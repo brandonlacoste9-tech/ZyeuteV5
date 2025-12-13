@@ -99,6 +99,17 @@ function createMockClient() {
   } as any;
 }
 
+// Helper function to get dynamic redirect URL based on current domain
+function getRedirectUrl(): string {
+  // Always use current origin to support all domains:
+  // - https://zyeute.com
+  // - https://zyeute.ca
+  // - https://zyeute-v3.vercel.app
+  // - http://localhost:5173 (dev)
+  const origin = window.location.origin;
+  return `${origin}/auth/callback`;
+}
+
 // Helper functions
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -110,10 +121,15 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signUp(email: string, password: string, username: string) {
-  return await supabase.auth.signUp({ 
-    email, 
-    password, 
-    options: { data: { username } } 
+  const redirectUrl = getRedirectUrl();
+
+  return await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+      emailRedirectTo: redirectUrl
+    }
   });
 }
 
@@ -122,9 +138,9 @@ export async function signOut() {
 }
 
 export async function signInWithGoogle() {
-  const redirectUrl = import.meta.env.PROD
-    ? 'https://zyeute-v3.vercel.app'
-    : window.location.origin;
+  const redirectUrl = getRedirectUrl();
+
+  console.log('🔍 Google OAuth redirect URL:', redirectUrl);
 
   return await supabase.auth.signInWithOAuth({
     provider: 'google',
