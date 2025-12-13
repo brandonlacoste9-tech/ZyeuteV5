@@ -1,0 +1,33 @@
+{
+  "name": "Zyeuté - Quebec's Social App",
+  "short_name": "Zyeuté",
+  "description": "The social app of Quebec, made for Quebecers!",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#F5C842",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["social"],
+  "screenshots": [
+    {
+      "src": "/opengraph.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    }
+  ]
+}
