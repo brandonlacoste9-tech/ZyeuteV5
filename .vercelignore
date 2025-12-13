@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Development files
+*.log
+.env.local
+.env.development
+.env.test
+
+# Replit specific
+.replit
+replit.md
+replit.nix
+.cache/
+.config/
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts (we build fresh)
+dist/
+
+# Large assets that should be in CDN
+attached_assets/*.zip
+
+# Tests
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/test/

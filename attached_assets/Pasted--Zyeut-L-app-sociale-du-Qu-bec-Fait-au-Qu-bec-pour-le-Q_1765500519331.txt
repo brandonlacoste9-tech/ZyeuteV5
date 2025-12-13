@@ -1,0 +1,188 @@
+🔥⚜️ Zyeuté - L'app sociale du Québec ⚜️🔥
+Fait au Québec, pour le Québec 🇨🇦
+
+Zyeuté is Quebec's first social media platform built specifically for Quebecers, by Quebecers. Share photos, videos, stories, and connect with your community in authentic Joual.
+
+✨ Now featuring:
+
+Leather UI - Premium, modern user interface inspired by Quebec's fur trading heritage with rich textures, warm leather tones, and luxurious gold accents
+Working Stripe Subscriptions - Fully integrated payment system for Zyeuté VIP memberships (Bronze, Silver, Gold tiers) with secure checkout and webhook support
+✨ Features
+🎨 Creative Tools
+Ti-Guy Artiste - AI-powered image generation with Quebec-themed presets
+Ti-Guy Studio - AI video editor with auto-captions in Joual
+Filters & Effects - Quebec-themed filters (Poutine, Hiver, Construction, etc.)
+🛍️ E-Commerce
+Zyeuté Commerce - Buy/sell tickets, crafts, services, and merch
+Secure Payments - Stripe integration for safe transactions
+Seller Dashboards - Track sales and manage inventory
+Webhook Setup - See STRIPE_WEBHOOK_SETUP.md for payment webhook configuration
+📍 Location Features
+Quebec Regions - Tag posts by region (Montréal, Québec City, Gaspésie, etc.)
+Montreal Neighborhoods - Specific quartier tagging (Plateau, Mile End, etc.)
+Local Discovery - Find content from your area
+🎭 Social Features
+Stories - 24-hour ephemeral content
+Live Streaming - Go live and connect with your audience
+Comments & Reactions - Engage with "feu" (fire) reactions
+Virtual Gifts - Send poutine, caribou, fleur-de-lys, and more!
+🤖 AI-Powered
+Ti-Guy Assistant - Your friendly AI helper that speaks Joual
+Smart Captions - AI-generated captions in authentic Quebec French
+Content Moderation - AI-powered moderation respecting Quebec culture
+Image Generation - DALL-E 3 powered by OpenAI
+💎 Premium Features
+Zyeuté VIP - Bronze, Silver, and Gold tiers
+Exclusive Content - Access premium creator content
+Creator Subscriptions - Support your favorite creators
+Ad-Free Experience - Enjoy Zyeuté without interruptions
+🎮 Gamification
+Daily Challenges - Complete quests for rewards
+Achievements - Unlock badges and milestones
+Leaderboards - Compete with other Quebecers
+🚀 Quick Start
+Prerequisites
+Node.js 18+ and npm
+Supabase account
+Stripe account (for payments)
+OpenAI API key (for AI features)
+Installation
+# Clone the repository
+git clone https://github.com/yourusername/zyeute.git
+cd zyeute
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your keys
+
+# Run development server
+npm run dev
+Visit http://localhost:5173 to see the app!
+
+🔧 Configuration
+Environment Variables
+Create a .env.local file with:
+
+# Supabase
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# OpenAI (for AI features)
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+
+# Stripe (for payments)
+VITE_STRIPE_PUBLIC_KEY=your_stripe_publishable_key_here
+
+# Optional: Google OAuth
+VITE_GOOGLE_CLIENT_ID=your-google-client-id
+See SETUP_GUIDE.md for detailed setup instructions.
+
+Stripe Webhooks: See STRIPE_WEBHOOK_SETUP.md for webhook configuration and testing.
+
+Preview Environments: For isolated database testing, see SUPABASE_PREVIEW_SETUP.md to learn about Supabase branching.
+
+📦 Tech Stack
+Frontend: React 18 + TypeScript + Vite
+Styling: Tailwind CSS v4
+Database: Supabase (PostgreSQL)
+Authentication: Supabase Auth
+Storage: Supabase Storage
+Payments: Stripe
+AI: OpenAI (GPT-4, DALL-E 3)
+Deployment: Vercel
+📁 Project Structure
+zyeute/
+├── src/
+│   ├── components/      # Reusable UI components
+│   ├── pages/          # Page components
+│   ├── services/       # API services
+│   ├── hooks/          # Custom React hooks
+│   ├── lib/            # Utilities and configs
+│   ├── contexts/       # React contexts
+│   └── types/          # TypeScript types
+├── public/             # Static assets
+├── supabase/           # Database migrations
+└── vercel.json         # Deployment config
+🗄️ Database Setup
+Run migrations in order using the setup script:
+
+# Get migration instructions
+npm run db:migrate
+This will list all migration files in the correct order. Then:
+
+Open your Supabase Dashboard → SQL Editor
+Run each migration file in the order shown by the script
+Start with 001_moderation_system.sql and proceed sequentially
+Critical: Don't skip 007_fix_rls_001_critical.sql - it enables Row Level Security for production.
+
+See SETUP_GUIDE.md for detailed instructions.
+
+🚢 Deployment
+Zyeuté is deployed on Vercel for optimal performance and seamless integration.
+
+Deploy to Vercel
+# Install Vercel CLI
+npm i -g vercel
+
+# Deploy
+vercel
+Important: Set all environment variables in your Vercel project settings!
+
+🧪 Development
+# Run dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Type check
+npm run type-check
+🤝 Contributing
+Zyeuté is built for the Quebec community. Contributions are welcome!
+
+See CONTRIBUTING.md for:
+
+Code standards and conventions
+Commit message guidelines
+Pull request process
+Areas where help is needed
+Quick start:
+
+Fork the repository
+Create your feature branch (git checkout -b feature/AmazingFeature)
+Commit your changes (git commit -m 'feat: add amazing feature')
+Push to the branch (git push origin feature/AmazingFeature)
+Open a Pull Request
+📄 License
+This project is proprietary. All rights reserved.
+
+Why is this repository public?
+While the codebase remains proprietary, this repository is publicly accessible for:
+
+Transparency: Building trust with the Quebec community by showing our development process
+Community Feedback: Enabling developers to report issues, suggest improvements, and contribute
+Hiring & Collaboration: Showcasing our technical stack and code quality to potential team members
+Open Development: Allowing the community to track progress and understand how Zyeuté is built
+See CONTRIBUTING.md for contribution guidelines and how to get involved.
+
+💬 Support
+GitHub Issues: Report bugs or request features
+Discord: Join our community
+Docs: See SETUP_GUIDE.md
+Note: For production support, please use GitHub Issues. Email support will be available once the domain is active.
+
+🎯 Roadmap
+ Mobile apps (iOS & Android)
+ Advanced analytics dashboard
+ Creator monetization tools
+ Integration with Quebec events
+ Multi-language support (French/English toggle)
+Made with ❤️ in Quebec 🇨🇦⚜️
+
+Propulsé par Nano Banana 🍌
