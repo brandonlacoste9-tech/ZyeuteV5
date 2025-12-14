@@ -105,7 +105,10 @@ export const AIStudio: React.FC = () => {
       a.download = `zyeute-ai-${Date.now()}.${type === 'video' ? 'mp4' : 'png'}`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      // Use a safe removeChild with existence check
+      if (a.parentNode === document.body) {
+        document.body.removeChild(a);
+      }
       window.URL.revokeObjectURL(downloadUrl);
       toast.success('Téléchargé! 📥');
     } catch {

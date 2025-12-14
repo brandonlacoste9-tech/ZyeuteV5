@@ -103,17 +103,28 @@ class ToastManager {
   private toasts: ToastProps[] = [];
   private container: HTMLDivElement | null = null;
   private root: any = null;
+  private isInitialized = false;
 
-  constructor() {
-    if (typeof document !== 'undefined') {
-      this.container = document.createElement('div');
-      document.body.appendChild(this.container);
-      this.root = createRoot(this.container);
-      this.render();
+  private ensureInitialized() {
+    if (!this.isInitialized && typeof document !== 'undefined') {
+      // Check if container already exists and is still in the DOM
+      if (this.container && !document.body.contains(this.container)) {
+        this.container = null;
+        this.root = null;
+      }
+
+      if (!this.container) {
+        this.container = document.createElement('div');
+        this.container.id = 'toast-container-ui';
+        document.body.appendChild(this.container);
+        this.root = createRoot(this.container);
+        this.isInitialized = true;
+      }
     }
   }
 
   private render() {
+    this.ensureInitialized();
     if (this.root) {
       this.root.render(<ToastContainer toasts={this.toasts} />);
     }

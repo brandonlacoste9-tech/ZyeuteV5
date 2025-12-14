@@ -52,7 +52,7 @@ Multi-brain DeepSeek V3 system with specialized roles:
 - `DATABASE_URL` - PostgreSQL connection string
 - `FAL_API_KEY` - FAL AI for Flux/Kling generation
 - `STRIPE_SECRET_KEY` - Stripe payments (premium subscriptions)
-- `VITE_STRIPE_PUBLIC_KEY` - Stripe frontend key
+- `VITE_STRIPE_PUBLISHABLE_KEY` - Stripe frontend key
 - `DEEPSEEK_API_KEY` - Ti-Guy AI assistant
 - `SESSION_SECRET` - Required in production (fails fast if not set)
 

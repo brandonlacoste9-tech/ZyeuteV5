@@ -12,7 +12,7 @@ import { toast } from '../Toast';
 import { cn } from '../../lib/utils';
 import type { User } from '../../types';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
 
 interface GiftInfo {
   type: string;

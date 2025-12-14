@@ -17,10 +17,10 @@ let stripePromise: Promise<Stripe | null> | null = null;
  */
 export const getStripe = (): Promise<Stripe | null> => {
   if (!stripePromise) {
-    const key = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
     
     if (!key) {
-      stripeServiceLogger.warn('⚠️ VITE_STRIPE_PUBLIC_KEY not found. Running in DEMO MODE.');
+      stripeServiceLogger.warn('⚠️ VITE_STRIPE_PUBLISHABLE_KEY not found. Running in DEMO MODE.');
       return Promise.resolve(null);
     }
     
