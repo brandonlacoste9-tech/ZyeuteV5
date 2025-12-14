@@ -211,9 +211,25 @@ export const assertions = {
 
   /**
    * Deep equality check
+   * Note: This is a simple implementation. For complex objects with circular references
+   * or different property ordering, consider using a library like lodash.isEqual
    */
   deepEqual: (a: any, b: any): boolean => {
-    return JSON.stringify(a) === JSON.stringify(b);
+    if (a === b) return true;
+    if (a === null || b === null) return false;
+    if (typeof a !== 'object' || typeof b !== 'object') return false;
+    
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    
+    if (keysA.length !== keysB.length) return false;
+    
+    for (const key of keysA) {
+      if (!keysB.includes(key)) return false;
+      if (!assertions.deepEqual(a[key], b[key])) return false;
+    }
+    
+    return true;
   },
 
   /**

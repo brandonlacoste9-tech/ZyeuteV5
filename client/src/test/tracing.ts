@@ -47,7 +47,7 @@ export class Tracer {
    * Generate unique trace ID
    */
   private generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**
@@ -326,7 +326,7 @@ export class TraceLogger {
     this.tracer.endSpan(spanId);
 
     // Also log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env?.DEV) {
       const prefix = `[${this.service}] [${level.toUpperCase()}]`;
       console[level === 'debug' ? 'log' : level](`${prefix} ${operation}:`, message, metadata || '');
     }
