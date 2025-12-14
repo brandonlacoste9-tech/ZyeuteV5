@@ -191,7 +191,7 @@ export const Login: React.FC = () => {
             Zyeuté
           </h1>
           <p className="text-sm font-bold tracking-[0.3em] mt-2" style={{ color: '#DAA520' }}>
-            L&apos;APP SOCIALE DU QUÉBEC
+            L'APP SOCIALE DU QUÉBEC
           </p>
         </div>
 
