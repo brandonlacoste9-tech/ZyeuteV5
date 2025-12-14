@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import session from "express-session";
 import rateLimit from "express-rate-limit";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { 
   insertUserSchema, insertPostSchema, insertCommentSchema, 
   insertStorySchema, GIFT_CATALOG, type GiftType
@@ -10,9 +10,9 @@ import {
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { fal } from "@fal-ai/client";
-import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, FAL_PRESETS } from "./v3-swarm";
-import emailAutomation from "./email-automation";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, FAL_PRESETS } from "./v3-swa.jsrm";
+import emailAutomation from "./email-automatio.jsn";
+import { setupAuth, isAuthenticated } from "./replitAut.jsh";
 
 // Configure FAL client
 fal.config({
