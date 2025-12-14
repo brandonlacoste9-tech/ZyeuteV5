@@ -44,13 +44,12 @@ export const users = pgTable("user_profiles", {
   displayName: varchar("display_name", { length: 100 }),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
-  region: regionEnum("region"),
-  isPremium: boolean("is_premium").default(false),
-  isVerified: boolean("is_verified").default(false),
-  isAdmin: boolean("is_admin").default(false),
-  followersCount: integer("followers_count").default(0),
-  followingCount: integer("following_count").default(0),
-  postsCount: integer("posts_count").default(0),
+
+
+
+
+
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
