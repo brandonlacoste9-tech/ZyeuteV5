@@ -93,12 +93,6 @@ export const Login: React.FC = () => {
       setError(err?.message || 'Erreur de connexion avec Google');
       setIsLoading(false);
     }
-
-      const handleGuestLogin = () => {
-    loginLogger.info('🎭 Guest login initiated');
-    // Navigate directly to the feed without authentication
-    window.location.href = '/';
-  };
   };
 
   return (
@@ -437,28 +431,6 @@ export const Login: React.FC = () => {
             </svg>
             {copy.auth.continueGoogle}
           </button>
-
-                {/* Guest Login Button */}
-      <button
-        onClick={handleGuestLogin}
-        className="w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 group press-effect hover-glow"
-        style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '2px dashed rgba(218,165,32,0.4)',
-          color: '#B8A88A',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(218,165,32,0.6)';
-          e.currentTarget.style.boxShadow = '0 0 15px rgba(218,165,32,0.15)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(218,165,32,0.4)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      >
-        <span className="text-lg">🎭</span>
-        Continue as Guest
-      </button>
 
           {/* Sign up link */}
           <p className="text-center text-sm mt-8" style={{ color: '#8B7355' }}>
