@@ -6,7 +6,7 @@ import { storage } from "./storage.js";
 import { 
   insertUserSchema, insertPostSchema, insertCommentSchema, 
   insertStorySchema, GIFT_CATALOG, type GiftType
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { fal } from "@fal-ai/client";
