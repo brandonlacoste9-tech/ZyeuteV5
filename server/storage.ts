@@ -9,6 +9,7 @@ import {
   type Gift, type InsertGift, type GiftType, type UpsertUser
 } from "../shared/schema.js";  
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { traceDatabase } from "./tracer.js";
 
 const { Pool } = pg;
 
@@ -76,13 +77,19 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    return traceDatabase("SELECT", "users", async (span) => {
+      span.setAttributes({ "db.user_id": id });
+      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0];
+    });
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
-    return result[0];
+    return traceDatabase("SELECT", "users", async (span) => {
+      span.setAttributes({ "db.username": username });
+      const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      return result[0];
+    });
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -96,8 +103,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
-    return result[0];
+    return traceDatabase("INSERT", "users", async (span) => {
+      span.setAttributes({ "db.username": insertUser.username });
+      const result = await db.insert(users).values(insertUser).returning();
+      return result[0];
+    });
   }
 
   async createUserFromOAuth(userData: UpsertUser): Promise<User> {

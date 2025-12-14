@@ -15,6 +15,8 @@ import emailAutomation from "./email-automation.js";
 import { setupAuth, isAuthenticated } from "./replitAuth.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
+// Import tracing utilities
+import { traced, traceDatabase, traceExternalAPI, traceStripe, traceSupabase, addSpanAttributes } from "./tracer.js";
 
 // Configure FAL client
 fal.config({
@@ -831,31 +833,34 @@ export async function registerRoutes(
         return res.status(401).json({ error: "User not found" });
       }
       
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "subscription",
-        line_items: [
-          {
-            price_data: {
-              currency: "cad",
-              product_data: {
-                name: "Zyeuté VIP",
-                description: "Accès premium avec Ti-Guy AI, création avancée, et plus!",
+      const session = await traceStripe("checkout.sessions.create", async (span) => {
+        span.setAttributes({ "stripe.user_id": user.id });
+        return stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "subscription",
+          line_items: [
+            {
+              price_data: {
+                currency: "cad",
+                product_data: {
+                  name: "Zyeuté VIP",
+                  description: "Accès premium avec Ti-Guy AI, création avancée, et plus!",
+                },
+                unit_amount: 999, // $9.99 CAD
+                recurring: {
+                  interval: "month",
+                },
               },
-              unit_amount: 999, // $9.99 CAD
-              recurring: {
-                interval: "month",
-              },
+              quantity: 1,
             },
-            quantity: 1,
+          ],
+          success_url: `${req.headers.origin}/premium?success=true`,
+          cancel_url: `${req.headers.origin}/premium?canceled=true`,
+          customer_email: user.email || undefined,
+          metadata: {
+            userId: user.id,
           },
-        ],
-        success_url: `${req.headers.origin}/premium?success=true`,
-        cancel_url: `${req.headers.origin}/premium?canceled=true`,
-        customer_email: user.email || undefined,
-        metadata: {
-          userId: user.id,
-        },
+        });
       });
       
       res.json({ url: session.url });
