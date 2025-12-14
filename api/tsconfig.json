@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "include": ["**/*", "../server/**/*", "../shared/**/*"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "../.vercel/output"
+  }
+}

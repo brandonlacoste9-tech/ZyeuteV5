@@ -14,7 +14,7 @@
 import OpenAI from 'openai';
 import { storage } from './storage.js';
 import { sendEmail } from './resend-client.js';
-import { renderEmail, EmailType as ReactEmailType } from './email-templates.jsx';
+import { renderEmail, EmailType as ReactEmailType } from './email-templates';
 
 // Initialize DeepSeek client
 const deepseek = new OpenAI({
