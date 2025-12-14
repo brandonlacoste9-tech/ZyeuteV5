@@ -132,6 +132,38 @@ Navigate to `http://localhost:3000`
 3. Click the "Run" button
 4. The app will automatically install dependencies and start
 
+## 🧪 Testing & Evaluation
+
+Zyeuté V3 includes a comprehensive evaluation framework for testing services, AI agents, and components:
+
+### Running Tests
+```bash
+# Run all tests once
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with interactive UI
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Framework Features
+- **Testing Infrastructure** - Vitest + React Testing Library
+- **Evaluation System** - Automated service evaluation with metrics
+- **Tracing System** - Distributed tracing for debugging and monitoring
+- **Performance Monitoring** - Track latency, throughput, and statistics
+
+### Documentation
+See [EVALUATION_FRAMEWORK.md](./EVALUATION_FRAMEWORK.md) for complete documentation on:
+- Writing tests for components and services
+- Evaluating AI agents and APIs
+- Using tracing and performance monitoring
+- Best practices and examples
+
 ## 🎮 Usage
 
 ### For Users
