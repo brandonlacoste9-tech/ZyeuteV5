@@ -7,7 +7,7 @@ import {
   type Comment, type InsertComment, type Follow, type InsertFollow,
   type Story, type InsertStory, type Notification, type InsertNotification,
   type Gift, type InsertGift, type GiftType, type UpsertUser
-} from "@shared/schema";
+} from "../shared/schema.js";  
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 const { Pool } = pg;
