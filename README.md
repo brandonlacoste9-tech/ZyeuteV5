@@ -263,15 +263,40 @@ PORT=80
 - [ ] Live streaming features
 - [ ] Group chats and communities
 
+## 🐛 Bug Tracking & Project Management
+
+Zyeuté V3 uses a comprehensive issue tracking system:
+
+- **[Bug Tracker](BUG_TRACKER.md)** - Live tracking of all bugs and features
+- **[Issue Templates](.github/ISSUE_TEMPLATE/)** - Standardized bug reports and feature requests
+- **[Project Board](.github/PROJECT_BOARD.md)** - Kanban board setup and workflow
+- **[Sample Issues](.github/SAMPLE_ISSUES.md)** - Example issues and CLI commands
+- **[Labels Guide](.github/LABELS.md)** - Label definitions and best practices
+
+### Report a Bug
+
+Found a bug? [Create a bug report](../../issues/new/choose) using our template.
+
+### Request a Feature
+
+Have an idea? [Submit a feature request](../../issues/new/choose) and let's discuss!
+
+### Track Progress
+
+View the [Project Board](../../projects) to see what we're working on.
+
 ## 🤝 Contributing
 
-We welcome contributions! Please follow these steps:
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
+**Quick start**:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+For more details, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 📝 License
 

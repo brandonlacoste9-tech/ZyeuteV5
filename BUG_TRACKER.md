@@ -1,0 +1,520 @@
+# 🐛 Zyeuté V3 Bug & Feature Tracker
+
+Comprehensive tracking document for all bugs, features, and enhancements in the Zyeuté V3 project.
+
+> **Last Updated**: December 14, 2024  
+> **Total Items**: 5 (3 Bugs, 2 Features)
+
+---
+
+## 📊 Quick Stats
+
+| Status | Count |
+|--------|-------|
+| 🆕 Backlog | 3 |
+| 📋 Todo | 1 |
+| 🔄 In Progress | 1 |
+| ✅ Fixed | 0 |
+| 🚫 Blocked | 0 |
+
+| Priority | Count |
+|----------|-------|
+| 🔴 Critical | 1 |
+| 🟠 High | 2 |
+| 🟡 Medium | 2 |
+| 🟢 Low | 0 |
+
+---
+
+## 🐛 Active Bugs
+
+### Bug #1: Stripe.js Loading Error in Payment Flow
+
+| Property | Value |
+|----------|-------|
+| **ID** | BUG-001 |
+| **Title** | Stripe.js fails to load on checkout page causing payment failures |
+| **Type** | 🐛 Bug |
+| **Status** | 🔄 In Progress |
+| **Priority** | 🔴 Critical |
+| **Severity** | Critical - Revenue Impact |
+| **Assignee** | Unassigned |
+| **Reporter** | System |
+| **Created** | 2024-12-14 |
+| **Updated** | 2024-12-14 |
+| **Labels** | `bug`, `critical`, `payment`, `stripe` |
+| **Affected Users** | ~20% of payment attempts |
+| **Component** | Payment Flow / Stripe Integration |
+
+**Description**:  
+Stripe.js library fails to load intermittently (~20% of the time) when users attempt to make payments for virtual currency. This results in a blank payment modal and prevents purchase completion.
+
+**Impact**:
+- Direct revenue loss from failed transactions
+- Poor user experience and trust issues
+- Customer support burden
+
+**Root Cause Analysis**:
+- Possible network timeout on slower connections
+- CSP (Content Security Policy) misconfiguration
+- Race condition in component mounting
+- Stripe CDN availability issues
+
+**Proposed Fix**:
+1. Implement retry logic for Stripe.js loading
+2. Add loading states and error handling
+3. Preload Stripe.js on app initialization
+4. Add fallback CDN sources
+5. Implement better error messaging to users
+
+**Testing Required**:
+- [ ] Test on various network speeds (3G, 4G, 5G, WiFi)
+- [ ] Test across different browsers
+- [ ] Verify error handling and user feedback
+- [ ] Load testing under high traffic
+
+**Related Issues**: #TBD  
+**Related PRs**: None  
+**Blocked By**: None
+
+---
+
+### Bug #2: Supabase 422 Unprocessable Entity Error
+
+| Property | Value |
+|----------|-------|
+| **ID** | BUG-002 |
+| **Title** | Supabase returns 422 error when creating posts with special characters |
+| **Type** | 🐛 Bug |
+| **Status** | 📋 Todo |
+| **Priority** | 🟠 High |
+| **Severity** | High - Core Functionality |
+| **Assignee** | Unassigned |
+| **Reporter** | System |
+| **Created** | 2024-12-14 |
+| **Updated** | 2024-12-14 |
+| **Labels** | `bug`, `high`, `database`, `supabase`, `i18n` |
+| **Affected Users** | All users posting French content with accents/emojis |
+| **Component** | Post Creation / Database Layer |
+
+**Description**:  
+When users create posts containing special characters (emojis, French accented characters like é, è, à, ç), Supabase API returns 422 Unprocessable Entity error. Critical issue for a French-language platform.
+
+**Impact**:
+- Users cannot post authentic French content
+- Blocks primary platform functionality
+- Poor experience for Quebec French-speaking users
+- Emoji support broken
+
+**Root Cause Analysis**:
+- Database column encoding not set to UTF-8
+- Input sanitization stripping valid Unicode
+- API validation rules too restrictive
+- Missing charset headers in requests
+
+**Proposed Fix**:
+1. Update database schema to use UTF-8 encoding
+2. Remove overly aggressive input sanitization
+3. Add proper charset headers to all API requests
+4. Update Supabase client configuration
+5. Add comprehensive Unicode testing
+
+**Testing Required**:
+- [ ] Test with various French accented characters
+- [ ] Test with common emojis
+- [ ] Test with mixed content (text + emoji)
+- [ ] Verify database storage and retrieval
+- [ ] Test display rendering
+
+**Related Issues**: #TBD  
+**Related PRs**: None  
+**Blocked By**: None
+
+---
+
+### Bug #3: React DOM Console Warning on Feed Page
+
+| Property | Value |
+|----------|-------|
+| **ID** | BUG-003 |
+| **Title** | React DOM warning "Each child in a list should have a unique key prop" |
+| **Type** | 🐛 Bug |
+| **Status** | 🆕 Backlog |
+| **Priority** | 🟡 Medium |
+| **Severity** | Medium - Performance & Code Quality |
+| **Assignee** | Unassigned |
+| **Reporter** | System |
+| **Created** | 2024-12-14 |
+| **Updated** | 2024-12-14 |
+| **Labels** | `bug`, `medium`, `code-quality`, `react`, `performance` |
+| **Affected Users** | Developers (console warnings) / Users (performance) |
+| **Component** | Feed Component / Post List Rendering |
+
+**Description**:  
+React console shows warnings about missing `key` props when rendering the post feed. While not breaking functionality, this causes performance issues with large feeds and creates console spam.
+
+**Impact**:
+- Performance degradation with large feeds
+- Increased re-rendering overhead
+- Difficult debugging due to console spam
+- Poor code quality perception
+
+**Root Cause Analysis**:
+- Missing `key` props on mapped components
+- Using array index as key (anti-pattern)
+- Nested lists without proper keys
+- Component architecture issues
+
+**Proposed Fix**:
+1. Add unique `key` prop to all list items using post IDs
+2. Review and update all `.map()` operations
+3. Ensure nested lists have proper keys
+4. Add ESLint rule to catch future violations
+5. Code review for similar patterns
+
+**Testing Required**:
+- [ ] Verify console is clean (no warnings)
+- [ ] Performance testing with large feeds (100+ posts)
+- [ ] Test feed updates and new post additions
+- [ ] Verify scrolling performance
+- [ ] Check React DevTools profiler
+
+**Related Issues**: #TBD  
+**Related PRs**: None  
+**Blocked By**: None
+
+---
+
+## ✨ Feature Requests
+
+### Feature #1: Guest Mode / Browse Without Login
+
+| Property | Value |
+|----------|-------|
+| **ID** | FEAT-001 |
+| **Title** | Implement guest mode to allow browsing without account creation |
+| **Type** | ✨ Feature |
+| **Status** | 🆕 Backlog |
+| **Priority** | 🟠 High |
+| **Effort** | Large (3-5 days) |
+| **Assignee** | Unassigned |
+| **Requester** | Product Team |
+| **Created** | 2024-12-14 |
+| **Updated** | 2024-12-14 |
+| **Labels** | `feature`, `high`, `ux`, `enhancement`, `authentication` |
+| **Business Value** | High - Increased user acquisition |
+| **Component** | Authentication / Routing / Permissions |
+
+**Problem Statement**:  
+Currently, users must create an account before seeing any platform content. This creates friction in the onboarding process and reduces conversion rates. Potential users want to explore before committing to registration.
+
+**Proposed Solution**:
+Allow unauthenticated users to browse public content with read-only access:
+- Browse public posts
+- View user profiles
+- See trending content
+- Explore platform features
+- Show "Sign up to interact" prompts on actions
+
+**Benefits**:
+- Lower barrier to entry
+- Increased user acquisition and conversion rates
+- Better SEO performance
+- Improved social sharing capabilities
+- Marketing campaign effectiveness
+
+**Technical Implementation**:
+1. **Authentication Layer**
+   - Add guest session tracking
+   - Create public/private content flags
+   - Update middleware to allow unauthenticated reads
+
+2. **Frontend Changes**
+   - Create guest mode UI state
+   - Add authentication prompts on actions
+   - Update routing for public access
+   - Show account benefits throughout experience
+
+3. **Backend Changes**
+   - API endpoints for public content
+   - Rate limiting for guest users
+   - Analytics for guest behavior
+   - Session management
+
+**Use Cases**:
+1. New visitors exploring platform before registration
+2. Shared links viewable without account
+3. SEO crawlers accessing content
+4. Marketing campaign landing pages
+
+**Testing Required**:
+- [ ] Functional testing of guest access
+- [ ] Verify authentication prompts trigger correctly
+- [ ] Test session tracking and analytics
+- [ ] Security testing (ensure no unauthorized actions)
+- [ ] Performance testing with mixed user types
+- [ ] Cross-browser compatibility
+
+**Dependencies**:
+- Authentication system refactoring
+- Routing updates
+- API permission changes
+
+**Related Issues**: #TBD  
+**Related PRs**: None  
+**Blocked By**: None
+
+---
+
+### Feature #2: Fix Manifest 401 Unauthorized & PWA Support
+
+| Property | Value |
+|----------|-------|
+| **ID** | FEAT-002 |
+| **Title** | Resolve manifest.json 401 error and implement proper PWA support |
+| **Type** | ✨ Feature |
+| **Status** | 🆕 Backlog |
+| **Priority** | 🟡 Medium |
+| **Effort** | Medium (2-3 days) |
+| **Assignee** | Unassigned |
+| **Requester** | Product Team |
+| **Created** | 2024-12-14 |
+| **Updated** | 2024-12-14 |
+| **Labels** | `feature`, `medium`, `pwa`, `mobile`, `enhancement` |
+| **Business Value** | Medium - Improved mobile experience |
+| **Component** | PWA / Service Worker / Manifest |
+
+**Problem Statement**:  
+The application returns 401 Unauthorized when requesting `/manifest.json`, preventing installation as a Progressive Web App. This limits mobile capabilities and user engagement.
+
+**Proposed Solution**:
+Implement full PWA support:
+
+1. **Create Manifest**
+   - App metadata (name, description)
+   - Brand colors and theme
+   - Icons in multiple sizes
+   - Display mode and orientation
+
+2. **Configure Server**
+   - Serve manifest without authentication
+   - Proper MIME types and headers
+   - Cache control settings
+
+3. **Service Worker**
+   - Offline content caching
+   - Asset precaching
+   - Background sync
+   - Update notifications
+
+4. **App Icons**
+   - Multiple sizes (192x192, 512x512)
+   - Maskable icons for Android
+   - iOS touch icons
+
+**Benefits**:
+- Installable on mobile home screen
+- Offline access to cached content
+- Native-like app experience
+- Improved user engagement
+- Reduced data usage
+- Push notifications capability (future)
+
+**Technical Implementation**:
+
+```json
+// manifest.json structure
+{
+  "name": "Zyeuté V3",
+  "short_name": "Zyeuté",
+  "description": "Quebec's premier French social media platform",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#your-brand-color",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+```
+
+**Testing Required**:
+- [ ] Verify manifest loads without errors
+- [ ] Test PWA installation on Android (Chrome)
+- [ ] Test PWA installation on iOS (Safari)
+- [ ] Verify offline functionality
+- [ ] Test service worker registration
+- [ ] Check icon display on home screen
+- [ ] Lighthouse PWA audit (score >90)
+
+**Dependencies**:
+- Icon assets creation
+- Service worker implementation
+- Server configuration updates
+
+**Related Issues**: #TBD  
+**Related PRs**: None  
+**Blocked By**: None
+
+---
+
+## 📋 Status Definitions
+
+| Status | Description |
+|--------|-------------|
+| 🆕 Backlog | Identified but not yet prioritized for work |
+| 📋 Todo | Prioritized and ready to be worked on |
+| 🔄 In Progress | Currently being developed |
+| 👀 Review | In code review or testing |
+| ✅ Fixed | Completed and merged (bugs) |
+| 🚀 Done | Completed and deployed (features) |
+| 🚫 Blocked | Cannot proceed due to dependencies |
+| ❌ Wontfix | Decided not to fix/implement |
+
+---
+
+## 🎯 Priority Definitions
+
+| Priority | Description | SLA |
+|----------|-------------|-----|
+| 🔴 Critical | Production broken, revenue impact, security issue | 24 hours |
+| 🟠 High | Major feature broken, significant user impact | 3-5 days |
+| 🟡 Medium | Feature partially broken, moderate impact | 1-2 weeks |
+| 🟢 Low | Minor issues, cosmetic problems, nice-to-haves | 3-4 weeks |
+
+---
+
+## 📈 Metrics & Analytics
+
+### Bug Resolution Time
+
+| Priority | Target Resolution | Average Actual |
+|----------|------------------|----------------|
+| Critical | 24 hours | TBD |
+| High | 3-5 days | TBD |
+| Medium | 1-2 weeks | TBD |
+| Low | 3-4 weeks | TBD |
+
+### Feature Development Time
+
+| Size | Estimated Days | Average Actual |
+|------|---------------|----------------|
+| Small | 1-2 days | TBD |
+| Medium | 2-3 days | TBD |
+| Large | 3-5 days | TBD |
+| XLarge | 1-2 weeks | TBD |
+
+---
+
+## 🔄 Workflow
+
+### Bug Workflow
+
+1. **Report** → Bug identified and reported
+2. **Triage** → Team reviews and assigns priority
+3. **Todo** → Added to sprint/backlog
+4. **In Progress** → Developer actively working
+5. **Review** → Code review and testing
+6. **Fixed** → Merged and ready for deployment
+7. **Verified** → Confirmed fixed in production
+8. **Closed** → Issue archived
+
+### Feature Workflow
+
+1. **Request** → Feature requested by stakeholder
+2. **Discussion** → Team evaluates feasibility and value
+3. **Design** → Technical design and planning
+4. **Todo** → Prioritized for development
+5. **In Progress** → Active development
+6. **Review** → Code review and QA testing
+7. **Done** → Merged and deployed
+8. **Closed** → Feature verified and issue archived
+
+---
+
+## 🔍 How to Use This Tracker
+
+### For Developers
+
+1. Check this file before starting work
+2. Update status when you start/finish work
+3. Add notes about implementation details
+4. Link related PRs and commits
+5. Update testing status
+
+### For Project Managers
+
+1. Review priorities weekly
+2. Track metrics and resolution times
+3. Identify blockers and dependencies
+4. Report to stakeholders
+5. Plan sprints based on priorities
+
+### For QA/Testers
+
+1. Review testing requirements
+2. Update testing status
+3. Report verification results
+4. Add reproduction steps if issues reoccur
+
+---
+
+## 📝 Maintenance Guidelines
+
+### Daily
+- Update status of in-progress items
+- Add new bugs/features as discovered
+- Update quick stats
+
+### Weekly
+- Review and adjust priorities
+- Update metrics
+- Identify blockers
+- Clean up closed items
+
+### Monthly
+- Review resolution times
+- Update workflow if needed
+- Archive completed items
+- Generate reports
+
+---
+
+## 🔗 Related Documentation
+
+- [GitHub Labels](.github/LABELS.md) - Label definitions and usage
+- [Sample Issues](.github/SAMPLE_ISSUES.md) - Example bug reports and features
+- [Project Board Setup](.github/PROJECT_BOARD.md) - GitHub Projects configuration
+- [Issue Templates](.github/ISSUE_TEMPLATE/) - Standard issue forms
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute (if available)
+
+---
+
+## 📞 Support & Contact
+
+For questions about this tracker:
+- Open a discussion in GitHub Discussions
+- Contact the project maintainer
+- Review the documentation
+
+---
+
+**Document Version**: 1.0  
+**Last Updated**: December 14, 2024  
+**Maintained By**: Zyeuté V3 Development Team  
+**Next Review Date**: December 21, 2024
+
+---
+
+*Made with ❤️ for Quebec | Fait avec ❤️ pour le Québec 🇨🇦⚜️*
