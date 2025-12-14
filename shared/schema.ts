@@ -44,7 +44,6 @@ export const users = pgTable("user_profiles", {
   displayName: varchar("display_name", { length: 100 }),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
-  location: text("location"),
   region: regionEnum("region"),
   isPremium: boolean("is_premium").default(false),
   isVerified: boolean("is_verified").default(false),
