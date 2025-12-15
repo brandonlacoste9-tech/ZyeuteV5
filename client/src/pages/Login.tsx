@@ -17,6 +17,7 @@ export const Login: React.FC = () => {
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState('');
 
@@ -255,19 +256,57 @@ export const Login: React.FC = () => {
 
             <div>
               <label className="block text-sm font-semibold mb-2" style={{ color: '#B8A88A' }}>Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-                className="w-full rounded-xl px-4 py-4 text-white placeholder-white/30 focus:outline-none transition-all duration-300"
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  className="w-full rounded-xl px-4 py-4 text-white placeholder-white/30 focus:outline-none transition-all duration-300"
+                  style={{
+                    background: 'rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255,191,0,0.2)',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)',
+                    paddingRight: '48px',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '20px',
+                    color: '#B8A88A',
+                    padding: '4px',
+                  }}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
+                </button>
+              </div>
+            </div>
+
+            {/* Forgot Password Link */}
+            <div style={{ textAlign: 'right', marginTop: '-8px' }}>
+              <Link
+                to="/forgot-password"
                 style={{
-                  background: 'rgba(0,0,0,0.4)',
-                  border: '1px solid rgba(255,191,0,0.2)',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)',
+                  fontSize: '13px',
+                  color: '#3b82f6',
+                  textDecoration: 'none',
+                  fontWeight: '500',
                 }}
-              />
+                className="hover:underline transition-all"
+              >
+                Mot de passe oublié?
+              </Link>
             </div>
 
             <button

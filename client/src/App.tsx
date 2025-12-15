@@ -25,6 +25,8 @@ import Explore from '@/pages/Explore';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import AuthCallback from '@/pages/AuthCallback';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 
 // Lazy-loaded Pages - Split into separate bundles (rarely accessed)
 const Upload = lazy(() => import('@/pages/Upload'));
@@ -185,6 +187,8 @@ function App() {
                         {/* Public Routes */}
                         <Route path="/login" element={<Login />} />
                         <Route path="/signup" element={<Signup />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/auth/callback" element={<AuthCallback />} />
 
                         {/* Protected Routes - with granular error boundaries */}
