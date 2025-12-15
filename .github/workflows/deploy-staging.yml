@@ -8,6 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     
     # Only run if Vercel secrets are configured
     if: ${{ secrets.VERCEL_TOKEN != '' }}
@@ -45,7 +48,18 @@ jobs:
       - name: Deploy to Vercel Staging
         id: deploy
         run: |
-          DEPLOYMENT_URL=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -oP 'https://[^\s]+' | tail -1)
+          # Deploy and capture output
+          DEPLOY_OUTPUT=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          
+          # Extract URL using multiple methods for reliability
+          DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9.-]+\.vercel\.app' | head -1)
+          
+          # Fallback to broader pattern if first attempt fails
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+' | grep 'vercel' | head -1)
+          fi
+          
           echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $DEPLOYMENT_URL"
         env:

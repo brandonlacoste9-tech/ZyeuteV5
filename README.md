@@ -141,6 +141,12 @@ Zyeuté V3 includes a comprehensive evaluation framework for testing services, A
 # Run all tests once
 npm test
 
+# Run unit tests only
+npm run test:unit
+
+# Run integration tests only
+npm run test:integration
+
 # Run tests in watch mode
 npm run test:watch
 
@@ -150,6 +156,13 @@ npm run test:ui
 # Generate coverage report
 npm run test:coverage
 ```
+
+### Test Suite
+- **118 Total Tests** across 8 test files
+- **Unit Tests** - Authentication, validation, utilities (58 tests)
+- **Integration Tests** - User flows and API integration (11 tests)
+- **Component Tests** - UI components and pages (49 tests)
+- **Coverage Target** - 80%+ code coverage
 
 ### Framework Features
 - **Testing Infrastructure** - Vitest + React Testing Library
@@ -163,6 +176,46 @@ See [EVALUATION_FRAMEWORK.md](./EVALUATION_FRAMEWORK.md) for complete documentat
 - Evaluating AI agents and APIs
 - Using tracing and performance monitoring
 - Best practices and examples
+
+## 🔄 CI/CD Pipeline
+
+Zyeuté V3 includes automated testing and deployment workflows powered by GitHub Actions:
+
+### Workflows
+- **✅ Test Suite** - Runs on every PR and push, includes:
+  - TypeScript type checking
+  - Unit and integration tests
+  - Code coverage reporting
+  - Build verification
+
+- **🔐 Security Scan** - Automated security checks:
+  - npm audit for vulnerabilities
+  - Dependency review on PRs
+  - Weekly scheduled scans
+
+- **🚀 Staging Deployment** - Preview deployments:
+  - Deploys to Vercel preview on every PR
+  - Automatic PR comments with preview URL
+  - Full test suite runs before deployment
+
+- **🌐 Production Deployment** - Automated production releases:
+  - Deploys to production on main branch merge
+  - Health checks after deployment
+  - Slack notifications (optional)
+
+### Setup
+See [CI_CD_SETUP.md](./CI_CD_SETUP.md) for complete documentation on:
+- Configuring GitHub secrets
+- Setting up branch protection rules
+- Workflow customization
+- Troubleshooting guide
+
+### Status Badges
+Add these to your repository for visibility:
+```markdown
+[![Tests](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/test.yml/badge.svg)](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/test.yml)
+[![Security](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/security.yml/badge.svg)](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/security.yml)
+```
 
 ## 🎮 Usage
 
