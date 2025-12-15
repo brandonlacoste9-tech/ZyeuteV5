@@ -99,8 +99,11 @@ Use our feature request template:
 3. **Test your changes**
    ```bash
    npm run check        # TypeScript check
+   npm test             # Run test suite
    npm run build        # Build verification
    ```
+   
+   See [Testing Guidelines](#testing-guidelines) below for detailed instructions.
 
 4. **Commit your changes**
    ```bash
@@ -229,6 +232,192 @@ Reviewers check for:
 - ✅ No breaking changes
 - ✅ Performance impact
 - ✅ Security considerations
+
+## 🧪 Testing Guidelines
+
+### Overview
+
+Zyeuté V3 uses **Vitest** for unit and integration tests, with scaffolding for **E2E tests** (Playwright/Cypress to be implemented).
+
+### Running Tests
+
+```bash
+# Run all tests once
+npm test
+
+# Run unit tests only
+npm run test:unit
+
+# Run integration tests only
+npm run test:integration
+
+# Run tests in watch mode (during development)
+npm run test:watch
+
+# Run tests with UI (interactive)
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+### Test Structure
+
+```
+client/src/
+├── test/
+│   ├── e2e/              # End-to-end tests (scaffolded)
+│   │   ├── auth.e2e.test.ts
+│   │   ├── guestMode.e2e.test.ts
+│   │   └── loginFlow.e2e.test.ts
+│   └── setup.ts          # Test configuration
+├── components/
+│   └── Button.test.tsx   # Component tests
+├── hooks/
+│   └── useGuestMode.test.ts  # Hook tests
+└── pages/
+    └── __tests__/
+        └── PasswordManagement.test.tsx
+```
+
+### Writing Tests
+
+#### Component Tests
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import Button from './Button';
+
+describe('Button Component', () => {
+  it('renders with text', () => {
+    render(<Button>Click Me</Button>);
+    expect(screen.getByText('Click Me')).toBeInTheDocument();
+  });
+
+  it('handles click events', () => {
+    const handleClick = vi.fn();
+    render(<Button onClick={handleClick}>Click Me</Button>);
+    fireEvent.click(screen.getByText('Click Me'));
+    expect(handleClick).toHaveBeenCalledOnce();
+  });
+});
+```
+
+#### Unit Tests
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { validateEmail } from './validation';
+
+describe('Email Validation', () => {
+  it('accepts valid email', () => {
+    expect(validateEmail('test@example.com')).toBe(true);
+  });
+
+  it('rejects invalid email', () => {
+    expect(validateEmail('invalid')).toBe(false);
+  });
+});
+```
+
+#### E2E Tests (Scaffolded - Phase 2)
+
+E2E tests are currently scaffolded and will be implemented in Phase 2:
+
+```typescript
+// client/src/test/e2e/auth.e2e.test.ts
+describe('Authentication E2E Tests', () => {
+  it('should successfully login with valid credentials', async () => {
+    // To be implemented with Playwright/Cypress
+    // 1. Navigate to /login
+    // 2. Enter credentials
+    // 3. Click submit
+    // 4. Verify redirect to home
+  });
+});
+```
+
+See [auth.e2e.test.ts](client/src/test/e2e/auth.e2e.test.ts) for complete test plans.
+
+### Test Requirements for PRs
+
+When submitting a Pull Request:
+
+#### ✅ Required
+- Add tests for new features
+- Update tests for modified functionality
+- Ensure all existing tests pass
+- Maintain or improve code coverage
+
+#### 🎯 Coverage Goals
+- **Overall:** 80%+ code coverage
+- **Critical paths:** 95%+ (auth, payments, etc.)
+- **New code:** 100% coverage for new files
+
+#### 📝 Test Checklist
+
+- [ ] Unit tests for new functions/utilities
+- [ ] Component tests for new React components
+- [ ] Integration tests for new API endpoints
+- [ ] Update existing tests if behavior changed
+- [ ] All tests pass locally (`npm test`)
+- [ ] Coverage meets requirements (`npm run test:coverage`)
+
+### Testing Best Practices
+
+#### DO ✅
+- Write tests before fixing bugs (TDD)
+- Test edge cases and error handling
+- Use descriptive test names
+- Keep tests isolated and independent
+- Mock external dependencies (API, database)
+- Test user interactions, not implementation details
+
+#### DON'T ❌
+- Skip tests because "it's too simple"
+- Test implementation details (CSS classes, internal state)
+- Write tests that depend on other tests
+- Use real API calls in tests
+- Commit failing tests
+- Ignore test failures in CI/CD
+
+### Debugging Tests
+
+```bash
+# Run specific test file
+npm test -- Button.test.tsx
+
+# Run tests matching pattern
+npm test -- --grep "login"
+
+# Run in debug mode
+npm test -- --inspect-brk
+
+# Use Vitest UI for visual debugging
+npm run test:ui
+```
+
+### CI/CD Integration
+
+Tests run automatically on:
+- **Every push** to PR branches
+- **Every PR** to `main` or `develop`
+- **Before deployment** to production
+
+GitHub Actions workflows:
+- `.github/workflows/test.yml` - Test suite
+- `.github/workflows/lighthouse-ci.yml` - Performance tests
+
+### Additional Resources
+
+- [Vitest Documentation](https://vitest.dev/)
+- [React Testing Library](https://testing-library.com/react)
+- [Testing Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
+- [AUTH_AUDIT_LOG.md](AUTH_AUDIT_LOG.md) - Authentication testing guide
+- [EVALUATION_FRAMEWORK.md](EVALUATION_FRAMEWORK.md) - Evaluation system
+
+---
 
 ## 🌐 Community Guidelines
 
