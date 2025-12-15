@@ -430,7 +430,8 @@ Check these files:
 2. **Templates Save Time:** Pre-filled templates eliminate back-and-forth
 3. **Code Samples are Essential:** Show agents exactly what you want
 4. **Coordination Matters:** Agents work better when they reference each other
-5. **Trust but Verify:** Review agent work, but trust their expertise
+5. **Architecture is Critical:** Validate that the move from `/api/auth/login` to direct Supabase auth is implemented correctly - this is the #1 fix that resolves 500 errors
+6. **Trust but Verify:** Review agent work, but trust their expertise
 
 ---
 

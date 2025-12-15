@@ -33,7 +33,7 @@ body:
         
         ### Old Pattern (CAUSES 500 ERRORS - DO NOT USE):
         ```typescript
-        // ❌ DEPRECATED - This is in Login.tsx line 65 and MUST be removed
+        // ❌ DEPRECATED - This is in the handleSubmit function (Login.tsx) and MUST be removed
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

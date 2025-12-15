@@ -515,7 +515,7 @@ body:
         
         ### 🔴 Critical Priority:
         1. **`client/src/pages/Login.tsx`** - Main auth UI
-        2. **`client/src/hooks/useGuestMode.ts`** - Session logic *(already has tests!)*
+        2. **`client/src/hooks/useGuestMode.ts`** - Session logic *(needs tests)*
         3. **`client/src/lib/supabase.ts`** - Auth API calls
         
         ### 🟠 High Priority:
