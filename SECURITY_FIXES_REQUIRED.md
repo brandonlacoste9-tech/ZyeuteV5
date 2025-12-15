@@ -9,7 +9,7 @@
 ## 🚨 CRITICAL - Fix Immediately (Today)
 
 ### 1. CORS Wildcard Configuration
-**File:** `vercel.json:18`  
+**File:** `vercel.json:28`  
 **Issue:** Using `Access-Control-Allow-Origin: "*"` with credentials enabled  
 **Risk:** CSRF attacks, unauthorized cross-origin requests, data leakage  
 
