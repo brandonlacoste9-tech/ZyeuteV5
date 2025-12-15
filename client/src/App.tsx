@@ -89,20 +89,45 @@ const LazyLoadFallback: React.FC = () => (
   </div>
 );
 
-// Protected Route Component - Uses session-based auth
+// Protected Route Component - Uses session-based auth + guest mode
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Check for authenticated user
         const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!response.ok) {
-          setIsAuthenticated(false);
-          return;
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setIsAuthenticated(true);
+            return;
+          }
         }
-        const data = await response.json();
-        setIsAuthenticated(!!data.user);
+        
+        // Check for guest mode
+        const guestMode = localStorage.getItem('zyeute_guest_mode');
+        const guestTimestamp = localStorage.getItem('zyeute_guest_timestamp');
+        
+        if (guestMode === 'true' && guestTimestamp) {
+          const age = Date.now() - parseInt(guestTimestamp, 10);
+          const GUEST_SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+          
+          if (age < GUEST_SESSION_DURATION) {
+            // Valid guest session
+            setIsAuthenticated(true);
+            return;
+          } else {
+            // Guest session expired - clear localStorage
+            localStorage.removeItem('zyeute_guest_mode');
+            localStorage.removeItem('zyeute_guest_timestamp');
+            localStorage.removeItem('zyeute_guest_views_count');
+          }
+        }
+        
+        // No valid auth or guest session
+        setIsAuthenticated(false);
       } catch {
         setIsAuthenticated(false);
       }

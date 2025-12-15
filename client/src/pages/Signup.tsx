@@ -58,6 +58,11 @@ export const Signup: React.FC = () => {
       // Check if component is still mounted before updating state
       if (!isMountedRef.current) return;
 
+      // Clear guest mode on successful signup
+      localStorage.removeItem('zyeute_guest_mode');
+      localStorage.removeItem('zyeute_guest_timestamp');
+      localStorage.removeItem('zyeute_guest_views_count');
+
       // Show success toast (non-blocking)
       toast.success('Compte créé! Vérifie ton courriel pour confirmer ton compte.');
       

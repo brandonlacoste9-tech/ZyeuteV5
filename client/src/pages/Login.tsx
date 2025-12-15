@@ -37,13 +37,18 @@ export const Login: React.FC = () => {
     checkUser();
   }, [navigate]);
 
-  // ✅ New Guest Login Handler (Safe & Scoped)
+  // ✅ Guest Login Handler - Sets 24h session
   const handleGuestLogin = (e: React.MouseEvent) => {
     e.preventDefault(); // Stop form submission
     setIsLoading(true);
     loginLogger.info('🎭 Guest login initiated');
     
-    // Simulate a short delay for UX, then force entry
+    // Set guest mode flags in localStorage
+    localStorage.setItem('zyeute_guest_mode', 'true');
+    localStorage.setItem('zyeute_guest_timestamp', Date.now().toString());
+    localStorage.setItem('zyeute_guest_views_count', '0');
+    
+    // Simulate a short delay for UX, then navigate
     setTimeout(() => {
         window.location.href = '/';
     }, 800);
@@ -67,6 +72,11 @@ export const Login: React.FC = () => {
       if (!response.ok) {
         throw new Error(data.error || 'Erreur de connexion');
       }
+
+      // Clear guest mode on successful login
+      localStorage.removeItem('zyeute_guest_mode');
+      localStorage.removeItem('zyeute_guest_timestamp');
+      localStorage.removeItem('zyeute_guest_views_count');
 
       window.location.href = '/';
     } catch (err: any) {

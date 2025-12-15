@@ -5,6 +5,7 @@
 
 import React, { ReactNode } from 'react';
 import { useBorderColor } from '@/contexts/BorderColorContext';
+import { GuestBanner } from '@/components/GuestBanner';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -54,6 +55,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div className="relative z-10 min-h-full">
           {children}
         </div>
+        
+        {/* Guest Banner - Shows after 3 views */}
+        <GuestBanner />
       </div>
     </div>
   );

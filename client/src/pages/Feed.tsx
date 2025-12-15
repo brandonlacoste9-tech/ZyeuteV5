@@ -20,6 +20,7 @@ import { getCurrentUser, getFeedPosts, getStories, togglePostFire } from '@/serv
 import type { Post, User, Story } from '@/types';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
+import { useGuestMode } from '@/hooks/useGuestMode';
 
 const feedLogger = logger.withContext('Feed');
 
@@ -35,6 +36,9 @@ export const Feed: React.FC = () => {
   
   const { showOnboarding, isChecked, completeOnboarding } = useOnboarding();
   
+  // Guest mode tracking
+  const { incrementViews } = useGuestMode();
+  
   // Gift modal state
   const [giftModalOpen, setGiftModalOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState<User | null>(null);
@@ -45,6 +49,11 @@ export const Feed: React.FC = () => {
   const [sentGiftEmoji, setSentGiftEmoji] = useState('');
   const [sentGiftType, setSentGiftType] = useState('');
   const [sentGiftRecipientName, setSentGiftRecipientName] = useState('');
+
+  // Increment guest view counter on page load
+  React.useEffect(() => {
+    incrementViews();
+  }, []);
 
   // Fetch current user
   React.useEffect(() => {
