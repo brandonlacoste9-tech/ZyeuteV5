@@ -286,7 +286,8 @@ export const Login: React.FC = () => {
                     color: '#B8A88A',
                     padding: '4px',
                   }}
-                  title={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}
+                  aria-label={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}
                 >
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>

@@ -19,14 +19,29 @@ export const ResetPassword: React.FC = () => {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
 
-  // Check if token is valid
+  // Check if token is valid by verifying session
   React.useEffect(() => {
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
+    const checkToken = async () => {
+      const token = searchParams.get('token');
+      const type = searchParams.get('type');
 
-    if (!token || type !== 'recovery') {
-      setError('Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.');
-    }
+      if (!token || type !== 'recovery') {
+        setError('Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.');
+        return;
+      }
+
+      // Verify the session is valid for password recovery
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) {
+          setError('Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.');
+        }
+      } catch (err) {
+        setError('Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.');
+      }
+    };
+
+    checkToken();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -214,7 +229,8 @@ export const ResetPassword: React.FC = () => {
                     color: '#B8A88A',
                     padding: '4px',
                   }}
-                  title={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}
+                  aria-label={showPassword ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}
                 >
                   {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
@@ -256,7 +272,8 @@ export const ResetPassword: React.FC = () => {
                     color: '#B8A88A',
                     padding: '4px',
                   }}
-                  title={showConfirm ? 'Hide password' : 'Show password'}
+                  title={showConfirm ? 'Cacher le mot de passe' : 'Afficher le mot de passe'}
+                  aria-label={showConfirm ? 'Cacher le mot de passe de confirmation' : 'Afficher le mot de passe de confirmation'}
                 >
                   {showConfirm ? '👁️' : '👁️‍🗨️'}
                 </button>
