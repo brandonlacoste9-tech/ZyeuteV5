@@ -21,16 +21,19 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-// import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-// import userEvent from '@testing-library/user-event';
 
 /**
- * TODO: Import necessary test utilities and components
- * Examples:
+ * TODO: Uncomment and configure these imports when implementing tests:
+ * 
+ * import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+ * import userEvent from '@testing-library/user-event';
+ * 
+ * Additional utilities to import:
  * - Testing library setup
- * - Router setup for navigation testing
+ * - Router setup for navigation testing (React Router or Wouter)
  * - Mock Supabase client for isolated tests
  * - Test data factories
+ * - Component imports (Login, Signup, Profile, etc.)
  */
 
 describe('Authentication Flow - E2E Tests', () => {
