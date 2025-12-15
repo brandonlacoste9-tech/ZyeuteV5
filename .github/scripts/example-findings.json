@@ -1,0 +1,167 @@
+{
+  "findings": [
+    {
+      "type": "bug",
+      "priority": "critical",
+      "title": "Stripe.js Loading Error in Payment Flow",
+      "description": "Stripe.js library fails to load intermittently (~20% of the time) when users attempt to make payments for virtual currency. This results in a blank payment modal and prevents purchase completion.",
+      "component": "payment",
+      "effort": "2-4h",
+      "complexity": "Medium",
+      "risk": "Medium",
+      "severity": "CRITICAL",
+      "rootCause": {
+        "file": "/src/components/GiftModal.tsx",
+        "line": "45-60",
+        "description": "Race condition in Stripe.js loading. Stripe script loaded asynchronously. Component mounts before script ready. No retry logic on failure."
+      },
+      "currentBehavior": "User clicks Purchase button. Modal opens but is blank. Console error: Stripe is not defined. Payment fails silently.",
+      "expectedBehavior": "User clicks Purchase button. Loading spinner shows while Stripe loads. Modal opens with payment form. Payment completes successfully.",
+      "acceptanceCriteria": [
+        "Stripe.js loads 100% of the time",
+        "Loading state displays while initializing",
+        "Retry logic attempts 3 times on failure",
+        "Clear error message shown if all retries fail",
+        "Works on 3G, 4G, 5G, and WiFi",
+        "Unit tests for retry logic",
+        "Integration test for payment flow"
+      ],
+      "filesAffected": [
+        "/src/components/GiftModal.tsx",
+        "/src/services/stripeService.ts",
+        "/client/index.html"
+      ],
+      "relatedIssues": {
+        "blocks": [11, 12]
+      },
+      "testingInstructions": "1. Open https://www.zyeute.com in incognito\n2. Slow down network to Slow 3G in DevTools\n3. Navigate to any post\n4. Click Gift icon\n5. Select currency amount\n6. Click Purchase\n7. Verify loading spinner appears and modal opens",
+      "sourceAudit": "Found in BUG_TRACKER.md as BUG-001"
+    },
+    {
+      "type": "bug",
+      "priority": "high",
+      "title": "Supabase 422 Error with French Characters",
+      "description": "When users create posts containing special characters (emojis, French accented characters like é, è, à, ç), Supabase API returns 422 Unprocessable Entity error.",
+      "component": "database",
+      "effort": "2-4h",
+      "complexity": "Medium",
+      "risk": "Medium",
+      "severity": "HIGH",
+      "rootCause": {
+        "file": "/server/db.ts",
+        "line": "N/A",
+        "description": "Database column encoding not set to UTF-8. Columns using default encoding (Latin1). Input sanitization stripping valid Unicode."
+      },
+      "currentBehavior": "User types French text with accents or emojis. API returns 422 error. Post fails to save.",
+      "expectedBehavior": "User types French text with accents and emojis. Post saves successfully. Content displays correctly in feed.",
+      "acceptanceCriteria": [
+        "Database columns use UTF-8 encoding (utf8mb4)",
+        "All French accented characters work: é è à ç ê ô û",
+        "Common emojis work: 🎉 😊 ❤️ 🇨🇦 ⚜️",
+        "Mixed content (text + emoji) works",
+        "No data corruption on save/retrieve"
+      ],
+      "filesAffected": [
+        "/server/db.ts",
+        "/shared/schema.ts",
+        "/server/routes/posts.ts",
+        "/client/src/utils/validation.ts"
+      ],
+      "relatedIssues": {
+        "blocks": [22, 23]
+      },
+      "testingInstructions": "1. Navigate to post creation\n2. Test inputs: Québec, École française, C'est génial! 🎉\n3. Verify all save successfully\n4. Verify display correctly in feed",
+      "sourceAudit": "Found in BUG_TRACKER.md as BUG-002"
+    },
+    {
+      "type": "security",
+      "priority": "critical",
+      "title": "Hardcoded Stripe Key in Repository",
+      "description": "Stripe publishable key is hardcoded in source code instead of using environment variables. While publishable keys are meant to be public, this practice exposes key rotation complexity.",
+      "component": "payment",
+      "effort": "1h",
+      "complexity": "Low",
+      "risk": "Low",
+      "severity": "HIGH",
+      "rootCause": {
+        "file": "/src/services/stripeService.ts",
+        "line": "8",
+        "description": "Hardcoded: const STRIPE_KEY = 'pk_live_xxxxxxxxxxxxx'"
+      },
+      "currentBehavior": "Stripe key is hardcoded in source code.",
+      "expectedBehavior": "Stripe key loaded from environment variables.",
+      "acceptanceCriteria": [
+        "Stripe key moved to environment variables",
+        "No hardcoded keys in source code",
+        ".env.example updated with template",
+        "Validation added for missing keys",
+        "Security scan passes"
+      ],
+      "filesAffected": [
+        "/src/services/stripeService.ts",
+        "/.env.example",
+        "/VERCEL_ENV_REQUIRED.md"
+      ],
+      "testingInstructions": "1. Grep for hardcoded keys: grep -r 'pk_live_' .\n2. Verify env loading works\n3. Run security scan",
+      "sourceAudit": "Found during security audit review"
+    },
+    {
+      "type": "test-coverage",
+      "priority": "high",
+      "title": "Missing Unit Tests for Authentication Flow",
+      "description": "Authentication flow lacks comprehensive unit and integration tests. This critical user flow has only 45% test coverage.",
+      "component": "auth",
+      "effort": "4-8h",
+      "complexity": "Medium",
+      "risk": "Low",
+      "severity": "HIGH",
+      "acceptanceCriteria": [
+        "Test coverage reaches 85%+",
+        "All test scenarios pass",
+        "No flaky tests",
+        "Tests run in CI/CD pipeline",
+        "Happy path tests complete",
+        "Edge case tests complete",
+        "Error handling tests complete"
+      ],
+      "filesAffected": [
+        "/src/services/__tests__/auth.test.ts",
+        "/src/hooks/__tests__/useAuth.test.tsx",
+        "/src/__tests__/fixtures/authFixtures.ts"
+      ],
+      "testingInstructions": "1. Run: npm test -- auth\n2. Verify coverage meets 85%\n3. Run tests 5 times to check for flakiness",
+      "sourceAudit": "Found during test coverage analysis"
+    },
+    {
+      "type": "bug",
+      "priority": "medium",
+      "title": "React DOM Key Prop Warning in Feed",
+      "description": "React console shows warnings about missing key props when rendering the post feed. Causes performance issues with large feeds.",
+      "component": "ui",
+      "effort": "1h",
+      "complexity": "Low",
+      "risk": "Low",
+      "severity": "MEDIUM",
+      "rootCause": {
+        "file": "/src/components/Feed.tsx",
+        "line": "67-85",
+        "description": "Missing key props in mapped list items"
+      },
+      "currentBehavior": "Console warning on every feed render. Performance degradation with 100+ posts.",
+      "expectedBehavior": "Clean console (no warnings). Efficient re-renders.",
+      "acceptanceCriteria": [
+        "No React key warnings in console",
+        "All .map() operations have unique keys",
+        "Keys use post IDs (not array indices)",
+        "Performance test shows improvement"
+      ],
+      "filesAffected": [
+        "/src/components/Feed.tsx",
+        "/src/components/PostList.tsx",
+        "/src/components/CommentList.tsx"
+      ],
+      "testingInstructions": "1. Open DevTools console\n2. Navigate to feed\n3. Scroll through 100+ posts\n4. Verify: No key prop warnings",
+      "sourceAudit": "Found in BUG_TRACKER.md as BUG-003"
+    }
+  ]
+}
