@@ -236,6 +236,103 @@ Add these to your repository for visibility:
 [![Security](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/security.yml/badge.svg)](https://github.com/brandonlacoste9-tech/zyeute-v3/actions/workflows/security.yml)
 ```
 
+## 📋 QA & Regression Guides
+
+Zyeuté V3 maintains comprehensive quality assurance documentation and testing playbooks to ensure consistent quality and accessibility across all features.
+
+### Authentication & Auth Flow
+
+- **[AUTH_AUDIT_LOG.md](./AUTH_AUDIT_LOG.md)** - Complete audit of authentication endpoints
+  - Documents all `/api/auth/*` usage across the frontend
+  - Standardization strategy for Supabase client-side authentication
+  - Guest mode session management utilities
+  - Before/after snapshots for each refactored call site
+
+### Accessibility (A11y) Testing
+
+- **[BUTTON_A11Y_AUDIT.md](./BUTTON_A11Y_AUDIT.md)** - Button accessibility audit framework
+  - Comprehensive checklists for all button components
+  - Keyboard navigation testing procedures
+  - Screen reader compatibility verification
+  - WCAG 2.1 Level AA compliance tracking
+  - Covers: `Button.tsx`, `GoldButton.tsx`, `ChatButton.tsx`, `ColonyTriggerButton.tsx`, password toggles, Follow/Unfollow buttons
+
+### Media Testing
+
+- **[MEDIA_TEST_PLAYBOOK.md](./MEDIA_TEST_PLAYBOOK.md)** - Video and image testing guide
+  - Image upload/display testing scenarios
+  - Video playback and streaming tests
+  - Device/browser coverage matrix (Desktop, Mobile, Tablet)
+  - Network condition testing (4G, 3G, Slow 3G, Offline)
+  - Meta tag validation (Open Graph, Twitter Cards)
+  - Performance benchmarks and optimization checks
+  - Error handling and fallback scenarios
+  - Accessibility requirements for media
+
+### E2E Testing
+
+- **[test/e2e/](./test/e2e/)** - End-to-end test suite
+  - **[auth-flow.test.ts](./test/e2e/auth-flow.test.ts)** - Authentication flow tests scaffold
+    - Login flow with valid/invalid credentials
+    - Guest mode entry and session management
+    - Signup flow with validation
+    - Profile CRUD operations
+    - Session persistence and management
+    - Error scenario handling
+  - **[test/README.md](./test/README.md)** - Testing guide and best practices
+
+### CI/CD Quality Gates
+
+- **[.github/workflows/test.yml](./.github/workflows/test.yml)** - Automated test suite
+  - 75% coverage threshold enforcement (configurable)
+  - Automated coverage reports on PRs
+  - Type checking with TypeScript
+  - Build verification
+  
+- **[.github/workflows/lighthouse.yml](./.github/workflows/lighthouse.yml)** - Performance & accessibility CI
+  - Lighthouse CI for critical routes
+  - Performance score ≥90
+  - Accessibility score ≥90
+  - SEO score ≥90
+  - Best Practices score ≥90
+  - Automated Lighthouse reports on PRs
+
+### Testing Best Practices
+
+When contributing to the project:
+
+1. **Before Making Changes**
+   - Review relevant audit documents
+   - Check existing test coverage
+   - Understand accessibility requirements
+
+2. **During Development**
+   - Write tests for new features
+   - Update audit checklists as needed
+   - Run local tests: `npm test` and `npm run test:coverage`
+
+3. **Before Submitting PR**
+   - Run full test suite: `npm run test:all`
+   - Check coverage report: `open coverage/lcov-report/index.html`
+   - Verify accessibility with browser tools
+   - Test on multiple devices/browsers (see playbooks)
+
+4. **PR Review Process**
+   - Automated tests run on every PR
+   - Coverage report posted as comment
+   - Lighthouse scores checked for performance regressions
+   - Manual QA for critical paths
+
+### Quick Links
+
+- 📚 **All Audit Documents**: [AUTH_AUDIT_LOG.md](./AUTH_AUDIT_LOG.md), [BUTTON_A11Y_AUDIT.md](./BUTTON_A11Y_AUDIT.md), [MEDIA_TEST_PLAYBOOK.md](./MEDIA_TEST_PLAYBOOK.md)
+- 🧪 **Test Suite**: [test/](./test/) directory
+- 🔄 **CI/CD Workflows**: [.github/workflows/](./.github/workflows/) directory
+- 📖 **Contributing Guide**: [CONTRIBUTING.md](./CONTRIBUTING.md)
+- 🐛 **Bug Tracking**: [BUG_TRACKER.md](./BUG_TRACKER.md)
+
+---
+
 ## 🎮 Usage
 
 ### For Users

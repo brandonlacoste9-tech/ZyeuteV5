@@ -98,9 +98,17 @@ Use our feature request template:
 
 3. **Test your changes**
    ```bash
-   npm run check        # TypeScript check
-   npm run build        # Build verification
+   npm run check              # TypeScript check
+   npm test                   # Run unit tests
+   npm run test:coverage      # Generate coverage report
+   npm run build              # Build verification
    ```
+   
+   **Required Testing Standards:**
+   - All new features must include tests
+   - Maintain minimum 75% code coverage for critical paths
+   - Tests must pass locally before pushing
+   - Run accessibility checks for UI changes (see below)
 
 4. **Commit your changes**
    ```bash
@@ -141,6 +149,94 @@ Use our feature request template:
 - **Comments**: Use JSDoc for public APIs
 - **Imports**: Organize and group imports logically
 
+#### Testing Standards
+
+All contributions must meet these testing requirements:
+
+**Unit Tests**
+- Write tests for all new functions and components
+- Use descriptive test names: `it('should display error when login fails with invalid credentials')`
+- Mock external dependencies (Supabase, APIs)
+- Aim for 75%+ code coverage
+
+**Integration Tests**
+- Test user flows end-to-end for critical features
+- Use realistic test data
+- Test happy path and error scenarios
+
+**E2E Tests** (for major features)
+- Add E2E tests for new authentication flows
+- Update `test/e2e/` with new scenarios
+- Follow existing test patterns in `auth-flow.test.ts`
+
+**Coverage Requirements**
+- **Critical paths**: 75% minimum coverage
+- **New features**: Must include tests before merge
+- **Bug fixes**: Add regression tests
+
+**Running Tests Locally**
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+
+# View coverage report
+open coverage/lcov-report/index.html
+
+# Run E2E tests (when implemented)
+npm run test:e2e
+```
+
+#### Accessibility (A11y) Standards
+
+All UI changes must meet **WCAG 2.1 Level AA** accessibility standards:
+
+**Before Submitting UI Changes:**
+1. **Keyboard Navigation**
+   - All interactive elements accessible via Tab
+   - Enter/Space keys activate buttons
+   - Logical tab order
+   - Visible focus indicators (contrast ratio ≥ 3:1)
+
+2. **Screen Reader Support**
+   - Use semantic HTML (`<button>`, `<nav>`, `<main>`)
+   - Add `aria-label` for icon-only buttons
+   - Use `aria-live` for dynamic content
+   - Test with NVDA (Windows) or VoiceOver (Mac)
+
+3. **Color & Contrast**
+   - Text contrast ≥ 4.5:1 (normal text)
+   - Large text contrast ≥ 3:1 (18pt+ or 14pt+ bold)
+   - Don't rely on color alone to convey information
+   - Use [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/)
+
+4. **Form Accessibility**
+   - Labels associated with inputs (`htmlFor` + `id`)
+   - Error messages clearly indicated
+   - Required fields marked with `aria-required`
+   - Validation errors announced to screen readers
+
+5. **Images & Media**
+   - All images have descriptive `alt` text
+   - Decorative images use `alt=""`
+   - Videos have captions/transcripts (if applicable)
+
+**Testing Tools:**
+- Browser DevTools (Lighthouse Accessibility score)
+- [axe DevTools](https://www.deque.com/axe/devtools/) browser extension
+- [WAVE](https://wave.webaim.org/) Web Accessibility Evaluation Tool
+- Screen readers: NVDA (Windows), VoiceOver (Mac)
+
+**Audit Documents:**
+- Review [BUTTON_A11Y_AUDIT.md](./BUTTON_A11Y_AUDIT.md) for button components
+- Check [MEDIA_TEST_PLAYBOOK.md](./MEDIA_TEST_PLAYBOOK.md) for media features
+- Follow WCAG guidelines in audit checklists
+
 #### Pull Request Guidelines
 
 **Do**:
@@ -148,8 +244,10 @@ Use our feature request template:
 - ✅ Write clear PR descriptions
 - ✅ Link related issues
 - ✅ Update documentation
-- ✅ Add tests for new features
-- ✅ Ensure all checks pass
+- ✅ Add tests for new features (required)
+- ✅ Ensure all checks pass (tests, coverage, build)
+- ✅ Test accessibility with keyboard and screen reader
+- ✅ Update audit documents if adding new components
 - ✅ Respond to review feedback
 
 **Don't**:
@@ -157,6 +255,8 @@ Use our feature request template:
 - ❌ Break existing functionality
 - ❌ Ignore linting errors
 - ❌ Submit without testing
+- ❌ Skip accessibility checks for UI changes
+- ❌ Submit with failing tests or < 75% coverage
 - ❌ Force push after review
 
 ### Improving Documentation
@@ -174,7 +274,114 @@ Documentation contributions are highly valued:
 - `BUG_TRACKER.md` - Issue tracking
 - `.github/` - Templates and guides
 - `DEPLOYMENT_FIX.md` - Deployment instructions
+- `AUTH_AUDIT_LOG.md` - Authentication audit and refactoring
+- `BUTTON_A11Y_AUDIT.md` - Button accessibility checklist
+- `MEDIA_TEST_PLAYBOOK.md` - Media testing scenarios
+- `test/README.md` - E2E testing guide
 - Code comments and JSDoc
+
+## 📋 Quality Assurance Standards
+
+### Test Coverage Requirements
+
+**Critical Path Coverage**: 75% minimum
+- Authentication flows
+- Payment processing
+- User profile management
+- Post creation/deletion
+- Core navigation
+
+**Feature Coverage**: 60% minimum
+- Secondary features
+- UI components
+- Utility functions
+
+**Coverage Enforcement**:
+- CI blocks merge if critical path coverage < 75%
+- Coverage report automatically posted on PRs
+- Run `npm run test:coverage` to check locally
+
+### Performance Standards
+
+**Lighthouse CI Thresholds** (automatically checked):
+- Performance: ≥ 90
+- Accessibility: ≥ 90
+- Best Practices: ≥ 90
+- SEO: ≥ 90
+
+**Key Metrics**:
+- First Contentful Paint: < 2s
+- Largest Contentful Paint: < 2.5s
+- Cumulative Layout Shift: < 0.1
+- Total Blocking Time: < 300ms
+
+**Testing Performance Locally**:
+```bash
+# Build and test performance
+npm run build
+NODE_ENV=production npm start
+
+# In another terminal
+lighthouse http://localhost:3000 --view
+```
+
+### Accessibility Compliance
+
+**WCAG 2.1 Level AA** is required for all UI components.
+
+**Automated Checks**:
+- Lighthouse accessibility score (CI)
+- Color contrast validation
+- Semantic HTML verification
+
+**Manual Testing Required**:
+- Keyboard navigation (Tab, Enter, Space, Escape)
+- Screen reader testing (NVDA or VoiceOver)
+- Focus management
+- Error announcements
+
+**Reference Documents**:
+- [BUTTON_A11Y_AUDIT.md](./BUTTON_A11Y_AUDIT.md) - Button audit checklist
+- [MEDIA_TEST_PLAYBOOK.md](./MEDIA_TEST_PLAYBOOK.md) - Media a11y requirements
+
+### Best Practices Checklist
+
+Before submitting your PR, ensure:
+
+**Code Quality**
+- [ ] TypeScript types are correct and complete
+- [ ] No `any` types (use proper typing)
+- [ ] Functions are pure where possible
+- [ ] Complex logic has explanatory comments
+- [ ] No console.log statements in production code
+
+**Testing**
+- [ ] Unit tests written for new functions
+- [ ] Integration tests for user flows
+- [ ] Tests are isolated and don't depend on order
+- [ ] Mocks are used for external dependencies
+- [ ] Coverage report shows ≥75% for new code
+
+**Accessibility**
+- [ ] Keyboard navigation tested
+- [ ] Screen reader tested (NVDA/VoiceOver)
+- [ ] Color contrast verified (4.5:1 min)
+- [ ] Focus indicators visible
+- [ ] ARIA attributes used correctly
+- [ ] Semantic HTML elements used
+
+**Performance**
+- [ ] Images optimized (WebP, compression)
+- [ ] Lazy loading for images/components
+- [ ] No unnecessary re-renders
+- [ ] Bundle size impact checked
+- [ ] Lighthouse score maintained
+
+**Documentation**
+- [ ] JSDoc comments for public APIs
+- [ ] README updated if needed
+- [ ] CHANGELOG updated for features/fixes
+- [ ] Audit documents updated for new components
 
 ## 🏷️ Labels and Project Management
 
@@ -224,10 +431,12 @@ Track work on the [Project Board](../../projects):
 Reviewers check for:
 - ✅ Code quality and readability
 - ✅ Adherence to project standards
-- ✅ Test coverage
+- ✅ Test coverage (≥75% for critical paths)
 - ✅ Documentation updates
 - ✅ No breaking changes
 - ✅ Performance impact
+- ✅ Accessibility compliance (WCAG 2.1 AA)
+- ✅ All CI checks passing (tests, build, coverage)
 - ✅ Security considerations
 
 ## 🌐 Community Guidelines
