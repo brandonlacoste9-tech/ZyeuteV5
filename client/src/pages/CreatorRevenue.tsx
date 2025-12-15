@@ -9,6 +9,7 @@ import { BottomNav } from '../components/BottomNav';
 import { Button } from '../components/Button';
 import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
+import { cn } from '../lib/utils';
 import {
   getCreatorRevenue,
   getCreatorEarnings,
