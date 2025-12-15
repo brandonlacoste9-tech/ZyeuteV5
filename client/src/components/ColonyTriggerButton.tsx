@@ -113,7 +113,8 @@ export const ColonyTriggerButton: React.FC = () => {
         <button
           onClick={handleSendTask}
           disabled={loading || !command.trim()}
-          className="w-full px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold rounded-lg transition-colors"
+          className="w-full px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-black"
+          aria-label="Send task to Colony Worker Bee"
         >
           {loading ? 'Sending...' : '🐝 Send Task to Worker Bee'}
         </button>

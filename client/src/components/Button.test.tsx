@@ -82,13 +82,14 @@ describe('Button Component', () => {
   describe('FireButton', () => {
     it('should render fire button with level', () => {
       render(<FireButton level={3} />);
-      expect(screen.getByLabelText('Fire level 3')).toBeInTheDocument();
+      expect(screen.getByLabelText('Give 3 fires - Praise this post')).toBeInTheDocument();
     });
 
     it('should apply active styles when active', () => {
       render(<FireButton level={1} active={true} />);
-      const button = screen.getByLabelText('Fire level 1');
+      const button = screen.getByLabelText('Give 1 fire - Remove praise');
       expect(button.className).toContain('scale-125');
+      expect(button).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('should call onClick when clicked', async () => {
@@ -96,7 +97,7 @@ describe('Button Component', () => {
       const user = userEvent.setup();
       
       render(<FireButton level={2} onClick={handleClick} />);
-      await user.click(screen.getByLabelText('Fire level 2'));
+      await user.click(screen.getByLabelText('Give 2 fires - Praise this post'));
       
       expect(handleClick).toHaveBeenCalledTimes(1);
     });

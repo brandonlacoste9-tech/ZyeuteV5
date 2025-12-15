@@ -59,6 +59,7 @@ export const ChatButton: React.FC<ChatButtonProps> = ({
           'flex items-center justify-center',
           'transition-all duration-300 ease-in-out',
           'transform hover:scale-110 active:scale-95',
+          'focus:outline-none focus:ring-2 focus:ring-gold-400 focus:ring-offset-2 focus:ring-offset-black',
           'group overflow-hidden',
           className
         )}

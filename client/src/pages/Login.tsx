@@ -35,7 +35,10 @@ export const Login: React.FC = () => {
         }
       } catch (err) {
         // Not logged in, stay on login page
-        loginLogger.debug('No existing session found');
+        // Logger may not be fully initialized in test environment
+        if (typeof loginLogger.debug === 'function') {
+          loginLogger.debug('No existing session found');
+        }
       }
     };
     checkUser();
