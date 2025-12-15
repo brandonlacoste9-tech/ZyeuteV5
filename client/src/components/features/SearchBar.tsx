@@ -78,7 +78,7 @@ const SearchBarComponent: React.FC<SearchBarProps> = ({
           .limit(5);
 
         if (users) {
-          searchResults.push(...users.map(user => ({
+          searchResults.push(...users.map((user: User) => ({
             type: 'user' as const,
             data: user,
           })));
@@ -92,7 +92,7 @@ const SearchBarComponent: React.FC<SearchBarProps> = ({
           .limit(5);
 
         if (posts) {
-          searchResults.push(...posts.map(post => ({
+          searchResults.push(...posts.map((post: Post) => ({
             type: 'post' as const,
             data: post,
           })));
