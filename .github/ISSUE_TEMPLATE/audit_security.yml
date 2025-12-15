@@ -1,0 +1,217 @@
+name: 🔐 Security Finding (Audit)
+description: Security vulnerability or code quality issue from Code Analysis audit
+title: "[SECURITY] Component: Security Issue Title"
+labels: ["security", "audit", "triaged"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔐 Security Audit Finding
+        This security issue was identified during the Code Analysis audit (Issue #2).
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🚨 Severity
+      description: Security risk level
+      options:
+        - "🔴 CRITICAL - Immediate security threat"
+        - "🟠 HIGH - Significant security risk"
+        - "🟡 MEDIUM - Moderate security concern"
+        - "🟢 LOW - Minor security improvement"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 📂 Category
+      description: Type of security issue
+      options:
+        - Hardcoded Secrets / API Keys
+        - Authentication Misconfiguration
+        - Input Validation Missing
+        - XSS Vulnerability
+        - SQL Injection Risk
+        - CORS Misconfiguration
+        - Insecure Data Storage
+        - Sensitive Data Exposure
+        - Dependency Vulnerability
+        - Code Quality Issue
+        - Missing Error Handling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Description
+      description: Clear description of the security issue
+      placeholder: What is the security vulnerability?
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: 📍 Location
+      description: Where is this vulnerability
+      placeholder: |
+        File: /src/services/auth.ts
+        Line: 12-15
+        Code snippet: [if applicable]
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: ⚠️ Risk Assessment
+      description: What could happen if exploited
+      placeholder: |
+        **Potential Impact:**
+        - Data breach risk
+        - Unauthorized access
+        - System compromise
+        
+        **Affected Users:**
+        - All users / Authenticated users / Specific role
+        
+        **Exploitability:**
+        - Easy / Medium / Difficult
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: ❌ Current Vulnerable Code
+      description: Current implementation that's vulnerable
+      placeholder: Paste the vulnerable code here
+      render: typescript
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: ✅ Recommended Fix
+      description: How to fix this vulnerability
+      placeholder: |
+        1. Step 1: [Describe fix]
+        2. Step 2: [Implementation details]
+        3. Step 3: [Verification]
+    validations:
+      required: true
+
+  - type: textarea
+    id: secure-code
+    attributes:
+      label: 🔒 Secure Code Example
+      description: Example of secure implementation
+      placeholder: Paste secure code example here
+      render: typescript
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: How to verify the fix
+      placeholder: |
+        - [ ] Vulnerability no longer present
+        - [ ] Security tests pass
+        - [ ] No new vulnerabilities introduced
+        - [ ] Code review completed
+        - [ ] Security scan passes
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: ⏱️ Effort Estimate
+      description: Time to fix
+      options:
+        - "30min - 1h (Quick fix)"
+        - "1-2h (Small change)"
+        - "2-4h (Medium complexity)"
+        - "4-8h (Complex)"
+        - "8h+ (Major refactoring)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-affected
+    attributes:
+      label: 📂 Files Affected
+      description: Files that need changes
+      placeholder: |
+        - /src/services/auth.ts
+        - /src/config/env.ts
+        - /.env.example
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: 🔗 Related Issues
+      description: Dependencies and relationships
+      placeholder: |
+        - Depends on: #XX
+        - Blocks: #YY
+        - Related CVE: CVE-XXXX-XXXXX
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: 🧪 Security Testing
+      description: How to test the fix
+      placeholder: |
+        **Manual Testing:**
+        1. Test case 1
+        2. Test case 2
+        
+        **Automated Testing:**
+        - Security scan with [tool]
+        - Penetration testing
+        - Code analysis
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 📚 References
+      description: Security resources and documentation
+      placeholder: |
+        - OWASP: [link]
+        - CWE: [link]
+        - Documentation: [link]
+
+  - type: dropdown
+    id: compliance
+    attributes:
+      label: 📜 Compliance Impact
+      description: Does this affect compliance requirements?
+      options:
+        - "Yes - GDPR"
+        - "Yes - PCI DSS"
+        - "Yes - SOC 2"
+        - "Yes - Other"
+        - "No compliance impact"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 🔒 Security Fix Checklist
+      description: Before deploying fix
+      options:
+        - label: Vulnerability confirmed and reproduced
+        - label: Secure fix implemented
+        - label: Security tests added
+        - label: Code reviewed by security-aware developer
+        - label: No sensitive data in commits
+        - label: Environment variables properly configured
+        - label: Security scan passes

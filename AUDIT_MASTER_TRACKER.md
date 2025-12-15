@@ -143,6 +143,16 @@
 - [ ] Dependencies documented
 - [ ] Fix order logical and prioritized
 
+**Triage Infrastructure:**
+- ✅ Issue Templates: `.github/ISSUE_TEMPLATE/audit_bug_triaged.yml`
+- ✅ Security Template: `.github/ISSUE_TEMPLATE/audit_security.yml`
+- ✅ Test Coverage Template: `.github/ISSUE_TEMPLATE/audit_test_coverage.yml`
+- ✅ Triage Workflow: `.github/TRIAGE_WORKFLOW.md`
+- ✅ Labels Guide: `.github/LABELS.md`
+- ✅ Dependency Mapping: `.github/DEPENDENCY_MAP_TEMPLATE.md`
+- ✅ Fix Order Roadmap: `.github/FIX_ORDER_ROADMAP_TEMPLATE.md`
+- ✅ Sample Issues: `.github/SAMPLE_TRIAGED_ISSUES.md`
+
 ---
 
 ## ⏱️ TIMELINE: 48-Hour Critical Fix Window

@@ -1,0 +1,214 @@
+name: 🔴 Audit Bug (Triaged)
+description: Triaged bug from audit findings (SWE Agent, Code Analysis, etc.)
+title: "[PRIORITY] Component: Issue Title"
+labels: ["bug", "audit", "triaged"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎯 Triaged Audit Finding
+        This issue has been triaged from audit findings (Issues #1-3). All fields are pre-filled with analysis.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🚨 Priority
+      description: Issue priority based on business impact
+      options:
+        - "🔴 CRITICAL - Fix immediately (blocks revenue)"
+        - "🟠 HIGH - Fix this week (impacts UX)"
+        - "🟡 MEDIUM - Fix next sprint (reduces quality)"
+        - "🟢 LOW - Fix eventually (technical debt)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Description
+      description: Clear description of the issue
+      placeholder: What is the problem?
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: 🔍 Root Cause
+      description: Analysis from audit findings
+      placeholder: |
+        File: /src/path/to/file.tsx
+        Line: 45-50
+        Root Cause: [What's causing the issue]
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: ❌ Current Behavior
+      description: What happens now
+      placeholder: Describe what currently happens...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: ✅ Expected Behavior
+      description: What should happen
+      placeholder: Describe what should happen...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: Clear success criteria for this fix
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+        - [ ] Unit tests pass
+        - [ ] Integration tests pass
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 🎯 Severity
+      description: Impact severity
+      options:
+        - CRITICAL - Blocks all users
+        - HIGH - Impacts major functionality
+        - MEDIUM - Impacts some users
+        - LOW - Minor inconvenience
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: ⏱️ Effort Estimate
+      description: Time to fix
+      options:
+        - "30min - 1h (Quick fix)"
+        - "1-2h (Small change)"
+        - "2-4h (Medium complexity)"
+        - "4-8h (Complex, requires refactoring)"
+        - "8h+ (Very complex, architectural)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: 🧩 Complexity
+      description: Technical complexity
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: ⚠️ Risk Level
+      description: Risk of introducing new issues
+      options:
+        - Low (Isolated change)
+        - Medium (Multiple files affected)
+        - High (Core system changes)
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-affected
+    attributes:
+      label: 📂 Files Affected
+      description: List of files that need changes
+      placeholder: |
+        - /src/pages/LoginPage.tsx
+        - /src/services/auth.ts
+        - /src/components/LoginForm.tsx
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: 🔗 Related Issues
+      description: Dependencies and relationships
+      placeholder: |
+        - Depends on: #XX
+        - Blocks: #YY
+        - Related to: #ZZ
+      value: |
+        - Depends on: 
+        - Blocks: 
+        - Related to: 
+
+  - type: textarea
+    id: testing-instructions
+    attributes:
+      label: 🧪 Testing Instructions
+      description: Step-by-step verification process
+      placeholder: |
+        1. Navigate to [URL]
+        2. Perform [action]
+        3. Verify [expected result]
+      value: |
+        1. 
+        2. 
+        3. 
+        
+        **Expected Result:**
+        - [ ] 
+        - [ ] 
+
+  - type: textarea
+    id: fix-approach
+    attributes:
+      label: 🛠️ Proposed Fix
+      description: How to fix this issue
+      placeholder: |
+        1. Step 1
+        2. Step 2
+        3. Step 3
+
+  - type: textarea
+    id: source-audit
+    attributes:
+      label: 📊 Source Audit
+      description: Which audit issue identified this bug
+      placeholder: "Found in: Issue #1 (SWE Agent) Phase 4"
+    validations:
+      required: true
+
+  - type: textarea
+    id: revenue-impact
+    attributes:
+      label: 💰 Revenue Impact (if applicable)
+      description: Business impact of this issue
+      placeholder: |
+        - Daily revenue loss: $XXX
+        - Affected conversion rate: X%
+        - Urgency: High/Medium/Low
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 📋 Pre-Fix Checklist
+      description: Before starting work
+      options:
+        - label: Issue fully understood
+        - label: Dependencies identified
+        - label: Test cases defined
+        - label: Acceptance criteria clear
+        - label: Files to change identified

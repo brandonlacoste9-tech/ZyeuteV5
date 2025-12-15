@@ -9,3 +9,12 @@ contact_links:
   - name: 🚀 Deployment Guide
     url: ../../blob/main/DEPLOYMENT_FIX.md
     about: Check deployment and environment setup guides
+  - name: 📋 Triage Workflow
+    url: ../../blob/main/.github/TRIAGE_WORKFLOW.md
+    about: Learn about the issue triage process for audit findings
+  - name: 🏷️ Labels Guide
+    url: ../../blob/main/.github/LABELS.md
+    about: Understand label definitions and usage
+  - name: 🔗 Dependency Mapping
+    url: ../../blob/main/.github/DEPENDENCY_MAP_TEMPLATE.md
+    about: How to map and document issue dependencies

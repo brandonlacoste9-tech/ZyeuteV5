@@ -1,38 +1,80 @@
-# Issue Labels for Zyeuté V3
+# 🏷️ Issue Labels for Zyeuté V3
 
-This document defines the standardized labels used for issue tracking in the Zyeuté V3 repository.
+This document defines the standardized labels used for issue tracking and audit triage in the Zyeuté V3 repository.
 
-## Label Categories
+## 📊 Label Categories
+
+### Priority Labels (Audit Triage System)
+
+| Label | Color | Description | SLA |
+|-------|-------|-------------|-----|
+| `critical` | `#B60205` 🔴 | Production broken, revenue blocked, security critical | 24 hours |
+| `high` | `#D93F0B` 🟠 | Major feature broken, significant user impact | 3-5 days |
+| `medium` | `#FBCA04` 🟡 | Feature partially broken, moderate impact | 1-2 weeks |
+| `low` | `#0E8A16` 🟢 | Minor issues, cosmetic, nice-to-have | 3-4 weeks |
+
+### Effort Estimation Labels
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `effort/1h` | `#C2E0C6` | Quick fixes, 30min - 1 hour |
+| `effort/2-4h` | `#BFD4F2` | Small changes, 1-4 hours |
+| `effort/4-8h` | `#D4C5F9` | Medium complexity, 4-8 hours |
+| `effort/8h+` | `#F9C5D5` | Complex, 8+ hours |
 
 ### Type Labels
 
 | Label | Color | Description |
 |-------|-------|-------------|
-| `bug` | `#d73a4a` | Something isn't working correctly |
-| `feature` | `#0e8a16` | New feature or functionality request |
-| `enhancement` | `#a2eeef` | Improvement to existing feature |
-| `documentation` | `#0075ca` | Improvements or additions to documentation |
-
-### Priority Labels
-
-| Label | Color | Description |
-|-------|-------|-------------|
-| `critical` | `#b60205` | Critical issue requiring immediate attention |
-| `high` | `#d93f0b` | High priority issue |
-| `medium` | `#fbca04` | Medium priority issue |
-| `low` | `#0e8a16` | Low priority issue |
+| `bug` | `#D73A4A` | Something isn't working |
+| `feature` | `#A2EEEF` | New feature or enhancement |
+| `security` | `#D93F0B` | Security vulnerability |
+| `refactor` | `#5319E7` | Code improvement, no functionality change |
+| `enhancement` | `#84B6EB` | Improvement to existing feature |
+| `documentation` | `#0075CA` | Documentation improvements |
+| `testing` | `#1D76DB` | Test coverage, test infrastructure |
 
 ### Status Labels
 
 | Label | Color | Description |
 |-------|-------|-------------|
-| `in progress` | `#d4c5f9` | Currently being worked on |
-| `blocked` | `#e99695` | Blocked by another issue or external dependency |
-| `fixed` | `#5cb85c` | Issue has been fixed and is awaiting verification |
-| `wontfix` | `#ffffff` | This will not be worked on |
-| `needs-triage` | `#fef2c0` | Needs review and prioritization |
-| `help wanted` | `#008672` | Community contributions welcome |
-| `good first issue` | `#7057ff` | Good for newcomers |
+| `backlog` | `#EDEDED` | Identified but not yet prioritized |
+| `ready` | `#C2E0C6` | Prioritized and ready to work |
+| `in-progress` | `#FBCA04` | Currently being developed |
+| `review` | `#D4C5F9` | In code review or testing |
+| `blocked` | `#B60205` | Cannot proceed due to dependencies |
+| `needs-triage` | `#FEF2C0` | Needs review and prioritization |
+| `wontfix` | `#FFFFFF` | Won't be fixed/implemented |
+
+### Audit Labels
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `audit` | `#5319E7` | From audit findings (Issues #1-3) |
+| `triaged` | `#1D76DB` | Fully analyzed and prioritized |
+| `test-coverage` | `#0E8A16` | Test coverage gaps |
+
+### Component Labels
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `auth` | `#FEF2C0` | Authentication / Authorization |
+| `ui` | `#BFD4F2` | User Interface |
+| `api` | `#C5DEF5` | Backend API |
+| `database` | `#D4C5F9` | Database / Supabase |
+| `payment` | `#F9C5D5` | Stripe / Payment processing |
+| `performance` | `#E99695` | Performance optimization |
+| `mobile` | `#FFA07A` | Mobile-specific issues |
+
+### Special Labels
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `blocker` | `#B60205` | Blocks other issues from progressing |
+| `breaking-change` | `#D93F0B` | Breaking change requiring migration |
+| `good first issue` | `#7057FF` | Good for newcomers |
+| `help wanted` | `#008672` | Extra attention needed |
+| `duplicate` | `#CFD3D7` | Duplicate of another issue |
 
 ## Creating Labels via GitHub CLI
 

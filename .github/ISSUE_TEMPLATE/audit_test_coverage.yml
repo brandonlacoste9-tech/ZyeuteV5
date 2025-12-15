@@ -1,0 +1,221 @@
+name: ✅ Test Coverage Gap (Audit)
+description: Test coverage gap or missing tests from CI/CD audit
+title: "[TEST] Component: Test Coverage Issue"
+labels: ["testing", "audit", "test-coverage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✅ Test Coverage Audit Finding
+        This test coverage gap was identified during the CI/CD audit (Issue #3).
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🚨 Priority
+      description: How important is this test coverage
+      options:
+        - "🔴 CRITICAL - Core functionality untested"
+        - "🟠 HIGH - Major feature lacks tests"
+        - "🟡 MEDIUM - Partial test coverage"
+        - "🟢 LOW - Nice to have additional tests"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: test-type
+    attributes:
+      label: 🧪 Test Type
+      description: What type of tests are needed
+      options:
+        - Unit Tests
+        - Integration Tests
+        - End-to-End Tests
+        - Component Tests
+        - API Tests
+        - Security Tests
+        - Performance Tests
+        - Accessibility Tests
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 📝 Description
+      description: What test coverage is missing
+      placeholder: Describe what needs testing...
+    validations:
+      required: true
+
+  - type: textarea
+    id: component
+    attributes:
+      label: 📂 Component / Module
+      description: What part of the codebase needs tests
+      placeholder: |
+        Component: LoginForm
+        File: /src/components/LoginForm.tsx
+        Functions: handleSubmit, validateEmail, validatePassword
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-coverage
+    attributes:
+      label: 📊 Current Coverage
+      description: Current test coverage stats
+      placeholder: |
+        Current Coverage: 45%
+        Lines Covered: 120 / 267
+        Branches Covered: 8 / 24
+        Functions Covered: 12 / 20
+      value: |
+        Current Coverage: %
+        Lines Covered:  / 
+        Branches Covered:  / 
+        Functions Covered:  / 
+
+  - type: textarea
+    id: target-coverage
+    attributes:
+      label: 🎯 Target Coverage
+      description: Desired test coverage after fix
+      placeholder: |
+        Target Coverage: 80%
+        Lines to Cover: 214 / 267
+        Branches to Cover: 20 / 24
+      value: |
+        Target Coverage: 80%
+        Lines to Cover:  / 
+        Branches to Cover:  / 
+
+  - type: textarea
+    id: test-scenarios
+    attributes:
+      label: 🧪 Test Scenarios Needed
+      description: Specific scenarios that need testing
+      placeholder: |
+        **Happy Path:**
+        - [ ] Scenario 1
+        - [ ] Scenario 2
+        
+        **Edge Cases:**
+        - [ ] Edge case 1
+        - [ ] Edge case 2
+        
+        **Error Handling:**
+        - [ ] Error scenario 1
+        - [ ] Error scenario 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: ✅ Acceptance Criteria
+      description: How to know tests are complete
+      placeholder: |
+        - [ ] All test scenarios pass
+        - [ ] Coverage meets target (80%+)
+        - [ ] No flaky tests
+        - [ ] Tests run in CI/CD
+        - [ ] Documentation updated
+    validations:
+      required: true
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: ⏱️ Effort Estimate
+      description: Time to implement tests
+      options:
+        - "1-2h (Simple tests)"
+        - "2-4h (Medium complexity)"
+        - "4-8h (Complex scenarios)"
+        - "8h+ (Full test suite)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: files-affected
+    attributes:
+      label: 📂 Test Files to Create/Update
+      description: Test files that need work
+      placeholder: |
+        **New Files:**
+        - /src/components/__tests__/LoginForm.test.tsx
+        - /src/services/__tests__/auth.test.ts
+        
+        **Update Files:**
+        - /src/pages/__tests__/LoginPage.test.tsx
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 🔧 Test Dependencies
+      description: Tools and libraries needed
+      placeholder: |
+        - Testing Framework: Vitest / Jest
+        - Mocking: MSW
+        - Testing Library: @testing-library/react
+        - Utilities: faker, test-utils
+      value: |
+        - Testing Framework: 
+        - Mocking: 
+        - Testing Library: 
+        - Utilities: 
+
+  - type: textarea
+    id: test-approach
+    attributes:
+      label: 🛠️ Testing Approach
+      description: How to implement these tests
+      placeholder: |
+        1. Setup test environment
+        2. Create test fixtures
+        3. Write unit tests for functions
+        4. Write integration tests for flows
+        5. Add mocks for external dependencies
+        6. Verify coverage targets met
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: 🔗 Related Issues
+      description: Dependencies and relationships
+      placeholder: |
+        - Tests for: #XX (bug fix)
+        - Blocks: #YY (deployment)
+        - Related to: #ZZ (feature)
+
+  - type: textarea
+    id: test-data
+    attributes:
+      label: 📊 Test Data / Fixtures
+      description: Mock data needed for tests
+      placeholder: |
+        - User fixtures: test users, auth tokens
+        - API responses: success, error cases
+        - Database state: initial data, edge cases
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ Test Implementation Checklist
+      description: Before marking complete
+      options:
+        - label: Test environment configured
+        - label: All test scenarios implemented
+        - label: Tests pass locally
+        - label: Tests pass in CI/CD
+        - label: Coverage target met (80%+)
+        - label: No flaky tests
+        - label: Test documentation added
+        - label: Code review completed
