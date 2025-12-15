@@ -1,0 +1,463 @@
+name: 🚨 AGENT 1 - SWE Live Audit (Login Page)
+description: Complete 4-phase audit for GitHub Copilot SWE Agent
+title: "[AGENT-SWE]: Login Page - Complete Live Audit & Root Cause Analysis"
+labels: ["agent-task", "swe-audit", "critical", "login"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🤖 GitHub Copilot SWE Agent - Assignment Brief
+        
+        **Agent Type:** Software Engineering (SWE) Agent  
+        **Priority:** 🚨 CRITICAL  
+        **Timeline:** 15 hours (Phases 1-4)  
+        **Expected Deliverables:** Phase reports, root causes, PRs with fixes
+        
+        ---
+        
+        ## 🎯 YOUR MISSION
+        
+        You are tasked with conducting a **complete live audit** of the Zyeuté login page at https://www.zyeute.com/login.
+        
+        **The Problem:** Login is non-functional (500 errors, timeouts, UI issues). Users cannot authenticate.
+        
+        **Your Goal:** Identify ALL issues, determine root causes, create PRs with fixes, and re-test to verify.
+        
+        ---
+        
+        ## 🏗️ CRITICAL: Architecture Shift Directive
+        
+        **⚠️ YOU MUST ABANDON THE SERVER-SIDE PROXY PATTERN**
+        
+        ### Old Pattern (CAUSES 500 ERRORS - DO NOT USE):
+        ```typescript
+        // ❌ DEPRECATED - This is in the handleSubmit function (Login.tsx) and MUST be removed
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        });
+        ```
+        
+        ### New Pattern (REQUIRED - USE THIS):
+        ```typescript
+        // ✅ Direct Client-Side Supabase Auth (The Fix)
+        import { supabase } from '../lib/supabase';
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) {
+          throw new Error(error.message);
+        }
+        
+        // Clear guest mode on successful login
+        localStorage.removeItem(GUEST_MODE_KEY);
+        localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+        localStorage.removeItem(GUEST_VIEWS_KEY);
+        
+        window.location.href = '/';
+        ```
+        
+        **Why:** The `/api/auth/login` endpoint causes Vercel timeouts and 500 errors. Direct Supabase client calls are faster, more secure, and eliminate the proxy layer.
+        
+        ---
+
+  - type: textarea
+    id: phase_1
+    attributes:
+      label: "📋 PHASE 1: Live Site Testing (4 hours)"
+      description: |
+        Test the live login page at https://www.zyeute.com/login
+      placeholder: |
+        **Test Results:**
+        
+        1. **Form Input Testing:**
+           - [ ] Email field accepts input
+           - [ ] Password field accepts input
+           - [ ] Password toggle button works
+           - [ ] "Forgot password" link works
+        
+        2. **Button Testing:**
+           - [ ] Login button is clickable
+           - [ ] Google login button works
+           - [ ] Guest mode button works
+           - [ ] Loading states display correctly
+        
+        3. **Navigation Testing:**
+           - [ ] "Créer un compte" link navigates to signup
+           - [ ] Logo is visible and styled correctly
+        
+        4. **Console Errors:**
+           ```
+           [Paste console errors here]
+           ```
+        
+        5. **Network Errors:**
+           ```
+           [Paste network tab errors here]
+           ```
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Visit https://www.zyeute.com/login in Chrome DevTools open
+        2. Test each form field, button, and link
+        3. Check Console tab for JavaScript errors
+        4. Check Network tab for failed requests
+        5. Document everything you find
+        
+        **Report your findings above.**
+
+  - type: textarea
+    id: phase_2
+    attributes:
+      label: "🔍 PHASE 2: Console Diagnostics (3 hours)"
+      description: |
+        Analyze browser console output and network traffic
+      placeholder: |
+        **Console Diagnostics:**
+        
+        1. **JavaScript Errors:**
+           - Error 1: [Description]
+           - Error 2: [Description]
+        
+        2. **Network Failures:**
+           - Request: POST /api/auth/login
+           - Status: 500
+           - Response: [error message]
+        
+        3. **Performance Issues:**
+           - Slow network requests: [list]
+           - Memory leaks: [if any]
+        
+        4. **Other Issues:**
+           - [List any other findings]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Report your diagnostics above.**
+
+  - type: textarea
+    id: phase_3
+    attributes:
+      label: "🧑‍💻 PHASE 3: Source Code Analysis (5 hours)"
+      description: |
+        Review the actual source code files
+      placeholder: |
+        **Source Code Analysis:**
+        
+        **Files Reviewed:**
+        1. client/src/pages/Login.tsx
+           - Issues found: [list]
+           - Lines affected: [line numbers]
+        
+        2. client/src/hooks/useGuestMode.ts
+           - Status: ✅ Working / ❌ Broken
+        
+        3. client/src/components/GuestBanner.tsx
+           - Status: ✅ Working / ❌ Broken
+        
+        4. client/src/lib/supabase.ts
+           - Issues found: [list]
+        
+        5. client/index.html
+           - CSP headers: ✅ Correct / ⚠️ Needs update
+        
+        **Code Quality Issues:**
+        - [List any patterns, anti-patterns, or bad practices]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Key Files to Review:**
+        - `client/src/pages/Login.tsx` (Main login logic - **FIX LINE 65**)
+        - `client/src/hooks/useGuestMode.ts` (Guest session)
+        - `client/src/components/GuestBanner.tsx` (Banner component)
+        - `client/src/lib/supabase.ts` (Auth helper functions)
+        - `client/index.html` (CSP headers for Supabase/Stripe)
+        
+        **Report your code analysis above.**
+
+  - type: textarea
+    id: phase_4
+    attributes:
+      label: "🎯 PHASE 4: Root Cause Identification (3 hours)"
+      description: |
+        For EVERY issue found, determine the exact root cause
+      placeholder: |
+        **Root Causes Identified:**
+        
+        ### Issue #1: Login Form Submission Fails with 500 Error
+        - **Symptom:** Clicking login button returns 500 error
+        - **Root Cause:** Using deprecated `/api/auth/login` proxy (Login.tsx:65)
+        - **Location:** `client/src/pages/Login.tsx:65-76`
+        - **Severity:** 🚨 CRITICAL
+        - **Fix:** Replace with direct Supabase `signInWithPassword` call
+        - **PR Created:** #[PR number]
+        
+        ### Issue #2: [Title]
+        - **Symptom:** [What users see]
+        - **Root Cause:** [Technical reason]
+        - **Location:** [File:line]
+        - **Severity:** CRITICAL / HIGH / MEDIUM / LOW
+        - **Fix:** [Solution description]
+        - **PR Created:** #[PR number]
+        
+        [Continue for all issues found...]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. For EVERY issue from Phases 1-3, identify the root cause
+        2. Use this format for each issue:
+           - Symptom (what user sees)
+           - Root Cause (technical reason)
+           - Location (file and line numbers)
+           - Severity (CRITICAL/HIGH/MEDIUM/LOW)
+           - Fix (exact code changes needed)
+           - PR number (link to your fix PR)
+        
+        **Report your root causes above.**
+
+  - type: textarea
+    id: prs_created
+    attributes:
+      label: "🔧 Pull Requests Created"
+      description: |
+        List all PRs you create to fix the issues
+      placeholder: |
+        **PRs Created:**
+        
+        1. **PR #[number]: Fix login 500 error - Use direct Supabase auth**
+           - Issue: #1 (Login fails with 500)
+           - Files changed: `client/src/pages/Login.tsx`
+           - Lines changed: 65-76
+           - Status: ✅ Ready for review
+        
+        2. **PR #[number]: [Title]**
+           - Issue: #[issue number]
+           - Files changed: [list]
+           - Status: ✅ Ready / 🔄 In progress
+        
+        [Continue for all PRs...]
+      value: |
+        **Status:** ⏳ No PRs created yet
+        
+        **Instructions:**
+        - Create ONE PR per issue found
+        - Include clear descriptions and before/after code
+        - Link back to this issue in each PR
+        - Request review from @brandonlacoste9-tech
+
+  - type: textarea
+    id: retesting
+    attributes:
+      label: "✅ Re-testing After Fixes"
+      description: |
+        After your PRs are merged, re-test the login page
+      placeholder: |
+        **Re-test Results:**
+        
+        1. **Login with Email/Password:**
+           - Status: ✅ Working / ❌ Still broken
+           - Test details: [description]
+        
+        2. **Google OAuth:**
+           - Status: ✅ Working / ❌ Still broken
+        
+        3. **Guest Mode:**
+           - Status: ✅ Working / ❌ Still broken
+        
+        4. **Console Errors:**
+           - Count: 0 errors ✅ / [X] errors ❌
+        
+        5. **Overall Success Rate:**
+           - Form submission: [X]% success rate
+           - Goal: >95% ✅
+      value: |
+        **Status:** ⏳ Pending (will update after PRs merged)
+
+  - type: checkboxes
+    id: success_criteria
+    attributes:
+      label: "🎯 Success Criteria"
+      description: Check off as you complete each requirement
+      options:
+        - label: "All 4 phases completed and documented above"
+          required: false
+        - label: "Root causes identified for EVERY issue found"
+          required: false
+        - label: "PRs created with exact code fixes (one PR per issue)"
+          required: false
+        - label: "Architecture shift implemented (removed `/api/auth/login`)"
+          required: false
+        - label: "Direct Supabase auth implemented in Login.tsx"
+          required: false
+        - label: "Re-testing completed and results documented"
+          required: false
+        - label: "Login page works with >95% form submission success"
+          required: false
+        - label: "0 critical console errors remaining"
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 📚 GOLDEN ARTIFACTS - Reference Code
+        
+        These are the **approved implementations** you should preserve (only fix bugs):
+        
+        ### ✅ Guest Mode Implementation (WORKING - Keep As Is)
+        
+        **File:** `client/src/hooks/useGuestMode.ts`
+        
+        ```typescript
+        // This hook is WORKING - do NOT modify unless you find a bug
+        export function useGuestMode() {
+          const [state, setState] = useState<GuestModeState>({
+            isGuest: false,
+            isExpired: false,
+            remainingTime: 0,
+            viewsCount: 0,
+          });
+        
+          useEffect(() => {
+            const checkSession = () => {
+              const guestMode = localStorage.getItem(GUEST_MODE_KEY);
+              const timestamp = localStorage.getItem(GUEST_TIMESTAMP_KEY);
+              
+              if (guestMode === 'true' && timestamp) {
+                const age = Date.now() - parseInt(timestamp, 10);
+                if (age >= GUEST_SESSION_DURATION) {
+                  localStorage.removeItem(GUEST_MODE_KEY);
+                  localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+                  localStorage.removeItem(GUEST_VIEWS_KEY);
+                  setState({ isGuest: false, isExpired: true, remainingTime: 0, viewsCount: 0 });
+                }
+              }
+            };
+            checkSession();
+            const interval = setInterval(checkSession, 60000);
+            return () => clearInterval(interval);
+          }, []);
+        
+          return { ...state, incrementViews };
+        }
+        ```
+        
+        ### ✅ Guest Banner (WORKING - Keep As Is)
+        
+        **File:** `client/src/components/GuestBanner.tsx`
+        
+        ```typescript
+        // This component is WORKING - do NOT modify unless you find a bug
+        export const GuestBanner: React.FC = () => {
+          const { isGuest, viewsCount, remainingTime } = useGuestMode();
+          const [isDismissed, setIsDismissed] = React.useState(false);
+        
+          // Show only after 3 views
+          if (!isGuest || isDismissed || viewsCount < 3) return null;
+        
+          const hoursRemaining = Math.floor(remainingTime / (1000 * 60 * 60));
+          const minutesRemaining = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+        
+          return (
+            <div className="fixed bottom-0 left-0 right-0 z-50">
+              <p>🎭 Mode Invité • {hoursRemaining}h {minutesRemaining}m restant</p>
+              <Link to="/signup">Créer un compte</Link>
+            </div>
+          );
+        };
+        ```
+        
+        ### ⚠️ Login.tsx - NEEDS FIX (Line 65)
+        
+        **File:** `client/src/pages/Login.tsx`
+        
+        **Current Code (BROKEN - Line 65-76):**
+        ```typescript
+        // ❌ This causes 500 errors - MUST be replaced
+        const handleSubmit = async (e: React.FormEvent) => {
+          e.preventDefault();
+          setError('');
+          setIsLoading(true);
+        
+          try {
+            const response = await fetch('/api/auth/login', {  // ❌ REMOVE THIS
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ email, password }),
+            });
+        
+            const data = await response.json();
+        
+            if (!response.ok) {
+              throw new Error(data.error || 'Erreur de connexion');
+            }
+        
+            // Clear guest mode and redirect...
+          }
+        }
+        ```
+        
+        **Fixed Code (USE THIS):**
+        ```typescript
+        // ✅ Direct Supabase auth - This is the fix
+        const handleSubmit = async (e: React.FormEvent) => {
+          e.preventDefault();
+          setError('');
+          setIsLoading(true);
+        
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+        
+            if (error) {
+              throw new Error(error.message);
+            }
+        
+            // Clear guest mode on successful login
+            localStorage.removeItem(GUEST_MODE_KEY);
+            localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+            localStorage.removeItem(GUEST_VIEWS_KEY);
+        
+            window.location.href = '/';
+          } catch (err: any) {
+            setError(err.message || 'Erreur de connexion');
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        ```
+        
+        ---
+        
+        ## 🔗 RELATED ISSUES
+        
+        - **Issue #2:** Code Analysis Agent (security scan will validate your fixes)
+        - **Issue #3:** CI/CD Agent (tests will verify your fixes)
+        - **Issue #4:** Issues Agent (will organize your findings into backlog)
+        
+        **Cross-Reference:** See `AUDIT_MASTER_TRACKER.md` for the full project plan.
+        
+        ---
+        
+        ## 📞 NEED HELP?
+        
+        - **Blocked?** Comment on this issue with `@brandonlacoste9-tech`
+        - **Questions?** Reference the `AUDIT_MASTER_TRACKER.md` file
+        - **Architecture unclear?** See the "CRITICAL ARCHITECTURE SHIFT" section above
+        
+        ---
+        
+        **🚀 YOU MAY BEGIN YOUR AUDIT NOW. GOOD LUCK!**

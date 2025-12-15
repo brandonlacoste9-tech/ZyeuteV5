@@ -1,0 +1,575 @@
+name: 📋 AGENT 4 - Issue Triage & Planning
+description: Issue organization and prioritization for GitHub Issues Agent
+title: "[AGENT-TRIAGE]: Issue Organization, Dependencies & Prioritization"
+labels: ["agent-task", "triage", "planning", "organization"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🤖 GitHub Issues Agent - Assignment Brief
+        
+        **Agent Type:** Issues & Planning Agent  
+        **Priority:** 🚨 HIGH  
+        **Timeline:** 4-6 hours  
+        **Expected Deliverables:** Organized issues, dependency map, prioritized backlog
+        
+        ---
+        
+        ## 🎯 YOUR MISSION
+        
+        Take the **findings from Agent 1 (SWE), Agent 2 (Security), and Agent 3 (CI/CD)** and organize them into a structured, actionable backlog.
+        
+        **Goals:**
+        1. Create individual GitHub issues for each bug/task
+        2. Map dependencies between issues
+        3. Prioritize by business impact
+        4. Estimate effort for each issue
+        5. Create a logical fix order roadmap
+        
+        ---
+        
+        ## 📥 INPUT SOURCES
+        
+        **You will receive findings from:**
+        - ✅ **Issue #1 (SWE Agent):** Root causes, bugs, code issues
+        - ✅ **Issue #2 (Security Agent):** Vulnerabilities, code quality issues
+        - ✅ **Issue #3 (CI/CD Agent):** Test failures, missing tests
+        
+        **Your Job:** Turn those findings into well-structured, actionable GitHub issues.
+        
+        ---
+
+  - type: textarea
+    id: issues_created
+    attributes:
+      label: "📋 GitHub Issues Created"
+      description: |
+        List all issues you create from the audit findings
+      placeholder: |
+        ### ISSUES CREATED:
+        
+        #### 🚨 CRITICAL PRIORITY (Fix Immediately):
+        
+        1. **Issue #[X]: [BUG] Login fails with 500 error - Replace proxy with direct Supabase auth**
+           - **Type:** Bug
+           - **Priority:** Critical
+           - **Effort:** 2 hours
+           - **Source:** Agent 1 (SWE) - Phase 4, Issue #1
+           - **Description:**
+             ```
+             Login form submission fails with 500 error when using /api/auth/login.
+             
+             Root Cause: Server-side proxy pattern causes Vercel timeouts.
+             
+             Fix: Replace fetch('/api/auth/login') with direct supabase.auth.signInWithPassword() call.
+             
+             Affected File: client/src/pages/Login.tsx:65-76
+             ```
+           - **Acceptance Criteria:**
+             - [ ] Remove /api/auth/login fetch call
+             - [ ] Implement direct Supabase auth
+             - [ ] Login works without 500 errors
+             - [ ] Tests pass
+           - **Assignee:** @brandonlacoste9-tech
+           - **Labels:** `bug`, `critical`, `login`, `auth`
+           - **Milestone:** v1.0 - Login Fix
+           - **Created:** ✅ [Link to issue]
+        
+        2. **Issue #[Y]: [SECURITY] Hardcoded API key in [file]**
+           - **Type:** Security
+           - **Priority:** Critical
+           - **Effort:** 1 hour
+           - **Source:** Agent 2 (Security) - Critical #1
+           - **Description:** [...]
+           - **Acceptance Criteria:** [...]
+           - **Created:** ⏳ Pending
+        
+        ---
+        
+        #### 🟠 HIGH PRIORITY (Fix This Week):
+        
+        3. **Issue #[Z]: [BUG] Password toggle button not working**
+           - **Priority:** High
+           - **Effort:** 1 hour
+           - **Source:** Agent 1 - Phase 1
+           - **Created:** ⏳ Pending
+        
+        4. **Issue #[A]: [TEST] Add unit tests for Login component**
+           - **Priority:** High
+           - **Effort:** 3 hours
+           - **Source:** Agent 3 (CI/CD)
+           - **Created:** ⏳ Pending
+        
+        ---
+        
+        #### 🟡 MEDIUM PRIORITY (Fix Next Sprint):
+        
+        5. **Issue #[B]: [REFACTOR] Remove duplicate code in auth module**
+           - **Priority:** Medium
+           - **Effort:** 2 hours
+           - **Source:** Agent 2 - Code Quality
+           - **Created:** ⏳ Pending
+        
+        [Continue for all findings...]
+        
+        ---
+        
+        **Total Issues Created:** [number]  
+        **Critical:** [X] | **High:** [Y] | **Medium:** [Z] | **Low:** [W]
+      value: |
+        **Status:** ⏳ Pending (waiting for Agent 1, 2, 3 findings)
+        
+        **Instructions:**
+        1. Wait for Agents 1, 2, 3 to post their findings
+        2. Read through all findings carefully
+        3. Create one GitHub issue per bug/task/vulnerability
+        4. Use the template format above
+        5. Link back to the source (which agent found it)
+        6. Include clear acceptance criteria
+        
+        **Document your created issues above.**
+
+  - type: textarea
+    id: dependency_map
+    attributes:
+      label: "🔗 Issue Dependencies & Relationships"
+      description: |
+        Map out which issues depend on others
+      placeholder: |
+        ### DEPENDENCY MAP:
+        
+        **Blocking Relationships:**
+        
+        ```
+        Issue #X (Fix server auth) → BLOCKS → Issue #Y (Add OAuth tests)
+           └─ Reason: Can't test OAuth until auth architecture is fixed
+        
+        Issue #Z (Add .env.example) → BLOCKS → Issue #A (Document setup)
+           └─ Reason: Setup docs need to reference .env.example
+        
+        Issue #B (Fix input validation) → BLOCKS → Issue #C (Add validation tests)
+           └─ Reason: Can't test validation until implementation exists
+        ```
+        
+        **Parallel Work (Can Do Simultaneously):**
+        
+        ```
+        Issue #D (Fix guest banner CSS)  ║  Issue #E (Add error logging)
+        Issue #F (Update README)         ║  Issue #G (Add ESLint rules)
+        ```
+        
+        **Dependency Groups:**
+        
+        **Group 1: Auth Architecture (Sequential)**
+        1. Issue #X: Fix server auth (2 hrs)
+        2. Issue #Y: Update OAuth callback (1 hr)
+        3. Issue #Z: Add auth tests (3 hrs)
+        
+        **Group 2: Guest Mode (Sequential)**
+        1. Issue #A: Fix session expiry (1 hr)
+        2. Issue #B: Add banner tests (2 hrs)
+        
+        **Group 3: Code Quality (Parallel)**
+        - Issue #C: Remove unused imports (30 min)
+        - Issue #D: Fix TypeScript errors (1 hr)
+        - Issue #E: Add documentation (2 hrs)
+        
+        **Critical Path:** Issues #X → #Y → #Z (6 hours total)
+      value: |
+        **Status:** ⏳ Pending (will map after issues created)
+        
+        **Instructions:**
+        1. Identify which issues depend on others
+        2. Create a visual dependency map
+        3. Identify the critical path (longest chain of dependencies)
+        4. Mark which issues can be done in parallel
+        
+        **Document your dependency map above.**
+
+  - type: textarea
+    id: prioritization
+    attributes:
+      label: "⚡ Prioritization & Business Impact"
+      description: |
+        Rank issues by business impact and urgency
+      placeholder: |
+        ### PRIORITIZATION MATRIX:
+        
+        **Ranked by Business Impact:**
+        
+        | Rank | Issue # | Title | Impact | Effort | ROI | Priority |
+        |------|---------|-------|--------|--------|-----|----------|
+        | 1 | #X | Fix login 500 error | 🔴 Revenue blocked | 2h | ⭐⭐⭐⭐⭐ | CRITICAL |
+        | 2 | #Y | Hardcoded API key | 🔴 Security risk | 1h | ⭐⭐⭐⭐⭐ | CRITICAL |
+        | 3 | #Z | Password toggle broken | 🟠 UX blocker | 1h | ⭐⭐⭐⭐ | HIGH |
+        | 4 | #A | Add auth tests | 🟠 Quality risk | 3h | ⭐⭐⭐ | HIGH |
+        | 5 | #B | Duplicate code | 🟡 Tech debt | 2h | ⭐⭐ | MEDIUM |
+        
+        **Impact Categories:**
+        - 🔴 **CRITICAL:** Revenue blocked, security risk, app unusable
+        - 🟠 **HIGH:** Major UX issue, data integrity risk, legal compliance
+        - 🟡 **MEDIUM:** Minor UX issue, tech debt, performance
+        - 🟢 **LOW:** Nice-to-have, cosmetic, documentation
+        
+        **ROI Calculation:**
+        - ⭐⭐⭐⭐⭐ (5 stars): Huge impact, low effort
+        - ⭐⭐⭐⭐ (4 stars): High impact, low effort OR huge impact, medium effort
+        - ⭐⭐⭐ (3 stars): Medium impact, medium effort
+        - ⭐⭐ (2 stars): Low impact, high effort
+        - ⭐ (1 star): Low impact, low priority
+        
+        **Recommended Fix Order:**
+        1. Issue #X (2h) - CRITICAL
+        2. Issue #Y (1h) - CRITICAL
+        3. Issue #Z (1h) - HIGH
+        4. Issue #A (3h) - HIGH
+        5. Issue #B (2h) - MEDIUM
+        [Continue...]
+      value: |
+        **Status:** ⏳ Pending (will prioritize after issues created)
+        
+        **Instructions:**
+        1. Assess business impact of each issue
+        2. Consider effort (time) required
+        3. Calculate ROI (impact vs effort)
+        4. Create prioritized list
+        5. Document recommended fix order
+        
+        **Document your prioritization above.**
+
+  - type: textarea
+    id: effort_estimates
+    attributes:
+      label: "⏱️ Effort Estimates"
+      description: |
+        Estimate time required for each issue
+      placeholder: |
+        ### EFFORT ESTIMATES:
+        
+        **By Priority:**
+        
+        #### 🚨 CRITICAL (Total: 3 hours):
+        - Issue #X: Fix login 500 error → **2 hours**
+          - Analysis: 15 min
+          - Coding: 45 min
+          - Testing: 30 min
+          - Review: 30 min
+        
+        - Issue #Y: Hardcoded API key → **1 hour**
+          - Find all instances: 20 min
+          - Move to env vars: 20 min
+          - Test: 20 min
+        
+        #### 🟠 HIGH (Total: 7 hours):
+        - Issue #Z: Password toggle → **1 hour**
+        - Issue #A: Add auth tests → **3 hours**
+        - Issue #B: OAuth callback → **2 hours**
+        - Issue #C: Error handling → **1 hour**
+        
+        #### 🟡 MEDIUM (Total: 8 hours):
+        - Issue #D: Refactor → **2 hours**
+        - Issue #E: Documentation → **2 hours**
+        - Issue #F: Code cleanup → **1 hour**
+        - Issue #G: Performance → **3 hours**
+        
+        #### 🟢 LOW (Total: 4 hours):
+        - Issue #H: Minor UI fix → **1 hour**
+        - Issue #I: Update README → **1 hour**
+        - Issue #J: Add comments → **2 hours**
+        
+        ---
+        
+        **Total Estimated Time:** 22 hours  
+        **Sprint Capacity:** 40 hours/week  
+        **Timeline:** Can complete in ~3-4 days with 1 developer
+        
+        **Breakdown:**
+        - Critical fixes: 3 hrs (Day 1, Morning)
+        - High priority: 7 hrs (Day 1 Afternoon + Day 2 Morning)
+        - Medium priority: 8 hrs (Day 2 Afternoon + Day 3)
+        - Low priority: 4 hrs (Day 4, if time permits)
+      value: |
+        **Status:** ⏳ Pending (will estimate after issues created)
+        
+        **Instructions:**
+        1. Estimate time for each issue (be realistic)
+        2. Break down large tasks (>4 hrs) into subtasks
+        3. Add buffer for code review and testing
+        4. Calculate total time per priority level
+        5. Create timeline based on team capacity
+        
+        **Document your estimates above.**
+
+  - type: textarea
+    id: fix_roadmap
+    attributes:
+      label: "🗺️ Fix Order Roadmap"
+      description: |
+        Step-by-step plan for fixing all issues
+      placeholder: |
+        ### FIX ORDER ROADMAP:
+        
+        **Phase 1: Critical Fixes (Day 1 AM - 3 hours)**
+        ```
+        Hour 0-2:   Issue #X - Fix login 500 error (Direct Supabase auth)
+        Hour 2-3:   Issue #Y - Remove hardcoded API key
+        
+        ✅ Milestone: Login works, no critical security issues
+        ```
+        
+        **Phase 2: High-Priority Fixes (Day 1 PM + Day 2 AM - 7 hours)**
+        ```
+        Hour 3-4:   Issue #Z - Fix password toggle button
+        Hour 4-6:   Issue #A - Add OAuth callback fix
+        Hour 6-9:   Issue #B - Add unit tests for auth
+        Hour 9-10:  Issue #C - Improve error handling
+        
+        ✅ Milestone: All major UX issues fixed, test coverage >80%
+        ```
+        
+        **Phase 3: Medium-Priority Fixes (Day 2 PM + Day 3 - 8 hours)**
+        ```
+        Hour 10-12: Issue #D - Refactor duplicate code
+        Hour 12-14: Issue #E - Add documentation
+        Hour 14-15: Issue #F - Code cleanup (unused imports)
+        Hour 15-18: Issue #G - Performance optimizations
+        
+        ✅ Milestone: Code quality improved, tech debt reduced
+        ```
+        
+        **Phase 4: Low-Priority Fixes (Day 4 - 4 hours, optional)**
+        ```
+        Hour 18-19: Issue #H - Minor UI fix
+        Hour 19-20: Issue #I - Update README
+        Hour 20-22: Issue #J - Add code comments
+        
+        ✅ Milestone: Polish complete, ready for Phase 2 features
+        ```
+        
+        ---
+        
+        **Key Milestones:**
+        - ✅ **Day 1 End:** Login works, critical bugs fixed
+        - ✅ **Day 2 End:** High-priority fixes done, tests passing
+        - ✅ **Day 3 End:** Code quality improved, ready for production
+        - ✅ **Day 4 End:** All issues resolved, documentation complete
+        
+        **Critical Path:** Issues #X → #Y → #Z (4 hours)
+        **Parallel Work Opportunities:** After Hour 3, can work on issues D-J in parallel
+      value: |
+        **Status:** ⏳ Pending (will create roadmap after prioritization)
+        
+        **Instructions:**
+        1. Order issues based on dependencies and priority
+        2. Group into phases (Critical, High, Medium, Low)
+        3. Create hour-by-hour timeline
+        4. Identify key milestones
+        5. Mark parallel work opportunities
+        
+        **Document your roadmap above.**
+
+  - type: textarea
+    id: labels_milestones
+    attributes:
+      label: "🏷️ Labels & Milestones Setup"
+      description: |
+        Organize issues with labels and milestones
+      placeholder: |
+        ### LABELS TO USE:
+        
+        **Type Labels:**
+        - `bug` - Something isn't working
+        - `security` - Security vulnerability
+        - `feature` - New feature or enhancement
+        - `test` - Testing-related
+        - `refactor` - Code improvement without changing functionality
+        - `docs` - Documentation update
+        
+        **Priority Labels:**
+        - `critical` - Must fix immediately
+        - `high` - Fix this week
+        - `medium` - Fix next sprint
+        - `low` - Nice to have
+        
+        **Area Labels:**
+        - `auth` - Authentication/authorization
+        - `login` - Login page specific
+        - `guest-mode` - Guest mode feature
+        - `ui` - User interface
+        - `api` - Backend API
+        
+        **Status Labels:**
+        - `blocked` - Waiting on dependency
+        - `in-progress` - Currently being worked on
+        - `needs-review` - Ready for code review
+        - `ready-to-merge` - Approved and ready
+        
+        ---
+        
+        ### MILESTONES TO CREATE:
+        
+        1. **v1.0 - Login Fix (Week 1)**
+           - Due: December 21, 2025
+           - Issues: #X, #Y, #Z (Critical & High)
+           - Goal: Login fully functional
+        
+        2. **v1.1 - Quality & Tests (Week 2)**
+           - Due: December 28, 2025
+           - Issues: #A, #B, #C (High & Medium)
+           - Goal: 80%+ test coverage, code quality improved
+        
+        3. **v1.2 - Polish (Week 3)**
+           - Due: January 4, 2026
+           - Issues: #D, #E, #F (Medium & Low)
+           - Goal: Tech debt reduced, documentation complete
+        
+        4. **v2.0 - Phase 2 Features (Future)**
+           - Due: TBD
+           - Goal: OAuth providers, 2FA, password strength, etc.
+      value: |
+        **Status:** ⏳ Pending (will setup after issues created)
+        
+        **Instructions:**
+        1. Create/verify all needed labels exist
+        2. Apply appropriate labels to each issue
+        3. Create milestones for logical release groups
+        4. Assign issues to milestones
+        5. Set due dates based on roadmap
+        
+        **Document your labels & milestones above.**
+
+  - type: checkboxes
+    id: success_criteria
+    attributes:
+      label: "🎯 Success Criteria"
+      description: Check off as you complete each requirement
+      options:
+        - label: "All bugs/tasks converted to GitHub issues (one per finding)"
+          required: false
+        - label: "Each issue has clear description and acceptance criteria"
+          required: false
+        - label: "Dependencies documented and mapped visually"
+          required: false
+        - label: "Issues prioritized by business impact"
+          required: false
+        - label: "Effort estimates provided for each issue"
+          required: false
+        - label: "Fix order roadmap created with timeline"
+          required: false
+        - label: "Labels and milestones properly configured"
+          required: false
+        - label: "Critical path identified"
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 📚 ISSUE TEMPLATE FORMAT
+        
+        Use this template when creating each issue:
+        
+        ```markdown
+        ## Description
+        [Clear description of the bug/task from audit findings]
+        
+        ## Root Cause
+        [Technical reason this is happening - from Agent 1 findings]
+        
+        ## Current Behavior
+        [What's happening now]
+        
+        ## Expected Behavior
+        [What should happen]
+        
+        ## Location
+        - **File:** `client/src/pages/Login.tsx`
+        - **Lines:** 65-76
+        
+        ## Proposed Fix
+        ```typescript
+        // Before (current broken code)
+        [paste current code]
+        
+        // After (proposed fix)
+        [paste fixed code]
+        ```
+        
+        ## Acceptance Criteria
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] All tests pass
+        - [ ] Code reviewed and approved
+        
+        ## Source
+        Found by: Agent 1 (SWE) - Phase 4, Issue #1
+        
+        ## Dependencies
+        - Blocks: Issue #[Y]
+        - Blocked by: Issue #[X]
+        
+        ## Effort Estimate
+        **2 hours** (Analysis: 15min, Coding: 45min, Testing: 30min, Review: 30min)
+        
+        ## Priority
+        🚨 CRITICAL - Revenue blocked, must fix immediately
+        
+        ## Labels
+        `bug`, `critical`, `login`, `auth`
+        
+        ## Milestone
+        v1.0 - Login Fix
+        
+        ## Assignee
+        @brandonlacoste9-tech
+        ```
+        
+        ---
+        
+        ## 🔗 RELATED ISSUES
+        
+        - **Issue #1:** SWE Agent (source of bug findings)
+        - **Issue #2:** Security Agent (source of security findings)
+        - **Issue #3:** CI/CD Agent (source of test findings)
+        
+        **Cross-Reference:** See `AUDIT_MASTER_TRACKER.md` for overall plan.
+        
+        ---
+        
+        ## 💡 BEST PRACTICES
+        
+        ### Writing Good Issue Titles:
+        - ✅ `[BUG] Login fails with 500 error when using email/password`
+        - ❌ `Login broken`
+        
+        ### Writing Clear Descriptions:
+        - Include **what**, **why**, and **how to fix**
+        - Add code snippets for context
+        - Reference source (which agent found it)
+        
+        ### Setting Priorities:
+        - **CRITICAL:** Revenue blocked, security risk, app unusable
+        - **HIGH:** Major UX issue, data risk
+        - **MEDIUM:** Minor UX issue, tech debt
+        - **LOW:** Nice-to-have, cosmetic
+        
+        ### Effort Estimation:
+        - Small: < 2 hours
+        - Medium: 2-4 hours
+        - Large: 4-8 hours
+        - X-Large: > 8 hours (break into subtasks)
+        
+        ---
+        
+        ## 📞 NEED HELP?
+        
+        - **Blocked?** Comment with `@brandonlacoste9-tech`
+        - **Questions?** Reference `AUDIT_MASTER_TRACKER.md`
+        - **Need findings?** Check Issues #1, #2, #3 for audit reports
+        
+        ---
+        
+        **🚀 YOU MAY BEGIN ORGANIZING ISSUES NOW. GOOD LUCK!**
