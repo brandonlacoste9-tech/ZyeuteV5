@@ -92,21 +92,20 @@ const LazyLoadFallback: React.FC = () => (
   </div>
 );
 
-// Protected Route Component - Uses session-based auth + guest mode
+// Protected Route Component - Uses Supabase auth + guest mode
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for authenticated user
-        const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
-            setIsAuthenticated(true);
-            return;
-          }
+        // Check for Supabase authenticated user
+        const { supabase } = await import('./lib/supabase');
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setIsAuthenticated(true);
+          return;
         }
         
         // Check for guest mode

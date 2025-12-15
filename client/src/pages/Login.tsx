@@ -25,15 +25,15 @@ export const Login: React.FC = () => {
   React.useEffect(() => {
     const checkUser = async () => {
       try {
-        const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
-            window.location.href = '/';
-          }
+        const { getCurrentUser } = await import('../lib/supabase');
+        const user = await getCurrentUser();
+        if (user) {
+          loginLogger.info('✅ User already logged in, redirecting...');
+          window.location.href = '/';
         }
       } catch (err) {
         // Not logged in, stay on login page
+        loginLogger.debug('No existing session found');
       }
     };
     checkUser();
@@ -62,24 +62,27 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
+      // ✅ DIRECT CLIENT-SIDE AUTH - No server proxy
+      const { signIn } = await import('../lib/supabase');
+      const { data, error } = await signIn(email, password);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erreur de connexion');
+      if (error) {
+        loginLogger.error('❌ Sign in error:', error.message);
+        throw new Error(error.message || 'Erreur de connexion');
       }
+
+      if (!data.user) {
+        throw new Error('Erreur de connexion');
+      }
+
+      loginLogger.info('✅ User signed in:', data.user.email);
 
       // Clear guest mode on successful login
       localStorage.removeItem(GUEST_MODE_KEY);
       localStorage.removeItem(GUEST_TIMESTAMP_KEY);
       localStorage.removeItem(GUEST_VIEWS_KEY);
 
+      // Redirect to home
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Erreur de connexion');
