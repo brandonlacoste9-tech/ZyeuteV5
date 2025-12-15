@@ -6,6 +6,25 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Replit](https://img.shields.io/badge/Deployed%20on-Replit-orange)](https://replit.com/@northern-ventur/Package-Installer)
 
+---
+
+## 🤖 NEW: AI-Powered Development with Copilot Agents
+
+**Automate your audit, fixes, and testing with 4 specialized AI agents:**
+
+- 🚨 **SWE Agent** - Live site testing + bug fixes + PRs
+- 🔐 **Security Agent** - Vulnerability scanning + code quality
+- ✅ **CI/CD Agent** - Automated testing + GitHub Actions
+- 📋 **Triage Agent** - Issue organization + prioritization
+
+**Quick Start:** [AGENT_QUICK_START.md](AGENT_QUICK_START.md) *(3 steps, 5 minutes)*  
+**Full Guide:** [COPILOT_AGENT_GUIDE.md](COPILOT_AGENT_GUIDE.md) *(Complete documentation)*  
+**Project Plan:** [AUDIT_MASTER_TRACKER.md](AUDIT_MASTER_TRACKER.md) *(48-hour recovery plan)*
+
+**Deploy Agents:** https://github.com/brandonlacoste9-tech/zyeute-v3/issues/new/choose
+
+---
+
 ## 📱 Overview
 
 Zyeuté Package Installer is a comprehensive social media application built specifically for the Quebec French-speaking market. It features real-time interactions, virtual gifting, Stripe payment integration, and a modern, responsive UI built with React and TypeScript.
