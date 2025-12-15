@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # NEUROSPHERE - Central Coordination Kernel (Future Phase)
+  # ═══════════════════════════════════════════════════════════════
+  neurosphere:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: colony-neurosphere
+    ports:
+      - "${NEUROSPHERE_PORT:-8000}:8000"
+    environment:
+      - COLONY_ENV=${COLONY_ENV:-development}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+    env_file:
+      - .env.colony
+    networks:
+      - colony-network
+    restart: unless-stopped
+    depends_on:
+      - finance-bee
+      - guardian-bee
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # FINANCE BEE - Revenue Intelligence
+  # ═══════════════════════════════════════════════════════════════
+  finance-bee:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: colony-finance-bee
+    command: python3 bees/finance_bee.py
+    ports:
+      - "${FINANCE_BEE_PORT:-8001}:8001"
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - FINANCE_BEE_PORT=8001
+    env_file:
+      - .env.colony
+    volumes:
+      - ./bees:/app/bees
+      - ./logs:/var/log/colony
+    networks:
+      - colony-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # GUARDIAN BEE - Security Sentinel
+  # ═══════════════════════════════════════════════════════════════
+  guardian-bee:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: colony-guardian-bee
+    command: python3 bees/guardian.py
+    ports:
+      - "${GUARDIAN_BEE_PORT:-8002}:8002"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - GUARDIAN_BEE_PORT=8002
+      - GUARDIAN_SCAN_INTERVAL=${GUARDIAN_SCAN_INTERVAL:-60}
+    env_file:
+      - .env.colony
+    volumes:
+      - ./bees:/app/bees
+      - ./logs:/var/log/colony
+    networks:
+      - colony-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+# ═══════════════════════════════════════════════════════════════
+# NETWORKS
+# ═══════════════════════════════════════════════════════════════
+networks:
+  colony-network:
+    driver: bridge
+    name: zyeute-colony-network
+
+# ═══════════════════════════════════════════════════════════════
+# VOLUMES
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  colony-logs:
+    name: zyeute-colony-logs

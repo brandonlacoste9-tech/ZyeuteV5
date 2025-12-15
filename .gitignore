@@ -3,9 +3,15 @@ dist
 .DS_Store
 server/public
 vite.config.ts.*
-*.tar.gz.env
+*.tar.gz
+.env
 
 .vercel
+
+# Colony OS
+infrastructure/colony/.env.colony
+infrastructure/colony/venv/
+infrastructure/colony/logs/*.log
 
 # Generated email templates (compiled from .tsx)
 server/email-templates.js

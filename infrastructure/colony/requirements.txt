@@ -1,0 +1,32 @@
+# Colony OS - Python Neurosphere Dependencies
+# Python 3.12+ required
+
+# Core Framework
+fastapi==0.115.0
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# Stripe Integration
+stripe==11.2.0
+
+# Supabase Client
+supabase==2.10.0
+
+# Async & Scheduling
+httpx>=0.26,<0.28
+aiohttp>=3.9,<4.0
+apscheduler>=3.10,<4.0
+
+# Utilities
+python-dotenv==1.0.1
+requests==2.32.3
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+
+# Logging & Monitoring
+structlog==24.4.0
+python-json-logger==3.2.1
