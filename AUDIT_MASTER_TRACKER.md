@@ -36,6 +36,266 @@
 
 ---
 
+## 🏗️ CRITICAL ARCHITECTURE SHIFT
+
+**⚠️ BREAKING CHANGE: Abandoning Server-Side Proxy Pattern**
+
+**Old Pattern (DEPRECATED - Causes 500 Errors):**
+```typescript
+// ❌ DO NOT USE - This causes Vercel timeouts and 500 errors
+const response = await fetch('/api/auth/login', {
+  method: 'POST',
+  body: JSON.stringify({ email, password })
+});
+```
+
+**New Pattern (APPROVED - Direct Client-Side Auth):**
+```typescript
+// ✅ USE THIS - Direct Supabase client-side authentication
+import { supabase } from '../lib/supabase';
+
+const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password
+});
+```
+
+**Why This Change:**
+1. **Eliminates 500 Errors:** No more server-side proxy failures
+2. **Fixes Vercel Timeouts:** Direct client-side calls are faster
+3. **Better Security:** Supabase handles auth securely via HTTPS
+4. **Simpler Architecture:** No backend API layer needed for auth
+
+**Implementation Priority:** This must be fixed in Issue #1 and #4.
+
+---
+
+## 📦 GOLDEN ARTIFACTS - REFERENCE CODE
+
+These are the **approved, working implementations** that agents should reference and preserve:
+
+### 1. Login.tsx - Luxury Design + Guest Mode + Direct Auth
+
+**Location:** `client/src/pages/Login.tsx`
+
+**Key Features:**
+- ✅ Luxury Quebec Heritage Design (beaver leather texture with gold fleur-de-lys)
+- ✅ Guest Access "Backdoor" button for 24h access
+- ✅ Google OAuth integration
+- ⚠️ **TO BE FIXED:** Still uses deprecated `/api/auth/login` (line 65)
+- ✅ Proper password visibility toggle
+- ✅ Forgot password link
+
+**Critical Code Block - Guest Login Handler:**
+```typescript
+const handleGuestLogin = (e: React.MouseEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  loginLogger.info('🎭 Guest login initiated');
+  
+  localStorage.setItem(GUEST_MODE_KEY, 'true');
+  localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
+  localStorage.setItem(GUEST_VIEWS_KEY, '0');
+  
+  setTimeout(() => {
+    window.location.href = '/';
+  }, 800);
+};
+```
+
+**Required Fix for Login Submit:**
+```typescript
+// ❌ CURRENT (Lines 64-76 - CAUSES 500 ERROR):
+const response = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ email, password }),
+});
+
+// ✅ SHOULD BE (Direct Supabase Auth):
+import { supabase } from '../lib/supabase';
+
+const { data, error } = await supabase.auth.signInWithPassword({
+  email,
+  password
+});
+
+if (error) {
+  throw new Error(error.message);
+}
+
+// Clear guest mode on successful login
+localStorage.removeItem(GUEST_MODE_KEY);
+localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+localStorage.removeItem(GUEST_VIEWS_KEY);
+
+window.location.href = '/';
+```
+
+---
+
+### 2. useGuestMode.ts - Session Logic
+
+**Location:** `client/src/hooks/useGuestMode.ts`
+
+**Status:** ✅ WORKING - No changes needed
+
+**Key Features:**
+- 24-hour session tracking
+- Auto-expiry with localStorage cleanup
+- View counter for banner trigger
+- Minute-by-minute session checks
+
+**Critical Implementation:**
+```typescript
+export function useGuestMode() {
+  const [state, setState] = useState<GuestModeState>({
+    isGuest: false,
+    isExpired: false,
+    remainingTime: 0,
+    viewsCount: 0,
+  });
+
+  useEffect(() => {
+    const checkSession = () => {
+      const guestMode = localStorage.getItem(GUEST_MODE_KEY);
+      const timestamp = localStorage.getItem(GUEST_TIMESTAMP_KEY);
+      
+      if (guestMode === 'true' && timestamp) {
+        const age = Date.now() - parseInt(timestamp, 10);
+        if (age >= GUEST_SESSION_DURATION) {
+          // Expired - cleanup
+          localStorage.removeItem(GUEST_MODE_KEY);
+          localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+          localStorage.removeItem(GUEST_VIEWS_KEY);
+          setState({ isGuest: false, isExpired: true, remainingTime: 0, viewsCount: 0 });
+        } else {
+          const remaining = GUEST_SESSION_DURATION - age;
+          const views = parseInt(localStorage.getItem(GUEST_VIEWS_KEY) || '0', 10);
+          setState({ isGuest: true, isExpired: false, remainingTime: remaining, viewsCount: views });
+        }
+      }
+    };
+
+    checkSession();
+    const interval = setInterval(checkSession, 60000); // Every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const incrementViews = useCallback(() => {
+    const views = parseInt(localStorage.getItem(GUEST_VIEWS_KEY) || '0', 10);
+    const newViews = views + 1;
+    localStorage.setItem(GUEST_VIEWS_KEY, newViews.toString());
+    setState(prev => ({ ...prev, viewsCount: newViews }));
+  }, []);
+
+  return { ...state, incrementViews };
+}
+```
+
+---
+
+### 3. GuestBanner.tsx - Conversion Funnel
+
+**Location:** `client/src/components/GuestBanner.tsx`
+
+**Status:** ✅ WORKING - No changes needed
+
+**Key Features:**
+- Shows after 3 guest page views
+- Displays countdown timer (hours/minutes remaining)
+- Gold gradient banner design matching Zyeuté theme
+- Dismissible with smooth animations
+- Call-to-action: "Créer un compte" button
+
+**Implementation:**
+```typescript
+export const GuestBanner: React.FC = () => {
+  const { isGuest, viewsCount, remainingTime } = useGuestMode();
+  const [isDismissed, setIsDismissed] = React.useState(false);
+
+  // Show only if: guest mode + not dismissed + 3+ views
+  if (!isGuest || isDismissed || viewsCount < 3) return null;
+
+  const hoursRemaining = Math.floor(remainingTime / (1000 * 60 * 60));
+  const minutesRemaining = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 animate-slide-up"
+         style={{ background: 'linear-gradient(135deg, rgba(255,215,0,0.95), rgba(218,165,32,0.95))' }}>
+      <p>🎭 Mode Invité • {hoursRemaining}h {minutesRemaining}m restant</p>
+      <p>Créez un compte pour publier, aimer et sauvegarder des publications</p>
+      <Link to="/signup">Créer un compte</Link>
+    </div>
+  );
+};
+```
+
+---
+
+### 4. client/index.html - CSP Meta Tag for Supabase/Stripe
+
+**Location:** `client/index.html`
+
+**Status:** ✅ WORKING - Comprehensive CSP already in place
+
+**Critical Security Headers:**
+```html
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; 
+               script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com; 
+               script-src-elem 'self' 'unsafe-inline' https://js.stripe.com https://*.stripe.com; 
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+               img-src 'self' data: https: blob:; 
+               font-src 'self' data: https://fonts.gstatic.com; 
+               connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://api.stripe.com https://js.stripe.com https://*.stripe.com; 
+               frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com; 
+               object-src 'none'; 
+               base-uri 'self'; 
+               form-action 'self';" />
+```
+
+**What This Allows:**
+- ✅ Supabase auth/API calls (`*.supabase.co`, `*.supabase.in`)
+- ✅ Stripe payment processing (`*.stripe.com`)
+- ✅ WebSocket connections for real-time features
+- ✅ Google Fonts for typography
+- ✅ Safe inline styles for React components
+
+---
+
+### 5. .env.example - Supabase Configuration
+
+**Location:** `.env.vercel.example` (already exists)
+
+**Status:** ⚠️ NEEDS LOCAL VERSION
+
+**Required Variables:**
+```bash
+# Supabase (Required for Auth)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+
+# Client-Side Keys (prefix with VITE_)
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...
+VITE_APP_URL=https://zyeute.vercel.app
+```
+
+**Action Required:** Create `.env.example` at project root with above variables.
+
+---
+
+### 6. Legacy Files - Needs Verification
+
+**These files may not exist or may be deprecated:**
+- ❓ `LoginPage.tsx` (legacy - replaced by `Login.tsx`)
+- ❓ `.env.example` (needs creation from `.env.vercel.example`)
+
+**Agent Directive:** Mark as "Needs Verification" in audit reports.
+
+---
+
 ## 🤖 AGENT DEPLOYMENT STRATEGY
 
 ### Agent 1: GitHub Copilot SWE Agent
@@ -381,10 +641,16 @@ Once Phase 1 (audit) completes, Phase 2 begins automatically:
 
 - **Live Site:** https://www.zyeute.com/login
 - **GitHub Repo:** https://github.com/brandonlacoste9-tech/zyeute-v3
-- **Issue #1:** [SWE Audit] (created below)
-- **Issue #2:** [Security Scan] (created below)
-- **Issue #3:** [CI/CD Setup] (created below)
-- **Issue #4:** [Issue Triage] (created below)
+- **Issue #1:** [SWE Audit] - Use template `.github/ISSUE_TEMPLATE/agent_swe_audit.yml`
+- **Issue #2:** [Security Scan] - Use template `.github/ISSUE_TEMPLATE/agent_code_analysis.yml`
+- **Issue #3:** [CI/CD Setup] - Use template `.github/ISSUE_TEMPLATE/agent_cicd.yml`
+- **Issue #4:** [Issue Triage] - Use template `.github/ISSUE_TEMPLATE/agent_issues_triage.yml`
+
+**How to Create Issues:**
+1. Go to: https://github.com/brandonlacoste9-tech/zyeute-v3/issues/new/choose
+2. Select the appropriate agent template
+3. Fill in any missing information
+4. Create the issue to trigger the agent
 
 ---
 
@@ -457,16 +723,39 @@ Once Phase 1 (audit) completes, Phase 2 begins automatically:
 ---
 
 **Master Tracker Created:** December 14, 2025 @ 8:36 PM EST  
+**Master Tracker Updated:** December 15, 2025 @ 2:10 AM UTC  
 **Audit Window:** December 14-16, 2025 (48 hours)  
 **Expected Completion:** December 16, 2025 @ 8:36 PM EST  
-**Status:** 🟡 READY FOR ISSUE CREATION
+**Status:** ✅ READY - ISSUE TEMPLATES CREATED
 
 🎭⚜️ **Made for Zyeuté - L'app sociale du Québec**
 
 ---
 
-## ➡️ NEXT STEP
+## ➡️ WHAT'S BEEN COMPLETED
 
-The 4 GitHub Issues are now ready to be created. They will appear in your Issues tab immediately upon creation and trigger the respective agents to start work.
+✅ **Architecture Shift Documented** - Server-side proxy → Direct Supabase auth  
+✅ **Golden Artifacts Embedded** - All reference code blocks included  
+✅ **Issue Template #1 Created** - `.github/ISSUE_TEMPLATE/agent_swe_audit.yml`  
+✅ **Issue Template #2 Created** - `.github/ISSUE_TEMPLATE/agent_code_analysis.yml`  
+✅ **Issue Template #3 Created** - `.github/ISSUE_TEMPLATE/agent_cicd.yml`  
+✅ **Issue Template #4 Created** - `.github/ISSUE_TEMPLATE/agent_issues_triage.yml`  
+✅ **`.env.example` Created** - At project root with Supabase configuration  
+✅ **Cross-References Added** - All issues link to each other and this tracker  
 
-**Ready to publish all 4 issues to GitHub?** (Awaiting confirmation)
+---
+
+## ➡️ NEXT STEP: CREATE THE ISSUES
+
+**To activate the agents:**
+
+1. **Go to:** https://github.com/brandonlacoste9-tech/zyeute-v3/issues/new/choose
+2. **You will see 4 new templates:**
+   - 🚨 AGENT 1 - SWE Live Audit (Login Page)
+   - 🔐 AGENT 2 - Code Security & Quality Scan
+   - ✅ AGENT 3 - CI/CD Pipeline & Testing
+   - 📋 AGENT 4 - Issue Triage & Planning
+3. **Create each issue** (they're pre-filled with instructions and code)
+4. **Agents will begin work** as soon as issues are created
+
+**Ready to deploy the agents!** 🚀

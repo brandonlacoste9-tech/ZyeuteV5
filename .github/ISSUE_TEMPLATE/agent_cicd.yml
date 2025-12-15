@@ -1,0 +1,615 @@
+name: ✅ AGENT 3 - CI/CD Pipeline & Testing
+description: Automated testing and CI/CD setup for GitHub Actions Agent
+title: "[AGENT-CICD]: Automated Testing & CI/CD Pipeline Setup"
+labels: ["agent-task", "ci-cd", "testing", "automation"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🤖 GitHub Actions Workflow Agent - Assignment Brief
+        
+        **Agent Type:** CI/CD & Testing Agent  
+        **Priority:** 🚨 HIGH  
+        **Timeline:** 6-8 hours  
+        **Expected Deliverables:** Test suite, GitHub Actions workflows, test reports
+        
+        ---
+        
+        ## 🎯 YOUR MISSION
+        
+        Create a **comprehensive automated testing and CI/CD pipeline** for the Zyeuté authentication system.
+        
+        **Goals:**
+        1. Create unit tests (Vitest/Jest)
+        2. Create integration tests (auth flows)
+        3. Setup GitHub Actions workflows (test, deploy)
+        4. Achieve 80%+ code coverage
+        5. Ensure all checks pass
+        
+        ---
+        
+        ## 🏗️ TESTING PRIORITIES
+        
+        **Focus Areas (in order):**
+        1. **Auth System** - Login, signup, OAuth, guest mode
+        2. **Guest Mode Logic** - Session expiry, view counting, banner display
+        3. **Form Validation** - Email, password, error handling
+        4. **Security** - XSS prevention, input sanitization
+        5. **UI Components** - GuestBanner, Login form
+        
+        ---
+
+  - type: textarea
+    id: unit_tests
+    attributes:
+      label: "🧪 Unit Tests Created"
+      description: |
+        Document all unit tests you create
+      placeholder: |
+        ### UNIT TESTS:
+        
+        #### Test File: `client/src/hooks/useGuestMode.test.ts`
+        **Status:** ✅ Created / 🔄 In Progress / ⏳ Pending
+        
+        **Tests Included:**
+        1. ✅ `should initialize with correct default state`
+        2. ✅ `should detect expired guest session`
+        3. ✅ `should calculate remaining time correctly`
+        4. ✅ `should increment view count`
+        5. ✅ `should cleanup localStorage on expiry`
+        
+        **Coverage:** 95%
+        
+        ---
+        
+        #### Test File: `client/src/pages/Login.test.tsx`
+        **Status:** ⏳ Pending
+        
+        **Tests Planned:**
+        1. [ ] Renders login form correctly
+        2. [ ] Email input accepts valid email
+        3. [ ] Password toggle button works
+        4. [ ] Guest login button triggers guest mode
+        5. [ ] Form submission calls Supabase auth
+        6. [ ] Error messages display on failure
+        7. [ ] Redirects to home on success
+        
+        **Coverage Target:** 85%
+        
+        ---
+        
+        #### Test File: `client/src/components/GuestBanner.test.tsx`
+        **Status:** ⏳ Pending
+        
+        **Tests Planned:**
+        1. [ ] Does not show if not in guest mode
+        2. [ ] Does not show if less than 3 views
+        3. [ ] Shows after 3 views with countdown
+        4. [ ] Dismiss button hides banner
+        5. [ ] "Créer un compte" link navigates correctly
+        
+        **Coverage Target:** 90%
+        
+        ---
+        
+        #### Test File: `client/src/lib/supabase.test.ts`
+        **Status:** ⏳ Pending
+        
+        **Tests Planned:**
+        1. [ ] Supabase client initializes correctly
+        2. [ ] signIn() calls supabase.auth.signInWithPassword
+        3. [ ] signUp() includes username in metadata
+        4. [ ] signOut() clears session
+        5. [ ] signInWithGoogle() uses correct redirect URL
+        
+        **Coverage Target:** 80%
+        
+        ---
+        
+        **Total Unit Tests Created:** [number]  
+        **Overall Coverage:** [X]%
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Create test files for each component/hook/util
+        2. Use Vitest (already configured in project)
+        3. Test happy paths AND edge cases
+        4. Aim for 80%+ coverage per file
+        5. Use mocks for Supabase client calls
+        
+        **Document your unit tests above.**
+
+  - type: textarea
+    id: integration_tests
+    attributes:
+      label: "🔗 Integration Tests Created"
+      description: |
+        Document end-to-end user flow tests
+      placeholder: |
+        ### INTEGRATION TESTS:
+        
+        #### Test Suite: `client/src/test/auth-flows.test.ts`
+        **Status:** ⏳ Pending
+        
+        **Tests Planned:**
+        
+        1. **Complete Login Flow:**
+           ```typescript
+           it('should complete full login flow', async () => {
+             // 1. Render login page
+             // 2. Fill email and password
+             // 3. Click login button
+             // 4. Wait for redirect to home
+             // 5. Verify user is logged in
+           });
+           ```
+        
+        2. **Guest Mode Flow:**
+           ```typescript
+           it('should activate guest mode and show banner after 3 views', async () => {
+             // 1. Click guest login button
+             // 2. Verify localStorage flags set
+             // 3. Navigate to 3 different pages
+             // 4. Verify banner appears with countdown
+             // 5. Click "Créer un compte" button
+             // 6. Verify navigates to signup
+           });
+           ```
+        
+        3. **Session Expiry Flow:**
+           ```typescript
+           it('should expire guest session after 24 hours', async () => {
+             // 1. Activate guest mode
+             // 2. Mock Date.now() to +24 hours
+             // 3. Trigger session check
+             // 4. Verify localStorage cleared
+             // 5. Verify isExpired = true
+           });
+           ```
+        
+        4. **OAuth Flow:**
+           ```typescript
+           it('should initiate Google OAuth flow', async () => {
+             // 1. Click Google login button
+             // 2. Verify supabase.auth.signInWithOAuth called
+             // 3. Verify correct redirect URL
+           });
+           ```
+        
+        ---
+        
+        **Total Integration Tests:** [number]  
+        **Status:** [X] passed, [Y] failed
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Create integration tests for complete user flows
+        2. Use @testing-library/react for UI testing
+        3. Mock external services (Supabase, API calls)
+        4. Test realistic user scenarios
+        
+        **Document your integration tests above.**
+
+  - type: textarea
+    id: test_workflow
+    attributes:
+      label: "⚙️ GitHub Actions Workflow - Tests"
+      description: |
+        Create .github/workflows/test.yml
+      placeholder: |
+        ### TEST WORKFLOW:
+        
+        **File:** `.github/workflows/test.yml`  
+        **Status:** ✅ Created / 🔄 In Progress / ⏳ Pending
+        
+        **Workflow Configuration:**
+        ```yaml
+        name: Test Suite
+        
+        on:
+          push:
+            branches: [main, develop]
+          pull_request:
+            branches: [main, develop]
+        
+        jobs:
+          test:
+            runs-on: ubuntu-latest
+            
+            steps:
+              - uses: actions/checkout@v3
+              
+              - name: Setup Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+              
+              - name: Install dependencies
+                run: npm ci
+              
+              - name: Run linter
+                run: npm run lint
+              
+              - name: Run type check
+                run: npm run type-check
+              
+              - name: Run tests
+                run: npm test -- --coverage
+              
+              - name: Upload coverage reports
+                uses: codecov/codecov-action@v3
+                with:
+                  token: ${{ secrets.CODECOV_TOKEN }}
+        ```
+        
+        **Triggers:**
+        - ✅ Push to main/develop branches
+        - ✅ Pull requests to main/develop
+        
+        **Checks:**
+        - ✅ Linting (ESLint)
+        - ✅ Type checking (TypeScript)
+        - ✅ Unit tests
+        - ✅ Integration tests
+        - ✅ Coverage report
+        
+        **Status:** [Passing ✅ / Failing ❌]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Create `.github/workflows/test.yml`
+        2. Configure to run on push and PR
+        3. Include linting, type-checking, and tests
+        4. Upload coverage reports
+        5. Test locally with `act` (if available)
+        
+        **Paste your workflow configuration above.**
+
+  - type: textarea
+    id: deploy_workflow
+    attributes:
+      label: "🚀 GitHub Actions Workflow - Deploy"
+      description: |
+        Create .github/workflows/deploy.yml
+      placeholder: |
+        ### DEPLOY WORKFLOW:
+        
+        **File:** `.github/workflows/deploy.yml`  
+        **Status:** ⏳ Pending
+        
+        **Workflow Configuration:**
+        ```yaml
+        name: Deploy to Production
+        
+        on:
+          push:
+            branches: [main]
+          workflow_dispatch:
+        
+        jobs:
+          deploy:
+            runs-on: ubuntu-latest
+            
+            steps:
+              - uses: actions/checkout@v3
+              
+              - name: Setup Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '18'
+                  cache: 'npm'
+              
+              - name: Install dependencies
+                run: npm ci
+              
+              - name: Build application
+                run: npm run build
+                env:
+                  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+                  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+              
+              - name: Deploy to Vercel
+                uses: amondnet/vercel-action@v20
+                with:
+                  vercel-token: ${{ secrets.VERCEL_TOKEN }}
+                  vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+                  vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+                  vercel-args: '--prod'
+        ```
+        
+        **Triggers:**
+        - ✅ Push to main branch
+        - ✅ Manual trigger (workflow_dispatch)
+        
+        **Required Secrets:**
+        - [ ] VITE_SUPABASE_URL
+        - [ ] VITE_SUPABASE_ANON_KEY
+        - [ ] VERCEL_TOKEN
+        - [ ] VERCEL_ORG_ID
+        - [ ] VERCEL_PROJECT_ID
+        
+        **Status:** [Deployed ✅ / Failed ❌]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Create `.github/workflows/deploy.yml`
+        2. Configure for production deployment
+        3. Use Vercel or current deployment platform
+        4. Document required secrets
+        5. Test with manual trigger first
+        
+        **Paste your deploy workflow above.**
+
+  - type: textarea
+    id: staging_workflow
+    attributes:
+      label: "🧪 GitHub Actions Workflow - Staging"
+      description: |
+        Create .github/workflows/staging.yml (Optional)
+      placeholder: |
+        ### STAGING WORKFLOW:
+        
+        **File:** `.github/workflows/staging.yml`  
+        **Status:** ⏳ Optional (can skip if no staging env)
+        
+        **Purpose:** Deploy to staging environment for testing before production
+        
+        **Workflow Configuration:**
+        ```yaml
+        name: Deploy to Staging
+        
+        on:
+          push:
+            branches: [develop]
+        
+        jobs:
+          deploy-staging:
+            runs-on: ubuntu-latest
+            
+            steps:
+              # Similar to deploy.yml but with staging secrets
+              - uses: actions/checkout@v3
+              - name: Deploy to Vercel (Preview)
+                uses: amondnet/vercel-action@v20
+                with:
+                  vercel-token: ${{ secrets.VERCEL_TOKEN }}
+                  vercel-args: '--env=preview'
+        ```
+        
+        **Status:** [Deployed ✅ / Skipped ⏭️]
+      value: |
+        **Status:** ⏳ Optional
+        
+        **Instructions:**
+        - Create this workflow if staging environment exists
+        - Skip if deploying directly to production
+        - Use preview deployments on Vercel
+        
+        **Document if created.**
+
+  - type: textarea
+    id: coverage_report
+    attributes:
+      label: "📊 Test Coverage Report"
+      description: |
+        Summary of test coverage across the codebase
+      placeholder: |
+        ### TEST COVERAGE REPORT:
+        
+        **Generated:** [date/time]  
+        **Tool:** Vitest + c8
+        
+        **Overall Coverage:**
+        - **Statements:** 85% (Target: 80%+) ✅
+        - **Branches:** 78% (Target: 75%+) ✅
+        - **Functions:** 90% (Target: 80%+) ✅
+        - **Lines:** 84% (Target: 80%+) ✅
+        
+        **Per-File Coverage:**
+        
+        | File | Statements | Branches | Functions | Lines |
+        |------|-----------|----------|-----------|-------|
+        | useGuestMode.ts | 95% | 90% | 100% | 94% |
+        | Login.tsx | 80% | 70% | 85% | 82% |
+        | GuestBanner.tsx | 90% | 85% | 90% | 88% |
+        | supabase.ts | 75% | 65% | 80% | 76% |
+        
+        **Low Coverage Areas (Need More Tests):**
+        1. `supabase.ts:45-60` - OAuth error handling
+        2. `Login.tsx:100-110` - Error display logic
+        
+        **Status:** ✅ Target achieved / ⚠️ Needs improvement
+      value: |
+        **Status:** ⏳ Pending (will generate after tests created)
+        
+        **Instructions:**
+        1. Run `npm test -- --coverage`
+        2. Review coverage report
+        3. Identify low-coverage areas
+        4. Add tests to improve coverage
+        
+        **Paste your coverage report above.**
+
+  - type: textarea
+    id: test_results
+    attributes:
+      label: "✅ Test Execution Results"
+      description: |
+        Results from running the test suite
+      placeholder: |
+        ### TEST EXECUTION RESULTS:
+        
+        **Run Date:** [date/time]  
+        **Environment:** Local / CI
+        
+        **Summary:**
+        - **Total Tests:** 45
+        - **Passed:** 43 ✅
+        - **Failed:** 2 ❌
+        - **Skipped:** 0
+        - **Duration:** 12.5s
+        
+        **Failed Tests:**
+        
+        1. **Test:** `Login.tsx > should handle network errors`
+           - **Error:** `Expected error message to be "Network error" but got "Unknown error"`
+           - **File:** `client/src/pages/Login.test.tsx:45`
+           - **Fix:** Update error message in Login.tsx
+        
+        2. **Test:** `useGuestMode.ts > should expire after 24 hours`
+           - **Error:** `Mock timer not advancing correctly`
+           - **File:** `client/src/hooks/useGuestMode.test.ts:78`
+           - **Fix:** Use `vi.useFakeTimers()` correctly
+        
+        **Action Items:**
+        - [ ] Fix failed tests
+        - [ ] Re-run suite
+        - [ ] Verify all tests pass
+      value: |
+        **Status:** ⏳ Pending (will run after tests created)
+        
+        **Instructions:**
+        1. Run `npm test`
+        2. Document results (passed/failed counts)
+        3. Debug any failures
+        4. Re-run until all tests pass
+        
+        **Paste your test results above.**
+
+  - type: checkboxes
+    id: success_criteria
+    attributes:
+      label: "🎯 Success Criteria"
+      description: Check off as you complete each requirement
+      options:
+        - label: "Unit tests created (80%+ coverage per file)"
+          required: false
+        - label: "Integration tests created (key user flows covered)"
+          required: false
+        - label: "Test workflow created (.github/workflows/test.yml)"
+          required: false
+        - label: "Deploy workflow created (.github/workflows/deploy.yml)"
+          required: false
+        - label: "All tests passing (0 failures)"
+          required: false
+        - label: "Coverage reports generated and uploaded"
+          required: false
+        - label: "Workflows tested and verified working"
+          required: false
+        - label: "Documentation updated with test instructions"
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 📚 FILES TO TEST (Priority Order)
+        
+        ### 🔴 Critical Priority:
+        1. **`client/src/pages/Login.tsx`** - Main auth UI
+        2. **`client/src/hooks/useGuestMode.ts`** - Session logic *(already has tests!)*
+        3. **`client/src/lib/supabase.ts`** - Auth API calls
+        
+        ### 🟠 High Priority:
+        4. **`client/src/components/GuestBanner.tsx`** - Banner UI
+        5. **`client/src/hooks/useAuth.ts`** - Auth state (if exists)
+        6. **`client/src/pages/AuthCallback.tsx`** - OAuth callback
+        
+        ### 🟡 Medium Priority:
+        7. **Form validation utilities** - Input sanitization
+        8. **Error handling components** - Error displays
+        
+        ---
+        
+        ## 🛠️ TESTING TOOLS ALREADY IN PROJECT
+        
+        **Check `package.json` for:**
+        - ✅ **Vitest** - Unit test runner (already configured)
+        - ✅ **@testing-library/react** - React component testing
+        - ✅ **@testing-library/user-event** - User interaction simulation
+        - ⚠️ **c8 or istanbul** - Coverage tool (verify installed)
+        
+        **Run Commands:**
+        ```bash
+        npm test              # Run all tests
+        npm test -- --watch   # Watch mode
+        npm test -- --coverage # With coverage
+        npm run lint          # Run linter
+        npm run type-check    # TypeScript check
+        ```
+        
+        ---
+        
+        ## 💡 TESTING BEST PRACTICES
+        
+        ### Mock External Dependencies:
+        ```typescript
+        // Mock Supabase client
+        vi.mock('../lib/supabase', () => ({
+          supabase: {
+            auth: {
+              signInWithPassword: vi.fn(),
+              signOut: vi.fn()
+            }
+          }
+        }));
+        ```
+        
+        ### Test User Interactions:
+        ```typescript
+        import { render, screen } from '@testing-library/react';
+        import userEvent from '@testing-library/user-event';
+        
+        it('should submit form on button click', async () => {
+          const user = userEvent.setup();
+          render(<Login />);
+          
+          await user.type(screen.getByLabelText('Email'), 'test@example.com');
+          await user.click(screen.getByRole('button', { name: /login/i }));
+          
+          expect(mockSignIn).toHaveBeenCalledWith('test@example.com', expect.any(String));
+        });
+        ```
+        
+        ### Test Edge Cases:
+        ```typescript
+        it('should handle expired guest session', () => {
+          // Setup expired timestamp
+          localStorage.setItem('zyeute_guest_timestamp', String(Date.now() - 25 * 60 * 60 * 1000));
+          
+          const { result } = renderHook(() => useGuestMode());
+          
+          expect(result.current.isExpired).toBe(true);
+          expect(localStorage.getItem('zyeute_guest_mode')).toBeNull();
+        });
+        ```
+        
+        ---
+        
+        ## 🔗 RELATED ISSUES
+        
+        - **Issue #1:** SWE Agent (you'll validate their fixes)
+        - **Issue #2:** Code Analysis Agent (you'll verify security fixes)
+        - **Issue #4:** Issues Agent (will organize test findings)
+        
+        **Cross-Reference:** See `AUDIT_MASTER_TRACKER.md` for context.
+        
+        ---
+        
+        ## 📞 NEED HELP?
+        
+        - **Blocked?** Comment with `@brandonlacoste9-tech`
+        - **Questions?** Reference `vitest.config.ts` for test setup
+        - **Testing resources:** Vitest docs, Testing Library docs
+        
+        ---
+        
+        **🚀 YOU MAY BEGIN CREATING TESTS NOW. GOOD LUCK!**
