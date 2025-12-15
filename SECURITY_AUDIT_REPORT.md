@@ -106,19 +106,24 @@ const pgPool = new pg.Pool({
 });
 ```
 
-**⚠️ Minor Issue:** `.gitignore` pattern `*.tar.gz.env` is non-standard
+**⚠️ Minor Issue:** `.gitignore` pattern `*.tar.gz.env` is non-standard and unclear
 ```
 # .gitignore:6
 *.tar.gz.env
 ```
 
+**Analysis:** This unusual pattern appears to be a typo or legacy artifact. Standard patterns for environment files would be `.env*` or `.env.local`. This non-standard pattern may not effectively exclude all environment files.
+
 **Recommendation:** 
-1. ✅ No immediate action required
-2. Consider adding explicit `.env.local` to `.gitignore` for clarity:
-   ```
+1. ✅ No immediate security risk (standard .gitignore patterns still apply)
+2. ⚠️ **Clarify intent:** If this was meant to exclude `.env` files, replace with standard patterns:
+   ```gitignore
+   # Environment variables
    .env
    .env.local
    .env.*.local
+   !.env.example
+   !.env.vercel.example
    ```
 
 ---
@@ -298,7 +303,7 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 - ❌ No length checks
 - ❌ No special character filtering
 
-**Password Field Validation - INSUFFICIENT:**
+**Password Field Validation - PARTIALLY IMPLEMENTED:**
 ```tsx
 // client/src/pages/Login.tsx:261-273
 <input
@@ -311,9 +316,17 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 ```
 
 **Issues:**
-- ❌ No minimum length enforcement
+- ❌ **Login page:** No minimum length enforcement on client-side
+- ⚠️ **Signup page:** Has basic validation (6 chars minimum) but should be 8+
+  ```typescript
+  // Signup.tsx:48-50
+  if (password.length < 6) {
+    setError('Le mot de passe doit avoir au moins 6 caractères');
+    return;
+  }
+  ```
 - ❌ No complexity requirements (uppercase, numbers, special chars)
-- ❌ No maximum length check
+- ❌ No maximum length check (prevents buffer overflow attacks)
 - ✅ Password visibility toggle (good UX)
 
 **Risk Level:** **HIGH** - Weak passwords and invalid emails can be submitted
@@ -322,12 +335,12 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 1. **Email Field (Multiple Pages):**
    - Login.tsx:242 - No validation
-   - Signup.tsx:XXX - No validation
-   - ForgotPassword.tsx:XXX - No validation
+   - Signup.tsx:136 - No validation
+   - ForgotPassword.tsx:177 - No validation
 
 2. **Password Field (Multiple Pages):**
-   - Login.tsx:261 - No minimum length
-   - Signup.tsx:XXX - No complexity check
+   - Login.tsx:261 - No minimum length check on client-side
+   - Signup.tsx:48 - Only checks minimum 6 characters (should be 8+)
 
 3. **Text Inputs:**
    - Comment fields - No sanitization check
