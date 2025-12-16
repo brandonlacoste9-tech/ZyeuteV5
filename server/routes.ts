@@ -95,6 +95,16 @@ export async function registerRoutes(
   // Apply general rate limiting to all API routes
   app.use("/api", generalRateLimiter);
 
+  // ============ HEALTH CHECK ENDPOINT ============
+
+  // Health check for monitoring and test verification
+  app.get("/api/health", (_req, res) => {
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development"
+    });
+  });
 
 
   // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
