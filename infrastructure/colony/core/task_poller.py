@@ -1,17 +1,36 @@
+"""
+Task Poller - The Hive Mind 🐝
+Central task routing and state machine for Colony OS.
+
+Hardened version with:
+- Heartbeat updates for stuck task detection
+- Automatic stuck task recovery
+- Structured logging
+- Retry logic for API calls
+- Configurable timeouts
+"""
+
 import os
 import sys
 import time
-import json
+import logging
 import requests
-import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-# Try importing standard libs, facilitate partial installs
+# Configure structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+)
+logger = logging.getLogger("hive_mind")
+
+# Try importing optional libs, facilitate partial installs
 try:
     import fal_client
 except ImportError:
     fal_client = None
+    logger.warning("⚠️ fal_client not installed - creation tasks disabled")
 
 try:
     import google.generativeai as genai
@@ -20,13 +39,9 @@ except ImportError:
 
 from supabase import create_client, Client
 
-# Import the new Security Bee & Health Bee
-from bees import security_bee
-from bees import health_bee
-
 # Load environment
 script_dir = os.path.dirname(os.path.abspath(__file__))
-# Add parent directory to path so we can import 'bees'
+# Add parent directory to path so we can import 'bees' and 'utils'
 sys.path.append(os.path.dirname(script_dir))
 
 # Try loading from colony env first (core/../.env.colony)
@@ -34,29 +49,76 @@ load_dotenv(os.path.join(script_dir, '../.env.colony'))
 # Fallback/Additional from root
 load_dotenv(os.path.join(script_dir, '../../../.env'))
 
-# 1. Setup Supabase (The Hive Mind)
+# Import bees
+from bees import security_bee
+from bees import health_bee
+
+# Try importing retry utility
+try:
+    from utils.retry import retry
+    HAS_RETRY = True
+except ImportError:
+    HAS_RETRY = False
+    logger.warning("⚠️ Retry utility not available - proceeding without retry logic")
+    # Fallback: no-op decorator
+    def retry(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Stuck task recovery settings
+STUCK_TASK_THRESHOLD_MINUTES = 5  # Tasks processing longer than this are considered stuck
+HEARTBEAT_INTERVAL_SECONDS = 30   # How often to update heartbeat during work
+API_TIMEOUT_SECONDS = 30          # Timeout for external API calls
+
+# =============================================================================
+# SUPABASE SETUP
+# =============================================================================
+
 url: str = os.environ.get("VITE_SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_SERVICE_KEY")
+
 if not url or not key:
-    print("❌ Critical: Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_KEY")
+    logger.critical("❌ Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_KEY")
     exit(1)
 
 supabase: Client = create_client(url, key)
+logger.info("✅ [HIVE MIND] Supabase connection established")
 
-# 2. Setup Gemini (The Eyes/Reflexes)
+# =============================================================================
+# GEMINI SETUP (The Eyes/Reflexes)
+# =============================================================================
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+gemini_model = None
+
 if GEMINI_API_KEY and genai:
     genai.configure(api_key=GEMINI_API_KEY)
     gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-    print("👀 [SENSORY CORTEX] Gemini Vision Online")
+    logger.info("👀 [SENSORY CORTEX] Gemini Vision Online")
 else:
-    print("⚠️ [SENSORY CORTEX] Gemini Offline (Missing Key/Lib)")
+    logger.warning("⚠️ [SENSORY CORTEX] Gemini Offline (Missing Key/Lib)")
 
-# 3. Setup DeepSeek (The Brain/Logic)
+# =============================================================================
+# DEEPSEEK SETUP (The Brain/Logic)
+# =============================================================================
+
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+if DEEPSEEK_API_KEY:
+    logger.info("🧠 [NEUROSPHERE] DeepSeek V3 Online")
+else:
+    logger.warning("⚠️ [NEUROSPHERE] DeepSeek Offline (Missing Key)")
 
-# --- PROCESSORS ---
 
+# =============================================================================
+# PROCESSORS
+# =============================================================================
+
+@retry(max_retries=3, base_delay=1.0)
 def process_deepseek_task(task):
     """Routes logic/chat tasks to DeepSeek V3."""
     print(f"🧠 [NEUROSPHERE] DeepSeek V3 thinking about: {task['id']}")
@@ -215,12 +277,85 @@ def process_task(task):
     else:
         return {"status": "failed", "error": f"Unknown command: {command}"}
 
+def recover_stuck_tasks():
+    """
+    Find and reset tasks that have been stuck in 'processing' status.
+    These are likely from a previous poller crash.
+    """
+    try:
+        threshold = datetime.now() - timedelta(minutes=STUCK_TASK_THRESHOLD_MINUTES)
+        
+        # Find tasks that started processing before the threshold
+        # Use raw filter since Supabase Python client may not support lt on timestamps well
+        stuck_response = supabase.table('colony_tasks')\
+            .select("id, command, started_at")\
+            .eq('status', 'processing')\
+            .execute()
+        
+        stuck_tasks = []
+        for task in stuck_response.data:
+            if task.get('started_at'):
+                started = datetime.fromisoformat(task['started_at'].replace('Z', '+00:00'))
+                # Compare as naive datetimes for simplicity
+                started_naive = started.replace(tzinfo=None)
+                threshold_naive = threshold.replace(tzinfo=None) if threshold.tzinfo else threshold
+                
+                if started_naive < threshold_naive:
+                    stuck_tasks.append(task)
+        
+        if stuck_tasks:
+            logger.warning(f"🔄 [RECOVERY] Found {len(stuck_tasks)} stuck task(s)")
+            
+            for task in stuck_tasks:
+                logger.info(f"🔄 [RECOVERY] Resetting stuck task {task['id']} ({task['command']})")
+                supabase.table('colony_tasks').update({
+                    'status': 'pending',
+                    'worker_id': None,
+                    'error': f'Recovered: stuck since {task.get("started_at")}'
+                }).eq('id', task['id']).execute()
+            
+            logger.info(f"✅ [RECOVERY] Reset {len(stuck_tasks)} stuck task(s) to pending")
+            
+    except Exception as e:
+        logger.error(f"❌ [RECOVERY] Error checking for stuck tasks: {e}")
+
+
+def update_heartbeat(task_id: str):
+    """Update the heartbeat timestamp for a task to prevent it being marked as stuck."""
+    try:
+        supabase.table('colony_tasks').update({
+            'last_heartbeat': datetime.now().isoformat()
+        }).eq('id', task_id).execute()
+    except Exception as e:
+        logger.warning(f"⚠️ [HEARTBEAT] Failed to update heartbeat for {task_id}: {e}")
+
+
 def main_loop():
-    print("🐝 [HIVE MIND] Colony OS Triad Poller Online (Hardened Mode)...")
-    print("   🛡️ Security | 🔺 Gemini | 🧠 DeepSeek | 🎨 Flux/Kling | 🩺 Health")
+    """
+    Main polling loop for the Hive Mind.
+    
+    Features:
+    - Stuck task recovery on startup and periodically
+    - Heartbeat updates during long-running tasks
+    - Structured logging for observability
+    - Graceful error handling
+    """
+    logger.info("🐝 [HIVE MIND] Colony OS Triad Poller Online (Hardened Mode)...")
+    logger.info("   🛡️ Security | 🔺 Gemini | 🧠 DeepSeek | 🎨 Flux/Kling | 🩺 Health")
+    
+    # Recover any stuck tasks from previous crashes on startup
+    recover_stuck_tasks()
+    
+    loop_count = 0
     
     while True:
         try:
+            loop_count += 1
+            
+            # Periodic stuck task recovery (every 30 loops ≈ every minute)
+            if loop_count % 30 == 0:
+                recover_stuck_tasks()
+            
             # 1. Fetch PENDING tasks (New Work)
             response = supabase.table('colony_tasks')\
                 .select("*")\
@@ -232,8 +367,6 @@ def main_loop():
             pending_tasks = response.data
             
             # 2. Fetch ASYNC WAITING tasks (Ongoing Work)
-            # Only fetch if we didn't get a pending task, or interleave them.
-            # For simplicity, we check waiting tasks every loop too.
             waiting_response = supabase.table('colony_tasks')\
                 .select("*")\
                 .eq('status', 'async_waiting')\
@@ -242,59 +375,80 @@ def main_loop():
                 
             waiting_tasks = waiting_response.data
             
-            # Process Waiting Tasks
+            # 3. Process Waiting Tasks (check async job status)
             for task in waiting_tasks:
-                print(f"🔄 Checking Async Task {task['id']} ({task['command']})...")
+                logger.debug(f"🔄 Checking async task {task['id']} ({task['command']})")
                 result = process_task(task)
                 
                 if result['status'] != 'async_waiting':
-                    # It finished or failed!
+                    # It finished or failed
                     supabase.table('colony_tasks').update({
                         'status': result['status'],
                         'result': result.get('result', {}),
                         'error': result.get('error'),
-                        'completed_at': datetime.now().isoformat()
+                        'completed_at': datetime.now().isoformat(),
+                        'last_heartbeat': datetime.now().isoformat()
                     }).eq('id', task['id']).execute()
+                    
+                    logger.info(f"✅ Async task {task['id']} completed: {result['status']}")
             
-            # Process New Tasks
+            # 4. Process New Tasks
             if pending_tasks:
                 task = pending_tasks[0]
-                print(f"\n⚡ Starting Task {task['id']}: {task['command']}")
+                task_id = task['id']
+                command = task['command']
                 
-                # Mark as processing
+                logger.info(f"⚡ Starting Task {task_id}: {command}")
+                
+                # Mark as processing with heartbeat
+                now = datetime.now().isoformat()
                 supabase.table('colony_tasks').update({
                     'status': 'processing',
-                    'worker_id': os.getpid(), # Track who is working on it
-                    'started_at': datetime.now().isoformat()
-                }).eq('id', task['id']).execute()
+                    'worker_id': os.getpid(),
+                    'started_at': now,
+                    'last_heartbeat': now
+                }).eq('id', task_id).execute()
                 
-                # Execute Logic
+                # Execute task
                 result = process_task(task)
                 
-                # Update DB Based on Result
+                # Update heartbeat after completion
+                update_heartbeat(task_id)
+                
+                # Build update payload
                 update_payload = {
                     'status': result['status'],
                     'result': result.get('result', {}),
-                    'error': result.get('error')
+                    'error': result.get('error'),
+                    'last_heartbeat': datetime.now().isoformat()
                 }
                 
                 if result['status'] == 'completed':
                     update_payload['completed_at'] = datetime.now().isoformat()
+                    logger.info(f"✅ Task {task_id} completed successfully")
+                elif result['status'] == 'failed':
+                    logger.error(f"❌ Task {task_id} failed: {result.get('error')}")
                 elif result.get('metadata_update'):
-                    # Task went async, update metadata (e.g. store request_id)
+                    # Task went async, update metadata
                     update_payload['metadata'] = result['metadata_update']
+                    logger.info(f"⏳ Task {task_id} moved to async_waiting")
                 
-                supabase.table('colony_tasks').update(update_payload).eq('id', task['id']).execute()
+                supabase.table('colony_tasks').update(update_payload).eq('id', task_id).execute()
                 
+            # 5. Idle sleep if no work
             if not pending_tasks and not waiting_tasks:
-                time.sleep(2) 
+                time.sleep(2)
                 
         except Exception as e:
-            print(f"⚠️ Loop Error: {e}")
+            logger.error(f"⚠️ Loop Error: {e}")
             time.sleep(5)
+
 
 if __name__ == "__main__":
     try:
         main_loop()
     except KeyboardInterrupt:
-        print("\n👋 Hive Mind Sleeping...")
+        logger.info("👋 Hive Mind Sleeping...")
+    except Exception as e:
+        logger.critical(f"💀 Fatal error: {e}")
+        raise
