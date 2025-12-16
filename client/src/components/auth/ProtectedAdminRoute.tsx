@@ -25,7 +25,7 @@ interface ProtectedAdminRouteProps {
   children: React.ReactNode;
 }
 
-export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({ children }) => {
+export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = React.memo(({ children }) => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // null = loading
   const [isChecking, setIsChecking] = useState(true);
 
@@ -35,7 +35,7 @@ export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({ childr
       try {
         const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
-        
+
         if (!adminStatus) {
           routeLogger.warn('Unauthorized admin access attempt');
         }
@@ -69,4 +69,7 @@ export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({ childr
 
   // Render protected content
   return <>{children}</>;
-};
+});
+
+// Display name for React DevTools debugging
+ProtectedAdminRoute.displayName = 'ProtectedAdminRoute';

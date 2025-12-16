@@ -92,12 +92,8 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // Apply general rate limiting to all API routes
-  app.use("/api", generalRateLimiter);
-
-  // ============ HEALTH CHECK ENDPOINT ============
-
-  // Health check for monitoring and test verification
+  // ============ HEALTH CHECK ENDPOINT (EXEMPT FROM RATE LIMITING) ============
+  // Place BEFORE rate limiter so monitoring/testing works without limits
   app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
@@ -105,6 +101,9 @@ export async function registerRoutes(
       environment: process.env.NODE_ENV || "development"
     });
   });
+
+  // Apply general rate limiting to all other API routes
+  app.use("/api", generalRateLimiter);
 
 
   // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
