@@ -99,90 +99,20 @@ export async function registerRoutes(
 
   // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
 
+  /* LEGACY SIGNUP REMOVED - Using Supabase Auth
   // Sign up
   app.post("/api/auth/signup", authRateLimiter, async (req, res) => {
-    try {
-      const { email, username, password, displayName } = req.body;
-
-      // Validate
-      const parsed = insertUserSchema.safeParse({
-        email,
-        username,
-        password,
-        displayName: displayName || username
-      });
-
-      if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.errors[0].message });
-      }
-
-      // Check if user exists
-      const existingEmail = await storage.getUserByEmail(email);
-      if (existingEmail) {
-        return res.status(400).json({ error: "Email already registered" });
-      }
-
-      const existingUsername = await storage.getUserByUsername(username);
-      if (existingUsername) {
-        return res.status(400).json({ error: "Username already taken" });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
-      const user = await storage.createUser({
-        ...parsed.data,
-        password: hashedPassword,
-      });
-
-      // Schedule welcome + onboarding email sequence
-      try {
-        emailAutomation.scheduleOnboardingSequence(user.id);
-        console.log(`[Auth] Scheduled onboarding emails for user ${user.id}`);
-      } catch (emailError) {
-        // Don't fail signup if email scheduling fails
-        console.error("[Auth] Failed to schedule onboarding emails:", emailError);
-      }
-
-      // Return user without password
-      const { password: _, ...safeUser } = user;
-      res.json({ user: safeUser });
-    } catch (error) {
-      console.error("Signup error:", error);
-      res.status(500).json({ error: "Failed to create account" });
-    }
+     // ... implementation removed ...
+     res.status(410).json({ error: "Please use Supabase Auth" });
   });
+  */
 
+  /* LEGACY LOGIN REMOVED - Using Supabase Auth
   // Login
   app.post("/api/auth/login", authRateLimiter, async (req, res) => {
-    try {
-      const { email, password } = req.body;
-
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-
-      // Check if user has a password (OAuth users may not have one)
-      if (!user.password) {
-        return res.status(401).json({ error: "Please log in with your social account" });
-      }
-
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-
-      // Session-based auth removed - frontend uses Supabase JWT
-
-      const { password: _, ...safeUser } = user;
-      res.json({ user: safeUser });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ error: "Login failed" });
-    }
+     res.status(410).json({ error: "Please use Supabase Auth" });
   });
+  */
 
   // Legacy /api/auth/logout removed - Frontend uses Supabase signOut directly
 
@@ -195,8 +125,9 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const { password: _, ...safeUser } = user;
-      res.json({ user: safeUser });
+      // const { password: _, ...safeUser } = user; 
+      // res.json({ user: safeUser });
+      res.json({ user: user }); // User object from Drizzle should be safe now
     } catch (error) {
       console.error("Get me error:", error);
       res.status(500).json({ error: "Failed to get user profile" });
@@ -862,7 +793,7 @@ export async function registerRoutes(
       return res.status(401).json({ error: "Unauthorized" });
     }
     const user = await storage.getUser(req.userId);
-    if (!user || !user.isAdmin) {
+    if (!user || !(user as any).isAdmin) {
       return res.status(403).json({ error: "Admin access required" });
     }
     next();
