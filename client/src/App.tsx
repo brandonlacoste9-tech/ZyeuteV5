@@ -20,6 +20,7 @@ import { SwarmDebug } from '@/components/SwarmDebug';
 import { GUEST_SESSION_DURATION, GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '@/lib/constants';
 
 // Core Pages - Eagerly loaded (frequently accessed)
+import Home from '@/pages/Home';
 import Feed from '@/pages/Feed';
 import Profile from '@/pages/Profile';
 import Explore from '@/pages/Explore';
@@ -194,6 +195,14 @@ function App() {
                             {/* Protected Routes - with granular error boundaries */}
                             <Route
                               path="/"
+                              element={
+                                <ErrorBoundary>
+                                  <Home />
+                                </ErrorBoundary>
+                              }
+                            />
+                            <Route
+                              path="/feed"
                               element={
                                 <ProtectedRoute>
                                   <ErrorBoundary>
@@ -571,11 +580,11 @@ function App() {
                           </Routes>
                         </PageTransition>
 
-                        {/* Ti-Guy mascot assistant (always available) */}
-                        <TiGuy />
-
                         {/* Colony OS Debug Button (Phase 2 - Testing) */}
                         <SwarmDebug />
+
+                        {/* Ti-Guy mascot assistant (always available) */}
+                        <TiGuy />
                       </MainLayout>
                     }
                   />

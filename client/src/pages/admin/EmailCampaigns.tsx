@@ -71,7 +71,7 @@ export const EmailCampaigns: React.FC = () => {
                   onChange={e => setCampaign({...campaign, subject: e.target.value})}
                 />
                 <Button 
-                  variant="secondary" 
+                  variant="outline" 
                   onClick={handleGenerate}
                   disabled={isGenerating}
                 >
