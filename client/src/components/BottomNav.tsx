@@ -108,8 +108,8 @@ export const BottomNav: React.FC = () => {
   };
 
   return (
-    <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
+    <nav
+      className="absolute bottom-0 left-0 right-0 z-50 safe-bottom"
       style={{
         background: 'linear-gradient(to top, #0f0c0e 0%, #1a1418 100%)',
         boxShadow: '0 -10px 40px rgba(0,0,0,0.8), 0 -2px 20px rgba(255, 191, 0, 0.15)',
@@ -124,7 +124,7 @@ export const BottomNav: React.FC = () => {
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => {
             const isActive = isActivePath(item.to);
-            
+
             return (
               <NavLink
                 key={item.to}
@@ -136,92 +136,92 @@ export const BottomNav: React.FC = () => {
                     'flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-300 relative',
                     item.to === '/upload' ? '-mt-4' : '',
                     (isActive || navLinkActive)
-                      ? 'text-gold-400' 
+                      ? 'text-gold-400'
                       : 'text-neutral-500 hover:text-gold-500/70'
                   )
                 }
               >
-              {({ isActive: navLinkActive }) => {
-                const active = isActive || navLinkActive;
-                
-                return (
-                  <>
-                    {/* Active Glow Indicator */}
-                    {active && (
-                    <>
-                      {/* Top Bar */}
-                      <div 
-                        className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
-                        style={{
-                          background: 'linear-gradient(90deg, #B8860B, #FFD700, #B8860B)',
-                          boxShadow: '0 0 10px rgba(255,191,0,0.6)',
-                        }}
-                      />
-                      {/* Background Glow */}
-                      <div 
-                        className="absolute inset-0 rounded-xl opacity-20"
-                        style={{
-                          background: 'radial-gradient(circle, rgba(255,191,0,0.4) 0%, transparent 70%)',
-                        }}
-                      />
-                    </>
-                  )}
+                {({ isActive: navLinkActive }) => {
+                  const active = isActive || navLinkActive;
 
-                    {/* Upload Button Special Styling */}
-                    {item.to === '/upload' ? (
-                      <div 
-                        className="relative p-1 rounded-full transition-all duration-300"
-                        style={{
-                          background: active 
-                            ? 'linear-gradient(135deg, #FFD700 0%, #DAA520 100%)'
-                            : 'linear-gradient(135deg, #3a3530 0%, #252320 100%)',
-                          boxShadow: active 
-                            ? '0 0 20px rgba(255,191,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)'
-                            : '0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
-                          border: `2px solid ${active ? 'rgba(255,191,0,0.8)' : 'rgba(255,191,0,0.3)'}`,
-                        }}
-                      >
-                        <div className={active ? 'text-black' : 'text-gold-400'}>
+                  return (
+                    <>
+                      {/* Active Glow Indicator */}
+                      {active && (
+                        <>
+                          {/* Top Bar */}
+                          <div
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full"
+                            style={{
+                              background: 'linear-gradient(90deg, #B8860B, #FFD700, #B8860B)',
+                              boxShadow: '0 0 10px rgba(255,191,0,0.6)',
+                            }}
+                          />
+                          {/* Background Glow */}
+                          <div
+                            className="absolute inset-0 rounded-xl opacity-20"
+                            style={{
+                              background: 'radial-gradient(circle, rgba(255,191,0,0.4) 0%, transparent 70%)',
+                            }}
+                          />
+                        </>
+                      )}
+
+                      {/* Upload Button Special Styling */}
+                      {item.to === '/upload' ? (
+                        <div
+                          className="relative p-1 rounded-full transition-all duration-300"
+                          style={{
+                            background: active
+                              ? 'linear-gradient(135deg, #FFD700 0%, #DAA520 100%)'
+                              : 'linear-gradient(135deg, #3a3530 0%, #252320 100%)',
+                            boxShadow: active
+                              ? '0 0 20px rgba(255,191,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)'
+                              : '0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+                            border: `2px solid ${active ? 'rgba(255,191,0,0.8)' : 'rgba(255,191,0,0.3)'}`,
+                          }}
+                        >
+                          <div className={active ? 'text-black' : 'text-gold-400'}>
+                            {active ? item.activeIcon : item.icon}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Icon with Glow Effect */
+                        <div
+                          className="relative z-10 transition-all duration-300"
+                          style={{
+                            filter: active
+                              ? 'drop-shadow(0 0 8px rgba(255,191,0,0.6))'
+                              : 'none',
+                          }}
+                        >
                           {active ? item.activeIcon : item.icon}
                         </div>
-                      </div>
-                    ) : (
-                      /* Icon with Glow Effect */
-                      <div 
-                        className="relative z-10 transition-all duration-300"
+                      )}
+
+                      {/* Label */}
+                      <span
+                        className={cn(
+                          'text-[10px] font-semibold tracking-wide relative z-10 transition-all duration-300',
+                          item.to === '/upload' && 'sr-only'
+                        )}
                         style={{
-                          filter: active 
-                            ? 'drop-shadow(0 0 8px rgba(255,191,0,0.6))'
-                            : 'none',
+                          textShadow: active ? '0 0 10px rgba(255,191,0,0.5)' : 'none',
                         }}
                       >
-                        {active ? item.activeIcon : item.icon}
-                      </div>
-                    )}
-
-                    {/* Label */}
-                    <span 
-                      className={cn(
-                        'text-[10px] font-semibold tracking-wide relative z-10 transition-all duration-300',
-                        item.to === '/upload' && 'sr-only'
-                      )}
-                      style={{
-                        textShadow: active ? '0 0 10px rgba(255,191,0,0.5)' : 'none',
-                      }}
-                    >
-                      {item.label}
-                    </span>
-                  </>
-                );
-              }}
-            </NavLink>
+                        {item.label}
+                      </span>
+                    </>
+                  );
+                }}
+              </NavLink>
             );
           })}
         </div>
       </div>
 
       {/* Bottom Safe Area Fill */}
-      <div 
+      <div
         className="h-[env(safe-area-inset-bottom)]"
         style={{ background: '#0d0c0b' }}
       />

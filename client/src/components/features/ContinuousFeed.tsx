@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SingleVideoView } from './SingleVideoView';
-import { supabase } from '@/lib/supabase';
+import { getExplorePosts, togglePostFire, getCurrentUser } from '@/services/api';
 import { useHaptics } from '@/hooks/useHaptics';
 import type { Post, User } from '@/types';
 import { logger } from '../../lib/logger';
@@ -23,33 +23,25 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
     const { tap } = useHaptics();
 
     const [posts, setPosts] = useState<Array<Post & { user: User }>>([]);
+    const [page, setPage] = useState(0);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
 
-    // Fetch video feed from Supabase (Latest Public Videos)
+    // Fetch video feed (Latest Public Videos)
     const fetchVideoFeed = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('publications')
-                .select(`
-          *,
-          user:user_profiles!user_id(*)
-        `)
-                .eq('visibilite', 'public')
-                .is('est_masque', null)
-                .is('deleted_at', null)
-
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (error) throw error;
+            const data = await getExplorePosts(0, 10);
 
             if (data) {
-                setPosts(data as Array<Post & { user: User }>);
+                // Ensure user property exists on posts (api returns Post, we need Post & { user })
+                // The API getExplorePosts returns (Post & { user: User })[] based on the implementation
+                const validPosts = data.filter(p => p.user) as Array<Post & { user: User }>;
+                setPosts(validPosts);
                 setHasMore(data.length === 10);
+                setPage(0);
             }
         } catch (error) {
             feedLogger.error('Error fetching video feed:', error);
@@ -60,30 +52,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
 
     // Load more videos
     const loadMoreVideos = useCallback(async () => {
-        if (loadingMore || !hasMore || posts.length === 0) return;
+        if (loadingMore || !hasMore) return;
 
         setLoadingMore(true);
         try {
-            const lastPost = posts[posts.length - 1];
-            const { data, error } = await supabase
-                .from('publications')
-                .select(`
-          *,
-          user:user_profiles!user_id(*)
-        `)
-                .eq('visibilite', 'public')
-                .is('est_masque', null)
-                .is('deleted_at', null)
-
-                .lt('created_at', lastPost.created_at)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (error) throw error;
+            const nextPage = page + 1;
+            const data = await getExplorePosts(nextPage, 10);
 
             if (data && data.length > 0) {
-                setPosts((prev) => [...prev, ...(data as Array<Post & { user: User }>)]);
+                const validPosts = data.filter(p => p.user) as Array<Post & { user: User }>;
+                setPosts((prev) => [...prev, ...validPosts]);
                 setHasMore(data.length === 10);
+                setPage(nextPage);
             } else {
                 setHasMore(false);
             }
@@ -92,7 +72,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         } finally {
             setLoadingMore(false);
         }
-    }, [posts, loadingMore, hasMore]);
+    }, [page, loadingMore, hasMore]);
 
     // Initial fetch
     useEffect(() => {
@@ -165,14 +145,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         // Optimistic UI update could be added here
         feedLogger.debug('Fire toggle for post:', postId);
         try {
-            const user = (await supabase.auth.getUser()).data.user;
+            const user = await getCurrentUser();
             if (!user) return;
 
-            // Call toggle rpc
-            await supabase.rpc('toggle_fire', {
-                p_post_id: postId,
-                p_user_id: user.id
-            });
+            await togglePostFire(postId, user.id);
         } catch (err) {
             console.error(err);
         }

@@ -8,27 +8,40 @@ import type { Post, User, Story } from '@/types';
 
 const apiLogger = logger.withContext('API');
 
+import { supabase } from '@/lib/supabase';
+
 // Base API call helper
 async function apiCall<T>(
-  endpoint: string, 
+  endpoint: string,
   options: RequestInit = {}
 ): Promise<{ data: T | null; error: string | null }> {
   try {
+    // Get current session token
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    // Prepare headers with Authorization if token exists
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...((options.headers as Record<string, string>) || {}),
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`/api${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       credentials: 'include', // Include cookies for session
     });
-    
+
     const data = await response.json();
-    
+
     if (!response.ok) {
       return { data: null, error: data.error || 'Request failed' };
     }
-    
+
     return { data, error: null };
   } catch (error) {
     apiLogger.error(`API call failed: ${endpoint}`, error);
@@ -49,14 +62,14 @@ export async function login(email: string, password: string): Promise<{ user: Us
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  
+
   if (error) return { user: null, error };
   return { user: data?.user || null, error: null };
 }
 
 export async function signup(
-  email: string, 
-  password: string, 
+  email: string,
+  password: string,
   username: string,
   displayName?: string
 ): Promise<{ user: User | null; error: string | null }> {
@@ -64,7 +77,7 @@ export async function signup(
     method: 'POST',
     body: JSON.stringify({ email, password, username, displayName }),
   });
-  
+
   if (error) return { user: null, error };
   return { user: data?.user || null, error: null };
 }
@@ -82,7 +95,7 @@ export async function getUserProfile(
 ): Promise<User | null> {
   const endpoint = usernameOrId === 'me' ? '/auth/me' : `/users/${usernameOrId}`;
   const { data, error } = await apiCall<{ user: User }>(endpoint);
-  
+
   if (error || !data) return null;
   return data.user;
 }
@@ -92,7 +105,7 @@ export async function updateProfile(updates: Partial<User>): Promise<User | null
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
-  
+
   if (error || !data) return null;
   return data.user;
 }
@@ -103,12 +116,12 @@ export async function getFeedPosts(page: number = 0, limit: number = 20): Promis
   const { data, error } = await apiCall<{ posts: Post[] }>(
     `/feed?page=${page}&limit=${limit}`
   );
-  
+
   if (error || !data) {
     apiLogger.warn('No feed data returned');
     return [];
   }
-  
+
   // Map backend response to frontend Post type
   return (data.posts || []).map(mapBackendPost);
 }
@@ -117,7 +130,7 @@ export async function getExplorePosts(page: number = 0, limit: number = 20): Pro
   const { data, error } = await apiCall<{ posts: Post[] }>(
     `/explore?page=${page}&limit=${limit}`
   );
-  
+
   if (error || !data) return [];
   return (data.posts || []).map(mapBackendPost);
 }
@@ -148,7 +161,7 @@ export async function createPost(postData: {
     method: 'POST',
     body: JSON.stringify(postData),
   });
-  
+
   if (error || !data) return null;
   return mapBackendPost(data.post);
 }
@@ -185,7 +198,7 @@ export async function addComment(postId: string, content: string): Promise<any |
     method: 'POST',
     body: JSON.stringify({ content }),
   });
-  
+
   if (error || !data) return null;
   return data.comment;
 }
@@ -240,12 +253,12 @@ export async function getStories(
   currentUserId?: string
 ): Promise<Array<{ user: User; story?: Story; isViewed?: boolean }>> {
   const { data, error } = await apiCall<{ stories: any[] }>('/stories');
-  
+
   if (error || !data) return [];
-  
+
   // Group stories by user
   const storyMap = new Map<string, { user: User; story: Story; isViewed: boolean }>();
-  
+
   (data.stories || []).forEach((story: any) => {
     if (story.user && !storyMap.has(story.user.id)) {
       storyMap.set(story.user.id, {
@@ -255,9 +268,9 @@ export async function getStories(
       });
     }
   });
-  
+
   const storyList = Array.from(storyMap.values());
-  
+
   // Prioritize current user's story
   if (currentUserId) {
     const userStory = storyList.find((s) => s.user.id === currentUserId);
@@ -265,7 +278,7 @@ export async function getStories(
       return [userStory, ...storyList.filter((s) => s.user.id !== currentUserId)];
     }
   }
-  
+
   return storyList;
 }
 
@@ -278,7 +291,7 @@ export async function createStory(storyData: {
     method: 'POST',
     body: JSON.stringify(storyData),
   });
-  
+
   if (error || !data) return null;
   return data.story;
 }
@@ -313,7 +326,7 @@ export async function generateImage(prompt: string, aspectRatio: string = "1:1")
     method: 'POST',
     body: JSON.stringify({ prompt, aspectRatio }),
   });
-  
+
   if (error || !data) return null;
   return data;
 }
