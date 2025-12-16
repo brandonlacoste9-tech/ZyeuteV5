@@ -256,3 +256,25 @@ export type InsertGift = z.infer<typeof insertGiftSchema>;
 
 // Replit Auth upsert type
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
+
+// Colony Tasks Table (AI Swarm)
+export const colonyTasks = pgTable("colony_tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  command: text("command").notNull(),
+  status: text("status").notNull().default('pending'), // pending, processing, completed, failed, async_waiting
+  priority: integer("priority").default(0),
+  metadata: jsonb("metadata"),
+  result: jsonb("result"),
+  error: text("error"),
+  workerId: text("worker_id"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
+  falRequestId: text("fal_request_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  statusIdx: index("idx_colony_tasks_status").on(table.status),
+  stuckIdx: index("idx_colony_tasks_stuck").on(table.status, table.lastHeartbeat),
+}));
+
+export type ColonyTask = typeof colonyTasks.$inferSelect;

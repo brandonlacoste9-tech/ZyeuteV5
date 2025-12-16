@@ -30,3 +30,7 @@ pytest-cov==6.0.0
 # Logging & Monitoring
 structlog==24.4.0
 python-json-logger==3.2.1
+
+# Creation Bee (AI Media)
+fal-client==0.5.3
+google-generativeai==0.8.3

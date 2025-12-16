@@ -51,18 +51,26 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
   return (
     <div
       ref={videoRef}
-      className="w-full h-screen flex-shrink-0 snap-center snap-always relative bg-black"
+      className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black"
     >
-      {/* Full-screen Video Player */}
+      {/* Full-screen Media */}
       <div className="absolute inset-0 w-full h-full">
-        <VideoPlayer
-          src={post.media_url}
-          poster={post.media_url}
-          autoPlay={isActive}
-          muted={!isActive}
-          loop
-          className="w-full h-full"
-        />
+        {post.type === 'video' ? (
+          <VideoPlayer
+            src={post.media_url}
+            poster={post.media_url}
+            autoPlay={isActive}
+            muted={!isActive}
+            loop
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <img
+            src={post.media_url}
+            alt={post.caption || 'Post media'}
+            className="w-full h-full object-cover"
+          />
+        )}
       </div>
 
       {/* Gradient Overlay */}
@@ -144,11 +152,10 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
           {/* Fire Button */}
           <button
             onClick={handleFire}
-            className={`flex flex-col items-center gap-1 transition-all ${
-              isLiked
-                ? 'text-orange-500 scale-110 drop-shadow-[0_0_10px_rgba(255,100,0,0.6)]'
-                : 'text-white hover:text-gold-400'
-            }`}
+            className={`flex flex-col items-center gap-1 transition-all ${isLiked
+              ? 'text-orange-500 scale-110 drop-shadow-[0_0_10px_rgba(255,100,0,0.6)]'
+              : 'text-white hover:text-gold-400'
+              }`}
           >
             <svg
               className="w-8 h-8"

@@ -17,6 +17,7 @@ import { GiftOverlay } from '@/components/features/GiftOverlay';
 import { Onboarding, useOnboarding } from '@/components/Onboarding';
 import { FeedSkeleton } from '@/components/ui/Spinner';
 import { getCurrentUser, getFeedPosts, getStories, togglePostFire } from '@/services/api';
+import { ContinuousFeed } from '@/components/features/ContinuousFeed';
 import type { Post, User, Story } from '@/types';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
@@ -251,14 +252,14 @@ export const Feed: React.FC = () => {
   }, [posts]);
 
   return (
-    <div className="min-h-screen bg-black leather-overlay pb-20">
+    <div className="h-screen bg-black flex flex-col overflow-hidden pb-[4.5rem]">
       {/* First-time user onboarding */}
       {isChecked && showOnboarding && (
         <Onboarding onComplete={completeOnboarding} />
       )}
 
-      {/* Premium Header with leather texture */}
-      <div className="sticky top-0 z-30 bg-neutral-900/95 backdrop-blur-md border-b border-gold-500/30 shadow-lg shadow-black/50">
+      {/* Premium Header - Fixed Top */}
+      <div className="flex-none z-30 bg-neutral-900/95 backdrop-blur-md border-b border-gold-500/30 shadow-lg shadow-black/50">
         <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-gold-400 embossed tracking-tight drop-shadow-sm">
@@ -286,140 +287,21 @@ export const Feed: React.FC = () => {
             </div>
           </div>
         </div>
-        {/* Gold accent line */}
-        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-500/20" />
-        <div className="absolute bottom-[2px] left-0 right-0 border-b border-dashed border-gold-500/30 opacity-50" />
-      </div>
 
-      {/* Recent Stories Section */}
-      {stories.length > 0 && (
-        <>
-          <SectionHeader title="Recent Stories" />
-          <div className="border-b border-neutral-800 py-4 bg-black/20 backdrop-blur-sm">
+        {/* Stories Section (Integrated into Header area) */}
+        {stories.length > 0 && (
+          <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5">
             <StoryCarousel stories={stories} />
           </div>
-        </>
-      )}
-
-      {/* Videos Section - Horizontal Scroll */}
-      {posts.length > 0 && (
-        <>
-          <SectionHeader title="Videos" showArrow linkTo="/explore" />
-          <div className="flex overflow-x-auto gap-4 px-4 pb-6 scrollbar-hide">
-            {horizontalPosts.map((post, index) => (
-              <div
-                key={`h-${post.id}`}
-                className="animate-fade-in-up flex-shrink-0"
-                style={{
-                  animationDelay: `${index * 0.05}s`,
-                  animationFillMode: 'both',
-                }}
-              >
-                <VideoCard
-                  post={post}
-                  user={post.user!}
-                  variant="horizontal"
-                  autoPlay={false}
-                  muted={true}
-                  onFireToggle={handleFireToggle}
-                  onComment={handleComment}
-                  onShare={handleShare}
-                  onGift={handleGift}
-                />
-              </div>
-            ))}
-            {/* Padding at end for better scroll UX */}
-            <div className="flex-shrink-0 w-2" />
-          </div>
-        </>
-      )}
-
-      {/* Latest Hitants Section - Vertical Feed */}
-      <SectionHeader title="Latest Hitants" />
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Debug info - remove in production */}
-        {import.meta.env.DEV && (
-          <div className="mb-4 p-2 bg-black/50 rounded text-xs text-white/60">
-            <div>Posts count: {posts.length}</div>
-            <div>Is loading: {isLoading ? 'true' : 'false'}</div>
-            <div>Has more: {hasMore ? 'true' : 'false'}</div>
-            <div>Current user: {currentUser?.username || 'none'}</div>
-          </div>
         )}
-        {isLoading && posts.length === 0 ? (
-          <FeedSkeleton />
-        ) : posts.length === 0 ? (
-          <div className="leather-card rounded-2xl p-12 text-center stitched slide-up">
-            <div className="text-6xl mb-4 bounce-in">🦫</div>
-            <h3 className="text-xl font-bold text-gold-400 mb-2 embossed">{copy.empty.feed.title}</h3>
-            <p className="text-stone-400 mb-6">
-              {copy.empty.feed.subtitle}
-            </p>
-            <Link to="/explore">
-              <GoldButton className="px-8 py-3 rounded-xl press-effect hover-glow" size="lg">
-                {copy.empty.feed.action}
-              </GoldButton>
-            </Link>
-          </div>
-        ) : (
-          <>
-            {/* Posts Feed with Smart Autoplay */}
-            {posts.map((post, index) => (
-              <div
-                key={post.id}
-                ref={setRef(post.id)} // Register for intersection observation
-                className="animate-fade-in-up scroll-mt-24" // scroll-mt for better snapping alignment
-                style={{
-                  animationDelay: `${index * 0.1}s`,
-                  animationFillMode: 'both',
-                }}
-              >
-                <VideoCard
-                  post={post}
-                  user={post.user!}
-                  autoPlay={activePostId === post.id} // Play only if this is the active post
-                  muted={true} // Start muted by default
-                  onFireToggle={handleFireToggle}
-                  onComment={handleComment}
-                  onShare={handleShare}
-                  onGift={handleGift}
-                />
-              </div>
-            ))}
 
-            {/* Load More */}
-            {hasMore && (
-              <div className="flex justify-center py-8">
-                <button
-                  onClick={() => {
-                    setPage(prev => prev + 1);
-                    fetchPosts(page + 1);
-                  }}
-                  disabled={isLoading}
-                  className="btn-leather px-8 py-3 rounded-xl disabled:opacity-50 font-medium text-gold-400 border-gold-500/30 press-effect hover-glow flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="spinner-gold" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
-                      {copy.feedback.loading.generic}
-                    </>
-                  ) : (
-                    copy.actions.loadMore
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        {/* Gold accent line */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-500/20" />
       </div>
 
-      {/* Quebec Pride Footer */}
-      <div className="text-center py-8 text-stone-500 text-sm">
-        <p className="flex items-center justify-center gap-2 opacity-60 hover:opacity-100 transition-opacity">
-          <span className="text-gold-500 drop-shadow-[0_0_5px_rgba(255,191,0,0.5)]">⚜️</span>
-          <span>Fait au Québec, pour le Québec</span>
-          <span className="text-red-500 drop-shadow-[0_0_5px_rgba(255,0,0,0.3)]">🇨🇦</span>
-        </p>
+      {/* Main Content - Continuous Video Feed */}
+      <div className="flex-1 w-full bg-black relative">
+        <ContinuousFeed />
       </div>
 
       {/* Premium Chat Button - Ti-Guy Bronze Emblem */}

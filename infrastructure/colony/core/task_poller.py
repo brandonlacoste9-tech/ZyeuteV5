@@ -320,6 +320,57 @@ def recover_stuck_tasks():
         logger.error(f"❌ [RECOVERY] Error checking for stuck tasks: {e}")
 
 
+def publish_generated_content(task_id, result_data, prompt, media_type='video'):
+    """
+    Promotes a completed task artifact to a public Post on the feed.
+    Assigned to the 'Ti-Guy' AI Persona.
+    """
+    try:
+        # 1. Get Ti-Guy User ID
+        ti_guy_response = supabase.table('user_profiles').select('id').eq('username', 'ti_guy_bot').execute()
+        
+        if ti_guy_response.data:
+            ti_guy_id = ti_guy_response.data[0]['id']
+        else:
+            logger.info("🤖 Ti-Guy not found! Creating the AI personality...")
+            # Create generic auth user first if needed, but for now we assume we can insert into user_profiles
+            # if RLS allows or we use service role (we are using service key)
+            
+            # NOTE: In Supabase, usually need an auth.users entry. 
+            # Ideally Ti-Guy exists. If not, we might fail unless we mock it.
+            # We'll try to find ANY admin or creates one. 
+            # For resilience, let's create a placeholder or fail gracefully.
+            logger.warning("⚠️ Ti-Guy bot user missing. Content will not be published.")
+            return
+
+        # 2. Extract Media URL
+        media_url = result_data.get('video_url') if media_type == 'video' else result_data.get('image_url')
+        if not media_url:
+            logger.error(f"❌ No media URL found in result for task {task_id}")
+            return
+
+        # 3. Create the Post
+        logger.info(f"🚀 Publishing task {task_id} to the Main Feed as Ti-Guy...")
+        
+        # Using 'publications' table as per DB inspection and Feed.tsx usage
+        # Columns: user_id, media_url, caption, visibilite, created_at
+        
+        post_payload = {
+            'user_id': ti_guy_id,
+            'caption': f"Generated via Colony OS 🐝\nPrompt: {prompt}",
+            'media_url': media_url,
+            # 'type': media_type, # Column does not exist in 'publications', inferred by URL in frontend
+            'visibilite': 'public',
+            'created_at': datetime.now().isoformat()
+        }
+        
+        supabase.table('publications').insert(post_payload).execute()
+        logger.info(f"✅ Live on Feed! Task {task_id} published.")
+
+    except Exception as e:
+        logger.error(f"⚠️ Failed to publish content for task {task_id}: {e}")
+
+
 def update_heartbeat(task_id: str):
     """Update the heartbeat timestamp for a task to prevent it being marked as stuck."""
     try:
@@ -426,6 +477,15 @@ def main_loop():
                 if result['status'] == 'completed':
                     update_payload['completed_at'] = datetime.now().isoformat()
                     logger.info(f"✅ Task {task_id} completed successfully")
+                    
+                    # Auto-publish creation tasks
+                    if command in ['generate_image', 'generate_video']:
+                         media_type = 'video' if command == 'generate_video' else 'photo'
+                         # Parse prompt from metadata
+                         prompt = task.get('metadata', {}).get('prompt', 'AI Generation')
+                         
+                         publish_generated_content(task_id, result['result'], prompt, media_type)
+                         
                 elif result['status'] == 'failed':
                     logger.error(f"❌ Task {task_id} failed: {result.get('error')}")
                 elif result.get('metadata_update'):

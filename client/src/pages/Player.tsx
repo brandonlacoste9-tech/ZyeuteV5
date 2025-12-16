@@ -350,7 +350,7 @@ export const Player: React.FC = () => {
             if (!post.user) return null;
 
             return (
-              <div key={post.id} data-video-view>
+              <div key={post.id} data-video-view className="w-full h-full snap-center">
                 <SingleVideoView
                   post={post}
                   user={post.user}

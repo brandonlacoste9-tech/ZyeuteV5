@@ -42,10 +42,11 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   const isHorizontal = variant === 'horizontal';
 
   const handleCardClick = () => {
-    // Only navigate to player if it's a video post
+    tap();
     if (post.type === 'video') {
-      tap();
       navigate(`/video/${post.id}`);
+    } else {
+      navigate(`/p/${post.id}`);
     }
   };
 
@@ -60,11 +61,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
       className={cn(
         'leather-card rounded-2xl overflow-hidden stitched transition-all duration-300 group shadow-xl',
         'hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(255,191,0,0.2)]',
-        'hover:border-gold-500/50',
-        isHorizontal ? 'w-72 flex-shrink-0' : 'w-full',
-        post.type === 'video' ? 'cursor-pointer' : ''
+        'hover:border-gold-500/50 cursor-pointer',
+        isHorizontal ? 'w-72 flex-shrink-0' : 'w-full'
       )}
-      onClick={post.type === 'video' ? handleCardClick : undefined}
+      onClick={handleCardClick}
     >
       {/* User Header */}
       <div className={cn(
@@ -95,7 +95,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             </p>
           )}
         </div>
-        <button 
+        <button
           onClick={(e) => {
             e.stopPropagation();
             tap();
@@ -136,7 +136,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity duration-300" />
           </div>
         )}
-        
+
         {/* Video indicator badge */}
         {post.type === 'video' && (
           <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1 text-white text-xs font-medium">
@@ -146,7 +146,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <span>Video</span>
           </div>
         )}
-        
+
         {/* Gold accent lines */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
@@ -164,11 +164,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}>
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${
-              isLiked 
-                ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse' 
+            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
+                ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse'
                 : 'text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95'
-            }`}
+              }`}
           >
             <svg className="w-7 h-7" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
@@ -221,7 +220,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
 
           <div className="flex-1" />
 
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation();
               tap();
@@ -247,9 +246,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <Link to={`/profile/${user.username}`} className="font-bold text-gold-400 hover:text-gold-300 mr-2">
               {user.username}
             </Link>
-            <span 
+            <span
               className="text-stone-300"
-              dangerouslySetInnerHTML={{ 
+              dangerouslySetInnerHTML={{
                 __html: DOMPurify.sanitize(post.caption, {
                   ALLOWED_TAGS: ['b', 'i', 'em', 'strong'],
                   ALLOWED_ATTR: []
