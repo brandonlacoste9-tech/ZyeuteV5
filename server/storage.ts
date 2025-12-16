@@ -25,9 +25,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  getUserByReplitId(replitId: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  createUserFromOAuth(userData: UpsertUser): Promise<User>;
+  // getUserByReplitId removed - legacy
+  createUser(user: InsertUser & { id: string }): Promise<User>;
+  // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   // Posts
@@ -37,7 +37,7 @@ export interface IStorage {
   getExplorePosts(page: number, limit: number): Promise<(Post & { user: User })[]>;
   createPost(post: InsertPost): Promise<Post>;
   deletePost(id: string): Promise<boolean>;
-  incrementPostViews(id: string): Promise<void>;
+  // incrementPostViews removed - not in schema
 
   // Comments
   getPostComments(postId: string): Promise<(Comment & { user: User; isFired: boolean })[]>;
@@ -92,33 +92,18 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
     return result[0];
   }
 
-  async getUserByReplitId(replitId: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.replitId, replitId)).limit(1);
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: InsertUser & { id: string }): Promise<User> {
     return traceDatabase("INSERT", "users", async (span) => {
       span.setAttributes({ "db.username": insertUser.username });
       const result = await db.insert(users).values(insertUser).returning();
       return result[0];
     });
-  }
-
-  async createUserFromOAuth(userData: UpsertUser): Promise<User> {
-    const result = await db.insert(users).values({
-      replitId: userData.replitId,
-      email: userData.email || null,
-      username: userData.username,
-      displayName: userData.displayName || userData.username,
-      avatarUrl: userData.avatarUrl || null,
-    }).returning();
-    return result[0];
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
@@ -138,11 +123,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(posts.id, id))
       .limit(1);
 
-    if (!result[0] || !result[0].users) return undefined;
+    if (!result[0] || !result[0].user_profiles) return undefined;
 
     return {
-      ...result[0].posts,
-      user: result[0].users,
+      ...result[0].publications,
+      user: result[0].user_profiles,
     };
   }
 
@@ -232,13 +217,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPost(post: InsertPost): Promise<Post> {
-    const result = await db.insert(posts).values(post).returning();
-
-    // Increment user's post count
-    await db.update(users)
-      .set({ postsCount: sql`${users.postsCount} + 1` })
-      .where(eq(users.id, post.userId));
-
+    const result = await db.insert(posts).values(post as any).returning();
     return result[0];
   }
 
@@ -247,19 +226,11 @@ export class DatabaseStorage implements IStorage {
     if (!post[0]) return false;
 
     await db.delete(posts).where(eq(posts.id, id));
-
-    // Decrement user's post count
-    await db.update(users)
-      .set({ postsCount: sql`${users.postsCount} - 1` })
-      .where(eq(users.id, post[0].userId));
-
     return true;
   }
 
   async incrementPostViews(id: string): Promise<void> {
-    await db.update(posts)
-      .set({ viewCount: sql`${posts.viewCount} + 1` })
-      .where(eq(posts.id, id));
+    // No-op: viewCount not in schema
   }
 
   // Comments
@@ -400,16 +371,6 @@ export class DatabaseStorage implements IStorage {
     if (existing[0]) return false;
 
     await db.insert(follows).values({ followerId, followingId });
-
-    // Update counts
-    await db.update(users)
-      .set({ followingCount: sql`${users.followingCount} + 1` })
-      .where(eq(users.id, followerId));
-
-    await db.update(users)
-      .set({ followersCount: sql`${users.followersCount} + 1` })
-      .where(eq(users.id, followingId));
-
     return true;
   }
 
@@ -423,15 +384,6 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     if (result.length === 0) return false;
-
-    // Update counts
-    await db.update(users)
-      .set({ followingCount: sql`${users.followingCount} - 1` })
-      .where(eq(users.id, followerId));
-
-    await db.update(users)
-      .set({ followersCount: sql`${users.followersCount} - 1` })
-      .where(eq(users.id, followingId));
 
     return true;
   }
@@ -565,11 +517,6 @@ export class DatabaseStorage implements IStorage {
   // Gifts
   async createGift(gift: InsertGift): Promise<Gift> {
     const result = await db.insert(gifts).values(gift).returning();
-
-    // Increment gift count on post
-    await db.update(posts)
-      .set({ giftCount: sql`${posts.giftCount} + 1` })
-      .where(eq(posts.id, gift.postId));
 
     return result[0];
   }

@@ -46,11 +46,18 @@ const generalRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Stripe configuration
+// Stripe configuration - only initialize if API key is present
 import Stripe from "stripe";
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-11-17.clover",
-});
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+let stripe: Stripe | null = null;
+
+if (STRIPE_SECRET_KEY) {
+  stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: "2025-11-17.clover",
+  });
+} else {
+  console.warn("⚠️ STRIPE_SECRET_KEY not found - payment features will be disabled");
+}
 
 
 
@@ -195,14 +202,22 @@ export async function registerRoutes(
 
   // ============ POSTS ROUTES ============
 
-  // Get feed posts
-  app.get("/api/feed", requireAuth, async (req, res) => {
+  // Get feed posts - supports guest mode (returns explore posts for guests)
+  app.get("/api/feed", optionalAuth, async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 0;
       const limit = parseInt(req.query.limit as string) || 20;
 
-      const posts = await storage.getFeedPosts(req.userId!, page, limit);
-      res.json({ posts });
+      // If authenticated, return personalized feed
+      // If guest (no auth), return explore posts
+      if (req.userId) {
+        const posts = await storage.getFeedPosts(req.userId, page, limit);
+        res.json({ posts });
+      } else {
+        // Guest mode: return explore posts
+        const posts = await storage.getExplorePosts(page, limit);
+        res.json({ posts, isGuestMode: true });
+      }
     } catch (error) {
       console.error("Get feed error:", error);
       res.status(500).json({ error: "Failed to get feed" });
@@ -728,7 +743,7 @@ export async function registerRoutes(
   // Create checkout session for premium subscription
   app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
     try {
-      if (!process.env.STRIPE_SECRET_KEY) {
+      if (!stripe) {
         return res.status(500).json({ error: "Stripe not configured" });
       }
 
@@ -967,7 +982,7 @@ export async function registerRoutes(
     try {
       const { giftType, postId } = req.body;
 
-      if (!process.env.STRIPE_SECRET_KEY) {
+      if (!stripe) {
         return res.status(500).json({ error: "Stripe not configured" });
       }
 
@@ -1027,6 +1042,9 @@ export async function registerRoutes(
       }
 
       // Verify payment was successful
+      if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+      }
       const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
       if (paymentIntent.status !== 'succeeded') {
         return res.status(400).json({ error: "Payment not completed" });

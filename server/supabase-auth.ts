@@ -1,27 +1,44 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { traceSupabase } from "./tracer.js";
 
-if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Track if Supabase is properly configured
+const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+
+if (!isSupabaseConfigured) {
   console.warn("⚠️ Supabase environment variables missing. JWT Auth will fail.");
+  console.warn("   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.");
 }
 
-// Create a single supabase admin client for interacting with the Auth API
-const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
-);
+// Create the Supabase admin client only if properly configured
+let supabaseAdmin: SupabaseClient | null = null;
+
+if (isSupabaseConfigured) {
+  supabaseAdmin = createClient(
+    SUPABASE_URL!,
+    SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+}
 
 /**
  * Verifies a Supabase JWT and returns the user ID if valid.
  * This is stateless and serverless-friendly.
  */
 export async function verifyAuthToken(token: string): Promise<string | null> {
+  // If Supabase is not configured, auth always fails
+  if (!supabaseAdmin) {
+    console.warn("Auth verification skipped: Supabase not configured");
+    return null;
+  }
+
   return traceSupabase("auth.getUser", { "auth.method": "jwt_verification" }, async (span) => {
     try {
       const { data, error } = await supabaseAdmin.auth.getUser(token);
@@ -35,7 +52,7 @@ export async function verifyAuthToken(token: string): Promise<string | null> {
         return null;
       }
 
-      span.setAttributes({ 
+      span.setAttributes({
         "auth.success": true,
         "auth.user_id": data.user.id,
       });
