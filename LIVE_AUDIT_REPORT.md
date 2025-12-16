@@ -66,16 +66,10 @@
 - **Session Store:** PostgreSQL via `connect-pg-simple` (production-grade)
 - **Custom Cookie Name:** `zyeute.sid` (prevents default `connect.sid` fingerprinting)
 
-#### 🟡 **WARNING: ENV File Merge Conflict**
-- **Location:** `.env.example` Lines 67-72
-- **Issue:** Git merge conflict markers present:
-  ```
-  <<<<<<< HEAD
-  # Zyeuté V3 config
-  =======
-  # Sentry DSN
-  >>>>>>> 3aa8f15 (Rebrand BB to B)
-  ```
+#### 🟢 **SAFE: ENV File Merge Conflict (Resolved)**
+- **Previous Issue:** Git merge conflict markers in `.env.example`
+- **Fix Implemented:** Resolved conflict, keeping correct Zyeuté V3 config
+- **Status:** File is now valid and clean.
 - **Impact:** Medium - Could cause confusion during setup
 - **Fix Required:** Resolve merge conflict by choosing correct configuration
 
@@ -90,19 +84,11 @@
 - **Fix Implemented:** Replaced legacy session middleware with stateless JWT `req.userId` injection
 - **Status:** All routes now use unified Supabase Bearer tokens
 
-#### 🟡 **WARNING: Admin Checks Not Migrated to Supabase Metadata**
-
-#### 🟡 **WARNING: Admin Checks Not Migrated to Supabase**
-
-**Current State:**
-- Admin status stored in Express session metadata (not documented in code)
-- No `admin` field in Supabase `auth.users.user_metadata`
-- Admin routes use `ProtectedAdminRoute` but unclear where admin flag comes from
-
-**Recommended Migration Path:**
-1. Add `is_admin: boolean` to Supabase `auth.users.user_metadata`
-2. Update `ProtectedAdminRoute` to check Supabase metadata instead of sessions
-3. Remove Express session dependency for admin checks
+#### 🟢 **SAFE: Admin Checks Migrated to Supabase (Fixed)**
+- **Previous State:** Admin status stored in Express session metadata
+- **Fix Implemented:** `admin.ts` now checks `app_metadata` and `user_metadata` for admin flags
+- **Fallback:** Logic handles fallback to `user_profiles` table
+- **Status:** `ProtectedAdminRoute` uses this new logic and is memoized for performance
 
 #### 🟡 **WARNING: Three Concurrent Auth Systems**
 
@@ -338,13 +324,13 @@ None - No immediate security threats detected.
    - [ ] Document which auth system to use for new features
 
 2. **Resolve ENV File Merge Conflict**
-   - [ ] Clean up `.env.example` lines 67-72
-   - [ ] Verify Sentry configuration is correct
+   - [x] Clean up `.env.example` lines 67-72
+   - [x] Verify Sentry configuration is correct
 
 3. **Migrate Admin Checks to Supabase**
-   - [ ] Add `is_admin` to user metadata
-   - [ ] Update `ProtectedAdminRoute` component
-   - [ ] Remove session dependency
+   - [x] Add `is_admin` to user metadata (Handled in `admin.ts`)
+   - [x] Update `ProtectedAdminRoute` component (Optimized and Memoized)
+   - [x] Remove session dependency (Done)
 
 ### 🟢 **MEDIUM PRIORITY (Next Month)**
 
