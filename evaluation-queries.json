@@ -1,0 +1,134 @@
+[
+  {
+    "category": "Authentication",
+    "persona": "New user",
+    "language": "en",
+    "query": "Sign up with email john.doe@example.com and password Zyeute2025!"
+  },
+  {
+    "category": "Authentication",
+    "persona": "Returning user",
+    "language": "fr",
+    "query": "Connexion avec courriel marie.lapointe@exemple.ca et mot de passe Bonjour123!"
+  },
+  {
+    "category": "Authentication",
+    "persona": "Guest browser",
+    "language": "en",
+    "query": "Continue as guest"
+  },
+  {
+    "category": "Authentication",
+    "persona": "New user",
+    "language": "fr",
+    "query": "Réinitialiser le mot de passe pour jean.gagnon@exemple.ca"
+  },
+  {
+    "category": "Content",
+    "persona": "Power user",
+    "language": "en",
+    "query": "Create a new post: 'First snow in Montreal! #winter #quebec'"
+  },
+  {
+    "category": "Content",
+    "persona": "Lurker",
+    "language": "fr",
+    "query": "Afficher le fil d'actualité"
+  },
+  {
+    "category": "Content",
+    "persona": "Power user",
+    "language": "en",
+    "query": "Search for trending posts about 'poutine'"
+  },
+  {
+    "category": "Social",
+    "persona": "Returning user",
+    "language": "en",
+    "query": "Like post #1234"
+  },
+  {
+    "category": "Social",
+    "persona": "Power user",
+    "language": "fr",
+    "query": "Commenter sur la publication #5678: 'Ben voyons donc, c'est malade!'"
+  },
+  {
+    "category": "Social",
+    "persona": "Lurker",
+    "language": "en",
+    "query": "Follow user @quebecois"
+  },
+  {
+    "category": "Social",
+    "persona": "New user",
+    "language": "fr",
+    "query": "Envoyer un message à @marc: 'On se voit au dépanneur?'"
+  },
+  {
+    "category": "Quebec-specific",
+    "persona": "Power user",
+    "language": "fr",
+    "query": "Créer une publication: 'Tabarnak, il fait frette aujourd'hui!'"
+  },
+  {
+    "category": "Quebec-specific",
+    "persona": "Lurker",
+    "language": "en",
+    "query": "View posts tagged #montreal #quebec #french"
+  },
+  {
+    "category": "Guest mode",
+    "persona": "Guest browser",
+    "language": "en",
+    "query": "Try to like a post as guest"
+  },
+  {
+    "category": "Guest mode",
+    "persona": "Guest browser",
+    "language": "fr",
+    "query": "Essayer de commenter en mode invité"
+  },
+  {
+    "category": "Edge cases",
+    "persona": "New user",
+    "language": "en",
+    "query": "Sign up with invalid email: 'notanemail'"
+  },
+  {
+    "category": "Edge cases",
+    "persona": "Returning user",
+    "language": "fr",
+    "query": "Connexion avec mauvais mot de passe"
+  },
+  {
+    "category": "Edge cases",
+    "persona": "Power user",
+    "language": "en",
+    "query": "Create post with empty content"
+  },
+  {
+    "category": "Payments",
+    "persona": "Power user",
+    "language": "en",
+    "query": "Subscribe to premium with Stripe"
+  },
+  {
+    "category": "Payments",
+    "persona": "Returning user",
+    "language": "fr",
+    "query": "Payer l'abonnement premium avec Stripe"
+  },
+  {
+    "category": "AI features",
+    "persona": "Power user",
+    "language": "en",
+    "query": "Generate an image of a snowman in Quebec using Fal"
+  },
+  {
+    "category": "AI features",
+    "persona": "Lurker",
+    "language": "fr",
+    "query": "Utiliser DeepSeek pour discuter: 'C'est quoi la meilleure cabane à sucre?'"
+  }
+]

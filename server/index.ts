@@ -1,10 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+// --- OpenTelemetry Tracing ---
+import '../tracing-setup';
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
 
 const app = express();
@@ -14,45 +13,17 @@ app.set("trust proxy", 1);
 
 const httpServer = createServer(app);
 
-// Production-ready session configuration with PostgreSQL store
-const PgSession = connectPgSimple(session);
-const isProduction = process.env.NODE_ENV === "production";
-
-// Session secret - fail fast in production if not set
-const sessionSecret = process.env.SESSION_SECRET;
-if (isProduction && !sessionSecret) {
-  console.error("FATAL: SESSION_SECRET environment variable must be set in production");
-  process.exit(1);
-}
-
-// Create PostgreSQL pool for session store
-const pgPool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-app.use(
-  session({
-    store: new PgSession({
-      pool: pgPool,
-      tableName: "user_sessions",
-      createTableIfMissing: true,
-    }),
-    secret: sessionSecret || "dev-only-secret-not-for-production",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: isProduction, // Only send over HTTPS in production
-      httpOnly: true, // Prevent XSS access to cookie
-      sameSite: "strict", // CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-    name: "zyeute.sid", // Custom session cookie name
-  })
-);
-
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
+  }
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+    }
   }
 }
 
@@ -79,7 +50,7 @@ export function log(message: string, source = "express") {
 
   // Include trace context in logs for correlation
   const traceContext = getTraceContext();
-  const traceInfo = traceContext.traceId 
+  const traceInfo = traceContext.traceId
     ? ` [trace:${traceContext.traceId.substring(0, 8)}]`
     : "";
 

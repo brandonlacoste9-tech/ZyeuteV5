@@ -1,32 +1,40 @@
 /**
  * Admin role checking utilities
- * Checks via session-based API for admin status
+ * Checks via Supabase User Metadata for admin status
+ * Migration: Replaces legacy session-based /api/auth/me check
  */
 
+import { supabase } from './supabase';
 import { logger } from './logger';
 
 const adminLogger = logger.withContext('Admin');
 
 /**
- * Check if current user is an admin via session API
+ * Check if current user is an admin via Supabase Metadata
  */
 export async function checkIsAdmin(): Promise<boolean> {
   try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    
-    if (!response.ok) {
-      adminLogger.debug('No authenticated user');
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      adminLogger.debug('No authenticated user found');
       return false;
     }
-    
-    const data = await response.json();
-    
-    if (data.user?.isAdmin === true) {
-      adminLogger.debug('Admin status confirmed via session');
+
+    // Check multiple common patterns for Admin flags in metadata
+    // Priority: app_metadata (secure, set by service role) > user_metadata (editable via dashboard)
+    const isAdmin =
+      user.app_metadata?.role === 'service_role' || // Supabase service role
+      user.app_metadata?.role === 'admin' ||        // Custom RBAC role
+      user.user_metadata?.is_admin === true ||      // Boolean flag
+      user.user_metadata?.role === 'admin';         // String role
+
+    if (isAdmin) {
+      adminLogger.debug('Admin status confirmed via Supabase');
       return true;
     }
 
-    adminLogger.debug('User is not an admin');
+    adminLogger.debug('User is authenticated but not an admin', { id: user.id });
     return false;
   } catch (error) {
     adminLogger.error('Error checking admin status:', error);
@@ -42,15 +50,15 @@ export async function getAdminStatus(): Promise<{
   user: unknown | null;
 }> {
   try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
-    
-    if (!response.ok) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
       return { isAdmin: false, user: null };
     }
-    
-    const data = await response.json();
-    const isAdmin = data.user?.isAdmin === true;
-    return { isAdmin, user: data.user };
+
+    // Reuse the robust logic from checkIsAdmin
+    const isAdmin = await checkIsAdmin();
+    return { isAdmin, user };
   } catch (error) {
     adminLogger.error('Error getting admin status:', error);
     return { isAdmin: false, user: null };

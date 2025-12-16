@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useGuestMode } from '@/contexts/GuestModeContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
@@ -15,6 +16,8 @@ const loginLogger = logger.withContext('Login');
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+
+  const { startGuestSession } = useGuestMode();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -48,19 +51,19 @@ export const Login: React.FC = () => {
   const handleGuestLogin = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault(); // Stop form submission
     e.stopPropagation(); // Stop event bubbling
-    
+
     if (debugMode) console.log('🎭 [GUEST LOGIN] Button clicked');
     setIsLoading(true);
     loginLogger.info('🎭 Guest login initiated');
-    
+
     try {
       // Set guest mode flags in localStorage
       localStorage.setItem(GUEST_MODE_KEY, 'true');
       localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
       localStorage.setItem(GUEST_VIEWS_KEY, '0');
-      
+
       if (debugMode) console.log('✅ Guest flags set in localStorage');
-      
+
       // Simulate a short delay for UX, then navigate
       setTimeout(() => {
         if (debugMode) console.log('🎭 Redirecting to home...');
@@ -77,14 +80,14 @@ export const Login: React.FC = () => {
   const handleSubmit = React.useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (debugMode) console.log('📝 [LOGIN] Form submitted with email:', email);
     setError('');
     setIsLoading(true);
 
     try {
       if (debugMode) console.log('🔐 [LOGIN] Attempting Supabase auth...');
-      
+
       // ✅ DIRECT CLIENT-SIDE AUTH - No server proxy
       const { signIn } = await import('../lib/supabase');
       const { data, error } = await signIn(email, password);
@@ -151,14 +154,14 @@ export const Login: React.FC = () => {
   }, [isLoading, error, debugMode]);
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1510 50%, #0d0b09 100%)',
       }}
     >
       {/* Leather Texture Overlay */}
-      <div 
+      <div
         className="absolute inset-0 opacity-30"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
@@ -167,7 +170,7 @@ export const Login: React.FC = () => {
 
       {/* Gold Ambient Glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div 
+        <div
           className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full"
           style={{
             background: 'radial-gradient(circle, rgba(255,191,0,0.15) 0%, rgba(255,191,0,0.05) 40%, transparent 70%)',
@@ -179,15 +182,15 @@ export const Login: React.FC = () => {
         {/* Glowing Fleur-de-lys Logo */}
         <div className="text-center mb-10 overflow-visible">
           <div className="relative inline-block overflow-visible">
-            <div 
+            <div
               className="absolute inset-0 blur-xl opacity-60"
               style={{
                 background: 'radial-gradient(circle, rgba(255,191,0,0.6) 0%, transparent 70%)',
                 transform: 'scale(1.5)',
               }}
             />
-            
-            <div 
+
+            <div
               className="relative w-28 h-28 mx-auto rounded-2xl flex items-center justify-center"
               style={{
                 background: 'linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%)',
@@ -196,16 +199,16 @@ export const Login: React.FC = () => {
                 boxShadow: `0 0 40px rgba(255,191,0,0.3), 0 0 80px rgba(255,191,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)`,
               }}
             >
-              <div 
+              <div
                 className="absolute inset-0 rounded-2xl"
                 style={{
                   border: '2px solid rgba(255,191,0,0.6)',
                   boxShadow: '0 0 20px rgba(255,191,0,0.4), inset 0 0 20px rgba(255,191,0,0.1)',
                 }}
               />
-              
-              <svg 
-                viewBox="0 0 100 100" 
+
+              <svg
+                viewBox="0 0 100 100"
                 className="w-16 h-16 relative z-10"
                 style={{
                   filter: 'drop-shadow(0 0 10px rgba(255,191,0,0.8)) drop-shadow(0 0 20px rgba(255,191,0,0.4))',
@@ -230,7 +233,7 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          <h1 
+          <h1
             className="text-5xl font-black mt-6 tracking-wide"
             style={{
               fontFamily: "'Georgia', 'Times New Roman', serif",
@@ -251,7 +254,7 @@ export const Login: React.FC = () => {
         </div>
 
         {/* Login Card */}
-        <div 
+        <div
           className="rounded-3xl p-8 relative"
           style={{
             background: `radial-gradient(ellipse at 30% 20%, rgba(80, 60, 45, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(60, 45, 35, 0.15) 0%, transparent 50%), linear-gradient(145deg, #3a2a22 0%, #251a15 50%, #1a1210 100%)`,
@@ -260,7 +263,7 @@ export const Login: React.FC = () => {
           }}
         >
           {/* Gold Stitching */}
-          <div 
+          <div
             className="absolute rounded-2xl pointer-events-none"
             style={{
               inset: '8px',
@@ -379,7 +382,8 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="relative my-6">
+          {/* Divider */}
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full" style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,191,0,0.3), transparent)' }} />
             </div>
@@ -388,60 +392,72 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {/* Google Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              className="w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 group press-effect hover-glow disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: 'rgba(0,0,0,0.3)',
-                border: '2px solid rgba(255,191,0,0.3)',
-                color: '#DAA520',
-              }}
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-              {copy.auth.continueGoogle}
-            </button>
-
-            {/* ✅ Guest Login Button */}
-            <button
-              type="button" 
-              onClick={handleGuestLogin}
-              disabled={isLoading}
-              className="w-full py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 group press-effect hover-glow disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                color: '#E8DCC4',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.5)';
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.2)';
-                (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)';
-              }}
-            >
-              <span className="text-xl">🎭</span>
-              Mode Invité (Accès Rapide)
-            </button>
-          </div>
-
-          <p className="text-center text-sm mt-8" style={{ color: '#8B7355' }}>
-            {copy.auth.noAccount}{' '}
-            <Link to="/signup" className="font-bold transition-colors link-underline" style={{ color: '#DAA520' }}>
-              {copy.auth.signupButton}
-            </Link>
-          </p>
         </div>
+        {/* Continue as Guest Button */}
+        <button
+          type="button"
+          className="w-full py-4 rounded-xl font-semibold transition-all duration-300 border-2 border-[rgba(244,196,48,0.3)] bg-transparent text-gold-400 hover:bg-[rgba(244,196,48,0.1)] mb-4"
+          style={{ color: '#f4c430', borderColor: 'rgba(244,196,48,0.3)' }}
+          onClick={() => {
+            startGuestSession();
+            navigate('/feed');
+          }}
+          aria-label="Continuer en tant qu'invité"
+        >
+          Continuer en tant qu'invité
+        </button>
 
-        <p className="text-center text-xs mt-8" style={{ color: '#5C4D3C' }}>
-          Fait avec fierté au Québec 🦫⚜️
+        {/* Google Button - Leather Style */}
+        <button
+          onClick={handleGoogleSignIn}
+          disabled={isLoading}
+          className="w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 group press-effect hover-glow"
+          style={{
+            background: 'rgba(0,0,0,0.3)',
+            border: '2px solid rgba(255,191,0,0.3)',
+            color: '#DAA520',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,191,0,0.6)';
+            e.currentTarget.style.boxShadow = '0 0 20px rgba(255,191,0,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(255,191,0,0.3)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path
+              fill="currentColor"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+              fill="currentColor"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="currentColor"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+            />
+            <path
+              fill="currentColor"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+            />
+          </svg>
+          {copy.auth.continueGoogle}
+        </button>
+
+        <p className="text-center text-sm mt-8" style={{ color: '#8B7355' }}>
+          {copy.auth.noAccount}{' '}
+          <Link to="/signup" className="font-bold transition-colors link-underline" style={{ color: '#DAA520' }}>
+            {copy.auth.signupButton}
+          </Link>
         </p>
       </div>
+
+      <p className="text-center text-xs mt-8" style={{ color: '#5C4D3C' }}>
+        Fait avec fierté au Québec 🦫⚜️
+      </p>
     </div>
   );
 };

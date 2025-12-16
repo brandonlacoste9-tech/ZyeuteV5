@@ -8,6 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Logo } from '@/components/Logo';
 import { signUp } from '@/lib/supabase';
+import { useGuestMode } from '@/contexts/GuestModeContext';
 import { toast } from '@/components/Toast';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '@/lib/constants';
 
@@ -15,6 +16,8 @@ export const Signup: React.FC = () => {
   const navigate = useNavigate();
   const isMountedRef = React.useRef(true);
   const navigationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const { startGuestSession } = useGuestMode();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -192,6 +195,29 @@ export const Signup: React.FC = () => {
               Créer mon compte
             </Button>
           </form>
+
+          {/* Divider */}
+          <div className="flex items-center my-6">
+            <div className="flex-grow border-t border-leather-400" />
+            <span className="mx-3 text-leather-400 text-xs">ou</span>
+            <div className="flex-grow border-t border-leather-400" />
+          </div>
+
+          {/* Continue as Guest Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full border-2 border-[rgba(244,196,48,0.3)] bg-transparent text-gold-400 hover:bg-[rgba(244,196,48,0.1)]"
+            onClick={() => {
+              startGuestSession();
+              navigate('/feed');
+            }}
+            aria-label="Continuer en tant qu'invité"
+          >
+            Continuer en tant qu'invité
+          </Button>
+
 
           {/* Terms */}
           <p className="text-center text-leather-400 text-xs mt-6">

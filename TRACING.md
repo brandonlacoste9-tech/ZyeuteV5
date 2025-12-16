@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # OpenTelemetry Tracing Guide
 
 This application uses OpenTelemetry for distributed tracing, providing deep visibility into application behavior, performance, and errors.
@@ -324,3 +325,41 @@ For issues or questions:
 2. Review trace data in Monitoring
 3. Check server logs for tracing errors
 4. Verify environment variables are set correctly
+=======
+# Tracing Setup for Zyeuté V3
+
+This project uses OpenTelemetry for distributed tracing.
+
+## How to Run with Tracing
+
+1. **Start the AI Toolkit Trace Collector**
+   - In VS Code, run the command: `AI: Open Tracing Viewer`
+   - This will start the OTLP collector and open the trace viewer.
+   - The default endpoint is `http://localhost:4318/v1/traces`.
+
+2. **Install Dependencies**
+   - All required OpenTelemetry packages are already listed in `package.json`.
+
+3. **Run the Server**
+   - Start your server as usual:
+     ```bash
+     npm run dev    # or npm start
+     ```
+   - Tracing will be automatically initialized from `server/index.ts`.
+
+4. **View Traces**
+   - Open the AI Toolkit trace viewer in VS Code to see live traces.
+
+## How It Works
+- Tracing is initialized in `tracing-setup.ts` and imported at the top of `server/index.ts`.
+- All Express and HTTP calls are auto-instrumented.
+- You can add custom spans using OpenTelemetry APIs if needed.
+
+## Customization
+- To change the service name, edit `tracing-setup.ts`.
+- To export traces to a different endpoint, update the OTLP exporter URL in `tracing-setup.ts`.
+
+---
+
+For more info, see the [OpenTelemetry JS Docs](https://opentelemetry.io/docs/instrumentation/js/).
+>>>>>>> 3aa8f15 (Rebrand BB to B (Bitcoin AI): logo, UI, API, personas, docs)

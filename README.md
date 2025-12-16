@@ -1,6 +1,6 @@
-# Zyeuté - Package Installer
+# Zyeuté / KryptoTrac - Production-Ready Crypto Tracker
 
-> Quebec's premier French social media platform with advanced monetization features
+> Quebec's premier French social media platform and crypto portfolio tracker with advanced monetization and analytics features
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-97.6%25-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -73,7 +73,7 @@
 
 ## 📱 Overview
 
-Zyeuté Package Installer is a comprehensive social media application built specifically for the Quebec French-speaking market. It features real-time interactions, virtual gifting, Stripe payment integration, and a modern, responsive UI built with React and TypeScript.
+Zyeuté/KryptoTrac is a comprehensive social media and crypto tracking application built for the Quebec French-speaking market. It features real-time interactions, portfolio and transaction management, advanced price alerts, Stripe payment integration, and a modern, responsive UI built with React and TypeScript.
 
 **Live Demo:** [https://package-installer--northern-ventur.replit.app](https://package-installer--northern-ventur.replit.app)
 
@@ -85,10 +85,14 @@ Zyeuté Package Installer is a comprehensive social media application built spec
 - ❤️ **Social Interactions** - Like posts and engage with content
 - 💬 **Messaging System** - Real-time chat with Socket.IO
 - 🎁 **Virtual Gifts** - Send and receive virtual gifts to creators
-- 💳 **Stripe Integration** - Secure payment processing for virtual currency
+- 💳 **Stripe Integration** - Secure payment processing for virtual currency and premium features
 - 🎨 **Premium UI** - Beautiful gradient designs and animations
 - 📱 **Responsive Design** - Works seamlessly on all devices
 - 🇫🇷 **French Interface** - Built for Quebec's Francophone community
+- 📊 **Portfolio Tracking** - Track crypto holdings, performance, and analytics
+- 🧾 **Transaction History** - Log, import, and export all trades and transfers
+- 🚨 **Price Alerts** - Multi-channel notifications (email, in-app, push)
+- 🛡️ **Sentry Monitoring** - Real-time error and performance monitoring
 
 ### Advanced Features
 - 🎬 **Video Player** - Custom video playback with controls

@@ -1,8 +1,8 @@
 import { sql } from "drizzle-orm";
-import { 
-  pgTable, 
-  text, 
-  varchar, 
+import {
+  pgTable,
+  text,
+  varchar,
   timestamp,
   integer,
   boolean,
@@ -25,31 +25,20 @@ export const giftTypeEnum = pgEnum('gift_type', [
   'comete', 'feuille_erable', 'fleur_de_lys', 'feu', 'coeur_or'
 ]);
 
-// Session storage table for Replit Auth (OIDC sessions)
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
-// Users Table - supports both password auth and OAuth (Replit Auth)
+// Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").primaryKey(), // FK to auth.users.id
+  replitId: varchar("replit_id", { length: 50 }).unique(), // Replit OAuth sub claim
   username: varchar("username", { length: 50 }).notNull().unique(),
   email: varchar("email", { length: 255 }).unique(), // Made optional for OAuth users
   displayName: varchar("display_name", { length: 100 }),
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
-
-
-
-
-
-
+  location: varchar("location", { length: 100 }),
+  region: regionEnum("region"),
+  password: varchar("password", { length: 255 }), // Optional for OAuth-only users
+  isAdmin: boolean("is_admin").default(false),
+  subscriptionTier: varchar("subscription_tier", { length: 20 }).default('free'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
