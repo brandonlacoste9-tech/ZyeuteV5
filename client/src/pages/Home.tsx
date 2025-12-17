@@ -46,8 +46,20 @@ const Home: React.FC = () => {
         // No valid auth or guest session
         setIsAuthenticated(false);
       } catch (error) {
-        // Log error for debugging while gracefully handling auth failures
         console.error('Authentication check failed:', error);
+
+        // Fallback to guest mode verification even on error
+        const guestMode = localStorage.getItem(GUEST_MODE_KEY);
+        const guestTimestamp = localStorage.getItem(GUEST_TIMESTAMP_KEY);
+
+        if (guestMode === 'true' && guestTimestamp) {
+          const age = Date.now() - parseInt(guestTimestamp, 10);
+          if (age < GUEST_SESSION_DURATION) {
+            setIsAuthenticated(true);
+            return;
+          }
+        }
+
         setIsAuthenticated(false);
       }
     };

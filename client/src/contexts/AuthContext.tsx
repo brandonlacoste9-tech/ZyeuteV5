@@ -78,6 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
+                // Fallback to Guest Mode on error
+                if (mounted) {
+                    const validGuest = checkGuestMode();
+                    setIsGuest(validGuest);
+                }
             } finally {
                 if (mounted) setIsLoading(false);
             }
