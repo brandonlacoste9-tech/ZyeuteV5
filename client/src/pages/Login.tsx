@@ -88,15 +88,46 @@ export const Login: React.FC = () => {
     try {
       if (debugMode) console.log('🔐 [LOGIN] Attempting Supabase auth...');
 
+      // If input is NOT an email, try to resolve username
+      let targetEmail = email.trim();
+      const isEmail = targetEmail.includes('@');
+
+      if (!isEmail) {
+        if (debugMode) console.log('👤 [LOGIN] Detected username, resolving to email...');
+        try {
+          const res = await fetch('/api/auth/resolve-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: targetEmail })
+          });
+
+          if (!res.ok) {
+            if (res.status === 404) throw new Error('Nom d\'utilisateur non trouvé');
+            throw new Error('Erreur de vérification du nom');
+          }
+
+          const data = await res.json();
+          if (debugMode) console.log('✅ [LOGIN] Resolved email:', data.email);
+          targetEmail = data.email;
+        } catch (resolveErr: any) {
+          throw new Error(resolveErr.message);
+        }
+      }
+
       // ✅ DIRECT CLIENT-SIDE AUTH - No server proxy
       const { signIn } = await import('../lib/supabase');
-      const { data, error } = await signIn(email, password);
+      const { data, error } = await signIn(targetEmail, password);
 
       if (debugMode) console.log('📊 [LOGIN] Auth response:', { data, error });
 
       if (error) {
         loginLogger.error('❌ Sign in error:', error.message);
-        throw new Error(error.message || 'Erreur de connexion');
+        // Translate common Supabase errors
+        let msg = error.message;
+        if (msg.includes('Invalid login credentials')) msg = 'Mot de passe ou courriel incorrect';
+        if (msg.includes('Email not confirmed')) msg = 'Courriel non confirmé. Vérifie tes courriels.';
+
+        throw new Error(msg);
       }
 
       if (!data.user) {
@@ -285,16 +316,16 @@ export const Login: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold mb-2" style={{ color: '#B8A88A' }}>Courriel</label>
+              <label className="block text-sm font-semibold mb-2" style={{ color: '#B8A88A' }}>Courriel ou Nom d'utilisateur</label>
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={(e) => {
                   if (debugMode) console.log('Email input blurred:', e.target.value);
                 }}
                 required
-                placeholder="ton@email.com"
+                placeholder="ton@email.com ou username"
                 className="w-full rounded-xl px-4 py-4 text-white placeholder-white/30 focus:outline-none transition-all duration-300"
                 style={{
                   background: 'rgba(0,0,0,0.4)',

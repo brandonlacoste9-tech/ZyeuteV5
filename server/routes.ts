@@ -136,6 +136,30 @@ export async function registerRoutes(
 
   // Legacy /api/auth/logout removed - Frontend uses Supabase signOut directly
 
+  // [NEW] Resolve username to email (Helper for login with username)
+  app.post("/api/auth/resolve-email", authRateLimiter, async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ error: "Username is required" });
+      }
+
+      // Sanitize username
+      const cleanUsername = username.trim().toLowerCase();
+
+      const user = await storage.getUserByUsername(cleanUsername);
+      if (user && user.email) {
+        // Return email so frontend can use it for Supabase auth
+        return res.json({ email: user.email });
+      }
+
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    } catch (error) {
+      console.error("Resolve email error:", error);
+      res.status(500).json({ error: "Failed to resolve username" });
+    }
+  });
+
   // [RESTORED] Get current user profile (bridged via JWT)
   // This is needed because client/src/services/api.ts still calls /auth/me
   // to get the full profile data (coins, region, etc.) which isn't in the JWT.
