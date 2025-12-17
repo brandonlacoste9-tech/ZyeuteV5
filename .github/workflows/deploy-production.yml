@@ -1,5 +1,9 @@
 name: Deploy to Production
 
+# NOTE: IDE may show false warnings about "Unrecognized named-value: 'secrets'" 
+# and "Context access might be invalid". These can be safely ignored - the 
+# workflow uses standard GitHub Actions syntax and will work correctly.
+
 on:
   push:
     branches: [main]
