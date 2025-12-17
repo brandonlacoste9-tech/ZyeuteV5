@@ -31,6 +31,23 @@ export const ChatButton: React.FC<ChatButtonProps> = ({
 }) => {
   const { impact } = useHaptics();
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Auto-hide on scroll
+  React.useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      setIsVisible(false);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setIsVisible(true), 500); // Show after 500ms stop
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleClick = () => {
     impact();
@@ -55,6 +72,7 @@ export const ChatButton: React.FC<ChatButtonProps> = ({
         className={cn(
           positionClasses,
           sizeClasses[size],
+          !isVisible && isFixed ? 'translate-x-[200%] opacity-0' : 'translate-x-0 opacity-100', // Hide animation
           'rounded-full',
           'flex items-center justify-center',
           'transition-all duration-300 ease-in-out',
@@ -79,7 +97,7 @@ export const ChatButton: React.FC<ChatButtonProps> = ({
           alt="Ti-Guy - Assistant IA Québécois"
           className="w-full h-full object-cover rounded-full"
         />
-        
+
         <div
           className="absolute inset-0 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           style={{
