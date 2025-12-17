@@ -34,21 +34,21 @@ async function withRetry<T>(
   baseDelayMs: number = 1000
 ): Promise<T> {
   let lastError: Error | null = null;
-  
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.warn(`V3 API attempt ${attempt + 1}/${maxRetries} failed:`, lastError.message);
-      
+
       if (attempt < maxRetries - 1) {
         const delay = baseDelayMs * Math.pow(2, attempt); // 1s, 2s, 4s
         await sleep(delay);
       }
     }
   }
-  
+
   throw lastError || new Error("All retry attempts failed");
 }
 
@@ -230,7 +230,7 @@ async function callV3(systemPrompt: string, userMessage: string, parseJson = tru
   if (!process.env.DEEPSEEK_API_KEY) {
     throw new Error("DeepSeek API key not configured");
   }
-  
+
   // Use retry wrapper for resilience
   return traceExternalAPI("deepseek", "chat.completions", "POST", async (span) => {
     span.setAttributes({
@@ -252,12 +252,12 @@ async function callV3(systemPrompt: string, userMessage: string, parseJson = tru
       });
 
       const content = completion.choices[0]?.message?.content || "";
-      
+
       span.setAttributes({
         "ai.response_length": content.length,
         "ai.finish_reason": completion.choices[0]?.finish_reason || "unknown",
       });
-      
+
       if (parseJson) {
         try {
           const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -269,7 +269,7 @@ async function callV3(systemPrompt: string, userMessage: string, parseJson = tru
           span.setAttributes({ "ai.json_parse_error": true });
         }
       }
-      
+
       return content;
     });
   });
@@ -284,7 +284,7 @@ export async function v3Core(userAction: string, context?: Record<string, unknow
 
 // V3-FEED: Generate feed content
 export async function v3Feed(context?: Record<string, unknown>): Promise<V3FeedItem> {
-  const message = JSON.stringify({ 
+  const message = JSON.stringify({
     request: "Generate a new feed item",
     context,
     themes: ["Quebec culture", "Montreal life", "humor", "tips", "creativity"]
@@ -295,35 +295,45 @@ export async function v3Feed(context?: Record<string, unknown>): Promise<V3FeedI
 
 // V3-TI-GUY: Joual voice transformation
 export async function v3TiGuy(text: string, context?: string): Promise<string> {
-  const message = context 
+  const message = context
     ? `Contexte: ${context}\n\nTexte à transformer en joual:\n${text}`
     : `Texte à transformer en joual:\n${text}`;
   const result = await callV3(V3_PROMPTS.TI_GUY, message, false);
   return typeof result === "string" ? result : JSON.stringify(result);
 }
 
-// V3-TI-GUY: Direct chat response
-export async function v3TiGuyChat(userMessage: string, conversationHistory?: Array<{role: string, content: string}>): Promise<string> {
+// [NEW] Unified Ti-Guy Architecture
+import { TiGuyUnified } from "./ti-guy/unified-system.js";
+
+// V3-TI-GUY: Direct chat response using Unified Context Engine
+export async function v3TiGuyChat(userMessage: string, conversationHistory?: Array<{ role: string, content: string }>): Promise<string> {
   try {
     if (!process.env.DEEPSEEK_API_KEY) {
       return "Ouin, j'ai pas mes clés API là. Réessaie plus tard! 🦫";
     }
-    
-    const messages: Array<{role: "system" | "user" | "assistant", content: string}> = [
-      { role: "system", content: V3_PROMPTS.TI_GUY }
+
+    // 1. Prepare dynamic interaction
+    const interaction = TiGuyUnified.getInstance().prepareInteraction(userMessage);
+
+    // 2. Build message flow with Dynamic System Prompt
+    const messages: Array<{ role: "system" | "user" | "assistant", content: string }> = [
+      { role: "system", content: interaction.systemPrompt }
     ];
-    
+
+    // 3. Add history context
     if (conversationHistory) {
       for (const msg of conversationHistory.slice(-10)) {
-        messages.push({ 
-          role: msg.role as "user" | "assistant", 
-          content: msg.content 
+        messages.push({
+          role: msg.role as "user" | "assistant",
+          content: msg.content
         });
       }
     }
-    
+
+    // 4. Add current user message
     messages.push({ role: "user", content: userMessage });
-    
+
+    // 5. Call LLM
     const completion = await deepseek.chat.completions.create({
       model: "deepseek-chat",
       messages,
@@ -347,7 +357,7 @@ export async function v3Mod(content: string): Promise<V3ModResult> {
 
 // V3-MEM: User preference snapshot
 export async function v3Mem(interactionHistory: string[]): Promise<V3MemSnapshot> {
-  const message = JSON.stringify({ 
+  const message = JSON.stringify({
     interaction_history: interactionHistory,
     request: "Generate preference snapshot"
   });
@@ -393,14 +403,14 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
   try {
     // 1. Ask V3-CORE what to do
     const coreDecision = await v3Core(userAction, context);
-    
+
     // 2. Execute based on decision
     switch (coreDecision.target_model) {
       case "V3-FEED": {
         // Generate feed content with moderation loop (capped at MOD_MAX_ATTEMPTS)
         let feedItem: V3FeedItem;
         let modApproved = false;
-        
+
         try {
           feedItem = await v3Feed(context);
         } catch (error) {
@@ -408,24 +418,24 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
           feedItem = { ...FALLBACK_FEED_ITEM };
           modApproved = true; // Fallback is pre-approved
         }
-        
+
         // Moderation loop with strict cap
         for (let attempt = 0; attempt < MOD_MAX_ATTEMPTS && !modApproved; attempt++) {
           try {
             const modResult = await v3Mod(feedItem.body);
-            
+
             if (modResult.status === "approved") {
               modApproved = true;
               break;
             }
-            
+
             // Use suggested rewrite if provided
             if (modResult.suggested_rewrite) {
               feedItem.body = modResult.suggested_rewrite;
               modApproved = true; // Trust the rewrite
               break;
             }
-            
+
             // Regenerate with safer context (only if not last attempt)
             if (attempt < MOD_MAX_ATTEMPTS - 1) {
               feedItem = await v3Feed({ ...context, safer: true, previous_rejection: modResult.reason });
@@ -434,16 +444,16 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
             console.error(`Moderation attempt ${attempt + 1} failed:`, error);
           }
         }
-        
+
         // If moderation still failed, use fallback content
         if (!modApproved) {
           console.warn("Moderation loop exhausted, using fallback content");
           feedItem = { ...FALLBACK_FEED_ITEM };
         }
-        
+
         // Transform to TI-GUY voice
         const tiGuyText = await v3TiGuy(feedItem.body, feedItem.suggested_tone);
-        
+
         return {
           type: "feed_item",
           content: tiGuyText,
@@ -455,13 +465,13 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
           }
         };
       }
-      
+
       case "V3-TI-GUY": {
         // Direct TI-GUY response
         const response = await v3TiGuyChat(userAction);
         return { type: "text", content: response };
       }
-      
+
       case "V3-MOD": {
         // Content moderation request
         const contentToMod = coreDecision.context?.content as string || userAction;
@@ -472,7 +482,7 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
           metadata: { moderation_result: modResult }
         };
       }
-      
+
       case "V3-MEM": {
         // Memory/preference request
         const history = coreDecision.context?.history as string[] || [];
@@ -483,7 +493,7 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
           metadata: { preferences: memResult.preference_snapshot }
         };
       }
-      
+
       case "FAL": {
         // Return image generation instructions
         return {
@@ -495,7 +505,7 @@ export async function v3Flow(userAction: string, context?: Record<string, unknow
           }
         };
       }
-      
+
       default: {
         // Default to TI-GUY chat
         const response = await v3TiGuyChat(userAction);
@@ -520,7 +530,7 @@ export async function v3Microcopy(type: "loading" | "error" | "success" | "onboa
     onboarding: "Bienvenue sur Zyeuté! L'application sociale du Québec. Glisse vers le haut pour commencer à explorer du contenu québécois.",
     empty_state: context ? `Pas de ${context} pour le moment. Reviens bientôt!` : "Rien à afficher pour le moment. Reviens bientôt!"
   };
-  
+
   // Transform neutral text to Ti-Guy joual voice
   return v3TiGuy(neutralMessages[type], type);
 }
