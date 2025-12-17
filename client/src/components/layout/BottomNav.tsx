@@ -88,7 +88,7 @@ const navItems: NavItem[] = [
 
 export const BottomNav: React.FC = () => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/10 safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/10 safe-bottom max-w-sm mx-auto">
       <div className="max-w-7xl mx-auto px-2">
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => (
@@ -96,6 +96,7 @@ export const BottomNav: React.FC = () => {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              aria-label={item.label}
               className={({ isActive }) =>
                 cn(
                   'flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 relative',
