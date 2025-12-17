@@ -17,6 +17,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { IoShareOutline } from 'react-icons/io5';
 import type { User, Post } from '@/types';
 import { logger } from '../lib/logger';
+import { QuebecEmptyState } from '@/components/ui/QuebecEmptyState';
 
 const profileLogger = logger.withContext('Profile');
 
@@ -391,24 +392,15 @@ export const Profile: React.FC = () => {
 
           {/* Posts Grid */}
           {posts.length === 0 ? (
-            <div className="leather-card rounded-2xl p-12 text-center stitched">
-              <div className="text-6xl mb-4">🦫</div>
-              <h3 className="text-xl font-bold text-gold-500 mb-2">
-                {isOwnProfile ? 'Aucun post encore' : 'Aucun post'}
-              </h3>
-              <p className="text-leather-300 mb-6">
-                {isOwnProfile
-                  ? 'Commence à partager ton contenu québécois!'
-                  : `${user.display_name || user.username} n'a pas encore posté.`}
-              </p>
-              {isOwnProfile && (
-                <Link to="/upload">
-                  <GoldButton className="px-8 py-3 rounded-xl" size="lg">
-                    Créer un post
-                  </GoldButton>
-                </Link>
-              )}
-            </div>
+            <QuebecEmptyState
+              type="profile"
+              title={isOwnProfile ? 'Aucun post encore' : 'Aucun post'}
+              description={isOwnProfile
+                ? 'Commence à partager ton contenu québécois!'
+                : `${user.display_name || user.username} n'a pas encore posté.`}
+              actionText={isOwnProfile ? 'Créer un post' : undefined}
+              onAction={isOwnProfile ? () => navigate('/upload') : undefined}
+            />
           ) : (
             <div className="grid grid-cols-3 gap-2">
               {posts.map((post) => (

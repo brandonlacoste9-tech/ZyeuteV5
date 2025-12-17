@@ -13,6 +13,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { toast } from '@/components/Toast';
 import type { Post } from '@/types';
 import { logger } from '../lib/logger';
+import { QuebecHashtags } from '@/components/trending/QuebecHashtags';
 
 const exploreLogger = logger.withContext('Explore');
 
@@ -111,7 +112,10 @@ export const Explore: React.FC = () => {
           </div>
         </div>
 
-        {/* Trending Hashtags */}
+        {/* Enhanced Trending Hashtags Component */}
+        <QuebecHashtags />
+
+        {/* Original Trending Hashtags - Keep for filter functionality */}
         <div className="mb-6">
           <h2 className="text-gold-400 font-bold mb-3 embossed flex items-center gap-2">
             <span>🔥</span>
