@@ -277,7 +277,6 @@ export const Settings: React.FC = () => {
         </svg>
       ),
       label: 'Abonnement Premium',
-      label: 'Abonnement Premium',
       path: '/premium',
       badge: user?.isPremium ? '⭐' : undefined,
     },
