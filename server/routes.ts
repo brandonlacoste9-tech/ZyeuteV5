@@ -178,13 +178,12 @@ export async function registerRoutes(
   // Update current user profile
   app.patch("/api/users/me", requireAuth, async (req, res) => {
     try {
-      const { displayName, bio, avatarUrl, location, region } = req.body;
+      const { displayName, bio, avatarUrl, region } = req.body;
 
       const updated = await storage.updateUser(req.userId!, {
         displayName,
         bio,
         avatarUrl,
-        location,
         region,
       });
 
@@ -798,7 +797,7 @@ export async function registerRoutes(
       }
 
       res.json({
-        isPremium: user.isPremium || false,
+        isPremium: user.subscriptionTier !== null && user.subscriptionTier !== 'free',
         subscriptionEnd: null, // Would track in DB
       });
     } catch (error: any) {
@@ -1146,7 +1145,6 @@ export async function registerRoutes(
           post: {
             id: g.post.id,
             mediaUrl: g.post.mediaUrl,
-            thumbnailUrl: g.post.thumbnailUrl,
           },
           createdAt: g.createdAt,
         })),

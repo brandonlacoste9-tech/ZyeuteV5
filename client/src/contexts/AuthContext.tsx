@@ -49,31 +49,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
     };
 
+    // Performance tracking helper
+    const trackPerformance = (operation: string, startTime: number) => {
+        const duration = Date.now() - startTime;
+        if (duration > 2000) { // 2 seconds threshold for auth operations
+            console.warn(`⚠️ Slow auth operation: ${operation} took ${duration}ms`);
+        }
+        return duration;
+    };
+
     useEffect(() => {
         let mounted = true;
+        const initStart = Date.now();
+
+        // EMERGENCY FAILSAFE: Force loading to complete after 10s maximum
+        const emergencyTimeout = setTimeout(() => {
+            console.warn('⚠️ Auth initialization timeout - forcing guest mode');
+            trackPerformance('Auth Emergency Timeout', initStart);
+            if (mounted) {
+                const validGuest = checkGuestMode();
+                setIsGuest(validGuest);
+                setIsLoading(false);
+            }
+        }, 10000);
 
         async function initializeAuth() {
             try {
                 // 1. Check Supabase Session with Timeout
-                // Emergency Fix: Race against 5s timeout
+                const sessionStart = Date.now();
                 const sessionPromise = supabase.auth.getSession();
                 const timeoutPromise = new Promise<{ data: { session: Session | null } }>((_, reject) =>
                     setTimeout(() => reject(new Error('Auth check timed out')), 5000)
                 );
 
                 const { data: { session: initialSession } } = await Promise.race([sessionPromise, timeoutPromise]);
+                trackPerformance('Supabase getSession', sessionStart);
 
                 if (initialSession?.user) {
                     if (mounted) {
                         setSession(initialSession);
                         setUser(initialSession.user);
                         // Check admin status
+                        const adminStart = Date.now();
                         const adminStatus = await checkIsAdmin(initialSession.user);
+                        trackPerformance('Admin check', adminStart);
                         if (mounted) setIsAdmin(adminStatus);
                     }
                 } else {
                     // 2. Fallback to Guest Mode
+                    const guestCheckStart = Date.now();
                     const validGuest = checkGuestMode();
+                    trackPerformance('Guest mode check', guestCheckStart);
                     if (mounted) setIsGuest(validGuest);
                 }
             } catch (error) {
@@ -84,7 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     setIsGuest(validGuest);
                 }
             } finally {
-                if (mounted) setIsLoading(false);
+                if (mounted) {
+                    setIsLoading(false);
+                    clearTimeout(emergencyTimeout);
+                    trackPerformance('Total auth initialization', initStart);
+                }
             }
         }
 
@@ -113,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return () => {
             mounted = false;
+            clearTimeout(emergencyTimeout);
             subscription.unsubscribe();
         };
     }, []);
