@@ -8,7 +8,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/Button';
 import { Logo } from '@/components/Logo';
 import { signUp } from '@/lib/supabase';
-import { useGuestMode } from '@/contexts/GuestModeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/Toast';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '@/lib/constants';
 
@@ -17,7 +17,7 @@ export const Signup: React.FC = () => {
   const isMountedRef = React.useRef(true);
   const navigationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  const { startGuestSession } = useGuestMode();
+  const { enterGuestMode } = useAuth();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -39,7 +39,7 @@ export const Signup: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isMountedRef.current) return;
-    
+
     setError('');
 
     // Validation
@@ -70,7 +70,7 @@ export const Signup: React.FC = () => {
 
       // Show success toast (non-blocking)
       toast.success('Compte créé! Vérifie ton courriel pour confirmer ton compte.');
-      
+
       // Use window.location for immediate redirect to bypass animation system
       // This prevents React DOM manipulation errors with AnimatePresence
       navigationTimeoutRef.current = setTimeout(() => {
@@ -210,7 +210,7 @@ export const Signup: React.FC = () => {
             size="lg"
             className="w-full border-2 border-[rgba(244,196,48,0.3)] bg-transparent text-gold-400 hover:bg-[rgba(244,196,48,0.1)]"
             onClick={() => {
-              startGuestSession();
+              enterGuestMode();
               navigate('/feed');
             }}
             aria-label="Continuer en tant qu'invité"

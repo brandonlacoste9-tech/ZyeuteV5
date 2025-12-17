@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useGuestMode } from '@/contexts/GuestModeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
@@ -17,7 +17,7 @@ const loginLogger = logger.withContext('Login');
 export const Login: React.FC = () => {
   const navigate = useNavigate();
 
-  const { startGuestSession } = useGuestMode();
+  const { enterGuestMode } = useAuth();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -399,7 +399,7 @@ export const Login: React.FC = () => {
           className="w-full py-4 rounded-xl font-semibold transition-all duration-300 border-2 border-[rgba(244,196,48,0.3)] bg-transparent text-gold-400 hover:bg-[rgba(244,196,48,0.1)] mb-4"
           style={{ color: '#f4c430', borderColor: 'rgba(244,196,48,0.3)' }}
           onClick={() => {
-            startGuestSession();
+            enterGuestMode();
             navigate('/feed');
           }}
           aria-label="Continuer en tant qu'invité"

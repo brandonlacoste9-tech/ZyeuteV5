@@ -1,0 +1,18 @@
+# deepseek-swarm-config.yaml
+cost_optimization:
+  strategy: "dynamic_model_selection"
+  rules:
+    - if: "task_complexity < 3"
+      use: "deepseek-chat"
+      context: 4000
+    - if: "task_complexity >= 3 and task_complexity < 7"
+      use: "deepseek-coder"
+      context: 8000
+    - if: "task_complexity >= 7"
+      use: "deepseek-reasoner"
+      context: 32000
+  
+parallel_execution:
+  max_concurrent_bots: 25
+  rate_limit_per_bot: "10 RPM"
+  fallback_strategy: "sequential_on_overload"

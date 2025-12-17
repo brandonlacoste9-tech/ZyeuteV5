@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { LogoFull } from './Logo';
+import { MapleSpinner } from './MapleSpinner';
 import { cn } from '../../lib/utils';
 
 interface LoadingScreenProps {
@@ -52,12 +53,10 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         <p className="text-white/80 text-lg font-medium animate-pulse">
           {message}
         </p>
-        
+
         {/* Loading spinner */}
-        <div className="relative w-12 h-12">
-          <div className="absolute inset-0 border-4 border-gold-400/20 rounded-full" />
-          <div className="absolute inset-0 border-4 border-transparent border-t-gold-400 rounded-full animate-spin" />
-        </div>
+        {/* Loading spinner */}
+        <MapleSpinner size="md" />
       </div>
 
       {/* Bottom tagline */}
