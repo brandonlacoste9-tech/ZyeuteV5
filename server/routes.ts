@@ -11,6 +11,8 @@ import bcrypt from "bcryptjs";
 import { fal } from "@fal-ai/client";
 import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, FAL_PRESETS } from "./v3-swarm.js";
 import emailAutomation from "./email-automation.js";
+// Import Studio API routes
+import studioRoutes from "./routes/studio.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
 // Import tracing utilities
@@ -112,6 +114,8 @@ export async function registerRoutes(
   // Apply general rate limiting to all other API routes
   app.use("/api", generalRateLimiter);
 
+  // ============ STUDIO AI HIVE ROUTES ============
+  app.use("/api/studio", requireAuth, studioRoutes);
 
   // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
 
