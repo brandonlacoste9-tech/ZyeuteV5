@@ -268,7 +268,7 @@ export const Settings: React.FC = () => {
   // Handle setting item click
   const handleSettingClick = (item: SettingItem) => {
     tap();
-    
+
     // Routes that exist
     const existingRoutes = [
       '/settings/tags',
@@ -290,7 +290,7 @@ export const Settings: React.FC = () => {
       '/settings/notifications',
       '/premium',
     ];
-    
+
     if (item.path && existingRoutes.includes(item.path)) {
       navigate(item.path);
     } else if (item.onClick) {
@@ -416,7 +416,7 @@ export const Settings: React.FC = () => {
           <h2 className="text-gold-500/70 text-xs font-bold uppercase tracking-wider mb-3 px-4">
             Personnalisation
           </h2>
-          
+
           <div className="leather-card rounded-xl overflow-hidden stitched">
             {/* Header */}
             <div className="p-4 border-b border-leather-700/30">
@@ -438,7 +438,7 @@ export const Settings: React.FC = () => {
 
               {/* Current Color Preview */}
               <div className="flex items-center gap-3 mt-4">
-                <div 
+                <div
                   className="w-16 h-16 rounded-xl border-2 border-gold-500/30 shadow-lg"
                   style={{ backgroundColor: borderColor }}
                 />
@@ -474,11 +474,10 @@ export const Settings: React.FC = () => {
                       setBorderColor(preset.color);
                       toast.success(`Couleur changée: ${preset.name}! ✨`);
                     }}
-                    className={`relative aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
-                      borderColor.toUpperCase() === preset.color.toUpperCase()
+                    className={`relative aspect-square rounded-lg border-2 transition-all hover:scale-110 ${borderColor.toUpperCase() === preset.color.toUpperCase()
                         ? 'border-gold-500 ring-2 ring-gold-500/50'
                         : 'border-leather-700 hover:border-gold-500/50'
-                    }`}
+                      }`}
                     style={{ backgroundColor: preset.color }}
                     title={preset.name}
                   >
@@ -503,7 +502,7 @@ export const Settings: React.FC = () => {
                   value={borderColor}
                   onChange={handleColorChange}
                   className="w-20 h-20 rounded-xl border-2 border-gold-500/50 cursor-pointer bg-transparent hover:border-gold-500 transition-colors"
-                  style={{ 
+                  style={{
                     WebkitAppearance: 'none',
                     appearance: 'none',
                     cursor: 'pointer',
@@ -548,7 +547,7 @@ export const Settings: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-8 h-8 rounded-lg border border-gold-500/50"
                   style={{ backgroundColor: defaultGold }}
                 />
@@ -635,7 +634,8 @@ export const Settings: React.FC = () => {
         </div>
       </div>
 
-      <BottomNav />
+      {/* Premium Chat Button */}
+      <ChatButton isFixed={true} />
     </div>
   );
 };

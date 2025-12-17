@@ -90,7 +90,8 @@ export const Notifications: React.FC = () => {
         )}
       </div>
 
-      <BottomNav />
+      {/* Premium Chat Button */}
+      <ChatButton isFixed={true} />
     </div>
   );
 };

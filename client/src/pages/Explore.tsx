@@ -39,31 +39,31 @@ export const Explore: React.FC = () => {
       // Use centralized API function - get all posts then filter client-side
       // (API function doesn't support region/hashtag filters yet)
       const allPosts = await getFeedPosts(0, 50);
-      
+
       // Apply client-side filters
       let filtered = allPosts;
-      
+
       if (selectedRegion) {
         filtered = filtered.filter(p => p.region === selectedRegion);
       }
 
       if (selectedHashtag) {
         const tagToSearch = selectedHashtag.startsWith('#') ? selectedHashtag.slice(1) : selectedHashtag;
-        filtered = filtered.filter(p => 
+        filtered = filtered.filter(p =>
           p.caption?.toLowerCase().includes(`#${tagToSearch.toLowerCase()}`) ||
           p.hashtags?.includes(tagToSearch)
         );
       }
 
       if (searchQuery) {
-        filtered = filtered.filter(p => 
+        filtered = filtered.filter(p =>
           p.caption?.toLowerCase().includes(searchQuery.toLowerCase())
         );
       }
 
       // Sort by fire_count (reactions_count)
       filtered.sort((a, b) => (b.fire_count || 0) - (a.fire_count || 0));
-      
+
       setPosts(filtered);
     } catch (error) {
       exploreLogger.error('Error fetching posts:', error);
@@ -122,7 +122,7 @@ export const Explore: React.FC = () => {
             {trendingHashtags.map((tag) => {
               const tagWithoutHash = tag.startsWith('#') ? tag.slice(1) : tag;
               const isSelected = selectedHashtag === tag || selectedHashtag === tagWithoutHash;
-              
+
               return (
                 <button
                   key={tag}
@@ -134,11 +134,10 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: #${newTag}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    isSelected
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected
                       ? 'btn-gold'
                       : 'btn-leather'
-                  }`}
+                    }`}
                 >
                   {tag}
                 </button>
@@ -162,17 +161,16 @@ export const Explore: React.FC = () => {
                   toast.info('Filtre régional retiré');
                 }
               }}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                selectedRegion === ''
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${selectedRegion === ''
                   ? 'btn-gold'
                   : 'btn-leather'
-              }`}
+                }`}
             >
               Toutes
             </button>
             {QUEBEC_REGIONS.map((region) => {
               const isSelected = selectedRegion === region.id;
-              
+
               return (
                 <button
                   key={region.id}
@@ -184,11 +182,10 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: ${region.name}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    isSelected
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected
                       ? 'btn-gold'
                       : 'btn-leather'
-                  }`}
+                    }`}
                 >
                   {region.emoji} {region.name}
                 </button>
@@ -270,7 +267,7 @@ export const Explore: React.FC = () => {
                   alt={post.caption || 'Post'}
                   className="w-full h-full object-cover"
                 />
-                
+
                 {/* Overlay on hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                   <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
@@ -289,7 +286,7 @@ export const Explore: React.FC = () => {
                         <span className="font-bold">{formatNumber(post.comment_count)}</span>
                       </div>
                     </div>
-                    
+
                     {/* User */}
                     {post.user && (
                       <div className="flex items-center gap-2">
@@ -321,7 +318,8 @@ export const Explore: React.FC = () => {
         </p>
       </div>
 
-      <BottomNav />
+      {/* Premium Chat Button */}
+      <ChatButton isFixed={true} />
     </div>
   );
 };
