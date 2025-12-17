@@ -66,7 +66,7 @@ export const Profile: React.FC = () => {
           profileLogger.debug('[Profile] Fetching current user for /profile/me');
           const profileUser = await getCurrentUser();
           profileLogger.debug('[Profile] getCurrentUser result:', profileUser ? 'found' : 'null');
-          
+
           if (profileUser) {
             setUser(profileUser);
             setCurrentUser(profileUser);
@@ -311,113 +311,110 @@ export const Profile: React.FC = () => {
         <div className="p-4 pt-0">
           {/* Tabs */}
           <div className="leather-card rounded-2xl mb-4 stitched overflow-hidden">
-          <div className="grid grid-cols-3 bg-leather-900/50">
-            <button
-              onClick={() => {
-                setActiveTab('posts');
-                tap();
-              }}
-              className={`py-4 font-semibold transition-all relative ${
-                activeTab === 'posts'
-                  ? 'text-gold-400'
-                  : 'text-leather-300 hover:text-gold-200'
-              }`}
-            >
-              <span className="relative z-10">Posts</span>
-              {activeTab === 'posts' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
-              )}
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('fires');
-                tap();
-              }}
-              className={`py-4 font-semibold transition-all relative ${
-                activeTab === 'fires'
-                  ? 'text-gold-400'
-                  : 'text-leather-300 hover:text-gold-200'
-              }`}
-            >
-              <span className="relative z-10">🔥 Fires</span>
-              {activeTab === 'fires' && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
-              )}
-            </button>
-            {isOwnProfile && (
+            <div className="grid grid-cols-3 bg-leather-900/50">
               <button
                 onClick={() => {
-                  setActiveTab('saved');
+                  setActiveTab('posts');
                   tap();
                 }}
-                className={`py-4 font-semibold transition-all relative ${
-                  activeTab === 'saved'
+                className={`py-4 font-semibold transition-all relative ${activeTab === 'posts'
                     ? 'text-gold-400'
                     : 'text-leather-300 hover:text-gold-200'
-                }`}
+                  }`}
               >
-                <span className="relative z-10">Sauvegardés</span>
-                {activeTab === 'saved' && (
+                <span className="relative z-10">Posts</span>
+                {activeTab === 'posts' && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
                 )}
               </button>
-            )}
-          </div>
+              <button
+                onClick={() => {
+                  setActiveTab('fires');
+                  tap();
+                }}
+                className={`py-4 font-semibold transition-all relative ${activeTab === 'fires'
+                    ? 'text-gold-400'
+                    : 'text-leather-300 hover:text-gold-200'
+                  }`}
+              >
+                <span className="relative z-10">🔥 Fires</span>
+                {activeTab === 'fires' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
+                )}
+              </button>
+              {isOwnProfile && (
+                <button
+                  onClick={() => {
+                    setActiveTab('saved');
+                    tap();
+                  }}
+                  className={`py-4 font-semibold transition-all relative ${activeTab === 'saved'
+                      ? 'text-gold-400'
+                      : 'text-leather-300 hover:text-gold-200'
+                    }`}
+                >
+                  <span className="relative z-10">Sauvegardés</span>
+                  {activeTab === 'saved' && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
+                  )}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Posts Grid */}
-        {posts.length === 0 ? (
-          <div className="leather-card rounded-2xl p-12 text-center stitched">
-            <div className="text-6xl mb-4">🦫</div>
-            <h3 className="text-xl font-bold text-gold-500 mb-2">
-              {isOwnProfile ? 'Aucun post encore' : 'Aucun post'}
-            </h3>
-            <p className="text-leather-300 mb-6">
-              {isOwnProfile
-                ? 'Commence à partager ton contenu québécois!'
-                : `${user.display_name || user.username} n'a pas encore posté.`}
-            </p>
-            {isOwnProfile && (
-              <Link to="/upload">
-                <GoldButton className="px-8 py-3 rounded-xl" size="lg">
-                  Créer un post
-                </GoldButton>
-              </Link>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {posts.map((post) => (
-              <Link
-                key={post.id}
-                to={`/p/${post.id}`}
-                className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
-              >
-                <Image
-                  src={post.media_url}
-                  alt={post.caption || 'Post'}
-                  objectFit="cover"
-                />
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                  <div className="flex items-center gap-1 text-white">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                    </svg>
-                    <span className="font-bold">{formatNumber(post.fire_count)}</span>
+          {posts.length === 0 ? (
+            <div className="leather-card rounded-2xl p-12 text-center stitched">
+              <div className="text-6xl mb-4">🦫</div>
+              <h3 className="text-xl font-bold text-gold-500 mb-2">
+                {isOwnProfile ? 'Aucun post encore' : 'Aucun post'}
+              </h3>
+              <p className="text-leather-300 mb-6">
+                {isOwnProfile
+                  ? 'Commence à partager ton contenu québécois!'
+                  : `${user.display_name || user.username} n'a pas encore posté.`}
+              </p>
+              {isOwnProfile && (
+                <Link to="/upload">
+                  <GoldButton className="px-8 py-3 rounded-xl" size="lg">
+                    Créer un post
+                  </GoldButton>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {posts.map((post) => (
+                <Link
+                  key={post.id}
+                  to={`/p/${post.id}`}
+                  className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                >
+                  <Image
+                    src={post.media_url}
+                    alt={post.caption || 'Post'}
+                    objectFit="cover"
+                  />
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    <div className="flex items-center gap-1 text-white">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                      </svg>
+                      <span className="font-bold">{formatNumber(post.fire_count)}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-white">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      <span className="font-bold">{formatNumber(post.comment_count)}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-white">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="font-bold">{formatNumber(post.comment_count)}</span>
-                  </div>
-                </div>
-                {/* Gold corner accent */}
-                <div className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
-              </Link>
-            ))}
-          </div>
+                  {/* Gold corner accent */}
+                  <div className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </main>
@@ -433,8 +430,6 @@ export const Profile: React.FC = () => {
 
       {/* Premium Chat Button */}
       <ChatButton isFixed={true} />
-
-      <BottomNav />
     </div>
   );
 };
