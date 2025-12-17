@@ -14,6 +14,7 @@ import { MainLayout } from '@/components/MainLayout';
 import { PageTransition } from '@/components/AnimatedRoutes';
 import { TiGuy } from '@/components/features/TiGuy';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { MapleSpinner } from '@/components/ui/MapleSpinner';
 import { AchievementListener } from '@/components/gamification/AchievementModal';
 import { ProtectedAdminRoute } from '@/components/auth/ProtectedAdminRoute';
 import { SwarmDebug } from '@/components/SwarmDebug';
@@ -87,8 +88,8 @@ const PrivacyPolicy = lazy(() => import('@/pages/legal/PrivacyPolicy'));
 // Loading fallback component with Quebec styling
 const LazyLoadFallback: React.FC = () => (
   <div className="min-h-screen bg-black flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4 mx-auto shadow-[0_0_20px_rgba(255,191,0,0.2)]" />
+    <div className="text-center flex flex-col items-center">
+      <MapleSpinner size="lg" className="mb-4" />
       <p className="text-stone-400 font-medium">Chargement...</p>
     </div>
   </div>
