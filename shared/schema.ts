@@ -251,8 +251,9 @@ export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export const colonyTasks = pgTable("colony_tasks", {
   id: uuid("id").primaryKey().defaultRandom(),
   command: text("command").notNull(),
+  origin: text("origin").default('Ti-Guy Swarm'),
   status: text("status").notNull().default('pending'), // pending, processing, completed, failed, async_waiting
-  priority: integer("priority").default(0),
+  priority: text("priority").default('normal'),
   metadata: jsonb("metadata"),
   result: jsonb("result"),
   error: text("error"),

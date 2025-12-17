@@ -99,6 +99,37 @@ export const BEE_REGISTRY: Record<string, BeeDefinition> = {
         description: 'Expands vague ideas into full specs',
         model: 'deepseek',
     },
+
+    // ======== Python Colony Bees (Existing) ========
+    'finance-bee': {
+        id: 'finance-bee',
+        name: 'Finance Bee',
+        core: 'worker',
+        capabilities: ['analytics', 'budget'],
+        description: 'Financial analysis and reporting',
+        model: 'deepseek',
+        endpoint: 'colony_tasks',
+    },
+
+    'health-bee': {
+        id: 'health-bee',
+        name: 'Health Bee',
+        core: 'guardian',
+        capabilities: ['analytics'],
+        description: 'System health monitoring',
+        model: 'deepseek',
+        endpoint: 'colony_tasks',
+    },
+
+    'security-bee': {
+        id: 'security-bee',
+        name: 'Security Bee',
+        core: 'guardian',
+        capabilities: ['moderation'],
+        description: 'Security and threat monitoring',
+        model: 'deepseek',
+        endpoint: 'colony_tasks',
+    },
 };
 
 /**

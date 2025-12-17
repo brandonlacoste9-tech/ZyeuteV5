@@ -6,7 +6,8 @@ import {
   type User, type InsertUser, type Post, type InsertPost,
   type Comment, type InsertComment, type Follow, type InsertFollow,
   type Story, type InsertStory, type Notification, type InsertNotification,
-  type Gift, type InsertGift, type GiftType, type UpsertUser
+  type Gift, type InsertGift, type GiftType, type UpsertUser,
+  colonyTasks, type ColonyTask
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -72,6 +73,9 @@ export interface IStorage {
   getPostGiftCount(postId: string): Promise<number>;
   getGiftsByPost(postId: string): Promise<(Gift & { sender: User })[]>;
   getUserReceivedGifts(userId: string, limit?: number): Promise<(Gift & { sender: User; post: Post })[]>;
+
+  // Colony Tasks (AI Hive)
+  createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -565,6 +569,19 @@ export class DatabaseStorage implements IStorage {
       sender: r.sender,
       post: r.post,
     }));
+  }
+
+  // Colony Tasks
+  async createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask> {
+    const result = await db.insert(colonyTasks).values({
+      command: task.command,
+      origin: task.origin,
+      status: 'pending',
+      priority: task.priority === 'high' ? 'high' : 'normal',
+      metadata: task.metadata,
+      workerId: task.workerId
+    }).returning();
+    return result[0];
   }
 }
 

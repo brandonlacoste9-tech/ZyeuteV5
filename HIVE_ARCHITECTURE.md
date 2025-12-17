@@ -122,7 +122,27 @@ All endpoints require authentication (`Authorization: Bearer <token>`).
 
 ---
 
-## 🔗 Colony OS Bridge
+## 🔗 Colony OS Bridge (Python Swarm)
+
+Zyeuté communicates with Python bees (e.g., `finance-bee`, `health-bee`) via the `colony_tasks` database table.
+
+1. **Orchestrator** detects bee has `endpoint: 'colony_tasks'`.
+2. **Python Bridge** (`python-bridge.ts`) inserts task row into `colony_tasks`.
+3. **Task Poller** (Python) picks up the task.
+4. **Bees** execute logic and write result back to `colony_tasks`.
+
+### Python Bees in Registry
+
+```typescript
+'finance-bee': {
+    capabilities: ['analytics', 'budget'],
+    endpoint: 'colony_tasks'
+}
+```
+
+---
+
+## 🔗 Colony OS Metrics Bridge
 
 The bridge sends metrics to the external Colony OS dashboard.
 

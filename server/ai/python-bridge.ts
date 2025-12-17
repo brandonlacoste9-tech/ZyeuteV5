@@ -1,71 +1,59 @@
 /**
- * AI Hive - Python Colony Bridge
- * Queues tasks to Python Colony bees via Supabase
+ * Python Bridge
+ * Connects the Orchestrator to the Python Colony Swarm via the DB task queue.
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.VITE_SUPABASE_ANON_KEY!
-);
+import { storage } from '../storage.js';
+import type { HiveTask, HiveTaskResult } from './types.js';
 
 /**
- * Execute a Python Colony bee by queueing a task
- * 
- * @param beeId - The bee ID (e.g., 'finance-bee', 'guardian-bee')
- * @param payload - Task payload
- * @returns Task result once completed
+ * Execute a task on a Python bee by queuing it in colony_tasks
  */
-export async function executePythonBee(
-    beeId: string,
-    payload: Record<string, unknown>
-): Promise<unknown> {
-    console.log(`[Python Bridge] Queueing task for bee: ${beeId}`);
+export async function executePythonBee(beeId: string, task: HiveTask): Promise<HiveTaskResult> {
+    console.log(`[Python Bridge] Queuing task for ${beeId}: ${task.type}`);
 
-    // Insert task into colony_tasks table
-    const { data, error } = await supabase
-        .from('colony_tasks')
-        .insert({
-            type: beeId,
-            payload,
-            status: 'pending',
-            created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+    try {
+        // Map Hive task to Colony task command
+        // This is a simplification. In reality, we might serialise the whole payload.
+        const command = `run_bee ${beeId} ${JSON.stringify(task.payload)}`;
 
-    if (error) {
-        throw new Error(`Failed to queue Python bee: ${error.message}`);
+        const colonyTask = await storage.createColonyTask({
+            command: command,
+            origin: 'Orchestrator',
+            priority: task.priority === 10 ? 'high' : 'normal',
+            metadata: {
+                beeId,
+                hiveTaskId: task.id,
+                ...task.payload
+            },
+            workerId: beeId // Target a specific worker/bee if the swarm supports it
+        });
+
+        console.log(`[Python Bridge] Task queued successfully (ID: ${colonyTask.id})`);
+
+        // For now, we return success immediately (async dispatch).
+        // In a future version, we could poll colonyTask until status is completed.
+        return {
+            taskId: task.id,
+            success: true,
+            data: {
+                status: 'queued',
+                colonyTaskId: colonyTask.id,
+                message: 'Task sent to Python swarm'
+            },
+            metadata: {
+                beeId,
+                executionTime: 0,
+                model: 'python-swarm'
+            }
+        };
+
+    } catch (error: any) {
+        console.error(`[Python Bridge] Failed to queue task:`, error);
+        return {
+            taskId: task.id,
+            success: false,
+            error: `Bridge Error: ${error.message}`
+        };
     }
-
-    // Poll for completion
-    const taskId = data.id;
-    const maxAttempts = 60; // 60 seconds max wait
-
-    for (let i = 0; i < maxAttempts; i++) {
-        const { data: task } = await supabase
-            .from('colony_tasks')
-            .select('*')
-            .eq('id', taskId)
-            .single();
-
-        if (!task) {
-            throw new Error(`Task ${taskId} not found`);
-        }
-
-        if (task.status === 'completed') {
-            console.log(`[Python Bridge] Task ${taskId} completed`);
-            return task.result;
-        }
-
-        if (task.status === 'failed') {
-            throw new Error(task.error || 'Python bee execution failed');
-        }
-
-        // Wait 1 second before next poll
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    throw new Error(`Python bee execution timeout (task ${taskId})`);
 }

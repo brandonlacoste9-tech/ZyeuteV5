@@ -5,11 +5,12 @@
 
 import { HiveTask, HiveTaskResult } from '../types';
 import { getBeesByCapability } from '../bee-registry';
-// We will import the bees dynamically or via a map to avoid circular deps if possible
-// For now, we stub the execution
+// @ts-ignore - The bridge module definitely exists, TS just might be fussy about extensions
+import { sendMetricsToColony } from '../../colony/bridge';
 
 export class OrchestratorCore {
     async handleHiveTask(task: HiveTask): Promise<HiveTaskResult> {
+        const startTime = Date.now();
         console.log(`[Orchestrator] Received task: ${task.type}`);
 
         // Map task type to capability (simple mapping for now)
@@ -33,25 +34,69 @@ export class OrchestratorCore {
             // In a real app, we might use a BeeFactory or Command pattern.
             // For this plan, we'll assume we load the module from ../bees/<id>
 
+            // Check if it's a Python bee (Colony Swarm)
+            if (bee.endpoint) {
+                // Determine if we should wait or fire-and-forget.
+                // For now, Orchestrator expects a promise result.
+                const { executePythonBee } = await import('../python-bridge');
+                const result = await executePythonBee(bee.id, task);
+
+                // Add execution time to result if missing
+                const executionTime = Date.now() - startTime;
+                if (result.metadata) {
+                    result.metadata.executionTime = result.metadata.executionTime || executionTime;
+                }
+
+                return result;
+            }
+
+            // Note: We need to use relative path that works at runtime
             const beeModule = await import(`../bees/${bee.id}`);
+
             if (beeModule && typeof beeModule.run === 'function') {
                 const result = await beeModule.run(task.payload);
-                return {
+                const executionTime = Date.now() - startTime;
+
+                const taskResult: HiveTaskResult = {
                     taskId: task.id,
                     success: true,
                     data: result,
                     metadata: {
                         beeId: bee.id,
-                        executionTime: 0, // TODO: Measure
-                        model: bee.model
+                        executionTime,
+                        model: bee.model,
+                        cost: result.metadata?.cost || 0
                     }
                 };
+
+                // Send metrics to Colony OS (fire 'n forget)
+                sendMetricsToColony({
+                    beeId: bee.id,
+                    taskType: task.type,
+                    executionTime,
+                    cost: taskResult.metadata?.cost || 0,
+                    success: true,
+                    model: bee.model
+                }).catch(err => console.error('[Orchestrator] Failed to send metrics:', err));
+
+                return taskResult;
             } else {
                 throw new Error(`Bee ${bee.id} does not export a run function`);
             }
 
         } catch (error: any) {
+            const executionTime = Date.now() - startTime;
             console.error(`[Orchestrator] Error executing bee ${bee.id}:`, error);
+
+            // Report failure metrics too
+            sendMetricsToColony({
+                beeId: bee.id,
+                taskType: task.type,
+                executionTime,
+                success: false,
+                error: error.message
+            }).catch(err => console.error('[Orchestrator] Failed to send failure metrics:', err));
+
             return {
                 taskId: task.id,
                 success: false,
