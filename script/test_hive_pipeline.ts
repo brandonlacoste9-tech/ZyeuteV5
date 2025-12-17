@@ -3,6 +3,12 @@
  * Verifies that the Orchestrator correctly routes tasks to bees
  */
 
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load env vars for real API calls
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 import { orchestrator } from '../server/ai/cores/orchestrator-core';
 import type { HiveTask } from '../server/ai/types';
 import crypto from 'crypto';
