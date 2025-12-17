@@ -123,13 +123,13 @@ jobs:
               
               const comment = `## 🏆 Lighthouse Performance Report
 
-| Category | Score |
-|----------|-------|
-| ${emoji(metrics.performance)} Performance | ${metrics.performance}/100 |
-| ${emoji(metrics.accessibility)} Accessibility | ${metrics.accessibility}/100 |
-| ${emoji(metrics.bestPractices)} Best Practices | ${metrics.bestPractices}/100 |
-| ${emoji(metrics.seo)} SEO | ${metrics.seo}/100 |
-| ${metrics.pwa !== 'N/A' ? emoji(metrics.pwa) : '⚪'} PWA | ${metrics.pwa}${metrics.pwa !== 'N/A' ? '/100' : ''} |
+              | Category | Score |
+              |----------|-------|
+              | ${emoji(metrics.performance)} Performance | ${metrics.performance}/100 |
+              | ${emoji(metrics.accessibility)} Accessibility | ${metrics.accessibility}/100 |
+              | ${emoji(metrics.bestPractices)} Best Practices | ${metrics.bestPractices}/100 |
+              | ${emoji(metrics.seo)} SEO | ${metrics.seo}/100 |
+              | ${metrics.pwa !== 'N/A' ? emoji(metrics.pwa) : '⚪'} PWA | ${metrics.pwa}${metrics.pwa !== 'N/A' ? '/100' : ''} |
 
 ### Key Metrics
 - **First Contentful Paint:** ${report.audits['first-contentful-paint'].displayValue}
