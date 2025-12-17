@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { toast } from '../components/Toast';
-import type { Notification} from '../types';
+import type { Notification } from '../types';
 import { logger } from '../lib/logger';
 
 const notificationContextLogger = logger.withContext('NotificationContext');
@@ -14,6 +14,7 @@ const notificationContextLogger = logger.withContext('NotificationContext');
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  loading: boolean;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
@@ -25,6 +26,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Get current user
   useEffect(() => {
@@ -46,6 +48,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Fetch notifications
   const refreshNotifications = useCallback(async () => {
     if (!currentUserId) return;
+    setLoading(true);
 
     try {
       // Simpler query without foreign key hints - let PostgREST infer relationships
@@ -69,6 +72,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     } catch (error) {
       notificationContextLogger.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
     }
   }, [currentUserId]);
 
@@ -216,6 +221,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       value={{
         notifications,
         unreadCount,
+        loading,
         markAsRead,
         markAllAsRead,
         refreshNotifications,
@@ -233,4 +239,3 @@ export const useNotifications = () => {
   }
   return context;
 };
-

@@ -6,12 +6,11 @@
 import React, { ReactNode } from 'react';
 import { useBorderColor } from '@/contexts/BorderColorContext';
 import { GuestBanner } from '@/components/GuestBanner';
+import { BottomNav } from '@/components/BottomNav';
 
 interface MainLayoutProps {
   children: ReactNode;
 }
-
-import { BottomNav } from '@/components/BottomNav';
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { borderColor } = useBorderColor();
@@ -28,24 +27,24 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div
-      className="min-h-screen flex justify-center items-start pt-0 pb-0 leather-dark"
+      className="min-h-screen flex justify-center items-start pt-4 pb-4 leather-dark"
     >
       <div
-        className="w-full max-w-md mx-auto min-h-screen text-white overflow-hidden relative shadow-2xl"
+        className="w-full max-w-md mx-auto min-h-[calc(100vh-2rem)] text-white overflow-hidden rounded-3xl relative shadow-2xl"
         style={{
           ...goldEdgeGlow,
         }}
       >
         {/* Brown leather background inside the app */}
         <div
-          className="absolute inset-0 leather-brown"
+          className="absolute inset-0 rounded-3xl leather-brown"
           style={{
             opacity: 0.95,
           }}
         />
         {/* Gold ambient glow at top */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 pointer-events-none rounded-3xl"
           style={{
             background: 'radial-gradient(ellipse at 50% 0%, rgba(255, 215, 0, 0.1) 0%, transparent 40%)',
           }}
@@ -55,13 +54,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           {children}
         </div>
 
-        {/* Navigation */}
-        <BottomNav />
-
         {/* Guest Banner - Shows after 3 views */}
         <GuestBanner />
+
+        {/* Global Bottom Navigation */}
+        <BottomNav />
       </div>
     </div>
   );
 };
-

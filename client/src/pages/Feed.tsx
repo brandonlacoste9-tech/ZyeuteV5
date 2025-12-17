@@ -6,7 +6,6 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
 import { ChatButton } from '@/components/ChatButton';
 import { GoldButton } from '@/components/GoldButton';
 import { SectionHeader } from '@/components/SectionHeader';

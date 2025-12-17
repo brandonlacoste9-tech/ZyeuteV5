@@ -5,7 +5,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { BottomNav } from '../components/BottomNav';
 import { Avatar } from '../components/Avatar';
 import { useNotifications } from '../contexts/NotificationContext';
 import { getTimeAgo } from '../lib/utils';
@@ -89,9 +88,6 @@ export const Notifications: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Premium Chat Button */}
-      <ChatButton isFixed={true} />
     </div>
   );
 };

@@ -6,7 +6,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { getCurrentUser, logout } from '@/services/api';
@@ -15,6 +14,7 @@ import { generateId } from '@/lib/utils';
 import { QUEBEC_REGIONS } from '@/lib/quebecFeatures';
 import { useBorderColor } from '@/contexts/BorderColorContext';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useAuth } from '@/contexts/AuthContext';
 import type { User } from '@/types';
 import { logger } from '../lib/logger';
 
@@ -36,12 +36,33 @@ export const Settings: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const { borderColor, setBorderColor, defaultGold } = useBorderColor();
   const { tap, success, selection, impact } = useHaptics();
+  const { isGuest, logout: authLogout } = useAuth();
 
   // Fetch current user
   React.useEffect(() => {
     const fetchUser = async () => {
       setIsLoading(true);
       try {
+        // If Guest, setup dummy user without API call
+        if (isGuest) {
+          setUser({
+            id: 'guest',
+            username: 'visiteur',
+            display_name: 'Visiteur',
+            coins: 0,
+            fire_score: 0,
+            is_verified: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            followers_count: 0,
+            following_count: 0,
+            posts_count: 0,
+            is_following: false
+          } as User);
+          setIsLoading(false);
+          return;
+        }
+
         const currentUser = await getCurrentUser();
 
         if (!currentUser) {
@@ -58,15 +79,19 @@ export const Settings: React.FC = () => {
     };
 
     fetchUser();
-  }, [navigate]);
+  }, [navigate, isGuest]);
 
   // Sign out
   const handleSignOut = async () => {
-    const confirmed = window.confirm('Es-tu sûr de vouloir te déconnecter?');
+    const message = isGuest
+      ? 'Quitter le mode invité?'
+      : 'Es-tu sûr de vouloir te déconnecter?';
+
+    const confirmed = window.confirm(message);
     if (!confirmed) return;
 
-    toast.info('Déconnexion...');
-    await logout();
+    toast.info(isGuest ? 'Fermeture...' : 'Déconnexion...');
+    await authLogout();
     toast.success('À la prochaine! 👋');
     setTimeout(() => navigate('/login'), 500);
   };
@@ -252,10 +277,16 @@ export const Settings: React.FC = () => {
         </svg>
       ),
       label: 'Abonnement Premium',
+      label: 'Abonnement Premium',
       path: '/premium',
       badge: user?.isPremium ? '⭐' : undefined,
     },
   ];
+
+  // For Guests, remove account-specific settings
+  const filteredAccountSettings = isGuest
+    ? []
+    : accountSettings;
 
   // Filter settings based on search
   const filterSettings = (items: SettingItem[]) => {
@@ -475,8 +506,8 @@ export const Settings: React.FC = () => {
                       toast.success(`Couleur changée: ${preset.name}! ✨`);
                     }}
                     className={`relative aspect-square rounded-lg border-2 transition-all hover:scale-110 ${borderColor.toUpperCase() === preset.color.toUpperCase()
-                        ? 'border-gold-500 ring-2 ring-gold-500/50'
-                        : 'border-leather-700 hover:border-gold-500/50'
+                      ? 'border-gold-500 ring-2 ring-gold-500/50'
+                      : 'border-leather-700 hover:border-gold-500/50'
                       }`}
                     style={{ backgroundColor: preset.color }}
                     title={preset.name}
@@ -590,7 +621,7 @@ export const Settings: React.FC = () => {
           <h2 className="text-leather-400 text-xs font-bold uppercase tracking-wider mb-3 px-4">
             Ton compte
           </h2>
-          {filterSettings(accountSettings).map((item, index) => (
+          {filterSettings(filteredAccountSettings).map((item, index) => (
             <button
               key={index}
               onClick={() => handleSettingClick(item)}
@@ -619,7 +650,7 @@ export const Settings: React.FC = () => {
             }}
             className="w-full text-center py-3 text-red-400 font-bold hover:text-red-300 transition-colors"
           >
-            Se déconnecter
+            {isGuest ? 'Quitter le mode invité' : 'Se déconnecter'}
           </button>
         </div>
 
@@ -633,9 +664,6 @@ export const Settings: React.FC = () => {
           <p className="text-xs text-leather-500">Fait au Québec avec fierté 🦫⚜️</p>
         </div>
       </div>
-
-      {/* Premium Chat Button */}
-      <ChatButton isFixed={true} />
     </div>
   );
 };

@@ -6,7 +6,6 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { BottomNav } from '@/components/BottomNav';
 import { getFeedPosts } from '@/services/api';
 import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from '@/lib/quebecFeatures';
 import { formatNumber } from '@/lib/utils';
@@ -135,8 +134,8 @@ export const Explore: React.FC = () => {
                     }
                   }}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected
-                      ? 'btn-gold'
-                      : 'btn-leather'
+                    ? 'btn-gold'
+                    : 'btn-leather'
                     }`}
                 >
                   {tag}
@@ -162,8 +161,8 @@ export const Explore: React.FC = () => {
                 }
               }}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${selectedRegion === ''
-                  ? 'btn-gold'
-                  : 'btn-leather'
+                ? 'btn-gold'
+                : 'btn-leather'
                 }`}
             >
               Toutes
@@ -183,8 +182,8 @@ export const Explore: React.FC = () => {
                     }
                   }}
                   className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected
-                      ? 'btn-gold'
-                      : 'btn-leather'
+                    ? 'btn-gold'
+                    : 'btn-leather'
                     }`}
                 >
                   {region.emoji} {region.name}
@@ -317,9 +316,6 @@ export const Explore: React.FC = () => {
           <span className="text-gold-500">🇨🇦</span>
         </p>
       </div>
-
-      {/* Premium Chat Button */}
-      <ChatButton isFixed={true} />
     </div>
   );
 };

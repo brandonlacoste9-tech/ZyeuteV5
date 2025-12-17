@@ -7,7 +7,6 @@ import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { Button } from '../components/Button';
-import { BottomNav } from '../components/BottomNav';
 import { generateImage } from '../services/api';
 import { toast } from '../components/Toast';
 
@@ -408,10 +407,6 @@ export const AIStudio: React.FC = () => {
           <p className="text-xs text-gold-500/60 mt-1">Propulsé par l'innovation québécoise</p>
         </footer>
       </main>
-
-      {/* Bottom Navigation */}
-      {/* Premium Chat Button - Always fixed */}
-      <ChatButton isFixed={true} />
     </div>
   );
 };
