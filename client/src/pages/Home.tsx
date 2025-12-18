@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_SESSION_DURATION } from '@/lib/constants';
+import { supabase } from '../lib/supabase';
 
 
 const Home: React.FC = () => {
@@ -28,7 +29,6 @@ const Home: React.FC = () => {
     const checkAuth = async () => {
       try {
         // Check for Supabase authenticated user
-        const { supabase } = await import('../lib/supabase');
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
