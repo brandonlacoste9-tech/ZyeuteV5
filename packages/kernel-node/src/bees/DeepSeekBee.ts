@@ -1,109 +1,158 @@
 
 import { neurosphere, DeepSeekMessage } from '../lib/ai/deepseek';
+import { db } from '../lib/db';
+import { gitHubTool } from '../lib/tools/github';
 
-interface Task {
+interface ColonyTask {
   id: string;
-  type: 'content_advice' | 'moderation' | 'strategy';
+  type: string;
   payload: any;
   status: 'pending' | 'processing' | 'completed' | 'failed';
+  result?: any;
+  created_at: string;
 }
 
-/**
- * DeepSeekBee: The Specialized Forager
- * Responsibility: Process text-heavy tasks using the DeepSeek V3 model.
- * * Biomimetic Role: Forager
- */
 export class DeepSeekBee {
   private isAwake = false;
-  private pollInterval = 5000; // 5 seconds heartbeat
+  private isForaging = false;
+  private pollInterval = 5000;
   private beeId = 'bee_deepseek_v3_01';
 
   constructor() {
-    console.log(`🐝 [${this.beeId}] Larva stage complete. Metamorphosis initializing...`);
+    console.log(`🐝 [${this.beeId}] Initialized. Waiting for signal...`);
   }
 
-  /**
-   * Awakens the agent to start its metabolic loop.
-   */
   public wakeUp() {
     if (this.isAwake) return;
     this.isAwake = true;
-    console.log(`🐝 [${this.beeId}] Awake and foraging.`);
+    console.log(`🐝 [${this.beeId}] Hive Link Established. Polling for tasks...`);
     
     // Start the heartbeat
     setInterval(() => this.forage(), this.pollInterval);
   }
 
   /**
-   * The "Forage" Loop: Looks for pollen (tasks) in the database.
+   * The Safe Forage Loop
+   * Replaces Math.random() with specific DB queries.
    */
   private async forage() {
+    if (this.isForaging) return;
+    this.isForaging = true;
+
     try {
-      // 1. SENSE: Look for pending tasks (Mocking DB connection for Phase 3 start)
-      // In Phase 4, we connect this to Supabase 'tasks' table
+      // 1. SENSE: Query the database for pending tasks
       const task = await this.findPollen(); 
 
       if (!task) {
-        // No pollen found, conserve energy.
+        // No tasks found. The Bee sleeps safely. No spam.
+        // console.log('zzz...'); 
+        this.isForaging = false;
         return;
       }
 
-      console.log(`🐝 [${this.beeId}] Pollen found: [${task.type}]`);
+      console.log(`🐝 [${this.beeId}] 🌸 Task Detected: [${task.type}] - ID: ${task.id}`);
 
-      // 2. THINK: Process with Neurosphere
-      const nectar = await this.processTask(task);
+      // 2. DIGEST: Lock the task so other bees don't take it
+      await this.claimTask(task.id);
 
-      // 3. ACT: Deposit Honey (Save result)
-      await this.depositHoney(task.id, nectar);
+      // 3. THINK & ACT: Process logic
+      const result = await this.processTask(task);
+      
+      // 4. MEMORIZE: Save result
+      await this.depositHoney(task.id, result);
 
     } catch (error) {
-      console.error(`🐝 [${this.beeId}] Wing damage (Error):`, error);
+      console.error(`🐝 [${this.beeId}] Processing Error:`, error);
+    } finally {
+      this.isForaging = false;
     }
   }
 
-  private async processTask(task: Task): Promise<string> {
-    let systemPrompt = '';
-    let userContent = '';
+  // --- Database Interactions ---
 
-    switch (task.type) {
-      case 'content_advice':
-        systemPrompt = "You are Ti-Guy, a helpful Quebecois social media expert. Speak in 'Joual' and give short, punchy tips to improve this post.";
-        userContent = JSON.stringify(task.payload);
-        break;
-      case 'moderation':
-        systemPrompt = "You are the Colony Guard. Analyze this text for toxicity, hate speech, or harassment. Return strictly JSON: { isSafe: boolean, confidence: number, reason: string }.";
-        userContent = task.payload.text;
-        break;
-      default:
-        return 'Unknown pollen type';
+  private async findPollen(): Promise<ColonyTask | null> {
+    const { data, error } = await db
+      .from('colony_tasks')
+      .select('*')
+      .eq('status', 'pending')
+      .in('type', ['content_advice', 'moderation', 'bug_report']) // Whitelisted task types
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // Ignore "no rows found"
+      console.error('Error finding pollen:', error.message);
     }
-
-    const messages: DeepSeekMessage[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userContent }
-    ];
-
-    return await neurosphere.think(messages);
+    return data;
   }
 
-  // --- Mock Colony Interfaces (To be replaced with DB Calls) ---
-  
-  private async findPollen(): Promise<Task | null> {
-    // Randomly find a task 10% of the time for testing purposes
-    if (Math.random() > 0.9) {
-      return {
-        id: `task_${Date.now()}`,
-        type: 'content_advice',
-        payload: { text: "Check out my new poutine recipe! #yum" },
-        status: 'pending'
-      };
-    }
-    return null;
+  private async claimTask(taskId: string) {
+    await db.from('colony_tasks')
+      .update({ status: 'processing', assigned_to: this.beeId, started_at: new Date() })
+      .eq('id', taskId);
   }
 
   private async depositHoney(taskId: string, result: string) {
-    console.log(`🍯 [${this.beeId}] Honey deposited for Task ${taskId}:`);
-    console.log(result);
-    console.log('---------------------------------------------------');
+    await db.from('colony_tasks')
+      .update({ 
+        status: 'completed', 
+        result: { output: result }, 
+        completed_at: new Date() 
+      })
+      .eq('id', taskId);
+    
+    console.log(`🍯 [${this.beeId}] Task ${taskId} completed successfully.`);
+  }
+
+  // --- Cognitive Processing ---
+
+  private async processTask(task: ColonyTask): Promise<string> {
+    const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : task.payload;
+
+    if (task.type === 'bug_report') {
+        console.log('🐞 [Bee] Initiating GitHub Protocol...');
+        const messages: DeepSeekMessage[] = [
+          { role: 'system', content: 'You are a QA Lead. Summarize this error for a GitHub Issue. Return strictly JSON: { "title": "...", "body": "..." }' },
+          { role: 'user', content: JSON.stringify(payload) }
+        ];
+        
+        const aiResponse = await neurosphere.think(messages);
+        try {
+          // Clean markdown code blocks if present
+          const cleanJson = aiResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+          const issueData = JSON.parse(cleanJson);
+          
+          const issueUrl = await gitHubTool.createIssue({
+            title: issueData.title,
+            body: `${issueData.body}\n\n*Reported automatically by DeepSeekBee*`,
+            labels: ['bug', 'automated']
+          });
+          return `Issue created: ${issueUrl}`;
+        } catch (e: any) {
+          return `Failed to create issue: ${e.message}`;
+        }
+    }
+
+    // Handle other types (content_advice, moderation)
+    let systemPrompt = '';
+    let userContent = '';
+
+    if (task.type === 'content_advice') {
+       systemPrompt = "You are Ti-Guy, a helpful Quebecois social media expert. Speak in 'Joual'. Give 3 short, punchy tips to improve this post.";
+       userContent = JSON.stringify(payload);
+    } else if (task.type === 'moderation') {
+      systemPrompt = "You are the Colony Guard. Analyze this text for toxicity. Return strictly JSON: { isSafe: boolean, confidence: number, reason: string }.";
+      userContent = payload.text || payload.content;
+    }
+
+    if (systemPrompt) {
+       const messages: DeepSeekMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ];
+      return await neurosphere.think(messages);
+    }
+
+    return "Task type processed (placeholder result)";
   }
 }
