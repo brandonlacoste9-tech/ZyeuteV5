@@ -110,7 +110,7 @@ export async function createSubscriptionTier(
       .single();
 
     if (error) throw error;
-    
+
     toast.success(`Abonnement "${tier.name_fr}" créé!`);
     return data;
   } catch (error: any) {

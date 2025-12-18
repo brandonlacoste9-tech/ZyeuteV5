@@ -20,7 +20,17 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:vitals": "playwright test tests/vital-signs/"
+    "test:vitals": "playwright test tests/vital-signs/",
+    "test:comprehensive": "playwright test tests/comprehensive/",
+    "test:auth": "playwright test tests/comprehensive/01-auth-flows.spec.ts",
+    "test:social": "playwright test tests/comprehensive/02-social-features.spec.ts",
+    "test:messaging": "playwright test tests/comprehensive/03-messaging.spec.ts",
+    "test:media": "playwright test tests/comprehensive/04-media-content.spec.ts",
+    "test:ai": "playwright test tests/comprehensive/05-ai-features.spec.ts",
+    "test:payments": "playwright test tests/comprehensive/06-payments.spec.ts",
+    "test:navigation": "playwright test tests/comprehensive/07-navigation.spec.ts",
+    "test:accessibility": "playwright test tests/comprehensive/08-accessibility.spec.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.2",

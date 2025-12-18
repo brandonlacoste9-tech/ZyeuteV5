@@ -53,8 +53,8 @@ app.get('/api/health', async (req, res) => {
                 active: totalCount - idleCount,
             },
         });
-    } catch (error) {
-        res.status(500).json({ status: 'unhealthy', error: error.message });
+    } catch (error: any) {
+        res.status(500).json({ status: 'unhealthy', error: error.message || String(error) });
     }
 });
 

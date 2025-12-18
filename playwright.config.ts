@@ -36,6 +36,9 @@ export default defineConfig({
         /* Screenshot on failure */
         screenshot: 'only-on-failure',
 
+        /* Video recording for failed tests */
+        video: 'retain-on-failure',
+
         /* Timeout for each action (click, fill, etc.) */
         actionTimeout: 10000,
     },

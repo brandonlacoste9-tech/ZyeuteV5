@@ -68,7 +68,7 @@ export const PostDetail: React.FC = () => {
             .eq('post_id', id)
             .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
             .single();
-          
+
           setPost({
             ...postData,
             user_fire: fireData ? { fire_level: fireData.fire_level } : undefined,

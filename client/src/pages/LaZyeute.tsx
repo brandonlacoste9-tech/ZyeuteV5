@@ -128,14 +128,8 @@ export const LaZyeute: React.FC = () => {
   const handleFireToggle = async (postId: string) => {
     if (!currentUser) return;
     try {
-      const success = await togglePostFire(postId, currentUser.id);
-      if (success) {
-        setPosts(prev => prev.map(p =>
-          p.id === postId
-            ? { ...p, fire_count: p.fire_count + (p.is_fired ? -1 : 1), is_fired: !p.is_fired }
-            : p
-        ));
-      }
+      await togglePostFire(postId, currentUser.id);
+      // The infinite feed hook will automatically refetch and update
     } catch (error) {
       console.error('Error toggling fire:', error);
     }

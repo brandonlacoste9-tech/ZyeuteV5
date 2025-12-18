@@ -35,9 +35,9 @@ const AuthCallback: React.FC = () => {
       // Check for OAuth error in URL parameters
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
-      
+
       authCallbackLogger.debug('Checking for OAuth error:', error);
-      
+
       if (error) {
         authCallbackLogger.error('❌ OAuth error:', error, errorDescription);
         hasNavigated = true;
@@ -55,10 +55,10 @@ const AuthCallback: React.FC = () => {
       if (code) {
         // Explicit code exchange flow
         authCallbackLogger.debug('Exchanging OAuth code for session...', { code, provider });
-        
+
         try {
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-          
+
           if (exchangeError) {
             authCallbackLogger.error('OAuth exchange error:', exchangeError);
             hasNavigated = true;
@@ -94,7 +94,8 @@ const AuthCallback: React.FC = () => {
       authCallbackLogger.debug('Hash contains type:', window.location.hash.includes('type='));
 
       // Listen for auth state changes to know when session is ready
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+        const subscription = (data as any).subscription || data;
         authCallbackLogger.debug('🔔 Auth state change:', event, session ? 'has session' : 'no session');
 
         if (event === 'SIGNED_IN' && session) {
@@ -121,8 +122,8 @@ const AuthCallback: React.FC = () => {
         }
       });
 
-      // Store subscription for cleanup
-      authSubscription = subscription;
+      // Store the subscription object to be used for cleanup
+      authSubscription = (data as any).subscription || data;
 
       // Also check current session immediately in case auth already completed
       const checkSession = async () => {
@@ -130,11 +131,11 @@ const AuthCallback: React.FC = () => {
           authCallbackLogger.debug('🔍 Checking for existing session...');
           // Supabase's detectSessionInUrl should have processed hash-based OAuth already
           const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
+
           if (sessionError) {
             authCallbackLogger.error('❌ Session error:', sessionError);
           }
-          
+
           if (session) {
             authCallbackLogger.debug('✅ Session found immediately:', {
               user: session.user?.email,

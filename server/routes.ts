@@ -15,6 +15,7 @@ import emailAutomation from "./email-automation.js";
 import studioRoutes from "./routes/studio.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
+import debugRoutes from "./api/debug.js";
 // Import tracing utilities
 import { traced, traceDatabase, traceExternalAPI, traceStripe, traceSupabase, addSpanAttributes } from "./tracer.js";
 
@@ -110,6 +111,9 @@ export async function registerRoutes(
       environment: process.env.NODE_ENV || "development"
     });
   });
+
+  // [NEW] Debug and Scalability Diagnostics
+  app.use("/api/debug", debugRoutes);
 
   // Apply general rate limiting to all other API routes
   app.use("/api", generalRateLimiter);

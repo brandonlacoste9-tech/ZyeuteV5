@@ -24,7 +24,7 @@ export async function generateCaption(topic: string, tone: string = 'fun'): Prom
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     const prompt = `Génère une courte légende Instagram amusante en français québécois (joual léger) sur le sujet: "${topic}". Ton: ${tone}. Ajoute 2-3 emojis.`;
-    
+
     const result = await model.generateContent(prompt);
     return result.response.text();
   } catch (error) {
@@ -44,7 +44,7 @@ export async function generateHashtags(topic: string): Promise<string[]> {
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
     const prompt = `Génère 5 hashtags populaires pour Instagram liés à "${topic}" dans un contexte québécois. Réponds SEULEMENT avec les hashtags séparés par des espaces.`;
-    
+
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     return text.split(' ').filter(tag => tag.startsWith('#'));

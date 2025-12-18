@@ -158,11 +158,10 @@ export const Analytics: React.FC = () => {
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-4 py-2 rounded-xl font-semibold transition-all ${
-                timeRange === range
+              className={`px-4 py-2 rounded-xl font-semibold transition-all ${timeRange === range
                   ? 'bg-gold-gradient text-black'
                   : 'bg-white/5 text-white hover:bg-white/10'
-              }`}
+                }`}
             >
               {range === '7d' ? '7 jours' : range === '30d' ? '30 jours' : 'Tout'}
             </button>
@@ -238,8 +237,8 @@ export const Analytics: React.FC = () => {
                 {analytics.engagementRate > 5
                   ? '🔥 Excellent engagement!'
                   : analytics.engagementRate > 3
-                  ? '👍 Bon engagement'
-                  : '💪 Continue à créer du contenu!'}
+                    ? '👍 Bon engagement'
+                    : '💪 Continue à créer du contenu!'}
               </p>
             </div>
           </div>

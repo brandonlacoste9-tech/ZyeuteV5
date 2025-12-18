@@ -81,7 +81,7 @@ export default function Challenges() {
 
       const progressMap = new Map<string, UserProgress>();
       let points = 0;
-      
+
       data?.forEach((progress) => {
         progressMap.set(progress.challenge_id, progress);
         if (progress.completed) {
@@ -128,10 +128,10 @@ export default function Challenges() {
     const now = new Date();
     const expires = new Date(expiresAt);
     const diff = expires.getTime() - now.getTime();
-    
+
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (hours > 24) {
       return `${Math.floor(hours / 24)}j restants`;
     }
@@ -141,7 +141,7 @@ export default function Challenges() {
   return (
     <div className="min-h-screen bg-black pb-20">
       <Header />
-      
+
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="text-center mb-8">
@@ -169,11 +169,10 @@ export default function Challenges() {
             <button
               key={tab.id}
               onClick={() => setSelectedType(tab.id as any)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${
-                selectedType === tab.id
+              className={`px-4 py-2 rounded-full whitespace-nowrap transition-all ${selectedType === tab.id
                   ? 'bg-gold-500 text-black font-bold'
                   : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+                }`}
             >
               {tab.icon} {tab.name}
             </button>
@@ -197,9 +196,8 @@ export default function Challenges() {
               return (
                 <div
                   key={challenge.id}
-                  className={`bg-white/5 border ${
-                    isCompleted ? 'border-green-500' : 'border-white/10'
-                  } rounded-2xl p-6 hover:bg-white/10 transition-all`}
+                  className={`bg-white/5 border ${isCompleted ? 'border-green-500' : 'border-white/10'
+                    } rounded-2xl p-6 hover:bg-white/10 transition-all`}
                 >
                   <div className="flex items-start gap-4">
                     {/* Icon */}
@@ -237,13 +235,12 @@ export default function Challenges() {
                           <span className="text-xs text-white/40">
                             ⏰ {getTimeRemaining(challenge.expires_at)}
                           </span>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            challenge.type === 'daily' ? 'bg-blue-500/20 text-blue-400' :
-                            challenge.type === 'weekly' ? 'bg-purple-500/20 text-purple-400' :
-                            'bg-red-500/20 text-red-400'
-                          }`}>
+                          <span className={`text-xs px-2 py-1 rounded-full ${challenge.type === 'daily' ? 'bg-blue-500/20 text-blue-400' :
+                              challenge.type === 'weekly' ? 'bg-purple-500/20 text-purple-400' :
+                                'bg-red-500/20 text-red-400'
+                            }`}>
                             {challenge.type === 'daily' ? 'Quotidien' :
-                             challenge.type === 'weekly' ? 'Hebdo' : 'Saisonnier'}
+                              challenge.type === 'weekly' ? 'Hebdo' : 'Saisonnier'}
                           </span>
                         </div>
 

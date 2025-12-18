@@ -145,7 +145,10 @@ export const comments = pgTable("commentaires", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  postIdIdx: index("commentaires_publication_id_idx").on(table.postId),
+  userIdIdx: index("commentaires_user_id_idx").on(table.userId),
+}));
 
 // Post Reactions (Fire) - mapped to reactions
 export const postReactions = pgTable("reactions", {
@@ -154,7 +157,10 @@ export const postReactions = pgTable("reactions", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   type: text("type").default('fire'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  postIdIdx: index("reactions_publication_id_idx").on(table.postId),
+  userIdIdx: index("reactions_user_id_idx").on(table.userId),
+}));
 
 // Comment Reactions (Fire)
 export const commentReactions = pgTable("comment_reactions", {
@@ -162,7 +168,10 @@ export const commentReactions = pgTable("comment_reactions", {
   commentId: uuid("comment_id").notNull().references(() => comments.id, { onDelete: 'cascade' }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  commentIdIdx: index("comment_reactions_comment_id_idx").on(table.commentId),
+  userIdIdx: index("comment_reactions_user_id_idx").on(table.userId),
+}));
 
 // Follows Table - mapped to abonnements
 export const follows = pgTable("abonnements", {
@@ -185,7 +194,10 @@ export const stories = pgTable("stories", {
   viewCount: integer("view_count").default(0),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("stories_user_id_idx").on(table.userId),
+  expiresAtIdx: index("stories_expires_at_idx").on(table.expiresAt),
+}));
 
 // Story Views Table
 export const storyViews = pgTable("story_views", {
@@ -193,7 +205,10 @@ export const storyViews = pgTable("story_views", {
   storyId: uuid("story_id").notNull().references(() => stories.id, { onDelete: 'cascade' }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   viewedAt: timestamp("viewed_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  storyIdIdx: index("story_views_story_id_idx").on(table.storyId),
+  userIdIdx: index("story_views_user_id_idx").on(table.userId),
+}));
 
 // Gifts Table
 export const gifts = pgTable("gifts", {
@@ -223,7 +238,12 @@ export const notifications = pgTable("notifications", {
   message: text("message"),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index("notifications_user_id_idx").on(table.userId),
+  postIdIdx: index("notifications_post_id_idx").on(table.postId),
+  fromUserIdIdx: index("notifications_from_user_id_idx").on(table.fromUserId),
+  isReadIdx: index("notifications_is_read_idx").on(table.isRead),
+}));
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
