@@ -1,0 +1,51 @@
+[dotenv@17.2.3] injecting env (12) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+≡ƒöì Inspecting latest colony_tasks...
+---------------------------------------------------
+ID:        79a7e720-b959-4b19-b6d3-571836186c02
+Command:   run_bee finance-bee {"query":"Direct bridge test","timestamp":1766006089335}
+Origin:    Orchestrator
+Status:    pending
+Worker:    finance-bee
+Created:   Wed Dec 17 2025 16:14:49 GMT-0500 (Eastern Standard Time)
+Started:   -
+Completed: -
+---------------------------------------------------
+ID:        01fda325-654b-47ef-a2a6-f0daab7649d1
+Command:   generate_video
+Origin:    Ti-Guy Swarm
+Status:    pending
+Worker:    (none)
+Created:   Wed Dec 17 2025 16:08:39 GMT-0500 (Eastern Standard Time)
+Started:   -
+Completed: -
+---------------------------------------------------
+ID:        af1fcada-fc0b-457f-8eb0-626cb610246a
+Command:   run_bee finance-bee {"period":"Q4 2025"}
+Origin:    Orchestrator
+Status:    pending
+Worker:    finance-bee
+Created:   Wed Dec 17 2025 15:23:35 GMT-0500 (Eastern Standard Time)
+Started:   -
+Completed: -
+---------------------------------------------------
+ID:        48aabd72-bb67-4321-a0b1-290d13cbc8d5
+Command:   check_vitals
+Origin:    Ti-Guy Swarm
+Status:    completed
+Worker:    21036
+Created:   Wed Dec 17 2025 02:21:27 GMT-0500 (Eastern Standard Time)
+Started:   Tue Dec 16 2025 21:21:28 GMT-0500 (Eastern Standard Time)
+Completed: Tue Dec 16 2025 21:21:34 GMT-0500 (Eastern Standard Time)
+Result:    {"api":{"status":"nominal","latency_ms":3813.3},"system":{"errors":[],"platform":"Windows","disk_pat...
+---------------------------------------------------
+ID:        c39b0c3b-bc93-4789-a940-11bbb0f979d1
+Command:   scan_moderation
+Origin:    Ti-Guy Swarm
+Status:    failed
+Worker:    21036
+Created:   Tue Dec 16 2025 19:30:34 GMT-0500 (Eastern Standard Time)
+Started:   Tue Dec 16 2025 14:30:35 GMT-0500 (Eastern Standard Time)
+Completed: -
+Error:     Unknown security command: scan_moderation
+Result:    {}...
+---------------------------------------------------

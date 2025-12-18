@@ -152,6 +152,11 @@ export const Feed: React.FC = () => {
 
   // Handle fire toggle - memoized to prevent VideoCard re-renders
   const handleFireToggle = React.useCallback(async (postId: string, _currentFire: number) => {
+    const guestMode = localStorage.getItem('zyeute_guest_mode');
+    if (guestMode === 'true') {
+      alert('Inscrivez-vous pour donner du feu ! 🔥');
+      return;
+    }
     if (!currentUser) return;
 
     try {
@@ -196,6 +201,11 @@ export const Feed: React.FC = () => {
 
   // Handle gift button click
   const handleGift = useCallback((postId: string, recipient: User) => {
+    const guestMode = localStorage.getItem('zyeute_guest_mode');
+    if (guestMode === 'true') {
+      alert('Inscrivez-vous pour envoyer des cadeaux ! 🎁');
+      return;
+    }
     if (!currentUser) {
       alert('Tu dois être connecté pour envoyer un cadeau! 🎁');
       return;
@@ -251,7 +261,7 @@ export const Feed: React.FC = () => {
   }, [posts]);
 
   return (
-    <div className="h-screen bg-black flex flex-col overflow-hidden pb-[4.5rem]">
+    <div className="flex flex-col h-full bg-black overflow-hidden">
       {/* First-time user onboarding */}
       {isChecked && showOnboarding && (
         <Onboarding onComplete={completeOnboarding} />

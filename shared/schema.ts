@@ -9,11 +9,33 @@ import {
   pgEnum,
   jsonb,
   uuid,
-  index
+  index,
+  customType
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+
+// Custom Geography type for PostGIS
+export const geography = customType<{ data: string }>({
+  dataType() {
+    return 'geography(Point, 4326)';
+  },
+});
+
+// Custom Geometry type (for Polygons)
+export const geometry = customType<{ data: string }>({
+  dataType() {
+    return 'geometry(MultiPolygon, 4326)';
+  },
+});
+
+// Custom Vector type (for pgvector)
+export const vector = customType<{ data: number[], config: { dimensions: number } }>({
+  dataType(config) {
+    return `vector(${config?.dimensions || 384})`;
+  },
+});
 
 // Enums
 export const visibilityEnum = pgEnum('visibility', ['public', 'amis', 'prive']);
@@ -26,6 +48,7 @@ export const giftTypeEnum = pgEnum('gift_type', [
 ]);
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
+// Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
   id: uuid("id").primaryKey(), // FK to auth.users.id
   username: varchar("username", { length: 50 }).notNull().unique(),
@@ -35,7 +58,12 @@ export const users = pgTable("user_profiles", {
   avatarUrl: text("avatar_url"),
   region: text("region"),
   isAdmin: boolean("is_admin").default(false),
+  isPremium: boolean("is_premium").default(false),
+  plan: text("plan").default('free'),
+  credits: integer("credits").default(0),
   subscriptionTier: varchar("subscription_tier", { length: 20 }).default('free'),
+  location: geography("location"),
+  regionId: text("region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -44,35 +72,87 @@ export const users = pgTable("user_profiles", {
 export const posts = pgTable("publications", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  mediaUrl: text("media_url").notNull(),
+  mediaUrl: text("media_url"), // Optional in some cases?
+  content: text("content").notNull(), // Confirmed required by DB insert error
   caption: text("caption"),
   visibility: text("visibilite").default('public'),
   fireCount: integer("reactions_count").default(0),
   commentCount: integer("comments_count").default(0),
   isHidden: boolean("est_masque").default(false),
+  location: geography("location"),
+  regionId: text("region_id"),
+  embedding: vector("embedding", { dimensions: 384 }),
+  lastEmbeddedAt: timestamp("last_embedded_at"),
+  transcription: text("transcription"),
+  transcribedAt: timestamp("transcribed_at"),
+  isModerated: boolean("is_moderated").default(false),
+  moderationApproved: boolean("moderation_approved").default(true),
+  moderationScore: integer("moderation_score").default(0),
+  moderatedAt: timestamp("moderated_at"),
   deletedAt: timestamp("deleted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
   userIdIdx: index("publications_user_id_idx").on(table.userId),
   createdAtIdx: index("publications_created_at_idx").on(table.createdAt),
   userCreatedIdx: index("publications_user_created_idx").on(table.userId, table.createdAt),
+  locationIndex: index("idx_publications_location").using("gist", table.location),
+  regionIndex: index("idx_publications_region_created_at").on(table.regionId, table.createdAt),
 }));
 
-// Comments Table
-export const comments = pgTable("comments", {
+// Regions Table
+export const regions = pgTable("regions", {
+  id: text("id").primaryKey(),
+  nom: text("nom").notNull(),
+  geom: geometry("geom").notNull(),
+}, (table) => ({
+  geomIndex: index("idx_regions_geom").using("gist", table.geom),
+}));
+
+// Push Notification Devices (Phase 10)
+export const pushDevices = pgTable("poussoirs_appareils", {
   id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  deviceToken: text("device_token").notNull(),
+  platform: text("platform").notNull(), // 'ios' or 'android'
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastUsedAt: timestamp("last_used_at").defaultNow(),
+}, (table) => ({
+  userIdIdx: index("idx_push_devices_user_id").on(table.userId),
+  tokenIdx: index("idx_push_devices_token").on(table.deviceToken),
+}));
+
+// User Interactions (Phase 12 - Analytics)
+export const userInteractions = pgTable("user_interactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  publicationId: uuid("publication_id").references(() => posts.id, { onDelete: 'cascade' }),
+  interactionType: text("interaction_type").notNull(), // 'view', 'skip', 'fire', 'comment', 'share'
+  duration: integer("duration"), // milliseconds (for views)
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_interactions_user_id").on(table.userId),
+  publicationIdIdx: index("idx_interactions_publication_id").on(table.publicationId),
+  typeIdx: index("idx_interactions_type").on(table.interactionType),
+  createdAtIdx: index("idx_interactions_created_at").on(table.createdAt),
+}));
+
+// Comments Table - mapped to commentaires
+export const comments = pgTable("commentaires", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("publication_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   content: text("content").notNull(),
-  fireCount: integer("fire_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Post Reactions (Fire)
-export const postReactions = pgTable("post_reactions", {
+// Post Reactions (Fire) - mapped to reactions
+export const postReactions = pgTable("reactions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  postId: uuid("publication_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: text("type").default('fire'),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -84,16 +164,15 @@ export const commentReactions = pgTable("comment_reactions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Follows Table with performance indexes
-export const follows = pgTable("follows", {
-  id: uuid("id").primaryKey().defaultRandom(),
+// Follows Table - mapped to abonnements
+export const follows = pgTable("abonnements", {
+  // abonnements seems to be a composite key table in some schemas, but Drizzle prefers PK
   followerId: uuid("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  followingId: uuid("following_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  followingId: uuid("followee_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
-  followerIdx: index("follows_follower_id_idx").on(table.followerId),
-  followingIdx: index("follows_following_id_idx").on(table.followingId),
-  uniqueFollow: index("follows_unique_idx").on(table.followerId, table.followingId),
+  followerIdx: index("abonnements_follower_id_idx").on(table.followerId),
+  followingIdx: index("abonnements_followee_id_idx").on(table.followingId),
 }));
 
 // Stories Table
@@ -193,15 +272,16 @@ export const upsertUserSchema = z.object({
 
 export const insertPostSchema = createInsertSchema(posts, {
   caption: z.string().max(2200).optional(),
-}).omit({ id: true, createdAt: true, updatedAt: true, fireCount: true, commentCount: true, viewCount: true, giftCount: true });
+  content: z.string().min(1).max(5000), // Map to required 'content' column
+}).omit({ id: true, createdAt: true, fireCount: true, commentCount: true, isHidden: true, deletedAt: true });
 
 export const insertCommentSchema = createInsertSchema(comments, {
   content: z.string().min(1).max(500),
-}).omit({ id: true, createdAt: true, fireCount: true });
+}).omit({ id: true, createdAt: true });
 
-export const insertFollowSchema = createInsertSchema(follows).omit({ id: true, createdAt: true });
+export const insertFollowSchema = createInsertSchema(follows).omit({ createdAt: true });
 
-export const insertStorySchema = createInsertSchema(stories).omit({ id: true, createdAt: true, viewCount: true });
+export const insertStorySchema = createInsertSchema(stories).omit({ id: true, createdAt: true });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 

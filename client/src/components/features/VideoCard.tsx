@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Avatar } from '../Avatar';
 import { VideoPlayer } from './VideoPlayer';
 import { useHaptics } from '@/hooks/useHaptics';
+import { usePresence } from '@/hooks/usePresence';
 import { toast } from '../Toast';
 import { cn } from '../../lib/utils';
 import type { Post, User } from '../../types';
@@ -38,7 +39,15 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { tap } = useHaptics();
+
+  // Real-time Presence & Engagement
+  const { viewerCount, engagement } = usePresence(post.id);
   const [isLiked, setIsLiked] = React.useState(false);
+
+  // Derive counts from props OR real-time updates
+  const fireCount = engagement.fireCount ?? post.fire_count;
+  const commentCount = engagement.commentCount ?? post.comment_count;
+
   const isHorizontal = variant === 'horizontal';
 
   const handleCardClick = () => {
@@ -53,7 +62,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   const handleFire = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click when clicking fire button
     setIsLiked(!isLiked);
-    onFireToggle?.(post.id, post.fire_count);
+    onFireToggle?.(post.id, fireCount);
   };
 
   return (
@@ -137,6 +146,14 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
           </div>
         )}
 
+        {/* Live Viewer Indicator */}
+        {viewerCount > 0 && (
+          <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1.5 text-white text-[10px] font-bold uppercase tracking-wider animate-pulse border border-red-400/30">
+            <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_white]" />
+            <span>{viewerCount} Live</span>
+          </div>
+        )}
+
         {/* Video indicator badge */}
         {post.type === 'video' && (
           <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1 text-white text-xs font-medium">
@@ -165,15 +182,15 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
           <button
             onClick={handleFire}
             className={`flex items-center gap-2 transition-all duration-200 ${isLiked
-                ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse'
-                : 'text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95'
+              ? 'text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse'
+              : 'text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95'
               }`}
           >
             <svg className="w-7 h-7" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" />
             </svg>
-            <span className="font-bold text-lg font-mono">{post.fire_count}</span>
+            <span className="font-bold text-lg font-mono">{fireCount}</span>
           </button>
 
           <button
@@ -186,7 +203,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <span className="font-bold text-lg font-mono">{post.comment_count}</span>
+            <span className="font-bold text-lg font-mono">{commentCount}</span>
           </button>
 
           <button
@@ -261,9 +278,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         {/* Hashtags */}
         {post.hashtags && post.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
-            {post.hashtags.map((tag, i) => (
+            {post.hashtags.map((tag) => (
               <Link
-                key={i}
+                key={tag}
                 to={`/explore?tag=${tag}`}
                 className="text-gold-500/80 hover:text-gold-400 text-xs font-medium transition-colors bg-gold-500/5 px-2 py-1 rounded-md border border-gold-500/10 hover:border-gold-500/30"
               >

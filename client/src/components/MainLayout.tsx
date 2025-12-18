@@ -27,10 +27,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   return (
     <div
-      className="min-h-screen flex justify-center items-start pt-4 pb-4 leather-dark"
+      className="h-screen w-full flex justify-center items-center leather-dark p-4 overflow-hidden"
     >
       <div
-        className="w-full max-w-md mx-auto min-h-[calc(100vh-2rem)] text-white overflow-hidden rounded-3xl relative shadow-2xl"
+        className="w-full max-w-md h-full flex flex-col text-white overflow-hidden rounded-3xl relative shadow-2xl"
         style={{
           ...goldEdgeGlow,
         }}
@@ -49,15 +49,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             background: 'radial-gradient(ellipse at 50% 0%, rgba(255, 215, 0, 0.1) 0%, transparent 40%)',
           }}
         />
-        {/* Content */}
-        <div className="relative z-10 min-h-full pb-20">
+
+        {/* Scrollable Content Area */}
+        <div className="relative z-10 flex-1 overflow-y-auto scrollbar-hide pb-16">
           {children}
         </div>
 
-        {/* Guest Banner - Shows after 3 views */}
+        {/* Guest Banner - Fixed Position within frame */}
         <GuestBanner />
 
-        {/* Global Bottom Navigation */}
+        {/* Global Bottom Navigation - Fixed at bottom of frame */}
         <BottomNav />
       </div>
     </div>

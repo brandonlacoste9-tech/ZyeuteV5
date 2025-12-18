@@ -251,6 +251,32 @@ export async function registerRoutes(
     }
   });
 
+  // Get Smart "Pour Toi" Feed - Uses Vector Recommendations
+  app.get("/api/feed/smart", optionalAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      // Initial version: Use a fixed embedding for testing or search-based
+      // In a real scenario, we'd fetch the user's "interest profile" embedding
+      // or embed the search query if one exists.
+      let embedding = req.query.embedding
+        ? JSON.parse(req.query.embedding as string)
+        : null;
+
+      if (!embedding) {
+        // Fallback: Just return explore posts if no vector provided yet
+        const posts = await storage.getExplorePosts(0, limit);
+        return res.json({ posts, isFallback: true });
+      }
+
+      const posts = await storage.getSmartRecommendations(embedding, limit);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get smart feed error:", error);
+      res.status(500).json({ error: "Failed to get smart recommendations" });
+    }
+  });
+
   // Get explore posts (public, popular)
   app.get("/api/explore", async (req, res) => {
     try {
@@ -262,6 +288,39 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get explore error:", error);
       res.status(500).json({ error: "Failed to get explore posts" });
+    }
+  });
+
+  // Get nearby posts
+  app.get("/api/posts/nearby", optionalAuth, async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lon = parseFloat(req.query.lon as string);
+      const radius = parseInt(req.query.radius as string) || 50000;
+
+      if (isNaN(lat) || isNaN(lon)) {
+        return res.status(400).json({ error: "Lat and Lon are required" });
+      }
+
+      const posts = await storage.getNearbyPosts(lat, lon, radius);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get nearby error:", error);
+      res.status(500).json({ error: "Failed to get nearby posts" });
+    }
+  });
+
+  // Get regional trending posts
+  app.get("/api/posts/trending/:regionId", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const before = req.query.before ? new Date(req.query.before as string) : undefined;
+
+      const posts = await storage.getRegionalTrendingPosts(req.params.regionId, limit, before);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get regional trending error:", error);
+      res.status(500).json({ error: "Failed to get regional trending posts" });
     }
   });
 
@@ -898,6 +957,7 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to send welcome email" });
     }
   });
+
 
   // Resend webhook handler for tracking email events
   app.post("/api/email/webhook", async (req, res) => {

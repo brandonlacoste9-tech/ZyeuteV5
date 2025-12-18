@@ -1,0 +1,47 @@
+
+Running 5 tests using 1 worker
+
+  Γ£ÿ  1 [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:14:1 ΓÇ║ Check 1: Auth Page Loads (The Front Door) (7.7s)
+  Γ£ô  2 [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:31:1 ΓÇ║ Check 2: Guest Login Flow (The Guest Pass) (2.5s)
+  Γ£ô  3 [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:55:1 ΓÇ║ Check 3: Feed Visibility (The Feed) (8.3s)
+  Γ£ô  4 [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:95:1 ΓÇ║ Check 4: Admin Route Protection (The Shield) (4.3s)
+  Γ£ô  5 [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:125:1 ΓÇ║ Check 5: API Health Check (The Pulse) (384ms)
+
+
+  1) [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:14:1 ΓÇ║ Check 1: Auth Page Loads (The Front Door) 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('input[type="email"]')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('input[type="email"]')[22m
+
+
+      19 |
+      20 |     // Verify login form elements are present
+    > 21 |     await expect(page.locator('input[type="email"]')).toBeVisible();
+         |                                                       ^
+      22 |     await expect(page.locator('input[type="password"]')).toBeVisible();
+      23 |
+      24 |     // Verify guest login button is present
+        at C:\Users\north\zyeute-v3-1\tests\vital-signs\vital-signs.spec.ts:21:55
+
+    attachment #1: screenshot (image/png) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    test-results\vital-signs-vital-signs-Ch-c47c1--Page-Loads-The-Front-Door--chromium\test-failed-1.png
+    ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+    Error Context: test-results\vital-signs-vital-signs-Ch-c47c1--Page-Loads-The-Front-Door--chromium\error-context.md
+
+  1 failed
+    [chromium] ΓÇ║ tests\vital-signs\vital-signs.spec.ts:14:1 ΓÇ║ Check 1: Auth Page Loads (The Front Door) 
+  4 passed (26.9s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

@@ -52,6 +52,7 @@ load_dotenv(os.path.join(script_dir, '../../../.env'))
 # Import bees
 from bees import security_bee
 from bees import health_bee
+from bees import finance_bee
 
 # Try importing retry utility
 try:
@@ -271,9 +272,29 @@ def process_task(task):
         return process_gemini_vision_task(task)
         
     # 4. CREATION (Supports Async)
+    # 4. CREATION (Supports Async)
     elif command in ['generate_image', 'generate_video']:
         return process_fal_task(task)
         
+    # 5. BEE ORCHESTRATION (Bridge)
+    elif command.startswith('run_bee'):
+        # Format: "run_bee <bee_id> <optional_args>"
+        parts = command.split(' ', 1)
+        # Check explicit workerId from metadata or parse from command
+        bee_id = metadata.get('beeId') or (parts[1] if len(parts) > 1 else 'unknown')
+        
+        # Sub-command passed in payload or default to 'test'
+        sub_command = metadata.get('type', 'test') 
+        
+        if bee_id == 'finance-bee':
+            return finance_bee.handle_task(sub_command, metadata)
+        elif bee_id == 'health-bee':
+            return health_bee.handle_task(sub_command, metadata)
+        elif bee_id == 'security-bee':
+            return security_bee.execute_security_command(task) # Security bee likely takes full task
+        else:
+             return {"status": "failed", "error": f"Unknown target bee: {bee_id}"}
+             
     else:
         return {"status": "failed", "error": f"Unknown command: {command}"}
 

@@ -18,7 +18,7 @@ test('Check 1: Auth Page Loads (The Front Door)', async ({ page }) => {
     await expect(page.locator('text=Zyeuté')).toBeVisible({ timeout: 10000 });
 
     // Verify login form elements are present
-    await expect(page.locator('input[type="email"]')).toBeVisible();
+    await expect(page.locator('input[placeholder*="@"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
 
     // Verify guest login button is present

@@ -3,11 +3,12 @@
  * Full-screen video with overlay UI matching app aesthetic
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { VideoPlayer } from './VideoPlayer';
 import { Avatar } from '../Avatar';
 import { useHaptics } from '@/hooks/useHaptics';
+import { usePresence } from '@/hooks/usePresence';
 import type { Post, User } from '@/types';
 
 interface SingleVideoViewProps {
@@ -28,13 +29,20 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
   onShare,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null);
-  const [isLiked, setIsLiked] = React.useState(false);
   const { tap, impact } = useHaptics();
   const navigate = useNavigate();
 
+  // Real-time Presence & Engagement
+  const { viewerCount, engagement } = usePresence(post.id);
+  const [isLiked, setIsLiked] = useState(false);
+
+  // Derive counts from props OR real-time updates
+  const fireCount = engagement.fireCount ?? post.fire_count;
+  const commentCount = engagement.commentCount ?? post.comment_count;
+
   const handleFire = () => {
     setIsLiked(!isLiked);
-    onFireToggle?.(post.id, post.fire_count);
+    onFireToggle?.(post.id, fireCount);
     impact();
   };
 
@@ -111,6 +119,16 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
             </p>
           )}
         </div>
+
+        {/* Live Viewer Count (Zyeuteurs) */}
+        {viewerCount > 0 && (
+          <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.4)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_white]" />
+            <span className="text-white text-[10px] font-bold uppercase tracking-wider">
+              {viewerCount} {viewerCount > 1 ? 'Zyeuteurs' : 'Zyeuteur'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Content Area */}
@@ -134,9 +152,9 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
         {/* Hashtags */}
         {post.hashtags && post.hashtags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4">
-            {post.hashtags.map((tag, i) => (
+            {post.hashtags.map((tag) => (
               <Link
-                key={i}
+                key={tag}
                 to={`/explore?tag=${tag}`}
                 onClick={tap}
                 className="text-gold-400 hover:text-gold-300 text-xs font-medium transition-colors"
@@ -176,7 +194,7 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
               />
             </svg>
             <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
-              {post.fire_count}
+              {fireCount}
             </span>
           </button>
 
@@ -199,7 +217,7 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
               />
             </svg>
             <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
-              {post.comment_count}
+              {commentCount}
             </span>
           </button>
 
