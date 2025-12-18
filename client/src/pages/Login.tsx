@@ -11,6 +11,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '../lib/constants';
+import { getCurrentUser, signIn, signInWithGoogle } from '../lib/supabase';
 
 const loginLogger = logger.withContext('Login');
 
@@ -30,7 +31,6 @@ export const Login: React.FC = () => {
   React.useEffect(() => {
     const checkUser = async () => {
       try {
-        const { getCurrentUser } = await import('../lib/supabase');
         const user = await getCurrentUser();
         if (user) {
           loginLogger.info('✅ User already logged in, redirecting...');
@@ -115,7 +115,6 @@ export const Login: React.FC = () => {
       }
 
       // ✅ DIRECT CLIENT-SIDE AUTH - No server proxy
-      const { signIn } = await import('../lib/supabase');
       const { data, error } = await signIn(targetEmail, password);
 
       if (debugMode) console.log('📊 [LOGIN] Auth response:', { data, error });
@@ -159,7 +158,6 @@ export const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const { signInWithGoogle } = await import('../lib/supabase');
       const { data, error } = await signInWithGoogle();
 
       if (debugMode) console.log('🔵 [GOOGLE] Response:', { data, error });
