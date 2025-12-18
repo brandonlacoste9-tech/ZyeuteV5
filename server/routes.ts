@@ -277,6 +277,55 @@ export async function registerRoutes(
     }
   });
 
+  // [NEW] Infinite Scroll Feed - Cursor-based Pagination
+  app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const cursor = req.query.cursor as string | undefined;
+      const feedType = req.query.type as string || 'explore'; // 'feed', 'explore', 'smart'
+
+      let posts: any[] = [];
+
+      // Determine which feed to fetch
+      if (req.userId && feedType === 'feed') {
+        // User's personalized feed
+        const page = cursor ? parseInt(cursor) : 0;
+        posts = await storage.getFeedPosts(req.userId, page, limit + 1);
+      } else if (feedType === 'smart' && req.userId) {
+        // Smart recommendations (if user provides embedding)
+        const embedding = req.query.embedding ? JSON.parse(req.query.embedding as string) : null;
+        if (embedding) {
+          posts = await storage.getSmartRecommendations(embedding, limit + 1);
+        } else {
+          posts = await storage.getExplorePosts(cursor ? parseInt(cursor) : 0, limit + 1);
+        }
+      } else {
+        // Explore/public feed (default)
+        const page = cursor ? parseInt(cursor) : 0;
+        posts = await storage.getExplorePosts(page, limit + 1);
+      }
+
+      // Check if there are more posts
+      const hasMore = posts.length > limit;
+      const items = hasMore ? posts.slice(0, -1) : posts;
+
+      // Calculate next cursor
+      const nextCursor = hasMore
+        ? (cursor ? parseInt(cursor) + 1 : 1).toString()
+        : null;
+
+      res.json({
+        posts: items,
+        nextCursor,
+        hasMore,
+        feedType
+      });
+    } catch (error) {
+      console.error("Get infinite feed error:", error);
+      res.status(500).json({ error: "Failed to load feed" });
+    }
+  });
+
   // Get explore posts (public, popular)
   app.get("/api/explore", async (req, res) => {
     try {
