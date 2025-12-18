@@ -6,17 +6,20 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCurrentUser, getFeedPosts, togglePostFire } from '@/services/api';
+import { getCurrentUser, togglePostFire } from '@/services/api';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useInfiniteFeed } from '@/hooks/useInfiniteFeed';
 import type { Post, User } from '@/types';
 
 export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
   const { edgeLighting } = useTheme();
-  const [posts, setPosts] = useState<Post[]>([]);
+
+  // Infinite scroll hook
+  const { posts, loadMoreRef, isLoading, isFetchingNextPage, hasNextPage } = useInfiniteFeed('explore');
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showEdgeGlow, setShowEdgeGlow] = useState(false);
@@ -28,24 +31,26 @@ export const LaZyeute: React.FC = () => {
   // Current post for edge lighting
   const currentPost = useMemo(() => posts[currentIndex], [posts, currentIndex]);
 
+  // Fetch current user
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
+    const fetchUser = async () => {
       try {
-        const [user, feedPosts] = await Promise.all([
-          getCurrentUser(),
-          getFeedPosts(0, 50)
-        ]);
+        const user = await getCurrentUser();
         if (user) setCurrentUser(user);
-        setPosts(feedPosts || []);
       } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching user:', error);
       }
     };
-    fetchData();
+    fetchUser();
   }, []);
+
+  // Pre-fetch next page when user is 3 videos from the end
+  useEffect(() => {
+    if (posts.length > 0 && currentIndex >= posts.length - 3 && hasNextPage && !isFetchingNextPage) {
+      // Trigger will load more automatically via Intersection Observer
+      console.log('Near end of feed, pre-fetching...');
+    }
+  }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
 
   // Video playback control and edge lighting
   useEffect(() => {
@@ -54,7 +59,7 @@ export const LaZyeute: React.FC = () => {
       if (postIndex === currentIndex) {
         video.currentTime = 0;
         if (isPlaying) {
-          video.play().catch(() => {});
+          video.play().catch(() => { });
           setShowEdgeGlow(true);
         } else {
           video.pause();
@@ -125,8 +130,8 @@ export const LaZyeute: React.FC = () => {
     try {
       const success = await togglePostFire(postId, currentUser.id);
       if (success) {
-        setPosts(prev => prev.map(p => 
-          p.id === postId 
+        setPosts(prev => prev.map(p =>
+          p.id === postId
             ? { ...p, fire_count: p.fire_count + (p.is_fired ? -1 : 1), is_fired: !p.is_fired }
             : p
         ));
@@ -179,9 +184,8 @@ export const LaZyeute: React.FC = () => {
     <div className="fixed inset-0 bg-black">
       {/* Dynamic Edge Lighting Effect */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow ? 'opacity-100' : 'opacity-0'
+          }`}
         style={{
           boxShadow: `
             inset 0 0 60px ${edgeLighting}40,
@@ -193,9 +197,8 @@ export const LaZyeute: React.FC = () => {
 
       {/* Animated Edge Border */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow && currentPost?.type === 'video' ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow && currentPost?.type === 'video' ? 'opacity-100' : 'opacity-0'
+          }`}
         style={{
           border: `2px solid ${edgeLighting}60`,
           boxShadow: `
@@ -208,8 +211,8 @@ export const LaZyeute: React.FC = () => {
 
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-        <button 
-          onClick={() => navigate(-1)} 
+        <button
+          onClick={() => navigate(-1)}
           className="text-white p-2 press-scale"
           data-testid="button-back"
         >
@@ -219,8 +222,8 @@ export const LaZyeute: React.FC = () => {
         </button>
         <h1 className="text-gold-400 font-black text-lg">La Zyeute</h1>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={togglePlayPause} 
+          <button
+            onClick={togglePlayPause}
             className="text-white p-2 press-scale"
             data-testid="button-playpause"
           >
@@ -234,8 +237,8 @@ export const LaZyeute: React.FC = () => {
               </svg>
             )}
           </button>
-          <button 
-            onClick={() => setIsMuted(!isMuted)} 
+          <button
+            onClick={() => setIsMuted(!isMuted)}
             className="text-white p-2 press-scale"
             data-testid="button-mute"
           >
@@ -270,7 +273,7 @@ export const LaZyeute: React.FC = () => {
             data-testid={`post-slide-${post.id}`}
           >
             {/* Media */}
-            <div 
+            <div
               className="absolute inset-0 bg-black"
               onClick={post.type === 'video' ? togglePlayPause : undefined}
             >
@@ -291,9 +294,8 @@ export const LaZyeute: React.FC = () => {
                   <img
                     src={post.media_url}
                     alt={post.caption || 'Post image'}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
-                      index === currentIndex ? 'scale-110' : 'scale-100'
-                    }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? 'scale-110' : 'scale-100'
+                      }`}
                   />
                   {/* Subtle Ken Burns effect for photos */}
                 </div>
@@ -301,11 +303,10 @@ export const LaZyeute: React.FC = () => {
 
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
-                <div className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                  post.type === 'video' 
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                    : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                }`}>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${post.type === 'video'
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                  }`}>
                   {post.type === 'video' ? '▶ Vidéo' : '📷 Photo'}
                 </div>
               </div>
@@ -328,14 +329,14 @@ export const LaZyeute: React.FC = () => {
             {/* Right Side Actions */}
             <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-20">
               {/* Profile */}
-              <Link 
+              <Link
                 to={`/profile/${post.user?.username || post.user?.id}`}
                 className="relative press-scale"
                 data-testid={`link-profile-${post.id}`}
               >
-                <div 
+                <div
                   className="w-12 h-12 rounded-full border-2 overflow-hidden shadow-lg transition-all duration-300"
-                  style={{ 
+                  style={{
                     borderColor: edgeLighting,
                     boxShadow: showEdgeGlow ? `0 0 15px ${edgeLighting}50` : 'none'
                   }}
@@ -346,7 +347,7 @@ export const LaZyeute: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div 
+                <div
                   className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: edgeLighting }}
                 >
@@ -360,16 +361,14 @@ export const LaZyeute: React.FC = () => {
                 className="flex flex-col items-center gap-1 press-scale"
                 data-testid={`button-fire-${post.id}`}
               >
-                <div className={`p-2 rounded-full transition-all duration-300 ${
-                  post.is_fired 
-                    ? 'bg-orange-500/30 scale-110' 
-                    : 'bg-black/40 hover:bg-black/60'
-                }`}
-                style={post.is_fired ? { boxShadow: '0 0 20px rgba(255,100,0,0.5)' } : {}}
+                <div className={`p-2 rounded-full transition-all duration-300 ${post.is_fired
+                  ? 'bg-orange-500/30 scale-110'
+                  : 'bg-black/40 hover:bg-black/60'
+                  }`}
+                  style={post.is_fired ? { boxShadow: '0 0 20px rgba(255,100,0,0.5)' } : {}}
                 >
-                  <span className={`text-2xl transition-transform duration-200 ${
-                    post.is_fired ? 'animate-bounce' : ''
-                  }`}>🔥</span>
+                  <span className={`text-2xl transition-transform duration-200 ${post.is_fired ? 'animate-bounce' : ''
+                    }`}>🔥</span>
                 </div>
                 <span className="text-white text-xs font-bold">{post.fire_count || 0}</span>
               </button>
@@ -406,14 +405,14 @@ export const LaZyeute: React.FC = () => {
             {/* Bottom Info */}
             <div className="absolute bottom-6 left-4 right-20 z-20">
               {/* Username */}
-              <Link 
+              <Link
                 to={`/profile/${post.user?.username || post.user?.id}`}
                 className="flex items-center gap-2 mb-2"
                 data-testid={`link-user-${post.id}`}
               >
                 <span className="text-white font-bold text-base">@{post.user?.username}</span>
                 {post.user?.is_verified && (
-                  <span 
+                  <span
                     className="drop-shadow-lg"
                     style={{ color: edgeLighting }}
                   >✓</span>
@@ -429,8 +428,8 @@ export const LaZyeute: React.FC = () => {
               {post.hashtags && post.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {post.hashtags.slice(0, 4).map((tag, i) => (
-                    <span 
-                      key={i} 
+                    <span
+                      key={i}
                       className="text-xs"
                       style={{ color: edgeLighting }}
                     >#{tag}</span>
@@ -466,6 +465,37 @@ export const LaZyeute: React.FC = () => {
             </div>
           </div>
         ))}
+
+        {/* Infinite Scroll Trigger & Loading Indicator */}
+        {hasNextPage && (
+          <div
+            ref={loadMoreRef}
+            className="h-screen snap-start snap-always flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
+              <p className="text-white text-lg">Chargement...</p>
+              <p className="text-white/60 text-sm">Encore plus de contenu québécois! 🍁</p>
+            </div>
+          </div>
+        )}
+
+        {/* End of Feed Message */}
+        {!hasNextPage && posts.length > 0 && (
+          <div className="h-screen snap-start snap-always flex items-center justify-center">
+            <div className="text-center p-8">
+              <div className="text-6xl mb-4">🍁</div>
+              <h2 className="text-gold-400 text-xl font-bold mb-2">C'est tout pour le moment!</h2>
+              <p className="text-white/60 mb-6">Revenez plus tard pour plus de contenu</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold press-scale"
+              >
+                Recharger le fil
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Swipe Hint (shows briefly on first load) */}
@@ -483,7 +513,7 @@ export const LaZyeute: React.FC = () => {
         <Link
           to="/"
           className="bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border text-sm font-medium press-scale transition-all"
-          style={{ 
+          style={{
             borderColor: `${edgeLighting}50`,
             color: edgeLighting
           }}

@@ -15,8 +15,9 @@ import { GiftModal } from '@/components/features/GiftModal';
 import { GiftOverlay } from '@/components/features/GiftOverlay';
 import { Onboarding, useOnboarding } from '@/components/Onboarding';
 import { FeedSkeleton } from '@/components/ui/Spinner';
-import { getCurrentUser, getFeedPosts, getStories, togglePostFire } from '@/services/api';
+import { getCurrentUser, getStories, togglePostFire } from '@/services/api';
 import { ContinuousFeed } from '@/components/features/ContinuousFeed';
+import { useInfiniteFeed } from '@/hooks/useInfiniteFeed';
 import type { Post, User, Story } from '@/types';
 import { logger } from '../lib/logger';
 import copy from '../lib/copy';
@@ -28,12 +29,12 @@ const feedLogger = logger.withContext('Feed');
 
 export const Feed: React.FC = () => {
   const location = useLocation();
-  const [posts, setPosts] = React.useState<Post[]>([]);
+
+  // Infinite scroll for posts
+  const { posts, loadMoreRef, isLoading, isFetchingNextPage, hasNextPage, refetch } = useInfiniteFeed('explore');
+
   const [stories, setStories] = React.useState<Array<{ user: User; story?: Story; isViewed?: boolean }>>([]);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [hasMore, setHasMore] = React.useState(true);
-  const [page, setPage] = React.useState(0);
 
   const { showOnboarding, isChecked, completeOnboarding } = useOnboarding();
 
@@ -73,41 +74,6 @@ export const Feed: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
-  // Fetch posts
-  const fetchPosts = React.useCallback(async (pageNum: number) => {
-    setIsLoading(true);
-    try {
-      feedLogger.debug('[Feed] Fetching posts, page:', pageNum);
-      const data = await getFeedPosts(pageNum, 20);
-      feedLogger.debug('[Feed] Received posts data:', {
-        count: data?.length || 0,
-        posts: data,
-        firstPost: data?.[0]
-      });
-
-      if (pageNum === 0) {
-        setPosts(data || []);
-        feedLogger.debug('[Feed] Set posts (page 0):', data?.length || 0);
-      } else {
-        setPosts(prev => {
-          const updated = [...prev, ...(data || [])];
-          feedLogger.debug('[Feed] Appended posts (page > 0):', updated.length);
-          return updated;
-        });
-      }
-      setHasMore((data?.length || 0) === 20);
-    } catch (error) {
-      feedLogger.error('[Feed] Error fetching posts:', error);
-      // Set empty array on error to show empty state
-      if (pageNum === 0) {
-        setPosts([]);
-      }
-    } finally {
-      setIsLoading(false);
-      feedLogger.debug('[Feed] Fetch complete, isLoading set to false');
-    }
-  }, []);
-
   // Fetch stories
   React.useEffect(() => {
     const fetchStories = async () => {
@@ -122,15 +88,10 @@ export const Feed: React.FC = () => {
     fetchStories();
   }, [currentUser]);
 
-  // Initial fetch and refresh on navigation
-  React.useEffect(() => {
-    fetchPosts(0);
-  }, [fetchPosts]);
-
   // Refresh feed when navigating from upload (with refreshFeed flag)
   React.useEffect(() => {
     if (location.state?.refreshFeed) {
-      fetchPosts(0);
+      refetch(); // Use refetch from React Query instead
       // Clear the state to prevent infinite refresh
       window.history.replaceState({}, document.title);
     }
