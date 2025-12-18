@@ -10,7 +10,7 @@ interface GuestModeContextType {
     endGuestSession: () => void;
 }
 
-const GuestModeContext = createContext<GuestModeContextType | undefined>(undefined);
+export const GuestModeContext = createContext<GuestModeContextType | undefined>(undefined);
 
 export function GuestModeProvider({ children }: { children: ReactNode }) {
     // Initialize from localStorage

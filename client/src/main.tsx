@@ -2,20 +2,21 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { QueryProvider } from './providers/QueryProvider';
+import { AuthProvider } from './contexts/AuthContext';
+import { GuestModeProvider } from './contexts/GuestModeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+// import { NotificationProvider } from './contexts/NotificationContext'; // Uncomment if you have this
 
-// Simple logger mock since we removed the complex logger setup
-console.log('🚀 Starting Zyeuté app (Mockup Mode)...');
-
-const rootElement = document.getElementById('root');
-if (rootElement) {
-  ReactDOM.createRoot(rootElement).render(
-    <React.StrictMode>
-      <QueryProvider>
-        <App />
-      </QueryProvider>
-    </React.StrictMode>,
-  );
-} else {
-  console.error('Root element not found');
-}
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <GuestModeProvider>
+        <ThemeProvider>
+           {/* <NotificationProvider> */}
+            <App />
+           {/* </NotificationProvider> */}
+        </ThemeProvider>
+      </GuestModeProvider>
+    </AuthProvider>
+  </React.StrictMode>
+);
