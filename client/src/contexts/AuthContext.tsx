@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let mounted = true;
         const initStart = Date.now();
 
-        // EMERGENCY FAILSAFE: Force loading to complete after 7s maximum
+        // EMERGENCY FAILSAFE: Force loading to complete after 5s maximum
         const emergencyTimeout = setTimeout(() => {
             console.warn('⚠️ Auth initialization timeout - forcing guest mode');
             trackPerformance('Auth Emergency Timeout', initStart);
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsGuest(validGuest);
                 setIsLoading(false);
             }
-        }, 7000);
+        }, 5000);
 
         async function initializeAuth() {
             try {
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const sessionStart = Date.now();
                 const sessionPromise = supabase.auth.getSession();
                 const timeoutPromise = new Promise<{ data: { session: Session | null } }>((_, reject) =>
-                    setTimeout(() => reject(new Error('Auth check timed out')), 5000)
+                    setTimeout(() => reject(new Error('Auth check timed out')), 3000)
                 );
 
                 const { data: { session: initialSession } } = await Promise.race([sessionPromise, timeoutPromise]);
