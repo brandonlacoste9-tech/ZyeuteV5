@@ -55,14 +55,19 @@ export class DeepSeekBee {
       // 2. DIGEST: Lock the task so other bees don't take it
       await this.claimTask(task.id);
 
-      // 3. THINK & ACT: Process logic
-      const result = await this.processTask(task);
-      
-      // 4. MEMORIZE: Save result
-      await this.depositHoney(task.id, result);
+      try {
+        // 3. THINK & ACT: Process logic
+        const result = await this.processTask(task);
+        
+        // 4. MEMORIZE: Save result
+        await this.depositHoney(task.id, result);
+      } catch (processingError: any) {
+        console.error(`🐝 [${this.beeId}] Processing Error:`, processingError);
+        await this.failTask(task.id, processingError.message || String(processingError));
+      }
 
     } catch (error) {
-      console.error(`🐝 [${this.beeId}] Processing Error:`, error);
+      console.error(`🐝 [${this.beeId}] Loop Error:`, error);
     } finally {
       this.isForaging = false;
     }

@@ -17,6 +17,10 @@ const { Pool } = pg;
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  max: 20, // Max connections per instance (Supavisor supports multiplexing)
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 60000,
 });
 
 export const db = drizzle(pool);
