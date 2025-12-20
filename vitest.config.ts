@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./client/src/test/setup.ts'],
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', 'build', '.replit'],
+    exclude: ['node_modules', 'dist', 'build', '.replit', 'tests/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -20,7 +20,8 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData/',
         'dist/',
-        'build/',
+        'build/'
+        'tests/**',,
       ],
     },
     css: true,
