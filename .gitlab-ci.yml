@@ -1,0 +1,71 @@
+# GitLab CI/CD Configuration for zyeute-v3
+# Node.js/TypeScript project with Vercel deployment
+
+image: node:20
+
+stages:
+  - install
+  - build
+  - test
+  - deploy
+
+cache:
+  paths:
+    - node_modules/
+    - .next/cache/
+
+# Install dependencies
+install_dependencies:
+  stage: install
+  script:
+    - npm ci
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 hour
+
+# Build the application
+build:
+  stage: build
+  dependencies:
+    - install_dependencies
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - .next/
+      - dist/
+    expire_in: 1 hour
+
+# Run linting
+lint:
+  stage: test
+  dependencies:
+    - install_dependencies
+  script:
+    - npm run lint
+  allow_failure: true
+
+# Run tests
+test:
+  stage: test
+  dependencies:
+    - install_dependencies
+  script:
+    - npm test
+  allow_failure: true
+
+# Deploy to Vercel (requires VERCEL_TOKEN)
+deploy_production:
+  stage: deploy
+  dependencies:
+    - build
+  script:
+    - npm install -g vercel
+    - vercel --prod --token $VERCEL_TOKEN --yes
+  environment:
+    name: production
+    url: https://zyeute-v3.vercel.app
+  only:
+    - main
+  when: manual
