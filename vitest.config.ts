@@ -21,7 +21,7 @@ export default defineConfig({
         '**/mockData/',
         'dist/',
         'build/'
-        'tests/**',,
+        'tests/**',
       ],
     },
     css: true,
