@@ -55,17 +55,43 @@ test:
     - npm test
   allow_failure: true
 
-# Deploy to Vercel (requires VERCEL_TOKEN)
-deploy_production:
+# Build and push Docker image
+build_docker:
   stage: deploy
+  image: docker:latest
+  services:
+    - docker:dind
   dependencies:
     - build
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
   script:
-    - npm install -g vercel
-    - vercel --prod --token $VERCEL_TOKEN --yes
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker push $CI_REGISTRY_IMAGE:latest
+  only:
+    - main
+
+# Deploy to server (requires SSH setup)
+deploy_production:
+  stage: deploy
+  image: alpine:latest
+  dependencies:
+    - build_docker
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  script:
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "docker pull $CI_REGISTRY_IMAGE:latest"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "docker stop zyeute-v3 || true && docker rm zyeute-v3 || true"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "docker run -d --name zyeute-v3 --restart unless-stopped -p 3000:3000 -e DATABASE_URL=\$DATABASE_URL $CI_REGISTRY_IMAGE:latest"
   environment:
     name: production
-    url: https://zyeute-v3.vercel.app
+    url: $PRODUCTION_URL
   only:
     - main
   when: manual
