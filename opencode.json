@@ -1,0 +1,5 @@
+﻿{
+  "project": "zyeute-v3",
+  "provider": "gitlab",
+  "tasks": ["review", "fix", "summarize"]
+}
