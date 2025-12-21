@@ -7,6 +7,7 @@ stages:
   - install
   - build
   - test
+    - research
   - deploy
 
 cache:
@@ -116,3 +117,86 @@ opencode:
     - npm install -g opencode-ai
     - echo "🐝 Waking up the Researcher Bee..."
     - opencode run "Analyze this code change and provide feedback" --agent "$OPENCODE_AGENT"
+
+    # 🐝 Researcher Bee - Deep Analysis with Web Search
+researcher-bee:
+  stage: research
+  image: node:20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_COMMIT_MESSAGE =~ /@researcher-bee/
+      when: always
+  variables:
+    PERPLEXITY_API_KEY: $PERPLEXITY_API_KEY
+    GITLAB_TOKEN: $GITLAB_TOKEN
+    GIT_DEPTH: 50
+  before_script:
+    - npm install -g opencode-ai
+  script:
+    - echo "🐝 Waking up the Researcher Bee..."
+    - |
+      if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
+        DIFF_FILES=$(git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD || echo "Unable to get diff")
+        ANALYSIS_PROMPT="Analyze this merge request. Files changed: $DIFF_FILES. Provide detailed feedback on: 1) Code quality 2) Colony OS architectural coherence 3) Integration impact 4) Best practices from web research"
+      else
+        ANALYSIS_PROMPT="Analyze this commit with web research for best practices and improvements"
+      fi
+    - opencode run "$ANALYSIS_PROMPT" --agent researcher-bee 2>&1 | tee researcher-output.txt
+  artifacts:
+    paths:
+      - researcher-output.txt
+    expire_in: 1 week
+    when: always
+  allow_failure: true
+
+  # 🐝 Guardian Bee - Security Audit with CVE Search
+guardian-bee:
+  stage: research
+  image: node:20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_COMMIT_MESSAGE =~ /@guardian-bee/
+      when: always
+  variables:
+    PERPLEXITY_API_KEY: $PERPLEXITY_API_KEY
+    GITLAB_TOKEN: $GITLAB_TOKEN
+  before_script:
+    - npm install -g opencode-ai
+  script:
+    - echo "🐝 Guardian Bee performing security audit..."
+    - opencode run "Perform security audit: 1) Search for recent CVEs in dependencies 2) Check for known vulnerabilities 3) Identify security anti-patterns 4) Verify authentication mechanisms. Provide citations." --agent guardian-bee 2>&1 | tee security-audit.txt
+  artifacts:
+    paths:
+      - security-audit.txt
+    expire_in: 3 days
+    when: always
+  allow_failure: true
+
+  # 🐝 Architect Bee - Design Review
+architect-bee:
+  stage: research
+  image: node:20
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+      allow_failure: true
+    - if: $CI_COMMIT_MESSAGE =~ /@architect-bee/
+      when: always
+  variables:
+    PERPLEXITY_API_KEY: $PERPLEXITY_API_KEY
+    GITLAB_TOKEN: $GITLAB_TOKEN
+  before_script:
+    - npm install -g opencode-ai
+  script:
+    - echo "🐝 Architect Bee reviewing design..."
+    - opencode run "Review architectural design: 1) Organ separation (Mind/Body/Memory/Heart) 2) Caste responsibilities 3) Biological metaphor consistency 4) Search for modern patterns that could improve design. Provide recommendations with citations." --agent architect-bee 2>&1 | tee architecture-review.txt
+  artifacts:
+    paths:
+      - architecture-review.txt
+    expire_in: 1 week
+    when: always
+  allow_failure: true
