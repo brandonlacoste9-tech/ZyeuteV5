@@ -101,7 +101,7 @@ opencode:
   stage: .pre
   image: node:20
   script:
-    - npm install -g @opencode/cli
+    - npm install -g opencode-ai
     - opencode run
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -114,7 +114,7 @@ opencode:
   stage: .pre
   image: node:20
   script:
-    - npm install -g @opencode/cli
+    - npm install -g opencode-ai
     - opencode run
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
