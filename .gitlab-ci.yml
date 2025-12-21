@@ -102,7 +102,7 @@ opencode:
   image: node:20
     rules:
     - when: manual
-      allow_failure: true
+
   script:
     - npm install -g opencode-ai
     - opencode run
