@@ -115,4 +115,4 @@ opencode:
   script:
     - npm install -g opencode-ai
     - echo "🐝 Waking up the Researcher Bee..."
-    - opencode run --agent "$OPENCODE_AGENT" --context "This is a Merge Request review."
+    - opencode run "Analyze this code change and provide feedback" --agent "$OPENCODE_AGENT"
