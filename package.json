@@ -1,6 +1,7 @@
 {
   "name": "zyeute-monorepo",
   "private": true,
+    "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
