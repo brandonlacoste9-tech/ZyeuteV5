@@ -3,10 +3,12 @@
   "private": true,
   "packageManager": "npm@10.8.2",
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "echo 'Build placeholder - no build needed'",    "test": "turbo run test",
-    "check": "turbo run check",
-    "lint": "turbo run lint",
+    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
+    "build": "vite build && esbuild server/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --packages=external",
+    "start": "cross-env NODE_ENV=production node dist/index.cjs",
+    "check": "tsc",
+    "lint": "tsc --noEmit && eslint . --ext .ts,.tsx",
+    "test": "vitest run",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "worker:video": "tsx server/workers/videoProcessor.ts"
   },
