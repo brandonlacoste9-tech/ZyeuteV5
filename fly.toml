@@ -1,0 +1,51 @@
+# ========================================
+# Zyeuté V3 Backend - Fly.io Configuration
+# Québec-first deployment (Montréal region)
+# ========================================
+
+app = "zyeute-api"
+primary_region = "yul"  # Montréal, Québec - Sovereignty & low latency
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  dockerfile = "server/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  max_machines_running = 5
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+  [[http_service.checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+    tls_skip_verify = false
+
+[metrics]
+  port = 9091
+  path = "/metrics"
+
+# Scaling configuration
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
