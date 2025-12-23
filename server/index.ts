@@ -10,7 +10,7 @@ import { createServer } from "http";
 
 const app = express();
 
-// Trust proxy for proper IP detection behind reverse proxy (Replit/production)
+// Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
 
 const httpServer = createServer(app);
