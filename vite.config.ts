@@ -12,6 +12,9 @@ export default defineConfig({
     tailwindcss(),
     metaImagesPlugin(),
   ],
+  optimizeDeps: {
+    include: ['react-window', 'react-virtualized-auto-sizer'],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -33,7 +36,11 @@ export default defineConfig({
     // Enable source maps for production debugging (disable for smaller builds)
     sourcemap: process.env.NODE_ENV === "production" ? false : true,
     // Minification options (esbuild is faster and default in Vite)
-    minify: "esbuild",
+    minify: "esbu
+        // CommonJS compatibility for react-window
+        commonjsOptions: {
+          include: [/react-window/, /react-virtualized-auto-sizer/, /node_modules/],
+        },ild",
     // Rollup options for advanced bundling
     rollupOptions: {
       output: {
