@@ -79,6 +79,34 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setCurrentTime(0);
   }, [src]);
 
+  // Sync autoPlay prop updates (critical for feed scrolling)
+  useEffect(() => {
+    if (!videoRef.current) return;
+    
+    if (autoPlay) {
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+            // Auto-play was prevented
+            // videoPlayerLogger.debug('Autoplay prevented:', error); 
+            setIsPlaying(false);
+        });
+      }
+      setIsPlaying(true);
+    } else {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    }
+  }, [autoPlay]);
+
+  // Sync muted prop updates
+  useEffect(() => {
+    if (!videoRef.current) return;
+    videoRef.current.muted = muted;
+    setIsMuted(muted);
+  }, [muted]);
+
+
   // Play/Pause toggle
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -237,15 +265,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ref={videoRef}
         src={src}
         poster={poster}
-        autoPlay={autoPlay}
-        muted={muted}
-        loop={loop}
         playsInline
         className="w-full h-full object-cover"
         style={videoStyle}
         onError={handleError}
         onCanPlay={handleCanPlay}
         onLoadStart={handleLoadStart}
+        // Controlled props handled by useEffects now
       />
 
       {/* Loading State */}

@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { List, ListImperativeAPI } from 'react-window';
+import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { SingleVideoView } from './SingleVideoView';
 import { getExplorePosts, togglePostFire, getCurrentUser } from '@/services/api';
@@ -21,27 +21,18 @@ interface ContinuousFeedProps {
     onVideoChange?: (index: number, post: Post) => void;
 }
 
-const FeedRow = memo(({ index, style, posts, currentIndex, handleFireToggle, handleComment, handleShare }: any) => {
+const FeedRow = memo(({ index, style, data }: ListChildComponentProps) => {
+    const { posts, currentIndex, handleFireToggle, handleComment, handleShare } = data;
     const post = posts[index];
     const isActive = index === currentIndex;
 
     // Use a ref to ensure we only try to play properly mounted videos
     const rowRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (!rowRef.current) return;
-        
-        // Manual autoplay logic handled by the parent effect or simpler direct control here
-        const videoElement = rowRef.current.querySelector('video');
-        if (videoElement) {
-            if (isActive) {
-                videoElement.play().catch(() => {});
-            } else {
-                videoElement.pause();
-                videoElement.currentTime = 0; // Reset for better performance
-            }
-        }
-    }, [isActive]);
+    // Note: SingleVideoView handles playback via isActive prop
+    // Redundant DOM manipulation removed for cleanliness and to prevent conflicts
+
+    if (!post) return null;
 
     return (
         <div style={style} ref={rowRef} data-video-index={index} className="w-full h-full">
@@ -57,18 +48,21 @@ const FeedRow = memo(({ index, style, posts, currentIndex, handleFireToggle, han
     );
 }, (prevProps, nextProps) => {
     // Only re-render if the active status changes or the post data itself changes
-    const isPrevActive = prevProps.index === prevProps.currentIndex;
-    const isNextActive = nextProps.index === nextProps.currentIndex;
-    
+    const prevData = prevProps.data;
+    const nextData = nextProps.data;
+
+    const isPrevActive = prevProps.index === prevData.currentIndex;
+    const isNextActive = nextProps.index === nextData.currentIndex;
+
     return (
-        isPrevActive === isNextActive && 
-        prevProps.posts[prevProps.index] === nextProps.posts[nextProps.index] &&
+        isPrevActive === isNextActive &&
+        prevData.posts[prevProps.index] === nextData.posts[nextProps.index] &&
         prevProps.style === nextProps.style
     );
 });
 
 export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVideoChange }) => {
-    const listRef = useRef<ListImperativeAPI>(null);
+    const listRef = useRef<List>(null);
     const { tap } = useHaptics();
 
     const [posts, setPosts] = useState<Array<Post & { user: User }>>([]);
@@ -127,10 +121,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
     }, [fetchVideoFeed]);
 
     // Handle items rendered (for pagination and tracking current index)
-    const onRowsRendered = useCallback(({ startIndex, stopIndex }: any) => {
+    const onItemsRendered = useCallback(({ visibleStartIndex, visibleStopIndex }: any) => {
         // We assume the top-most visible item is the "current" one in a snap-scroll context
-        const newIndex = startIndex;
-        
+        const newIndex = visibleStartIndex;
+
         if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
             setCurrentIndex(newIndex);
             if (onVideoChange && posts[newIndex]) {
@@ -139,7 +133,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         }
 
         // Pagination trigger
-        if (stopIndex >= posts.length - 2 && hasMore && !loadingMore) {
+        if (visibleStopIndex >= posts.length - 2 && hasMore && !loadingMore) {
             loadMoreVideos();
         }
     }, [currentIndex, posts, hasMore, loadingMore, loadMoreVideos, onVideoChange]);
@@ -201,25 +195,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
             <AutoSizer>
                 {({ height, width }) => (
                     <List
-                        listRef={listRef}
+                        ref={listRef}
                         className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-                        style={{ height, width }}
-                        rowCount={posts.length}
-                        rowHeight={height} // Full screen height per item
-                        rowProps={itemData}
-                        onRowsRendered={onRowsRendered}
+                        height={height}
+                        width={width}
+                        itemCount={posts.length}
+                        itemSize={height} // Full screen height per item
+                        itemData={itemData}
+                        onItemsRendered={onItemsRendered}
                         overscanCount={1} // Only render 1 item above/below viewport
-                        rowComponent={FeedRow as any}
-                    />
+                    >
+                        {FeedRow}
+                    </List>
                 )}
             </AutoSizer>
-            
+
             {loadingMore && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none z-50">
-                     <div className="w-6 h-6 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin" />
                 </div>
             )}
         </div>
     );
 };
-
