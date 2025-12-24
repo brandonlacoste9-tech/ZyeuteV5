@@ -19,7 +19,7 @@ import { verifyAuthToken } from "./supabase-auth.js";
 import debugRoutes from "./api/debug.js";
 // Import tracing utilities
 import { traced, traceDatabase, traceExternalAPI, traceStripe, traceSupabase, addSpanAttributes } from "./tracer.js";
-import { videoQueue } from './queue.js';
+import { getVideoQueue } from './queue.js';
 
 // Configure FAL client
 fal.config({
@@ -438,6 +438,7 @@ export async function registerRoutes(
       const post = await storage.createPost(parsed.data);
 
       // Queue video for processing by Colony OS workers
+      const videoQueue = getVideoQueue();
       await videoQueue.add('processVideo', {
         videoUrl: post.mediaUrl,
         userId: req.userId,
