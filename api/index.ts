@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "../server/routes.js";
 import { createServer } from "http";

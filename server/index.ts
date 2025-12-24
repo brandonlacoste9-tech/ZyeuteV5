@@ -1,4 +1,5 @@
 import 'dotenv/config'; // Load environment variables from .env
+import 'express-async-errors';
 import express, { type Request, Response, NextFunction } from "express";
 // --- OpenTelemetry Tracing (Disabled temporarily due to version mismatch) ---
 // import '../tracing-setup';
