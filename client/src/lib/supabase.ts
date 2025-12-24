@@ -3,12 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found, using mock client');
+const isValidUrl = (url: string | undefined) => {
+  try {
+    return url && new URL(url).protocol.startsWith('http');
+  } catch (e) {
+    return false;
+  }
+};
+
+if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
+  console.warn('Supabase credentials missing or invalid, using mock client. URL:', supabaseUrl);
 }
 
-// Create real Supabase client if credentials exist, otherwise use mock
-export const supabase = supabaseUrl && supabaseAnonKey 
+// Create real Supabase client if credentials exist and are valid, otherwise use mock
+export const supabase = isValidUrl(supabaseUrl) && supabaseAnonKey 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : createMockClient();
 
