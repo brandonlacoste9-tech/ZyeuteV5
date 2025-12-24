@@ -14,6 +14,7 @@ import { MainLayout } from '@/components/MainLayout';
 import { PageTransition } from '@/components/AnimatedRoutes';
 import { TiGuy } from '@/components/features/TiGuy';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { GuestModeProvider } from '@/contexts/GuestModeContext';
 import { MapleSpinner } from '@/components/ui/MapleSpinner';
 import { AchievementListener } from '@/components/gamification/AchievementModal';
 import { ProtectedAdminRoute } from '@/components/auth/ProtectedAdminRoute';
@@ -124,6 +125,7 @@ function App() {
       <ThemeProvider>
         <NotificationProvider>
           <AuthProvider>
+            <GuestModeProvider>
             <ColonyProvider>
               <GlobalAuthLoader>
                 <BorderColorProvider>
@@ -577,6 +579,7 @@ function App() {
               </BorderColorProvider>
             </GlobalAuthLoader>
             </ColonyProvider>
+            </GuestModeProvider>
           </AuthProvider>
         </NotificationProvider>
       </ThemeProvider>
