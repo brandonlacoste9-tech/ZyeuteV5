@@ -1,6 +1,12 @@
 # GitLab CI/CD Configuration for zyeute-v3
 # Node.js/TypeScript project with Vercel deployment
 
+
+# Security Scanning (GitLab Ultimate)
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
 image: node:20
 
 stages:
