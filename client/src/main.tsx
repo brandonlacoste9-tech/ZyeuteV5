@@ -9,14 +9,6 @@ import { ThemeProvider } from './contexts/ThemeContext';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <GuestModeProvider>
-        <ThemeProvider>
-           {/* <NotificationProvider> */}
-            <App />
-           {/* </NotificationProvider> */}
-        </ThemeProvider>
-      </GuestModeProvider>
-    </AuthProvider>
+    <App />
   </React.StrictMode>
 );
