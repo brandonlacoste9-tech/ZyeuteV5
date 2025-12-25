@@ -1,7 +1,5 @@
-# Zyeuté / KryptoTrac - Production-Ready Crypto Tracker
-
-> Quebec's premier French social media platform and crypto portfolio tracker with advanced monetization and analytics features
-
+# Zyeuté - Quebec Social Media Platform with Ti-Guy AI 🤖
+> Quebec's premier French-Canadian social media platform with Ti-Guy AI chatbot for authentic "*joual*" conversations 🇨🇦💬
 [![TypeScript](https://img.shields.io/badge/TypeScript-97.6%25-blue)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
