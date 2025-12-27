@@ -5,8 +5,8 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import { FixedSizeList as List } from 'react-window';
+import type { ListChildComponentProps } from 'react-window';import AutoSizer from 'react-virtualized-auto-sizer';
 import { SingleVideoView } from './SingleVideoView';
 import { getExplorePosts, togglePostFire, getCurrentUser } from '@/services/api';
 import { useHaptics } from '@/hooks/useHaptics';
