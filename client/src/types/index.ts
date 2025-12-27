@@ -3,6 +3,8 @@
  * Matches Supabase database schema
  */
 
+export type UserRole = 'visitor' | 'citoyen' | 'moderator' | 'founder';
+
 export interface User {
   id: string;
   username: string;
@@ -13,6 +15,10 @@ export interface User {
   bio: string | null;
   city: string | null;
   region: string | null;
+  // RBAC Fields
+  role?: UserRole; // Optional because API might not always return it yet
+  custom_permissions?: Record<string, boolean>; // JSONB logic
+  
   is_verified: boolean;
   isVerified?: boolean;
   isPremium?: boolean;

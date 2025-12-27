@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { getUserProfile } from '@/services/api';
+import { User } from '@/types'; // Use our extended User type
 import { checkIsAdmin } from '@/lib/admin';
 import {
     GUEST_MODE_KEY,
@@ -39,7 +41,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (age < GUEST_SESSION_DURATION) {
                 return true;
             } else {
-                // Expired
                 localStorage.removeItem(GUEST_MODE_KEY);
                 localStorage.removeItem(GUEST_TIMESTAMP_KEY);
                 localStorage.removeItem(GUEST_VIEWS_KEY);
@@ -52,73 +53,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Performance tracking helper
     const trackPerformance = (operation: string, startTime: number) => {
         const duration = Date.now() - startTime;
-        if (duration > 2000) { // 2 seconds threshold for auth operations
-            console.warn(`⚠️ Slow auth operation: ${operation} took ${duration}ms`);
-        }
         return duration;
+    };
+
+    const enhanceUser = async (sessionUser: any) => {
+        if (!sessionUser) return null;
+        try {
+            // Fetch full profile (Role, Coins, etc.)
+            const fullProfile = await getUserProfile(sessionUser.id);
+            if (fullProfile) return fullProfile;
+            
+            // Fallback if profile doesn't exist yet (rare race condition)
+            return {
+                id: sessionUser.id,
+                username: sessionUser.user_metadata?.username || sessionUser.email?.split('@')[0],
+                email: sessionUser.email,
+                role: 'citoyen', // Default
+                created_at: new Date().toISOString()
+            } as User;
+        } catch (e) {
+            console.error('Error fetching full profile:', e);
+            return null;
+        }
     };
 
     useEffect(() => {
         let mounted = true;
         const initStart = Date.now();
 
-        // EMERGENCY FAILSAFE: Force loading to complete after 1s maximum
+        // EMERGENCY FAILSAFE: Force loading to complete after 2s maximum
         const emergencyTimeout = setTimeout(() => {
-            console.warn('⚠️ EMERGENCY: Forcing UI render after 1 second');
-            trackPerformance('Auth Emergency Timeout', initStart);
-            if (mounted) {
+            if (mounted && isLoading) {
+                console.warn('⚠️ EMERGENCY: Forcing UI render after 2 seconds');
                 setIsLoading(false);
             }
-        }, 1000);
+        }, 2000);
 
-        async function initializeAuth() {
-            try {
-                // 1. Check Supabase Session with AGGRESSIVE retry
+        const initializeAuth = async () => {
+             try {
                 const sessionStart = Date.now();
-
-                let session = null;
-                let attempts = 0;
-                const maxAttempts = 2;
-
-                while (attempts < maxAttempts && !session) {
-                    try {
-                        const { data, error } = await Promise.race([
-                            supabase.auth.getSession(),
-                            new Promise<any>((_, reject) =>
-                                setTimeout(() => reject(new Error('Timeout')), 2000)
-                            )
-                        ]);
-
-                        if (error) throw error;
-                        session = data.session;
-                        break;
-                    } catch (err) {
-                        attempts++;
-                        if (attempts < maxAttempts) {
-                            console.log(`Auth attempt ${attempts} failed, retrying...`);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        }
-                    }
-                }
-
+                // 1. Get initial session
+                const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+                
                 trackPerformance('Supabase getSession', sessionStart);
 
-                if (session?.user) {
-                    if (mounted) {
-                        setSession(session);
-                        setUser(session.user);
-                        // Check admin status
-                        const adminStart = Date.now();
-                        const adminStatus = await checkIsAdmin(session.user);
-                        trackPerformance('Admin check', adminStart);
-                        if (mounted) setIsAdmin(adminStatus);
+                if (mounted) {
+                    if (initialSession?.user) {
+                        setSession(initialSession);
+                        const profile = await enhanceUser(initialSession.user);
+                        if (mounted && profile) {
+                             setUser(profile);
+                             // Check admin based on ROLE now, falling back to helper
+                             setIsAdmin(profile.role === 'founder' || profile.role === 'moderator' || await checkIsAdmin(initialSession.user as any));
+                        }
+                    } else {
+                        // Fallback to Guest Mode check
+                        const validGuest = checkGuestMode();
+                        if (mounted) setIsGuest(validGuest);
                     }
-                } else {
-                    // 2. Fallback to Guest Mode check
-                    const guestCheckStart = Date.now();
-                    const validGuest = checkGuestMode();
-                    trackPerformance('Guest mode check', guestCheckStart);
-                    if (mounted) setIsGuest(validGuest);
                 }
             } catch (error) {
                 console.error('Auth initialization error:', error);
@@ -134,29 +126,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     trackPerformance('Total auth initialization', initStart);
                 }
             }
-        }
+        };
+
 
         initializeAuth();
 
         // 3. Listen for Auth Changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event: string, newSession: Session | null) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, newSession: Session | null) => {
             if (!mounted) return;
+            // console.log('🔐 Auth State Changed:', event);
 
             setSession(newSession);
-            setUser(newSession?.user ?? null);
-
+            
             if (newSession?.user) {
-                setIsGuest(false); // Logged in users are not guests
-                const adminStatus = await checkIsAdmin(newSession.user);
-                if (mounted) setIsAdmin(adminStatus);
+                setIsGuest(false);
+                const profile = await enhanceUser(newSession.user);
+                if (mounted && profile) {
+                    setUser(profile);
+                    setIsAdmin(profile.role === 'founder' || profile.role === 'moderator');
+                }
             } else {
+                setUser(null);
                 setIsAdmin(false);
-                // Re-check guest mode on logout
-                const validGuest = checkGuestMode();
-                if (mounted) setIsGuest(validGuest);
+                 if (event === 'SIGNED_OUT') {
+                    const validGuest = checkGuestMode();
+                    if(mounted) setIsGuest(validGuest);
+                 }
             }
 
-            setIsLoading(false);
+            // Ensure loading is false only after all state updates are complete
+            if (mounted) setIsLoading(false); 
         });
 
         return () => {
@@ -168,13 +167,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         setIsLoading(true);
-        await supabase.auth.signOut();
-        // Clear guest mode too just in case of mixed state
-        setIsGuest(false);
-        setIsAdmin(false);
-        setUser(null);
-        setSession(null);
-        setIsLoading(false);
+        try {
+            await supabase.auth.signOut();
+            setIsGuest(false);
+            setIsAdmin(false);
+            setUser(null);
+            setSession(null);
+            
+            localStorage.removeItem(GUEST_MODE_KEY);
+            localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+        } catch (error) {
+             console.error('Logout error:', error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const enterGuestMode = () => {

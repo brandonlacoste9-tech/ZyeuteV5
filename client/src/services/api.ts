@@ -833,6 +833,7 @@ export async function generateImage(prompt: string, aspectRatio: string = "1:1")
   return data;
 }
 
+<<<<<<< HEAD
 // ============ HELPER FUNCTIONS ============
 
 // Map backend user fields (camelCase) to frontend fields (snake_case where needed)
@@ -856,6 +857,23 @@ function mapBackendUser(user: any): User {
     posts_count: user.postsCount || user.posts_count || 0,
     is_following: user.isFollowing || user.is_following || false,
   } as User;
+=======
+// ============ MAPPERS (Adapting DB Columns to Frontend Types) ============
+function mapBackendUser(u: any): User {
+    if (!u) return u;
+    return {
+        id: u.id,
+        username: u.username,
+        display_name: u.display_name || u.displayName,
+        avatar_url: u.avatar_url || u.avatarUrl,
+        bio: u.bio,
+        is_verified: u.is_verified || false,
+        created_at: u.created_at,
+        role: u.role || 'citoyen',
+        custom_permissions: u.custom_permissions || {},
+        // ... map other fields
+    } as User;
+>>>>>>> 88b7e1c (feat: implement RBAC, profile badges, and finalize Gemini integration)
 }
 
 <<<<<<< HEAD

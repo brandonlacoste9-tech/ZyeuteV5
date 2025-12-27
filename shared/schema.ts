@@ -46,8 +46,8 @@ export const regionEnum = pgEnum('region', [
 export const giftTypeEnum = pgEnum('gift_type', [
   'comete', 'feuille_erable', 'fleur_de_lys', 'feu', 'coeur_or'
 ]);
+export const roleEnum = pgEnum('user_role', ['visitor', 'citoyen', 'moderator', 'founder']);
 
-// Users Table - mapped to user_profiles (FK to auth.users.id)
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
   id: uuid("id").primaryKey(), // FK to auth.users.id
@@ -57,6 +57,8 @@ export const users = pgTable("user_profiles", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   region: text("region"),
+  role: roleEnum('role').default('citoyen'), // RBAC Role
+  customPermissions: jsonb("custom_permissions").default({}), // Granular overrides
   isAdmin: boolean("is_admin").default(false),
   isPremium: boolean("is_premium").default(false),
   plan: text("plan").default('free'),

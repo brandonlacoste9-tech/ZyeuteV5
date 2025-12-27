@@ -259,6 +259,16 @@ export const Profile: React.FC = () => {
                 ✓
               </span>
             )}
+            {user.role === 'founder' && (
+              <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-gold-500 text-black font-bold tracking-wider shadow-[0_0_10px_rgba(255,215,0,0.4)]">
+                FONDATEUR
+              </span>
+            )}
+            {user.role === 'moderator' && (
+              <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-400 border border-blue-500/50 font-bold tracking-wider uppercase">
+                Gardien
+              </span>
+            )}
           </h1>
           <p className="text-sm text-gold-500/70">@{user.username}</p>
 

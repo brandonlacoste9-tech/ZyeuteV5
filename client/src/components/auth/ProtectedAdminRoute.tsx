@@ -17,6 +17,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRBAC } from '@/contexts/RBACContext';
 import { logger } from '@/lib/logger';
 
 const routeLogger = logger.withContext('ProtectedAdminRoute');
@@ -26,7 +27,8 @@ interface ProtectedAdminRouteProps {
 }
 
 export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = React.memo(({ children }) => {
-  const { isAdmin, isLoading } = useAuth();
+  const { isLoading } = useAuth();
+  const { hasPermission, role } = useRBAC();
 
   // Show loading state while checking
   if (isLoading) {
@@ -40,9 +42,11 @@ export const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = React.mem
     );
   }
 
-  // Redirect if not admin
-  if (!isAdmin) {
-    routeLogger.warn('Unauthorized admin access attempt');
+  // Redirect if not admin (Founder or Moderator with dashboard access)
+  const isAuthorized = hasPermission('admin_dashboard') || role === 'founder';
+
+  if (!isAuthorized) {
+    routeLogger.warn(`Unauthorized admin access attempt by role: ${role}`);
     return <Navigate to="/" replace />;
   }
 
