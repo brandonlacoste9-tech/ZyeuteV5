@@ -38,11 +38,11 @@ jobs:
       
       - name: Lint check
         run: npm run lint
-        continue-on-error: true
+        continue-on-error: false
       
       - name: Check code formatting
         run: npx prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
-        continue-on-error: true
+        continue-on-error: false
 
   # Job 2: Unit and Integration Tests
   test:
@@ -54,7 +54,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: ['20.x', '22.12.0']
+        node-version: ['20.x', '22.x']
       fail-fast: false
     
     steps:
@@ -80,11 +80,11 @@ jobs:
       
       - name: Generate coverage report
         run: npm run test:coverage
-        if: matrix.node-version == '22.12.0'
+        if: matrix.node-version == '22.x'
       
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: matrix.node-version == '22.12.0'
+        if: matrix.node-version == '22.x'
         with:
           files: ./coverage/lcov.info
           flags: unittests
@@ -267,7 +267,8 @@ jobs:
           needs.code-quality.result != 'success' ||
           needs.test.result != 'success' ||
           needs.e2e.result != 'success' ||
-          needs.build.result != 'success'
+          needs.build.result != 'success' ||
+          needs.security.result != 'success'
         run: |
           echo "❌ One or more CI jobs failed"
           exit 1

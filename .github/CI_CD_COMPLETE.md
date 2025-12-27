@@ -128,7 +128,7 @@ ci.yml
 - **Prettier**: Code formatting validation
 
 #### Test Suite (Matrix)
-- **Node 20.x & 22.12.0**: Tests on multiple Node versions
+- **Node 20.x & 22.x**: Tests on multiple Node versions
 - **Unit tests**: Fast, isolated component tests
 - **Integration tests**: API and service integration tests
 - **Coverage**: Reports uploaded to Codecov (Node 22 only)
