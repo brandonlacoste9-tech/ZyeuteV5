@@ -5,7 +5,7 @@
  * Inspired by the Ti-Guy Quebec CA logo
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../Button';
 import { cn } from '../../lib/utils';
 import tiGuyEmblem from '@assets/TI-GUY_NEW_SHARP_1765507001190.jpg';
@@ -83,17 +83,8 @@ export const TiGuy: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Initialize with greeting
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      setTimeout(() => {
-        addTiGuyMessage('greeting');
-      }, 500);
-    }
-  }, [isOpen]);
-
   // Add Ti-Guy message with progress indicator
-  const addTiGuyMessage = (responseKey: string) => {
+  const addTiGuyMessage = useCallback((responseKey: string) => {
     setIsTyping(true);
     setGenerating(true);
     setProgress(0);
@@ -124,7 +115,16 @@ export const TiGuy: React.FC = () => {
       clearInterval(progressInterval);
       setTimeout(() => setProgress(0), 500);
     }, 1000);
-  };
+  }, []);
+
+  // Initialize with greeting
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setTimeout(() => {
+        addTiGuyMessage('greeting');
+      }, 500);
+    }
+  }, [isOpen, messages.length, addTiGuyMessage]);
 
   // Handle user message - now uses DeepSeek AI
   const handleSendMessage = async (text?: string) => {

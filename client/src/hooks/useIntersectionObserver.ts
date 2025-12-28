@@ -14,6 +14,7 @@ export const useIntersectionObserver = (
     items: string[],
     options: UseIntersectionObserverOptions = { threshold: 0.6 }
 ) => {
+    const { threshold, root, rootMargin } = options;
     const [activeId, setActiveId] = useState<string | null>(null);
     const observerRef = useRef<IntersectionObserver | null>(null);
     const elementRefs = useRef<Map<string, Element>>(new Map());
@@ -45,8 +46,9 @@ export const useIntersectionObserver = (
         };
 
         observerRef.current = new IntersectionObserver(handleIntersect, {
-            ...options,
-            threshold: [0.5, 0.6, 0.7, 0.8, 0.9, 1.0], // Granular thresholds for better accuracy
+            threshold: threshold || [0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+            root,
+            rootMargin,
         });
 
         // Observe all currently registered elements
@@ -55,7 +57,7 @@ export const useIntersectionObserver = (
         return () => {
             observerRef.current?.disconnect();
         };
-    }, [options.root, options.rootMargin, options.threshold]);
+    }, [threshold, root, rootMargin]);
 
     return { activeId, setRef };
 };

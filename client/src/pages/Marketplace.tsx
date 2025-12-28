@@ -3,7 +3,7 @@
  * Buy & Sell Quebec Products with stitched leather cards
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { BottomNav } from '../components/BottomNav';
@@ -46,11 +46,7 @@ export default function Marketplace() {
     { id: 'other', name: 'Autre', icon: '📦' },
   ];
 
-  useEffect(() => {
-    loadProducts();
-  }, [selectedCategory, searchQuery]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -76,7 +72,11 @@ export default function Marketplace() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const handlePurchase = async (product: Product) => {
     try {
