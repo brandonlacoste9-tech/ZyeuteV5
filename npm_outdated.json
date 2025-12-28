@@ -1,336 +1,170 @@
 {
   "@fal-ai/client": {
-    "current": "1.7.2",
-    "wanted": "1.8.1",
-    "latest": "1.8.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@fal-ai\\client"
+    "current": "1.8.1",
+    "wanted": "1.7.2",
+    "latest": "1.7.2",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@fal-ai/client"
   },
   "@hookform/resolvers": {
     "current": "3.10.0",
     "wanted": "3.10.0",
     "latest": "5.2.2",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@hookform\\resolvers"
-  },
-  "@opentelemetry/auto-instrumentations-node": {
-    "current": "0.67.2",
-    "wanted": "0.67.3",
-    "latest": "0.67.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@opentelemetry\\auto-instrumentations-node"
-  },
-  "@opentelemetry/instrumentation-express": {
-    "current": "0.57.0",
-    "wanted": "0.57.1",
-    "latest": "0.57.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@opentelemetry\\instrumentation-express"
-  },
-  "@radix-ui/react-toast": {
-    "current": "1.2.7",
-    "wanted": "1.2.15",
-    "latest": "1.2.15",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@radix-ui\\react-toast"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@hookform/resolvers"
   },
   "@react-email/components": {
     "current": "0.5.7",
     "wanted": "0.5.7",
     "latest": "1.0.2",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@react-email\\components"
-  },
-  "@react-email/render": {
-    "current": "1.4.0",
-    "wanted": "1.4.0",
-    "latest": "2.0.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@react-email\\render"
-  },
-  "@stripe/stripe-js": {
-    "current": "8.5.3",
-    "wanted": "8.6.0",
-    "latest": "8.6.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@stripe\\stripe-js"
-  },
-  "@supabase/supabase-js": {
-    "current": "2.87.1",
-    "wanted": "2.89.0",
-    "latest": "2.89.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@supabase\\supabase-js"
-  },
-  "@tailwindcss/vite": {
-    "current": "4.1.16",
-    "wanted": "4.1.18",
-    "latest": "4.1.18",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@tailwindcss\\vite"
-  },
-  "@testing-library/react": {
-    "current": "16.3.0",
-    "wanted": "16.3.1",
-    "latest": "16.3.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@testing-library\\react"
-  },
-  "@types/bcryptjs": {
-    "current": "2.4.6",
-    "wanted": "2.4.6",
-    "latest": "3.0.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\bcryptjs"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@react-email/components"
   },
   "@types/dompurify": {
-    "current": "3.0.5",
-    "wanted": "3.2.0",
-    "latest": "3.2.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\dompurify"
+    "current": "3.2.0",
+    "wanted": "3.0.5",
+    "latest": "3.0.5",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/dompurify"
   },
   "@types/express": {
     "current": "4.17.21",
     "wanted": "4.17.21",
     "latest": "5.0.6",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\express"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/express"
   },
   "@types/node": {
     "current": "20.19.27",
     "wanted": "20.19.27",
     "latest": "25.0.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\node"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/node"
   },
-  "@types/react": {
-    "current": "19.2.2",
-    "wanted": "19.2.7",
-    "latest": "19.2.7",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\react"
+  "@types/react-window": {
+    "current": "2.0.0",
+    "wanted": "2.0.0",
+    "latest": "1.8.8",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/react-window"
   },
-  "@types/react-dom": {
-    "current": "19.2.2",
-    "wanted": "19.2.3",
-    "latest": "19.2.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@types\\react-dom"
+  "@types/socket.io-client": {
+    "current": "3.0.0",
+    "wanted": "3.0.0",
+    "latest": "1.4.36",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/socket.io-client"
   },
-  "@vitejs/plugin-react": {
-    "current": "5.1.0",
-    "wanted": "5.1.2",
-    "latest": "5.1.2",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@vitejs\\plugin-react"
-  },
-  "@vitest/ui": {
-    "current": "4.0.15",
-    "wanted": "4.0.16",
-    "latest": "4.0.16",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\@vitest\\ui"
+  "@types/uuid": {
+    "current": "11.0.0",
+    "wanted": "11.0.0",
+    "latest": "10.0.0",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/@types/uuid"
   },
   "ai": {
-    "current": "5.0.112",
+    "current": "5.0.116",
     "wanted": "5.0.116",
-    "latest": "6.0.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\ai"
+    "latest": "6.0.3",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/ai"
   },
-  "autoprefixer": {
-    "current": "10.4.21",
-    "wanted": "10.4.23",
-    "latest": "10.4.23",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\autoprefixer"
-  },
-  "bufferutil": {
-    "current": "4.0.9",
-    "wanted": "4.1.0",
-    "latest": "4.1.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\bufferutil"
+  "bullmq": {
+    "current": "5.66.2",
+    "wanted": "5.66.4",
+    "latest": "5.66.4",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/bullmq"
   },
   "date-fns": {
     "current": "3.6.0",
     "wanted": "3.6.0",
     "latest": "4.1.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\date-fns"
-  },
-  "drizzle-kit": {
-    "current": "0.31.4",
-    "wanted": "0.31.8",
-    "latest": "0.31.8",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\drizzle-kit"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/date-fns"
   },
   "drizzle-orm": {
     "current": "0.39.3",
     "wanted": "0.39.3",
     "latest": "0.45.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\drizzle-orm"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/drizzle-orm"
   },
   "drizzle-zod": {
-    "current": "0.7.0",
+    "current": "0.7.1",
     "wanted": "0.7.1",
     "latest": "0.8.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\drizzle-zod"
-  },
-  "esbuild": {
-    "current": "0.25.10",
-    "wanted": "0.27.2",
-    "latest": "0.27.2",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\esbuild"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/drizzle-zod"
   },
   "express": {
-    "current": "4.21.2",
+    "current": "4.22.1",
     "wanted": "4.22.1",
     "latest": "5.2.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\express"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/express"
   },
-  "framer-motion": {
-    "current": "12.23.24",
-    "wanted": "12.23.26",
-    "latest": "12.23.26",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\framer-motion"
+  "jsdom": {
+    "current": "27.3.0",
+    "wanted": "27.4.0",
+    "latest": "27.4.0",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/jsdom"
   },
   "lucide-react": {
     "current": "0.545.0",
     "wanted": "0.545.0",
     "latest": "0.562.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\lucide-react"
-  },
-  "openai": {
-    "current": "6.10.0",
-    "wanted": "6.15.0",
-    "latest": "6.15.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\openai"
-  },
-  "react": {
-    "current": "19.2.0",
-    "wanted": "19.2.3",
-    "latest": "19.2.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\react"
-  },
-  "react-dom": {
-    "current": "19.2.0",
-    "wanted": "19.2.3",
-    "latest": "19.2.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\react-dom"
-  },
-  "react-hook-form": {
-    "current": "7.66.0",
-    "wanted": "7.69.0",
-    "latest": "7.69.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\react-hook-form"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/lucide-react"
   },
   "react-resizable-panels": {
     "current": "2.1.9",
     "wanted": "2.1.9",
     "latest": "4.0.15",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\react-resizable-panels"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/react-resizable-panels"
   },
-  "react-router-dom": {
-    "current": "7.10.1",
-    "wanted": "7.11.0",
-    "latest": "7.11.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\react-router-dom"
+  "react-virtualized-auto-sizer": {
+    "current": "1.0.26",
+    "wanted": "1.0.26",
+    "latest": "2.0.0",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/react-virtualized-auto-sizer"
   },
   "resend": {
-    "current": "4.0.0",
+    "current": "4.8.0",
     "wanted": "4.8.0",
     "latest": "6.6.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\resend"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/resend"
   },
   "socket.io-client": {
-    "wanted": "4.8.2",
-    "latest": "4.8.2",
-    "dependent": "zyeute-v3-1"
-  },
-  "stripe": {
-    "current": "20.0.0",
-    "wanted": "20.1.0",
-    "latest": "20.1.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\stripe"
-  },
-  "tailwind-merge": {
-    "current": "3.3.1",
-    "wanted": "3.4.0",
-    "latest": "3.4.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\tailwind-merge"
-  },
-  "tailwindcss": {
-    "current": "4.1.16",
-    "wanted": "4.1.18",
-    "latest": "4.1.18",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\tailwindcss"
-  },
-  "tsx": {
-    "current": "4.20.5",
-    "wanted": "4.21.0",
-    "latest": "4.21.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\tsx"
+    "current": "4.8.2",
+    "wanted": "4.8.3",
+    "latest": "4.8.3",
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/socket.io-client"
   },
   "typescript": {
     "current": "5.6.3",
     "wanted": "5.6.3",
     "latest": "5.9.3",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\typescript"
-  },
-  "vite": {
-    "current": "7.1.12",
-    "wanted": "7.3.0",
-    "latest": "7.3.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\vite"
-  },
-  "vitest": {
-    "current": "4.0.15",
-    "wanted": "4.0.16",
-    "latest": "4.0.16",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\vitest"
-  },
-  "wouter": {
-    "current": "3.3.5",
-    "wanted": "3.9.0",
-    "latest": "3.9.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\wouter"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/typescript"
   },
   "zod": {
     "current": "3.25.76",
     "wanted": "3.25.76",
     "latest": "4.2.1",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\zod"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/zod"
   },
   "zod-validation-error": {
-    "current": "3.4.0",
+    "current": "3.5.4",
     "wanted": "3.5.4",
     "latest": "5.0.0",
-    "dependent": "zyeute-v3-1",
-    "location": "C:\\Users\\north\\zyeute-v3-1\\node_modules\\zod-validation-error"
+    "dependent": "ZyeuteV5",
+    "location": "/home/runner/work/ZyeuteV5/ZyeuteV5/node_modules/zod-validation-error"
   }
 }
