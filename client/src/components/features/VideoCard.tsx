@@ -40,6 +40,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   const navigate = useNavigate();
   const { tap } = useHaptics();
 
+  // Real-time Presence & Engagement
+  const { viewerCount, engagement } = usePresence(post.id);
+  const [isLiked, setIsLiked] = React.useState(false);
+
   // Handle missing user by using user from post relation
   const effectiveUser = user || post.user;
 
@@ -52,10 +56,6 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   }
 
   const userToUse = effectiveUser;
-
-  // Real-time Presence & Engagement
-  const { viewerCount, engagement } = usePresence(post.id);
-  const [isLiked, setIsLiked] = React.useState(false);
 
   // Derive counts from props OR real-time updates
   const fireCount = engagement.fireCount ?? post.fire_count;

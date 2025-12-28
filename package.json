@@ -15,6 +15,7 @@
     "preflight": "npm run check && npm run lint && npm run build && npm run test",
     "worker": "tsx server/startWorker.ts",
     "db:push": "drizzle-kit push",
+    "prepare": "husky || true",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration",
     "test:all": "vitest run",
@@ -33,7 +34,8 @@
     "test:payments": "playwright test tests/comprehensive/06-payments.spec.ts",
     "test:navigation": "playwright test tests/comprehensive/07-navigation.spec.ts",
     "test:accessibility": "playwright test tests/comprehensive/08-accessibility.spec.ts",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "prepare": "husky"
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.2",
@@ -130,18 +132,24 @@
     "@types/node": "^20.19.27",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@types/react-window": "^2.0.0",
     "@types/socket.io-client": "^3.0.0",
     "@types/uuid": "^11.0.0",
     "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/ui": "^4.0.15",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.27.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "happy-dom": "^20.0.11",
+    "husky": "^9.0.11",
     "jsdom": "^27.3.0",
+    "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prettier": "^3.0.0",
     "tailwindcss": "^4.1.14",
@@ -151,10 +159,28 @@
     "vite": "^7.1.9",
     "vitest": "^4.0.15"
   },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
   "overrides": {
     "esbuild": "^0.27.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   }
 }

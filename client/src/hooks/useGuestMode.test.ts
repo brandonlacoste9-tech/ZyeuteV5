@@ -34,6 +34,7 @@ describe('useGuestMode', () => {
     const { result } = renderHook(() => useGuestMode(), {
       wrapper: GuestModeProvider
     });
+    const { result } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     expect(result.current.isGuest).toBe(true);
     expect(result.current.viewsCount).toBe(2);

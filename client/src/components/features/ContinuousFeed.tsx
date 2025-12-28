@@ -4,9 +4,29 @@
  * NOW WITH VIRTUALIZATION by REACT-WINDOW
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { FixedSizeList as List } from 'react-window';
-import type { ListChildComponentProps } from 'react-window';import AutoSizer from 'react-virtualized-auto-sizer';
+import React, { useState, useEffect, useRef, useCallback, memo, ReactElement } from 'react';
+import { List, ListImperativeAPI } from 'react-window';
+
+// Support for react-window 2.x which renamed FixedSizeList to List
+interface RowData {
+  posts: Array<Post & { user: User }>;
+  currentIndex: number;
+  handleFireToggle: (postId: string, currentFire: number) => Promise<void>;
+  handleComment: (postId: string) => void;
+  handleShare: (postId: string) => Promise<void>;
+}
+
+interface FeedRowProps extends RowData {
+  index: number;
+  style: React.CSSProperties;
+  ariaAttributes?: {
+    "aria-posinset": number;
+    "aria-setsize": number;
+    role: "listitem";
+  };
+}
+
+import AutoSizer from 'react-virtualized-auto-sizer';
 import { SingleVideoView } from './SingleVideoView';
 import { getExplorePosts, togglePostFire, getCurrentUser } from '@/services/api';
 import { useHaptics } from '@/hooks/useHaptics';
@@ -21,18 +41,22 @@ interface ContinuousFeedProps {
     onVideoChange?: (index: number, post: Post) => void;
 }
 
-const FeedRow = memo(({ index, style, data }: ListChildComponentProps) => {
-    const { posts, currentIndex, handleFireToggle, handleComment, handleShare } = data;
+const FeedRow = memo(({ 
+  index, 
+  style, 
+  posts, 
+  currentIndex, 
+  handleFireToggle, 
+  handleComment, 
+  handleShare 
+}: FeedRowProps): ReactElement => {
     const post = posts[index];
     const isActive = index === currentIndex;
 
     // Use a ref to ensure we only try to play properly mounted videos
     const rowRef = useRef<HTMLDivElement>(null);
 
-    // Note: SingleVideoView handles playback via isActive prop
-    // Redundant DOM manipulation removed for cleanliness and to prevent conflicts
-
-    if (!post) return null;
+    if (!post) return <div style={style} />;
 
     return (
         <div style={style} ref={rowRef} data-video-index={index} className="w-full h-full">
@@ -48,21 +72,18 @@ const FeedRow = memo(({ index, style, data }: ListChildComponentProps) => {
     );
 }, (prevProps, nextProps) => {
     // Only re-render if the active status changes or the post data itself changes
-    const prevData = prevProps.data;
-    const nextData = nextProps.data;
-
-    const isPrevActive = prevProps.index === prevData.currentIndex;
-    const isNextActive = nextProps.index === nextData.currentIndex;
+    const isPrevActive = prevProps.index === prevProps.currentIndex;
+    const isNextActive = nextProps.index === nextProps.currentIndex;
 
     return (
         isPrevActive === isNextActive &&
-        prevData.posts[prevProps.index] === nextData.posts[nextProps.index] &&
+        prevProps.posts[prevProps.index] === nextProps.posts[nextProps.index] &&
         prevProps.style === nextProps.style
     );
 });
 
 export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVideoChange }) => {
-    const listRef = useRef<List>(null);
+    const listRef = useRef<ListImperativeAPI>(null);
     const { tap } = useHaptics();
 
     const [posts, setPosts] = useState<Array<Post & { user: User }>>([]);
@@ -120,10 +141,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         fetchVideoFeed();
     }, [fetchVideoFeed]);
 
-    // Handle items rendered (for pagination and tracking current index)
-    const onItemsRendered = useCallback(({ visibleStartIndex, visibleStopIndex }: any) => {
+    // Handle rows rendered (new API name in 2.x)
+    const onRowsRendered = useCallback((visibleRows: { startIndex: number; stopIndex: number }) => {
+        const { startIndex, stopIndex } = visibleRows;
         // We assume the top-most visible item is the "current" one in a snap-scroll context
-        const newIndex = visibleStartIndex;
+        const newIndex = startIndex;
 
         if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
             setCurrentIndex(newIndex);
@@ -133,7 +155,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         }
 
         // Pagination trigger
-        if (visibleStopIndex >= posts.length - 2 && hasMore && !loadingMore) {
+        if (stopIndex >= posts.length - 2 && hasMore && !loadingMore) {
             loadMoreVideos();
         }
     }, [currentIndex, posts, hasMore, loadingMore, loadMoreVideos, onVideoChange]);
@@ -182,7 +204,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
     }
 
     // Data object passed to rows
-    const itemData = {
+    const itemData: RowData = {
         posts,
         currentIndex,
         handleFireToggle,
@@ -194,19 +216,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         <div className={cn("w-full h-full bg-black", className)}>
             <AutoSizer>
                 {({ height, width }) => (
-                    <List
-                        ref={listRef}
+                    <List<RowData>
+                        listRef={listRef}
                         className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-                        height={height}
-                        width={width}
-                        itemCount={posts.length}
-                        itemSize={height} // Full screen height per item
-                        itemData={itemData}
-                        onItemsRendered={onItemsRendered}
+                        style={{ height, width }}
+                        rowCount={posts.length}
+                        rowHeight={height} // Full screen height per item
+                        rowProps={itemData}
+                        rowComponent={FeedRow as unknown as (props: FeedRowProps) => ReactElement}
+                        onRowsRendered={onRowsRendered}
                         overscanCount={1} // Only render 1 item above/below viewport
-                    >
-                        {FeedRow}
-                    </List>
+                    />
                 )}
             </AutoSizer>
 

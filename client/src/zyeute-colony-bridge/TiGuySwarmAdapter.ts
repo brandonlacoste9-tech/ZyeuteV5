@@ -1,8 +1,8 @@
-import OpenAI from 'openai';
 import { colonyClient } from './ColonyClient';
 import { BeeType, SwarmResponse } from './types';
 import { deepSeekCircuit, swarmCircuit } from './CircuitBreaker';
 import { processJoualTask, generateJoualResponse, joualify } from '@/services/bees/JoualBee';
+import type { DeepSeekResponse } from '@/types/deepseek';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPREHENSIVE JOUAL SYSTEM PROMPT
@@ -54,24 +54,17 @@ function getRandomFallback(): string {
 // ═══════════════════════════════════════════════════════════════
 
 export class TiGuySwarmAdapter {
-  private deepseek: OpenAI | null;
+  private apiKey: string | undefined;
   private useLocalJoualBee: boolean;
 
   constructor() {
-    const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
+    this.apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
     
-    // Initialize DeepSeek V3 client if API key available
-    this.deepseek = apiKey ? new OpenAI({
-      baseURL: 'https://api.deepseek.com',
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true // Move to server-side in production
-    }) : null;
-
     // Use local JoualBee if no API key
-    this.useLocalJoualBee = !apiKey;
+    this.useLocalJoualBee = !this.apiKey;
     
     if (this.useLocalJoualBee) {
-      console.log('🐝 Ti-Guy running in local JoualBee mode (no DeepSeek API key)');
+      console.log('🐝 Ti-Guy running in local JoualBee mode (no API key)');
     }
   }
 
@@ -228,24 +221,36 @@ export class TiGuySwarmAdapter {
     prompt: string, 
     history: { role: 'user' | 'assistant', content: string }[]
   ): Promise<string> {
-    if (!this.deepseek) {
-      throw new Error('DeepSeek client not initialized');
+    if (!this.apiKey) {
+      throw new Error('DeepSeek API key not found');
     }
 
     const messages = [
       { role: 'system', content: TI_GUY_SYSTEM_PROMPT },
       ...history,
       { role: 'user', content: prompt }
-    ] as any;
+    ];
 
-    const completion = await this.deepseek.chat.completions.create({
-      messages: messages,
-      model: 'deepseek-chat', // DeepSeek V3
-      temperature: 0.9, // Balanced for natural Joual
-      max_tokens: 1024
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify({
+        messages: messages,
+        model: 'deepseek-chat', // DeepSeek V3
+        temperature: 0.9, // Balanced for natural Joual
+        max_tokens: 1024
+      })
     });
 
-    return completion.choices[0].message.content || "Désolé, j'ai perdu le fil.";
+    if (!response.ok) {
+      throw new Error(`DeepSeek API error: ${response.status}`);
+    }
+
+    const data = await response.json() as DeepSeekResponse;
+    return data.choices[0]?.message.content || "Désolé, j'ai perdu le fil.";
   }
 
   /**
