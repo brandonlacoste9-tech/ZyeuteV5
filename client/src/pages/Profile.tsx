@@ -131,7 +131,7 @@ export const Profile: React.FC = () => {
 
     // Fetch immediately - don't wait for anything
     fetchUser();
-  }, [slug, navigate]);
+  }, [slug, navigate, currentUser?.id]);
 
   // Fetch user posts
   React.useEffect(() => {
