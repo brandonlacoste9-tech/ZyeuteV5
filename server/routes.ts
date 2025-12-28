@@ -3,13 +3,24 @@ import type { Server } from "http";
 import rateLimit from "express-rate-limit";
 import { storage } from "./storage.js";
 import {
-  insertUserSchema, insertPostSchema, insertCommentSchema,
-  insertStorySchema, GIFT_CATALOG, type GiftType
+  insertUserSchema,
+  insertPostSchema,
+  insertCommentSchema,
+  insertStorySchema,
+  GIFT_CATALOG,
+  type GiftType,
 } from "../shared/schema.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { fal } from "@fal-ai/client";
-import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, v3Mod, FAL_PRESETS } from "./v3-swarm.js";
+import {
+  v3TiGuyChat,
+  v3Flow,
+  v3Feed,
+  v3Microcopy,
+  v3Mod,
+  FAL_PRESETS,
+} from "./v3-swarm.js";
 import { lookupWord } from "./utils/dictionary.js";
 import emailAutomation from "./email-automation.js";
 // Import Studio API routes
@@ -18,9 +29,17 @@ import enhanceRoutes from "./routes/enhance.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
 import debugRoutes from "./api/debug.js";
+import adminRoutes from "./routes/admin.js";
 // Import tracing utilities
-import { traced, traceDatabase, traceExternalAPI, traceStripe, traceSupabase, addSpanAttributes } from "./tracer.js";
-import { getVideoQueue } from './queue.js';
+import {
+  traced,
+  traceDatabase,
+  traceExternalAPI,
+  traceStripe,
+  traceSupabase,
+  addSpanAttributes,
+} from "./tracer.js";
+import { getVideoQueue } from "./queue.js";
 import { joualizeText, type JoualStyle } from "./services/joualizer.js";
 
 // Configure FAL client
@@ -40,7 +59,9 @@ const aiRateLimiter = rateLimit({
 const authRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 5, // 5 auth attempts per minute per IP (stricter to prevent brute force)
-  message: { error: "Trop de tentatives de connexion. Réessaie dans une minute." },
+  message: {
+    error: "Trop de tentatives de connexion. Réessaie dans une minute.",
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -63,10 +84,10 @@ if (STRIPE_SECRET_KEY) {
     apiVersion: "2025-12-15.clover",
   });
 } else {
-  console.warn("⚠️ STRIPE_SECRET_KEY not found - payment features will be disabled");
+  console.warn(
+    "⚠️ STRIPE_SECRET_KEY not found - payment features will be disabled",
+  );
 }
-
-
 
 // [UPDATED] Hybrid Auth Middleware
 // Accepts:
@@ -82,13 +103,14 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     if (userId) {
       // Check if user is banned
       const user = await storage.getUser(userId);
-      if (user?.role === 'banned') {
-        return res.status(403).json({ 
-          error: "Votre compte a été désactivé en raison d'une violation grave de nos protocoles de sécurité. Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
-          isBanned: true
+      if (user?.role === "banned") {
+        return res.status(403).json({
+          error:
+            "Votre compte a été désactivé en raison d'une violation grave de nos protocoles de sécurité. Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
+          isBanned: true,
         });
       }
-      
+
       req.userId = userId;
       return next();
     }
@@ -112,21 +134,25 @@ async function optionalAuth(req: Request, res: Response, next: NextFunction) {
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
-
   // ============ HEALTH CHECK ENDPOINT (EXEMPT FROM RATE LIMITING) ============
   // Place BEFORE rate limiter so monitoring/testing works without limits
   app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || "development"
+      environment: process.env.NODE_ENV || "development",
     });
   });
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);
+
+  // [NEW] Admin Observability Dashboard
+  app.use("/api/admin", requireAuth, adminRoutes);
+
+  // Apply general rate limiting to all other API routes
 
   // Apply general rate limiting to all other API routes
   app.use("/api", generalRateLimiter);
@@ -161,7 +187,7 @@ export async function registerRoutes(
   app.post("/api/auth/resolve-email", authRateLimiter, async (req, res) => {
     try {
       const { username } = req.body;
-      if (!username || typeof username !== 'string') {
+      if (!username || typeof username !== "string") {
         return res.status(400).json({ error: "Username is required" });
       }
 
@@ -190,7 +216,7 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      // const { password: _, ...safeUser } = user; 
+      // const { password: _, ...safeUser } = user;
       // res.json({ user: safeUser });
       res.json({ user: user }); // User object from Drizzle should be safe now
     } catch (error) {
@@ -227,7 +253,8 @@ export async function registerRoutes(
   // Update current user profile
   app.patch("/api/users/me", requireAuth, async (req, res) => {
     try {
-      const { displayName, bio, avatarUrl, region, tiGuyCommentsEnabled } = req.body;
+      const { displayName, bio, avatarUrl, region, tiGuyCommentsEnabled } =
+        req.body;
 
       const updated = await storage.updateUser(req.userId!, {
         displayName,
@@ -304,13 +331,17 @@ export async function registerRoutes(
     try {
       const { text, style } = req.body;
 
-      if (!text || typeof text !== 'string') {
+      if (!text || typeof text !== "string") {
         return res.status(400).json({ error: "Text is required" });
       }
 
-      const validStyles: JoualStyle[] = ['street', 'old', 'enhanced'];
+      const validStyles: JoualStyle[] = ["street", "old", "enhanced"];
       if (!style || !validStyles.includes(style as JoualStyle)) {
-        return res.status(400).json({ error: "Invalid style. Use 'street', 'old', or 'enhanced'." });
+        return res
+          .status(400)
+          .json({
+            error: "Invalid style. Use 'street', 'old', or 'enhanced'.",
+          });
       }
 
       const rewrittenText = await joualizeText(text, style as JoualStyle);
@@ -326,22 +357,27 @@ export async function registerRoutes(
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const cursor = req.query.cursor as string | undefined;
-      const feedType = req.query.type as string || 'explore'; // 'feed', 'explore', 'smart'
+      const feedType = (req.query.type as string) || "explore"; // 'feed', 'explore', 'smart'
 
       let posts: any[] = [];
 
       // Determine which feed to fetch
-      if (req.userId && feedType === 'feed') {
+      if (req.userId && feedType === "feed") {
         // User's personalized feed
         const page = cursor ? parseInt(cursor) : 0;
         posts = await storage.getFeedPosts(req.userId, page, limit + 1);
-      } else if (feedType === 'smart' && req.userId) {
+      } else if (feedType === "smart" && req.userId) {
         // Smart recommendations (if user provides embedding)
-        const embedding = req.query.embedding ? JSON.parse(req.query.embedding as string) : null;
+        const embedding = req.query.embedding
+          ? JSON.parse(req.query.embedding as string)
+          : null;
         if (embedding) {
           posts = await storage.getSmartRecommendations(embedding, limit + 1);
         } else {
-          posts = await storage.getExplorePosts(cursor ? parseInt(cursor) : 0, limit + 1);
+          posts = await storage.getExplorePosts(
+            cursor ? parseInt(cursor) : 0,
+            limit + 1,
+          );
         }
       } else {
         // Explore/public feed (default)
@@ -362,7 +398,7 @@ export async function registerRoutes(
         posts: items,
         nextCursor,
         hasMore,
-        feedType
+        feedType,
       });
     } catch (error) {
       console.error("Get infinite feed error:", error);
@@ -407,9 +443,15 @@ export async function registerRoutes(
   app.get("/api/posts/trending/:regionId", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
-      const before = req.query.before ? new Date(req.query.before as string) : undefined;
+      const before = req.query.before
+        ? new Date(req.query.before as string)
+        : undefined;
 
-      const posts = await storage.getRegionalTrendingPosts(req.params.regionId, limit, before);
+      const posts = await storage.getRegionalTrendingPosts(
+        req.params.regionId,
+        limit,
+        before,
+      );
       res.json({ posts });
     } catch (error) {
       console.error("Get regional trending error:", error);
@@ -470,49 +512,54 @@ export async function registerRoutes(
       }
 
       // [PHASE 9] Synchronous AI Moderation
-      const moderationContent = `${parsed.data.caption || ''} ${parsed.data.content || ''}`;
+      const moderationContent = `${parsed.data.caption || ""} ${parsed.data.content || ""}`;
       const modResult = await v3Mod(moderationContent);
 
       if (modResult.is_minor_danger) {
         console.error(`🚨 Child Safety Violation: Banning user ${req.userId}`);
-        
+
         // Record persistent moderation log
         await storage.createModerationLog({
           userId: req.userId!,
-          action: 'ban',
-          reason: 'minor_danger',
+          action: "ban",
+          reason: "minor_danger",
           details: modResult.reason,
-          score: 10
+          score: 10,
         });
 
-        await storage.updateUser(req.userId!, { 
-          role: 'banned', 
-          bio: 'COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.' 
+        await storage.updateUser(req.userId!, {
+          role: "banned",
+          bio: "COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
         });
-        return res.status(403).json({ error: "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro)." });
+        return res
+          .status(403)
+          .json({
+            error:
+              "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
+          });
       }
 
       const post = await storage.createPost({
         ...parsed.data,
         isModerated: true,
-        moderationApproved: modResult.status === 'approved',
-        isHidden: modResult.status !== 'approved'
+        moderationApproved: modResult.status === "approved",
+        isHidden: modResult.status !== "approved",
       });
 
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
-      await videoQueue.add('processVideo', {
+      await videoQueue.add("processVideo", {
         videoUrl: post.mediaUrl,
         userId: req.userId,
-        visual_filter: req.body.visual_filter || 'prestige'
+        visual_filter: req.body.visual_filter || "prestige",
       });
 
-      res.status(201).json({ 
-        post, 
+      res.status(201).json({
+        post,
         moderation: {
-          approved: modResult.status === 'approved',
-          reason: modResult.status !== 'approved' ? modResult.reason : null
-        }
+          approved: modResult.status === "approved",
+          reason: modResult.status !== "approved" ? modResult.reason : null,
+        },
       });
     } catch (error) {
       console.error("Create post error:", error);
@@ -547,7 +594,7 @@ export async function registerRoutes(
     try {
       const result = await storage.togglePostReaction(
         req.params.id,
-        req.userId!
+        req.userId!,
       );
       res.json(result);
     } catch (error) {
@@ -588,7 +635,7 @@ export async function registerRoutes(
       const user = await storage.getUser(req.userId!);
 
       res.status(201).json({
-        comment: { ...comment, user, isFired: false }
+        comment: { ...comment, user, isFired: false },
       });
     } catch (error) {
       console.error("Create comment error:", error);
@@ -615,7 +662,7 @@ export async function registerRoutes(
     try {
       const result = await storage.toggleCommentReaction(
         req.params.id,
-        req.userId!
+        req.userId!,
       );
       res.json(result);
     } catch (error) {
@@ -657,9 +704,9 @@ export async function registerRoutes(
     try {
       const followers = await storage.getFollowers(req.params.id);
       res.json({
-        followers: followers.map(f => {
+        followers: followers.map((f) => {
           return f;
-        })
+        }),
       });
     } catch (error) {
       console.error("Get followers error:", error);
@@ -672,9 +719,9 @@ export async function registerRoutes(
     try {
       const following = await storage.getFollowing(req.params.id);
       res.json({
-        following: following.map(f => {
+        following: following.map((f) => {
           return f;
-        })
+        }),
       });
     } catch (error) {
       console.error("Get following error:", error);
@@ -770,99 +817,134 @@ export async function registerRoutes(
   // ============ AI GENERATION ROUTES ============
 
   // Generate image with Flux
-  app.post("/api/ai/generate-image", aiRateLimiter, requireAuth, async (req, res) => {
-    try {
-      const { prompt, aspectRatio = "1:1" } = req.body;
+  app.post(
+    "/api/ai/generate-image",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { prompt, aspectRatio = "1:1" } = req.body;
 
-      if (!prompt || typeof prompt !== 'string') {
-        return res.status(400).json({ error: "Prompt is required" });
-      }
+        if (!prompt || typeof prompt !== "string") {
+          return res.status(400).json({ error: "Prompt is required" });
+        }
 
-      if (!process.env.FAL_API_KEY) {
-        return res.status(500).json({ error: "FAL API key not configured" });
-      }
+        if (!process.env.FAL_API_KEY) {
+          return res.status(500).json({ error: "FAL API key not configured" });
+        }
 
-      console.log(`Generating image with Flux: "${prompt.substring(0, 50)}..."`);
+        console.log(
+          `Generating image with Flux: "${prompt.substring(0, 50)}..."`,
+        );
 
-      const result = await traceExternalAPI("fal-ai", "flux/schnell", "POST", async (span) => {
-        span.setAttributes({
-          "ai.model": "flux-schnell",
-          "ai.prompt_length": prompt.length,
-          "ai.aspect_ratio": aspectRatio,
-        });
+        const result = await traceExternalAPI(
+          "fal-ai",
+          "flux/schnell",
+          "POST",
+          async (span) => {
+            span.setAttributes({
+              "ai.model": "flux-schnell",
+              "ai.prompt_length": prompt.length,
+              "ai.aspect_ratio": aspectRatio,
+            });
 
-        return fal.subscribe("fal-ai/flux/schnell", {
-          input: {
-            prompt,
-            image_size: aspectRatio === "16:9" ? "landscape_16_9" :
-              aspectRatio === "9:16" ? "portrait_16_9" :
-                aspectRatio === "4:3" ? "landscape_4_3" :
-                  aspectRatio === "3:4" ? "portrait_4_3" : "square",
-            num_images: 1,
+            return fal.subscribe("fal-ai/flux/schnell", {
+              input: {
+                prompt,
+                image_size:
+                  aspectRatio === "16:9"
+                    ? "landscape_16_9"
+                    : aspectRatio === "9:16"
+                      ? "portrait_16_9"
+                      : aspectRatio === "4:3"
+                        ? "landscape_4_3"
+                        : aspectRatio === "3:4"
+                          ? "portrait_4_3"
+                          : "square",
+                num_images: 1,
+              },
+              logs: true,
+              onQueueUpdate: (update) => {
+                if (update.status === "IN_PROGRESS") {
+                  console.log("Flux generation in progress...");
+                }
+              },
+            });
           },
-          logs: true,
-          onQueueUpdate: (update) => {
-            if (update.status === "IN_PROGRESS") {
-              console.log("Flux generation in progress...");
-            }
-          },
+        );
+
+        const images = (result.data as any)?.images || [];
+        if (images.length === 0) {
+          return res.status(500).json({ error: "No image generated" });
+        }
+
+        res.json({
+          imageUrl: images[0].url,
+          prompt,
         });
-      });
-
-      const images = (result.data as any)?.images || [];
-      if (images.length === 0) {
-        return res.status(500).json({ error: "No image generated" });
+      } catch (error: any) {
+        console.error("AI image generation error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate image" });
       }
-
-      res.json({
-        imageUrl: images[0].url,
-        prompt,
-      });
-    } catch (error: any) {
-      console.error("AI image generation error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate image" });
-    }
-  });
+    },
+  );
 
   // Ti-Guy AI Chat (V3-TI-GUY from swarm)
-  app.post("/api/ai/tiguy-chat", aiRateLimiter, requireAuth, async (req, res) => {
-    try {
-      const { message, conversationHistory = [] } = req.body;
+  app.post(
+    "/api/ai/tiguy-chat",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { message, conversationHistory = [] } = req.body;
 
-      if (!message || typeof message !== 'string') {
-        return res.status(400).json({ error: "Message is required" });
+        if (!message || typeof message !== "string") {
+          return res.status(400).json({ error: "Message is required" });
+        }
+
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        // Use V3-TI-GUY from the swarm architecture
+        const formattedHistory = conversationHistory
+          .slice(-10)
+          .map((msg: any) => ({
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.text,
+          }));
+
+        const response = await v3TiGuyChat(message, formattedHistory);
+
+        res.json({ response });
+      } catch (error: any) {
+        console.error("Ti-Guy AI error:", error);
+        res
+          .status(500)
+          .json({
+            error: error.message || "Ti-Guy est fatigué, réessaie plus tard!",
+          });
       }
-
-      if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ error: "DeepSeek API key not configured" });
-      }
-
-      // Use V3-TI-GUY from the swarm architecture
-      const formattedHistory = conversationHistory.slice(-10).map((msg: any) => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.text,
-      }));
-
-      const response = await v3TiGuyChat(message, formattedHistory);
-
-      res.json({ response });
-    } catch (error: any) {
-      console.error("Ti-Guy AI error:", error);
-      res.status(500).json({ error: error.message || "Ti-Guy est fatigué, réessaie plus tard!" });
-    }
-  });
+    },
+  );
 
   // V3 Flow - Orchestrated AI actions
   app.post("/api/v3/flow", aiRateLimiter, requireAuth, async (req, res) => {
     try {
       const { action, context } = req.body;
 
-      if (!action || typeof action !== 'string') {
+      if (!action || typeof action !== "string") {
         return res.status(400).json({ error: "Action is required" });
       }
 
       if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ error: "DeepSeek API key not configured" });
+        return res
+          .status(500)
+          .json({ error: "DeepSeek API key not configured" });
       }
 
       const result = await v3Flow(action, context);
@@ -874,42 +956,69 @@ export async function registerRoutes(
   });
 
   // V3 Feed - Generate AI feed items
-  app.post("/api/v3/feed-item", aiRateLimiter, requireAuth, async (req, res) => {
-    try {
-      const { context } = req.body;
+  app.post(
+    "/api/v3/feed-item",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { context } = req.body;
 
-      if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ error: "DeepSeek API key not configured" });
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        const feedItem = await v3Feed(context);
+        res.json(feedItem);
+      } catch (error: any) {
+        console.error("V3 Feed error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate feed item" });
       }
-
-      const feedItem = await v3Feed(context);
-      res.json(feedItem);
-    } catch (error: any) {
-      console.error("V3 Feed error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate feed item" });
-    }
-  });
+    },
+  );
 
   // V3 Microcopy - Generate UI text in Ti-Guy voice
-  app.post("/api/v3/microcopy", aiRateLimiter, requireAuth, async (req, res) => {
-    try {
-      const { type, context } = req.body;
+  app.post(
+    "/api/v3/microcopy",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { type, context } = req.body;
 
-      if (!type || !["loading", "error", "success", "onboarding", "empty_state"].includes(type)) {
-        return res.status(400).json({ error: "Valid type is required" });
+        if (
+          !type ||
+          ![
+            "loading",
+            "error",
+            "success",
+            "onboarding",
+            "empty_state",
+          ].includes(type)
+        ) {
+          return res.status(400).json({ error: "Valid type is required" });
+        }
+
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        const text = await v3Microcopy(type, context);
+        res.json({ text });
+      } catch (error: any) {
+        console.error("V3 Microcopy error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate microcopy" });
       }
-
-      if (!process.env.DEEPSEEK_API_KEY) {
-        return res.status(500).json({ error: "DeepSeek API key not configured" });
-      }
-
-      const text = await v3Microcopy(type, context);
-      res.json({ text });
-    } catch (error: any) {
-      console.error("V3 Microcopy error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate microcopy" });
-    }
-  });
+    },
+  );
 
   // Get FAL presets
   app.get("/api/v3/fal-presets", requireAuth, (req, res) => {
@@ -917,48 +1026,61 @@ export async function registerRoutes(
   });
 
   // Generate video with Kling (image-to-video)
-  app.post("/api/ai/generate-video", aiRateLimiter, requireAuth, async (req, res) => {
-    try {
-      const { imageUrl, prompt = "Animate this image with natural movement" } = req.body;
+  app.post(
+    "/api/ai/generate-video",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const {
+          imageUrl,
+          prompt = "Animate this image with natural movement",
+        } = req.body;
 
-      if (!imageUrl || typeof imageUrl !== 'string') {
-        return res.status(400).json({ error: "Image URL is required" });
-      }
+        if (!imageUrl || typeof imageUrl !== "string") {
+          return res.status(400).json({ error: "Image URL is required" });
+        }
 
-      if (!process.env.FAL_API_KEY) {
-        return res.status(500).json({ error: "FAL API key not configured" });
-      }
+        if (!process.env.FAL_API_KEY) {
+          return res.status(500).json({ error: "FAL API key not configured" });
+        }
 
-      console.log(`Generating video with Kling from image...`);
+        console.log(`Generating video with Kling from image...`);
 
-      const result = await fal.subscribe("fal-ai/kling-video/v2/master/image-to-video", {
-        input: {
-          image_url: imageUrl,
+        const result = await fal.subscribe(
+          "fal-ai/kling-video/v2/master/image-to-video",
+          {
+            input: {
+              image_url: imageUrl,
+              prompt,
+              duration: "5" as const,
+            },
+            logs: true,
+            onQueueUpdate: (update) => {
+              if (update.status === "IN_PROGRESS") {
+                console.log("Kling video generation in progress...");
+              }
+            },
+          },
+        );
+
+        const video = (result.data as any)?.video;
+        if (!video?.url) {
+          return res.status(500).json({ error: "No video generated" });
+        }
+
+        res.json({
+          videoUrl: video.url,
           prompt,
-          duration: "5" as const,
-        },
-        logs: true,
-        onQueueUpdate: (update) => {
-          if (update.status === "IN_PROGRESS") {
-            console.log("Kling video generation in progress...");
-          }
-        },
-      });
-
-      const video = (result.data as any)?.video;
-      if (!video?.url) {
-        return res.status(500).json({ error: "No video generated" });
+        });
+      } catch (error: any) {
+        console.error("AI video generation error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate video" });
       }
-
-      res.json({
-        videoUrl: video.url,
-        prompt,
-      });
-    } catch (error: any) {
-      console.error("AI video generation error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate video" });
-    }
-  });
+    },
+  );
 
   // ============ STRIPE SUBSCRIPTION ROUTES ============
 
@@ -974,40 +1096,46 @@ export async function registerRoutes(
         return res.status(401).json({ error: "User not found" });
       }
 
-      const session = await traceStripe("checkout.sessions.create", async (span) => {
-        span.setAttributes({ "stripe.user_id": user.id });
-        return stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "subscription",
-          line_items: [
-            {
-              price_data: {
-                currency: "cad",
-                product_data: {
-                  name: "Zyeuté VIP",
-                  description: "Accès premium avec Ti-Guy AI, création avancée, et plus!",
+      const session = await traceStripe(
+        "checkout.sessions.create",
+        async (span) => {
+          span.setAttributes({ "stripe.user_id": user.id });
+          return stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "subscription",
+            line_items: [
+              {
+                price_data: {
+                  currency: "cad",
+                  product_data: {
+                    name: "Zyeuté VIP",
+                    description:
+                      "Accès premium avec Ti-Guy AI, création avancée, et plus!",
+                  },
+                  unit_amount: 999, // $9.99 CAD
+                  recurring: {
+                    interval: "month",
+                  },
                 },
-                unit_amount: 999, // $9.99 CAD
-                recurring: {
-                  interval: "month",
-                },
+                quantity: 1,
               },
-              quantity: 1,
+            ],
+            success_url: `${req.headers.origin}/premium?success=true`,
+            cancel_url: `${req.headers.origin}/premium?canceled=true`,
+            customer_email: user.email || undefined,
+            metadata: {
+              userId: user.id,
             },
-          ],
-          success_url: `${req.headers.origin}/premium?success=true`,
-          cancel_url: `${req.headers.origin}/premium?canceled=true`,
-          customer_email: user.email || undefined,
-          metadata: {
-            userId: user.id,
-          },
-        });
-      });
+          });
+        },
+      );
 
       res.json({ url: session.url });
     } catch (error: any) {
       console.error("Stripe checkout error:", error);
-      res.status(500).json({ error: error.message || "Failed to create checkout session" });
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to create checkout session" });
     }
   });
 
@@ -1020,7 +1148,8 @@ export async function registerRoutes(
       }
 
       res.json({
-        isPremium: user.subscriptionTier !== null && user.subscriptionTier !== 'free',
+        isPremium:
+          user.subscriptionTier !== null && user.subscriptionTier !== "free",
         subscriptionEnd: null, // Would track in DB
       });
     } catch (error: any) {
@@ -1049,12 +1178,12 @@ export async function registerRoutes(
       const pendingEmails = emailAutomation.getPendingEmails();
       res.json({
         count: pendingEmails.length,
-        emails: pendingEmails.map(e => ({
+        emails: pendingEmails.map((e) => ({
           id: e.id,
           type: e.emailType,
           scheduledFor: e.scheduledFor,
           status: e.status,
-        }))
+        })),
       });
     } catch (error: any) {
       console.error("Email pending error:", error);
@@ -1069,7 +1198,7 @@ export async function registerRoutes(
       res.json({
         success: true,
         processed: sentCount,
-        message: `Processed ${sentCount} emails`
+        message: `Processed ${sentCount} emails`,
       });
     } catch (error: any) {
       console.error("Email queue processing error:", error);
@@ -1081,7 +1210,7 @@ export async function registerRoutes(
   app.post("/api/email/send-welcome", requireAuth, async (req, res) => {
     try {
       const userId = req.userId!;
-      const result = await emailAutomation.sendEmailNow(userId, 'welcome');
+      const result = await emailAutomation.sendEmailNow(userId, "welcome");
 
       if (result.success) {
         res.json({ success: true, message: "Welcome email sent!" });
@@ -1094,7 +1223,6 @@ export async function registerRoutes(
     }
   });
 
-
   // Resend webhook handler for tracking email events
   app.post("/api/email/webhook", async (req, res) => {
     try {
@@ -1102,23 +1230,25 @@ export async function registerRoutes(
       console.log(`[Resend Webhook] Event received:`, event.type);
 
       switch (event.type) {
-        case 'email.sent':
+        case "email.sent":
           console.log(`[Resend] Email sent: ${event.data?.email_id}`);
           break;
-        case 'email.delivered':
+        case "email.delivered":
           console.log(`[Resend] Email delivered: ${event.data?.email_id}`);
           break;
-        case 'email.opened':
+        case "email.opened":
           console.log(`[Resend] Email opened: ${event.data?.email_id}`);
           break;
-        case 'email.clicked':
+        case "email.clicked":
           console.log(`[Resend] Email link clicked: ${event.data?.email_id}`);
           break;
-        case 'email.bounced':
+        case "email.bounced":
           console.error(`[Resend] Email bounced: ${event.data?.email_id}`);
           break;
-        case 'email.complained':
-          console.error(`[Resend] Email spam complaint: ${event.data?.email_id}`);
+        case "email.complained":
+          console.error(
+            `[Resend] Email spam complaint: ${event.data?.email_id}`,
+          );
           break;
         default:
           console.log(`[Resend] Unknown event: ${event.type}`);
@@ -1137,13 +1267,15 @@ export async function registerRoutes(
       const { emailType, username } = req.body;
 
       if (!emailType || !username) {
-        return res.status(400).json({ error: "emailType and username required" });
+        return res
+          .status(400)
+          .json({ error: "emailType and username required" });
       }
 
       const content = await emailAutomation.generatePersonalizedContent(
         emailType,
         username,
-        req.body.context
+        req.body.context,
       );
 
       res.json(content);
@@ -1160,7 +1292,7 @@ export async function registerRoutes(
       emailAutomation.scheduleOnboardingSequence(userId);
       res.json({
         success: true,
-        message: "Onboarding sequence scheduled"
+        message: "Onboarding sequence scheduled",
       });
     } catch (error: any) {
       console.error("Email trigger error:", error);
@@ -1179,7 +1311,7 @@ export async function registerRoutes(
       res.json({
         success: true,
         cancelled,
-        message: `Cancelled ${cancelled} pending emails`
+        message: `Cancelled ${cancelled} pending emails`,
       });
     } catch (error: any) {
       console.error("Email cancel error:", error);
@@ -1196,63 +1328,71 @@ export async function registerRoutes(
         type,
         ...info,
         priceDisplay: `$${(info.price / 100).toFixed(2)}`,
-      }))
+      })),
     });
   });
 
   // Create payment intent for gift purchase
-  app.post("/api/gifts/create-payment-intent", requireAuth, async (req, res) => {
-    try {
-      const { giftType, postId } = req.body;
+  app.post(
+    "/api/gifts/create-payment-intent",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { giftType, postId } = req.body;
 
-      if (!stripe) {
-        return res.status(500).json({ error: "Stripe not configured" });
+        if (!stripe) {
+          return res.status(500).json({ error: "Stripe not configured" });
+        }
+
+        // Validate gift type
+        if (!giftType || !(giftType in GIFT_CATALOG)) {
+          return res.status(400).json({ error: "Invalid gift type" });
+        }
+
+        // Validate post exists and get recipient
+        const post = await storage.getPost(postId);
+        if (!post) {
+          return res.status(404).json({ error: "Post not found" });
+        }
+
+        const senderId = req.userId!;
+        const recipientId = post.userId;
+
+        // Can't gift your own post
+        if (senderId === recipientId) {
+          return res
+            .status(400)
+            .json({ error: "Tu peux pas t'envoyer un cadeau à toi-même! 🎁" });
+        }
+
+        const giftInfo = GIFT_CATALOG[giftType as GiftType];
+        const amount = giftInfo.price;
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: "cad",
+          metadata: {
+            type: "gift",
+            giftType,
+            postId,
+            senderId,
+            recipientId,
+          },
+        });
+
+        res.json({
+          clientSecret: paymentIntent.client_secret,
+          amount,
+          giftInfo,
+        });
+      } catch (error: any) {
+        console.error("Gift payment intent error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to create payment intent" });
       }
-
-      // Validate gift type
-      if (!giftType || !(giftType in GIFT_CATALOG)) {
-        return res.status(400).json({ error: "Invalid gift type" });
-      }
-
-      // Validate post exists and get recipient
-      const post = await storage.getPost(postId);
-      if (!post) {
-        return res.status(404).json({ error: "Post not found" });
-      }
-
-      const senderId = req.userId!;
-      const recipientId = post.userId;
-
-      // Can't gift your own post
-      if (senderId === recipientId) {
-        return res.status(400).json({ error: "Tu peux pas t'envoyer un cadeau à toi-même! 🎁" });
-      }
-
-      const giftInfo = GIFT_CATALOG[giftType as GiftType];
-      const amount = giftInfo.price;
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount,
-        currency: "cad",
-        metadata: {
-          type: "gift",
-          giftType,
-          postId,
-          senderId,
-          recipientId,
-        },
-      });
-
-      res.json({
-        clientSecret: paymentIntent.client_secret,
-        amount,
-        giftInfo,
-      });
-    } catch (error: any) {
-      console.error("Gift payment intent error:", error);
-      res.status(500).json({ error: error.message || "Failed to create payment intent" });
-    }
-  });
+    },
+  );
 
   // Confirm gift after successful payment
   app.post("/api/gifts/confirm", requireAuth, async (req, res) => {
@@ -1268,15 +1408,18 @@ export async function registerRoutes(
       if (!stripe) {
         return res.status(500).json({ error: "Stripe not configured" });
       }
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      if (paymentIntent.status !== 'succeeded') {
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
         return res.status(400).json({ error: "Payment not completed" });
       }
 
       // Verify metadata matches
-      if (paymentIntent.metadata.postId !== postId ||
+      if (
+        paymentIntent.metadata.postId !== postId ||
         paymentIntent.metadata.giftType !== giftType ||
-        paymentIntent.metadata.senderId !== senderId) {
+        paymentIntent.metadata.senderId !== senderId
+      ) {
         return res.status(400).json({ error: "Payment verification failed" });
       }
 
@@ -1297,7 +1440,7 @@ export async function registerRoutes(
       const sender = await storage.getUser(senderId);
       await storage.createNotification({
         userId: recipientId,
-        type: 'gift',
+        type: "gift",
         fromUserId: senderId,
         postId,
         giftId: gift.id,
@@ -1311,7 +1454,9 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("Gift confirm error:", error);
-      res.status(500).json({ error: error.message || "Failed to confirm gift" });
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to confirm gift" });
     }
   });
 
@@ -1324,14 +1469,14 @@ export async function registerRoutes(
 
       // Group by gift type for display
       const giftCounts: Record<string, number> = {};
-      gifts.forEach(g => {
+      gifts.forEach((g) => {
         giftCounts[g.giftType] = (giftCounts[g.giftType] || 0) + 1;
       });
 
       res.json({
         totalCount: count,
         giftCounts,
-        recentGifts: gifts.slice(0, 5).map(g => ({
+        recentGifts: gifts.slice(0, 5).map((g) => ({
           id: g.id,
           type: g.giftType,
           sender: {
@@ -1356,7 +1501,7 @@ export async function registerRoutes(
       const gifts = await storage.getUserReceivedGifts(userId);
 
       res.json({
-        gifts: gifts.map(g => ({
+        gifts: gifts.map((g) => ({
           id: g.id,
           type: g.giftType,
           amount: g.amount,
@@ -1384,22 +1529,26 @@ export async function registerRoutes(
     try {
       const { word } = req.params;
       const entry = await lookupWord(word);
-      
+
       if (!entry) {
-        return res.status(404).json({ error: "Mot non trouvé dans le dictionnaire local." });
+        return res
+          .status(404)
+          .json({ error: "Mot non trouvé dans le dictionnaire local." });
       }
 
       res.json(entry);
     } catch (error: any) {
       console.error("Dictionary lookup error:", error);
-      res.status(500).json({ error: "Erreur lors de la recherche dans le dictionnaire." });
+      res
+        .status(500)
+        .json({ error: "Erreur lors de la recherche dans le dictionnaire." });
     }
   });
 
   // Start Colony OS metrics reporting
-  const { startMetricsReporting } = await import('./colony/metrics-bridge.js');
+  const { startMetricsReporting } = await import("./colony/metrics-bridge.js");
   startMetricsReporting();
-  console.log('✅ Colony OS metrics bridge initialized');
+  console.log("✅ Colony OS metrics bridge initialized");
 
   return httpServer;
 }
