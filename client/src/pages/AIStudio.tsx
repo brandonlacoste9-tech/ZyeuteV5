@@ -9,7 +9,7 @@ import { Header } from '../components/Header';
 import { Button } from '../components/Button';
 import { generateImage } from '../services/api';
 import { toast } from '../components/Toast';
-import { AIVideoResponseSchema } from '../lib/schemas/ai';
+import { AIVideoResponseSchema } from '../schemas/ai';
 
 const aspectRatios = [
   { label: "Carré", value: "1:1" },
