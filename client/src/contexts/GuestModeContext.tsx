@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '../lib/constants';
 
 interface GuestModeContextType {
     isGuest: boolean;
+    isExpired: boolean;
     viewsCount: number;
     remainingTime: number;
     setIsGuest: (value: boolean) => void;
@@ -32,6 +33,7 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
     });
 
     const [remainingTime, setRemainingTime] = useState(0);
+    const [isExpired, setIsExpired] = useState(false);
 
     // Sync localStorage changes to state
     useEffect(() => {
@@ -67,12 +69,12 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, [isGuest]);
 
-    const enterGuestMode = () => setIsGuest(true);
-    const exitGuestMode = () => setIsGuest(false);
+    const enterGuestMode = useCallback(() => setIsGuest(true), []);
+    const exitGuestMode = useCallback(() => setIsGuest(false), []);
 
     // ✅ Properly starts guest session with localStorage persistence
     // Handles private browsing mode gracefully
-    const startGuestSession = () => {
+    const startGuestSession = useCallback(() => {
         console.log('🎭 [GuestModeContext] Starting guest session...');
         try {
             localStorage.setItem(GUEST_MODE_KEY, 'true');
@@ -80,16 +82,15 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(GUEST_VIEWS_KEY, '0');
             console.log('✅ [GuestModeContext] Guest session started, localStorage set');
         } catch (e) {
-            // localStorage quota exceeded or in private/incognito browsing
             console.warn('⚠️ [GuestModeContext] Storage failed (private browsing?):', e);
         }
-        // Always set in-memory state, even if storage fails
         setIsGuest(true);
-    };
+        setIsExpired(false);
+    }, []);
 
     // ✅ Properly ends guest session
     // Handles private browsing mode gracefully
-    const endGuestSession = () => {
+    const endGuestSession = useCallback(() => {
         console.log('🎭 [GuestModeContext] Ending guest session...');
         try {
             localStorage.removeItem(GUEST_MODE_KEY);
@@ -101,22 +102,29 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
         setIsGuest(false);
         setViewsCount(0);
         setRemainingTime(0);
-    };
-
-    const incrementViews = () => {
-        const newCount = viewsCount + 1;
-        setViewsCount(newCount);
-        try {
-            localStorage.setItem(GUEST_VIEWS_KEY, newCount.toString());
-        } catch (e) {
-            console.warn('⚠️ [GuestModeContext] Failed to save view count:', e);
+        // Only set expired if it was actually a guest session
+        if (isGuest) {
+            setIsExpired(true);
         }
-    };
+    }, [isGuest]);
+
+    const incrementViews = useCallback(() => {
+        setViewsCount(prev => {
+            const newCount = prev + 1;
+            try {
+                localStorage.setItem(GUEST_VIEWS_KEY, newCount.toString());
+            } catch (e) {
+                console.warn('⚠️ [GuestModeContext] Failed to save view count:', e);
+            }
+            return newCount;
+        });
+    }, []);
 
 
     return (
         <GuestModeContext.Provider value={{
             isGuest,
+            isExpired,
             viewsCount,
             remainingTime,
             setIsGuest,
@@ -137,6 +145,7 @@ export function useGuestMode() {
         // Return a safe default instead of throwing
         return {
             isGuest: false,
+            isExpired: false,
             setIsGuest: () => { },
             enterGuestMode: () => { },
             exitGuestMode: () => { },

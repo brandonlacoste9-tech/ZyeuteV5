@@ -3,8 +3,8 @@
  * Tests for password show/hide toggles and password reset flow
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '../../test/utils';
 import Login from '../Login';
 import Signup from '../Signup';
 import ForgotPassword from '../ForgotPassword';
@@ -20,6 +20,9 @@ vi.mock('../../lib/supabase', () => ({
       signUp: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
       resetPasswordForEmail: vi.fn(() => Promise.resolve({ error: null })),
       updateUser: vi.fn(() => Promise.resolve({ error: null })),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } }
+      })),
     }
   }
 }));
@@ -61,11 +64,7 @@ describe('Password Management', () => {
 
   describe('Login Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -73,11 +72,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility when clicking eye icon', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -97,11 +92,7 @@ describe('Password Management', () => {
     });
 
     it('should render forgot password link', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      render(<Login />);
 
       const forgotLink = screen.getByText('Mot de passe oublié?');
       expect(forgotLink).toBeInTheDocument();
@@ -111,11 +102,7 @@ describe('Password Management', () => {
 
   describe('Signup Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -123,11 +110,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -146,11 +129,7 @@ describe('Password Management', () => {
 
   describe('ForgotPassword Page', () => {
     it('should render email input and submit button', () => {
-      render(
-        <BrowserRouter>
-          <ForgotPassword />
-        </BrowserRouter>
-      );
+      render(<ForgotPassword />);
 
       expect(screen.getByPlaceholderText('ton@email.com')).toBeInTheDocument();
       expect(screen.getByText('Envoyer le lien de réinitialisation')).toBeInTheDocument();
@@ -163,11 +142,7 @@ describe('Password Management', () => {
         error: null 
       });
 
-      render(
-        <BrowserRouter>
-          <ForgotPassword />
-        </BrowserRouter>
-      );
+      render(<ForgotPassword />);
 
       const emailInput = screen.getByPlaceholderText('ton@email.com');
       const submitButton = screen.getByText('Envoyer le lien de réinitialisation');
@@ -186,11 +161,7 @@ describe('Password Management', () => {
       // Mock URL search params
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      render(<ResetPassword />);
 
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       expect(passwordInputs).toHaveLength(2);
@@ -201,11 +172,7 @@ describe('Password Management', () => {
     it('should validate password matching', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      render(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -222,11 +189,7 @@ describe('Password Management', () => {
     it('should validate minimum password length', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      render(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -243,11 +206,7 @@ describe('Password Management', () => {
     it('should show error for invalid token', async () => {
       window.history.pushState({}, '', '/reset-password?token=invalid');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      render(<ResetPassword />);
 
       await waitFor(() => {
         expect(screen.getByText(/Lien de réinitialisation invalide ou expiré/)).toBeInTheDocument();
@@ -257,11 +216,7 @@ describe('Password Management', () => {
 
   describe('Accessibility', () => {
     it('should have proper aria-labels on password toggle buttons', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      render(<Login />);
 
       const toggleButtons = screen.getAllByRole('button');
       const toggleButton = toggleButtons.find(btn => 

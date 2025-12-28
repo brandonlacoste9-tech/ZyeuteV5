@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGuestMode } from './useGuestMode';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '../lib/constants';
+import { GuestModeProvider } from '../contexts/GuestModeContext';
 
 describe('useGuestMode', () => {
   beforeEach(() => {
@@ -15,7 +16,7 @@ describe('useGuestMode', () => {
   });
 
   it('should initialize with default state when no guest mode is active', () => {
-    const { result } = renderHook(() => useGuestMode());
+    const { result } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     expect(result.current.isGuest).toBe(false);
     expect(result.current.isExpired).toBe(false);
@@ -29,7 +30,7 @@ describe('useGuestMode', () => {
     localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
     localStorage.setItem(GUEST_VIEWS_KEY, '2');
 
-    const { result } = renderHook(() => useGuestMode());
+    const { result } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     expect(result.current.isGuest).toBe(true);
     expect(result.current.isExpired).toBe(false);
@@ -44,7 +45,7 @@ describe('useGuestMode', () => {
     localStorage.setItem(GUEST_TIMESTAMP_KEY, expiredTimestamp.toString());
     localStorage.setItem(GUEST_VIEWS_KEY, '5');
 
-    const { result } = renderHook(() => useGuestMode());
+    const { result } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     expect(result.current.isGuest).toBe(false);
     expect(result.current.isExpired).toBe(true);
@@ -62,7 +63,7 @@ describe('useGuestMode', () => {
     localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
     localStorage.setItem(GUEST_VIEWS_KEY, '0');
 
-    const { result } = renderHook(() => useGuestMode());
+    const { result } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     expect(result.current.viewsCount).toBe(0);
     
@@ -82,7 +83,7 @@ describe('useGuestMode', () => {
   });
 
   it('should provide stable incrementViews function reference', () => {
-    const { result, rerender } = renderHook(() => useGuestMode());
+    const { result, rerender } = renderHook(() => useGuestMode(), { wrapper: GuestModeProvider });
     
     const firstIncrementViews = result.current.incrementViews;
     rerender();

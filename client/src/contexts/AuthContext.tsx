@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: sessionUser.email,
                 role: 'citoyen', // Default
                 created_at: new Date().toISOString()
-            } as User;
+            } as unknown as User;
         } catch (e) {
             console.error('Error fetching full profile:', e);
             return null;
