@@ -12,6 +12,8 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { usePresence } from '@/hooks/usePresence';
 import { toast } from '../Toast';
 import { cn } from '../../lib/utils';
+import { InteractiveText } from '../InteractiveText';
+import { TiGuyInsight } from '../TiGuyInsight';
 import type { Post, User } from '../../types';
 
 interface VideoCardProps {
@@ -185,6 +187,19 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         {/* Gold accent lines */}
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
+
+        {/* Moderation Overlay (Phase 9) */}
+        {post.is_moderated && !post.moderation_approved && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4 border border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+              <span className="text-3xl">🛡️</span>
+            </div>
+            <h3 className="text-red-400 font-bold mb-2 uppercase tracking-widest text-sm">Contenu masqué</h3>
+            <p className="text-stone-400 text-xs leading-relaxed">
+              Cette publication ne respecte pas les standards de sécurité de Zyeuté.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Actions Bar */}
@@ -271,6 +286,16 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             </svg>
           </button>
         </div>
+        
+        {/* Ti-Guy AI Insight */}
+        {post.ai_description && (
+          <div className="px-4 pb-1">
+            <TiGuyInsight 
+              summary={post.ai_description} 
+              labels={post.ai_labels || []} 
+            />
+          </div>
+        )}
 
         {/* Caption - sanitized for XSS protection */}
         {post.caption && (
@@ -281,14 +306,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <Link to={`/profile/${userToUse.username}`} className="font-bold text-gold-400 hover:text-gold-300 mr-2">
               {userToUse.username}
             </Link>
-            <span
+            <InteractiveText 
+              text={post.caption} 
               className="text-stone-300"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(post.caption, {
-                  ALLOWED_TAGS: ['b', 'i', 'em', 'strong'],
-                  ALLOWED_ATTR: []
-                })
-              }}
             />
           </div>
         )}
@@ -331,6 +351,7 @@ export const VideoCard = React.memo(VideoCardComponent, (prevProps, nextProps) =
     prevProps.post.id === nextProps.post.id &&
     prevProps.post.fire_count === nextProps.post.fire_count &&
     prevProps.post.is_fired === nextProps.post.is_fired &&
+    prevProps.post.ai_description === nextProps.post.ai_description &&
     (prevProps.user?.id === nextProps.user?.id) &&
     prevProps.variant === nextProps.variant &&
     prevProps.autoPlay === nextProps.autoPlay &&

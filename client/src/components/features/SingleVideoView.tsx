@@ -10,6 +10,8 @@ import { Avatar } from '../Avatar';
 import { Image } from '../Image';
 import { useHaptics } from '@/hooks/useHaptics';
 import { usePresence } from '@/hooks/usePresence';
+import { InteractiveText } from '../InteractiveText';
+import { TiGuyInsight } from '../TiGuyInsight';
 import type { Post, User } from '@/types';
 
 interface SingleVideoViewProps {
@@ -222,6 +224,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
 
       {/* Bottom Content Area */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-20">
+        {/* Ti-Guy Insight */}
+        {post.ai_description && (
+          <div className="mb-4">
+            <TiGuyInsight 
+              summary={post.ai_description} 
+              labels={post.ai_labels || []} 
+            />
+          </div>
+        )}
+
         {/* Caption */}
         {post.caption && (
           <div className="mb-4">
@@ -232,9 +244,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
             >
               {user.username}
             </Link>
-            <span className="text-white text-sm leading-relaxed">
-              {post.caption}
-            </span>
+            <InteractiveText text={post.caption} className="text-white text-sm leading-relaxed" />
           </div>
         )}
 

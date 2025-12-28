@@ -46,7 +46,7 @@ export const regionEnum = pgEnum('region', [
 export const giftTypeEnum = pgEnum('gift_type', [
   'comete', 'feuille_erable', 'fleur_de_lys', 'feu', 'coeur_or'
 ]);
-export const roleEnum = pgEnum('user_role', ['visitor', 'citoyen', 'moderator', 'founder']);
+export const roleEnum = pgEnum('user_role', ['visitor', 'citoyen', 'moderator', 'founder', 'banned']);
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
@@ -68,6 +68,7 @@ export const users = pgTable("user_profiles", {
   regionId: text("region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  tiGuyCommentsEnabled: boolean("ti_guy_comments_enabled").default(true),
 });
 
 // Posts Table mapped to publications
@@ -93,6 +94,10 @@ export const posts = pgTable("publications", {
   lastEmbeddedAt: timestamp("last_embedded_at"),
   transcription: text("transcription"),
   transcribedAt: timestamp("transcribed_at"),
+  aiDescription: text("ai_description"), // Ti-Guy's summary
+  aiLabels: jsonb("ai_labels").default([]), // AI generated tags
+  viralScore: integer("viral_score").default(0), // Le Buzz Predictor
+  safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
   isModerated: boolean("is_moderated").default(false),
   moderationApproved: boolean("moderation_approved").default(true),
   moderationScore: integer("moderation_score").default(0),
@@ -243,6 +248,7 @@ export const notifications = pgTable("notifications", {
   fromUserId: uuid("from_user_id").references(() => users.id, { onDelete: 'cascade' }),
   postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
   commentId: uuid("comment_id").references(() => comments.id, { onDelete: 'cascade' }),
+  storyId: uuid("story_id").references(() => stories.id, { onDelete: 'cascade' }),
   message: text("message"),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -251,6 +257,21 @@ export const notifications = pgTable("notifications", {
   postIdIdx: index("notifications_post_id_idx").on(table.postId),
   fromUserIdIdx: index("notifications_from_user_id_idx").on(table.fromUserId),
   isReadIdx: index("notifications_is_read_idx").on(table.isRead),
+}));
+
+// Moderation Logs - Audit trail for bans and flags
+export const moderationLogs = pgTable("moderation_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
+  action: text("action").notNull(), // 'ban', 'warn', 'flag', 'hide'
+  reason: text("reason").notNull(),
+  details: text("details"),
+  score: integer("score"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("moderation_logs_user_id_idx").on(table.userId),
+  actionIdx: index("moderation_logs_action_idx").on(table.action),
 }));
 
 // Relations
@@ -301,7 +322,7 @@ export const upsertUserSchema = z.object({
 export const insertPostSchema = createInsertSchema(posts, {
   caption: z.string().max(2200).optional(),
   content: z.string().min(1).max(5000), // Map to required 'content' column
-}).omit({ id: true, createdAt: true, fireCount: true, commentCount: true, isHidden: true, deletedAt: true });
+}).omit({ id: true, createdAt: true, fireCount: true, commentCount: true, deletedAt: true });
 
 export const insertCommentSchema = createInsertSchema(comments, {
   content: z.string().min(1).max(500),
@@ -377,3 +398,55 @@ export const colonyTasks = pgTable("colony_tasks", {
 }));
 
 export type ColonyTask = typeof colonyTasks.$inferSelect;
+
+// Agent Memories - Core of "The Elephant" (Long-term Memory)
+export const agentMemories = pgTable("agent_memories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  content: text("content").notNull(),
+  importance: integer("importance").default(1), // 1-10
+  embedding: vector("embedding", { dimensions: 384 }), // For semantic recall
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_agent_memories_user_id").on(table.userId),
+  embeddingIdx: index("idx_agent_memories_embedding").using("hnsw", table.embedding),
+}));
+
+export type AgentMemory = typeof agentMemories.$inferSelect;
+
+// Agent Traces - "The Flight Recorder" (Observability)
+export const agentTraces = pgTable("agent_traces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  taskId: uuid("task_id"), // Optional link to colony_tasks
+  agentId: text("agent_id").notNull(),
+  traceType: text("trace_type").notNull(), // 'thought', 'tool_call', 'error', 'result'
+  content: text("content").notNull(),
+  metadata: jsonb("metadata"), // token usage, latency, tool args
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  agentIdIdx: index("idx_agent_traces_agent_id").on(table.agentId),
+  taskIdIdx: index("idx_agent_traces_task_id").on(table.taskId),
+  createdAtIdx: index("idx_agent_traces_created_at").on(table.createdAt),
+}));
+
+export type AgentTrace = typeof agentTraces.$inferSelect;
+
+// Agent Facts - "The Gold Nuggets" (Distilled Knowledge)
+export const agentFacts = pgTable("agent_facts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  category: text("category").notNull(), // 'preference', 'bio', 'history', 'relationship'
+  content: text("content").notNull(),
+  confidence: customType<{ data: number }>({
+    dataType() { return "decimal(3,2)"; } // 0.00 to 1.00
+  })("confidence").default({ data: 1.0 }),
+  sourceMemoryId: uuid("source_memory_id").references(() => agentMemories.id, { onDelete: 'set null' }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("idx_agent_facts_user_id").on(table.userId),
+  categoryIdx: index("idx_agent_facts_category").on(table.category),
+}));
+
+export type AgentFact = typeof agentFacts.$inferSelect;

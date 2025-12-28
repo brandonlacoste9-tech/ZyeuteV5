@@ -74,11 +74,16 @@ export const CommunityGuidelines: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
-                <h3 className="text-red-400 font-bold mb-2">🚫 Exploitation de Mineurs</h3>
-                <p className="text-white/70 mb-2">
-                  TOLÉRANCE ZÉRO. Tout contenu d&apos;exploitation de mineurs entraîne un bannissement
-                  permanent immédiat et signalement aux autorités.
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 shadow-[0_0_20px_rgba(239,68,68,0.05)]">
+                <h3 className="text-red-400 font-bold mb-2">🚫 Exploitation et Sécurité des Mineurs</h3>
+                <p className="text-white/70 mb-4 leading-relaxed">
+                  Zyeuté applique une politique de <strong className="text-red-400 uppercase tracking-wider">tolérance zéro</strong> concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.
+                </p>
+                <div className="bg-black/40 rounded-lg p-4 border-l-4 border-red-500 mb-4 text-sm text-stone-300">
+                  Toute tentative détectée entraîne la suppression immédiate du contenu, la désactivation permanente du compte et le signalement interne requis par nos protocoles de sécurité. Les utilisateurs sont entièrement responsables du contenu qu’ils créent et partagent.
+                </div>
+                <p className="text-white/50 text-sm italic">
+                  Zyeuté se réserve le droit de retirer tout contenu ou de suspendre tout compte contrevenant à ces standards de sécurité ou aux lois applicables.
                 </p>
               </div>
 

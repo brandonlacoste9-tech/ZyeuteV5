@@ -24,7 +24,7 @@ export type Notification = z.infer<typeof NotificationSchema>;
 export type Story = z.infer<typeof StorySchema>;
 
 // User Role Alias
-export type UserRole = 'visitor' | 'citoyen' | 'moderator' | 'founder';
+export type UserRole = 'visitor' | 'citoyen' | 'moderator' | 'founder' | 'banned';
 
 // Follow interface (might need schema later, simple for now)
 export interface Follow {
@@ -50,6 +50,7 @@ export interface UpdateProfileInput {
   avatar_url?: string;
   city?: string;
   region?: string;
+  tiGuyCommentsEnabled?: boolean;
 }
 
 export interface LoginInput {

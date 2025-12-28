@@ -5,7 +5,8 @@
 
 import { v3Mod } from '../../v3-swarm.js';
 
-export async function run(payload: any) {
+export async function run(task: any) {
+    const payload = task.payload || {};
     const content = payload.content || payload.text || '';
 
     console.log('[Moderation] Checking content:', content.substring(0, 50));

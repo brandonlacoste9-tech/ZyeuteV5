@@ -164,6 +164,7 @@ export async function createPost(postData: {
   hashtags?: string[];
   region?: string;
   visibility?: string;
+  visualFilter?: string;
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>('/posts', {
     method: 'POST',
@@ -378,6 +379,8 @@ function mapBackendUser(user: Record<string, any>): User {
     // RBAC Fields
     role: user.role || 'citoyen',
     custom_permissions: user.custom_permissions || {},
+    // Ti-Guy Preferences
+    tiGuyCommentsEnabled: user.tiGuyCommentsEnabled !== undefined ? user.tiGuyCommentsEnabled : (user.ti_guy_comments_enabled !== undefined ? user.ti_guy_comments_enabled : true),
   } as User;
 }
 

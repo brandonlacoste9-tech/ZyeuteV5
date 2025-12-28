@@ -20,6 +20,9 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     'action.comment': 'Commenter',
     'action.gift': 'Offrir un cadeau',
     'onboarding.complete': 'C\'est parti !',
+    'view.banned_account': 'Compte suspendu pour violation grave des règles de sécurité.',
+    'view.banned_message': 'Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs. Toute tentative détectée entraîne la désactivation permanente du compte.',
+    'safety.zero_tolerance_full': 'Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs. Toute tentative détectée entraîne la suppression immédiate du contenu, la désactivation permanente du compte et le signalement interne requis par nos protocoles de sécurité. Les utilisateurs sont entièrement responsables du contenu qu’ils créent et partagent.',
   },
   'es-MX': {
     'nav.feed': 'Noticias',

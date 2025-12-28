@@ -5,7 +5,8 @@
 
 import { v3TiGuy } from '../../v3-swarm.js';
 
-export async function run(payload: any) {
+export async function run(task: any) {
+    const payload = task.payload || {};
     const context = payload.context || payload.prompt || 'a beautiful Quebec scene';
 
     console.log('[Studio Caption] Generating caption for:', context);

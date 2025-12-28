@@ -22,10 +22,11 @@ interface RBACContextType {
 const RBACContext = createContext<RBACContextType | undefined>(undefined);
 
 // Role Hierarchy: Higher index = more power
-const ROLE_HIERARCHY: UserRole[] = ['visitor', 'citoyen', 'moderator', 'founder'];
+const ROLE_HIERARCHY: UserRole[] = ['banned', 'visitor', 'citoyen', 'moderator', 'founder'];
 
 // Implicit Permissions
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+    banned: [],
     visitor: ['view_feed'],
     citoyen: ['view_feed', 'create_post', 'comment', 'like'],
     moderator: ['view_feed', 'create_post', 'comment', 'like', 'moderate_content'],

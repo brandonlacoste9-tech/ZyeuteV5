@@ -4,7 +4,7 @@ import { z } from 'zod';
 // User Schema
 // ==========================================
 
-export const UserRoleSchema = z.enum(['visitor', 'citoyen', 'moderator', 'founder']);
+export const UserRoleSchema = z.enum(['visitor', 'citoyen', 'moderator', 'founder', 'banned']);
 
 const BaseUserSchema = z.object({
   id: z.string(),
@@ -38,6 +38,10 @@ const BaseUserSchema = z.object({
   // RBAC
   role: UserRoleSchema.optional(),
   custom_permissions: z.record(z.boolean()).optional(),
+  
+  // Ti-Guy Preferences
+  tiGuyCommentsEnabled: z.boolean().default(true),
+  ti_guy_comments_enabled: z.boolean().optional(), // Compat
 }).strict();
 
 export const UserSchema = z.preprocess((val: any) => {
@@ -79,6 +83,10 @@ export const UserSchema = z.preprocess((val: any) => {
     
     role: val.role || 'citoyen',
     custom_permissions: val.custom_permissions || {},
+    
+    // Ti-Guy
+    tiGuyCommentsEnabled: val.tiGuyCommentsEnabled !== undefined ? val.tiGuyCommentsEnabled : (val.ti_guy_comments_enabled !== undefined ? val.ti_guy_comments_enabled : true),
+    ti_guy_comments_enabled: val.tiGuyCommentsEnabled !== undefined ? val.tiGuyCommentsEnabled : (val.ti_guy_comments_enabled !== undefined ? val.ti_guy_comments_enabled : true),
   };
 }, BaseUserSchema);
 
@@ -226,6 +234,16 @@ const PostBase = z.object({
   // Computed
   is_fired: z.boolean().optional(),
   fire_level: z.number().optional(), 
+  
+  // Moderation (Phase 9)
+  is_moderated: z.boolean().default(false),
+  moderation_approved: z.boolean().default(true),
+  is_hidden: z.boolean().default(false),
+  // AI Enrichment (Phase 9 Upgrade)
+  ai_description: z.string().nullable().optional(),
+  aiDescription: z.string().nullable().optional(), // Compat
+  ai_labels: z.array(z.string()).nullable().optional(),
+  aiLabels: z.array(z.string()).nullable().optional(), // Compat
 });
 
 const PhotoPost = PostBase.extend({
@@ -289,7 +307,18 @@ export const PostSchema = z.preprocess((val: any) => {
         region: val.region_id || val.region,
         city: val.city,
         // Ensure processing status defaults if video
-        processing_status: val.processing_status || (type === 'video' ? 'ready' : undefined)
+        processing_status: val.processing_status || (type === 'video' ? 'ready' : undefined),
+        
+        // Moderation
+        is_moderated: val.is_moderated || val.isModerated || false,
+        moderation_approved: val.moderation_approved !== undefined ? val.moderation_approved : (val.moderationApproved !== undefined ? val.moderationApproved : true),
+        is_hidden: val.est_masque || val.isHidden || val.is_hidden || false,
+        
+        // AI Enrichment
+        ai_description: val.ai_description || val.aiDescription,
+        aiDescription: val.ai_description || val.aiDescription,
+        ai_labels: val.ai_labels || val.aiLabels || [],
+        aiLabels: val.ai_labels || val.aiLabels || [],
     };
 }, BasePostSchema);
 
@@ -300,15 +329,17 @@ export type Post = z.infer<typeof BasePostSchema>;
 // Notification Schema (depends on Post/User)
 // ==========================================
 
-export const NotificationTypeEnum = z.enum(['fire', 'comment', 'follow', 'gift', 'mention']);
+export const NotificationTypeEnum = z.enum(['fire', 'comment', 'follow', 'gift', 'mention', 'story_view']);
 
-export const NotificationSchema = z.object({
+const BaseNotificationSchema = z.object({
     id: z.string(),
     user_id: z.string(),
     type: NotificationTypeEnum,
     actor_id: z.string(),
     post_id: z.string().nullable().optional(),
     comment_id: z.string().nullable().optional(),
+    story_id: z.string().nullable().optional(),
+    reference_id: z.string().nullable().optional(),
     is_read: z.boolean().default(false),
     created_at: z.string(),
     
@@ -321,5 +352,23 @@ export const NotificationSchema = z.object({
         type: z.string().optional(),
     }).optional(), 
 }).strict();
+
+export const NotificationSchema = z.preprocess((val: any) => {
+    if (!val || typeof val !== 'object') return val;
+    return {
+        id: val.id,
+        user_id: val.user_id || val.userId,
+        type: val.type,
+        actor_id: val.fromUserId || val.from_user_id || val.actor_id,
+        post_id: val.postId || val.post_id,
+        comment_id: val.commentId || val.comment_id,
+        story_id: val.storyId || val.story_id,
+        reference_id: val.referenceId || val.reference_id,
+        is_read: val.isRead !== undefined ? val.isRead : (val.is_read !== undefined ? val.is_read : false),
+        created_at: val.createdAt || val.created_at || new Date().toISOString(),
+        actor: val.actor || val.fromUser,
+        post: val.post,
+    };
+}, BaseNotificationSchema);
 
 export type Notification = z.infer<typeof NotificationSchema>;

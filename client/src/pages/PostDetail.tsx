@@ -20,6 +20,7 @@ import { logger } from '../lib/logger';
 import { PostDetailSkeleton } from '@/components/ui/Skeleton';
 import { usePrefetchVideo } from '@/hooks/usePrefetchVideo';
 import { Image } from '@/components/Image';
+import { InteractiveText } from '@/components/InteractiveText';
 
 const postDetailLogger = logger.withContext('PostDetail');
 
@@ -239,7 +240,7 @@ export const PostDetail: React.FC = () => {
             {/* Caption */}
             {post.caption && (
               <div className="py-4 border-b border-white/10">
-                <p className="text-white">{post.caption}</p>
+                <InteractiveText text={post.caption} className="text-white" />
                 {post.hashtags && post.hashtags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {post.hashtags.map((tag) => (

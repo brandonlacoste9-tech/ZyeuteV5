@@ -39,6 +39,7 @@ import Signup from '@/pages/Signup';
 import AuthCallback from '@/pages/AuthCallback';
 import ForgotPassword from '@/pages/ForgotPassword';
 import ResetPassword from '@/pages/ResetPassword';
+import Banned from '@/pages/Banned';
 
 // Lazy-loaded Pages
 const Upload = lazy(() => import('@/pages/Upload'));
@@ -103,8 +104,9 @@ const LazyLoadFallback: React.FC = () => (
 );
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   if (isLoading) return <LoadingScreen message={`Chargement de ${AppConfig.identity.name}...`} />;
+  if (user?.role === 'banned') return <Navigate to="/banned" replace />;
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
@@ -140,6 +142,7 @@ function App() {
                                     <MainLayout>
                                       <PageTransition>
                                         <Routes>
+                                          <Route path="/banned" element={<Banned />} />
                                           <Route path="/login" element={<Login />} />
                                           <Route path="/signup" element={<Signup />} />
                                           <Route path="/forgot-password" element={<ForgotPassword />} />
