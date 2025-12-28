@@ -9,6 +9,7 @@ import type { Post, User, Story } from '@/types';
 const apiLogger = logger.withContext('API');
 
 import { supabase } from '@/lib/supabase';
+import { AIImageResponseSchema, type AIImageResponse } from '@/lib/schemas/ai';
 
 // Base API call helper
 async function apiCall<T>(
@@ -198,13 +199,17 @@ export async function toggleCommentFire(commentId: string): Promise<boolean> {
 
 // ============ COMMENTS FUNCTIONS ============
 
+// TODO: Replace 'any' return type with Comment interface from types/index.ts
 export async function getPostComments(postId: string): Promise<any[]> {
+  // TODO: Replace 'any[]' with proper Comment[] type and validate with type guard
   const { data, error } = await apiCall<{ comments: any[] }>(`/posts/${postId}/comments`);
   if (error || !data) return [];
   return data.comments || [];
 }
 
+// TODO: Replace 'any' return type with Comment interface from types/index.ts
 export async function addComment(postId: string, content: string): Promise<any | null> {
+  // TODO: Replace 'any' with proper Comment type and validate with type guard
   const { data, error } = await apiCall<{ comment: any }>(`/posts/${postId}/comments`, {
     method: 'POST',
     body: JSON.stringify({ content }),
@@ -332,14 +337,17 @@ export async function markAllNotificationsRead(): Promise<boolean> {
 
 // ============ AI FUNCTIONS ============
 
-export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<{ imageUrl: string; prompt: string } | null> {
-  const { data, error } = await apiCall<{ imageUrl: string; prompt: string }>('/ai/generate-image', {
+export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<AIImageResponse | null> {
+  const { data, error } = await apiCall<AIImageResponse>('/ai/generate-image', {
     method: 'POST',
     body: JSON.stringify({ prompt, aspectRatio }),
   });
 
   if (error || !data) return null;
-  return data;
+  
+  // Validate with Zod
+  const result = AIImageResponseSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
 
 // ============ HELPER FUNCTIONS ============
@@ -352,6 +360,8 @@ function isVideoUrl(url?: string): boolean {
 }
 
 // Map backend user fields (camelCase) to frontend fields (snake_case where needed)
+// TODO: Replace 'any' type with proper backend response interface
+// TODO: Consider using type guards from types/guards.ts for validation
 function mapBackendUser(user: any): User {
   if (!user) return user;
   return {
@@ -377,6 +387,8 @@ function mapBackendUser(user: any): User {
   } as User;
 }
 
+// TODO: Replace 'any' type with proper backend response interface
+// TODO: Consider using type guards from types/guards.ts for validation
 function mapBackendPost(p: any): Post | null {
     // Return a default safe object or throw/return null if critical data is missing
     if (!p || !p.id) {
@@ -409,6 +421,8 @@ function mapBackendPost(p: any): Post | null {
 }
 
 // Map backend story fields
+// TODO: Replace 'any' type with proper backend response interface
+// TODO: Consider using type guards from types/guards.ts for validation
 function mapBackendStory(story: any): Story {
   if (!story) return story;
   const mediaType = story.mediaType || story.media_type || 'photo';

@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // EMERGENCY FAILSAFE: Force loading to complete after 2s maximum
         const emergencyTimeout = setTimeout(() => {
-            if (mounted && isLoading) {
+            if (mounted) {
                 console.warn('⚠️ EMERGENCY: Forcing UI render after 2 seconds');
                 setIsLoading(false);
             }

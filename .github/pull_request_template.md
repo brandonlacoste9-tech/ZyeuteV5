@@ -1,144 +1,113 @@
 ## Description
 
-<!-- Provide a clear and concise description of what this PR does -->
+<!-- Provide a clear and concise description of your changes -->
 
 ## Type of Change
 
 <!-- Mark the relevant option with an 'x' -->
 
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Performance improvement
-- [ ] Code refactoring
-- [ ] Build/CI configuration
-- [ ] Other (please describe):
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📚 Documentation update
+- [ ] 🎨 Code style/formatting (no functional changes)
+- [ ] ♻️ Code refactoring (no functional changes)
+- [ ] ⚡ Performance improvement
+- [ ] ✅ Test updates
+- [ ] 🔧 Configuration changes
+- [ ] 🔒 Security fix
 
 ## Related Issues
 
 <!-- Link to related issues using #issue_number -->
 
-Closes #
+Fixes #
 Related to #
 
 ## Changes Made
 
-<!-- List the specific changes made in this PR -->
+<!-- List the main changes in bullet points -->
 
--
--
--
+- 
+- 
+- 
 
-## Test Plan
+## Screenshots (if applicable)
 
-<!-- Describe the tests you ran to verify your changes -->
+<!-- Add screenshots to help explain your changes -->
 
-### Manual Testing
-
-- [ ] Tested locally in development environment
-- [ ] Tested in preview deployment
-- [ ] Verified responsive design (mobile, tablet, desktop)
-- [ ] Tested cross-browser compatibility
-
-### Automated Testing
-
-- [ ] Unit tests pass (`npm run test:unit`)
-- [ ] Integration tests pass (`npm run test:integration`)
-- [ ] E2E tests pass (`npm run test:e2e`)
-- [ ] Type checking passes (`npm run check`)
-- [ ] Linting passes (`npm run lint`)
-
-## Screenshots/Videos
-
-<!-- If applicable, add screenshots or videos to demonstrate the changes -->
-
-## Risk Assessment
-
-<!-- Identify potential risks and mitigation strategies -->
-
-### Risk Level
-
-- [ ] Low (minor changes, well-tested)
-- [ ] Medium (moderate changes, some risk)
-- [ ] High (major changes, significant risk)
-
-### Potential Issues
-
-<!-- List any potential issues or concerns -->
-
--
-
-### Mitigation
-
-<!-- Describe how risks are mitigated -->
-
--
-
-## Performance Impact
-
-<!-- Describe any performance implications -->
-
-- [ ] No performance impact
-- [ ] Performance improvement
-- [ ] Potential performance impact (explain below)
-
-## Security Considerations
-
-<!-- Describe any security implications -->
-
-- [ ] No security impact
-- [ ] Security improvement
-- [ ] Requires security review
-
-## Database Migrations
-
-<!-- If applicable, describe database changes -->
-
-- [ ] No database changes
-- [ ] Database migration included
-- [ ] Requires manual migration (document in PR description)
-
-## Environment Variables
-
-<!-- If applicable, list new or changed environment variables -->
-
-- [ ] No environment variable changes
-- [ ] New environment variables added (update .env.example)
-- [ ] Environment variables modified
-
-## Documentation
-
-<!-- Ensure documentation is updated -->
-
-- [ ] README.md updated (if needed)
-- [ ] API documentation updated (if needed)
-- [ ] Comments added to complex code
-- [ ] CHANGELOG.md updated
-
-## Checklist
+## Testing Checklist
 
 <!-- Mark completed items with an 'x' -->
 
-- [ ] My code follows the project's style guidelines
+- [ ] I have tested these changes locally
+- [ ] All existing tests pass (`npm test`)
+- [ ] I have added tests for new functionality
+- [ ] TypeScript compilation succeeds (`npm run check`)
+- [ ] Linting passes (`npm run lint`)
+- [ ] Build succeeds (`npm run build`)
+
+## Code Quality Checklist
+
+- [ ] Code follows the project's style guidelines
 - [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
+- [ ] I have commented complex or non-obvious code
+- [ ] I have updated documentation as needed
+- [ ] My changes generate no new warnings or errors
+- [ ] I have checked for and eliminated `any` types where possible
 
-## Deployment Notes
+## Accessibility Checklist (for UI changes)
 
-<!-- Any special deployment instructions or considerations -->
+- [ ] Keyboard navigation tested
+- [ ] Screen reader tested (NVDA/VoiceOver)
+- [ ] Color contrast meets WCAG 2.1 AA standards (4.5:1 minimum)
+- [ ] Focus indicators are visible
+- [ ] Semantic HTML used appropriately
+- [ ] ARIA attributes added where necessary
 
-## Rollback Plan
+## Security Checklist
 
-<!-- How to rollback if this PR causes issues -->
+- [ ] No sensitive data (API keys, passwords, tokens) in code
+- [ ] Input validation implemented where needed
+- [ ] SQL injection prevention verified (parameterized queries)
+- [ ] XSS prevention verified (sanitized outputs)
+- [ ] CSRF protection maintained
+- [ ] Authentication/authorization checks in place
+
+## Deployment Checklist
+
+- [ ] Environment variables documented (if new ones added)
+- [ ] Database migrations included (if schema changed)
+- [ ] README updated (if setup/deployment process changed)
+- [ ] CHANGELOG.md updated
+- [ ] No breaking changes to existing APIs (or documented if unavoidable)
+
+## Vercel Preview Deployment
+
+<!-- This section will be auto-populated by Vercel bot -->
+<!-- Ensure preview deployment succeeds before requesting review -->
+
+- [ ] Preview deployment successful
+- [ ] Preview tested manually
+
+## Additional Notes
+
+<!-- Any additional information that reviewers should know -->
+
+## Pre-commit Hooks
+
+<!-- These should run automatically via Husky -->
+
+- [ ] Pre-commit hooks passed (lint-staged)
 
 ---
 
-**Note to Reviewers:**
+**Reviewer Guidelines:**
+- Verify all checkboxes are completed appropriately
+- Test the preview deployment
+- Check for code quality and adherence to standards
+- Ensure test coverage is maintained or improved
+- Validate security considerations
 
-<!-- Any specific areas you'd like reviewers to focus on -->
+**For Contributors:**
+Please ensure you have read [CONTRIBUTING.md](../CONTRIBUTING.md) before submitting this PR.

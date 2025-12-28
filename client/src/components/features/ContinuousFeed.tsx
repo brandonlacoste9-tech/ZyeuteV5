@@ -16,9 +16,14 @@ interface RowData {
   handleShare: (postId: string) => Promise<void>;
 }
 
-interface ListChildComponentProps extends RowData {
+interface FeedRowProps extends RowData {
   index: number;
   style: React.CSSProperties;
+  ariaAttributes?: {
+    "aria-posinset": number;
+    "aria-setsize": number;
+    role: "listitem";
+  };
 }
 
 import AutoSizer from 'react-virtualized-auto-sizer';
@@ -36,7 +41,15 @@ interface ContinuousFeedProps {
     onVideoChange?: (index: number, post: Post) => void;
 }
 
-const FeedRow = memo(({ index, style, posts, currentIndex, handleFireToggle, handleComment, handleShare }: ListChildComponentProps): ReactElement => {
+const FeedRow = memo(({ 
+  index, 
+  style, 
+  posts, 
+  currentIndex, 
+  handleFireToggle, 
+  handleComment, 
+  handleShare 
+}: FeedRowProps): ReactElement => {
     const post = posts[index];
     const isActive = index === currentIndex;
 
@@ -209,7 +222,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
                         style={{ height, width }}
                         rowCount={posts.length}
                         rowHeight={height} // Full screen height per item
-                        rowProps={itemData}
+                        rowProps={itemData as any}
                         rowComponent={FeedRow as any}
                         onRowsRendered={onRowsRendered}
                         overscanCount={1} // Only render 1 item above/below viewport

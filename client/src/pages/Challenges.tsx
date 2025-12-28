@@ -3,7 +3,7 @@
  * Gamified content creation with rewards
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
 import { BottomNav } from '../components/BottomNav';
 import { Button } from '../components/Button';
@@ -38,12 +38,7 @@ export default function Challenges() {
   const [selectedType, setSelectedType] = useState<'all' | 'daily' | 'weekly' | 'seasonal'>('all');
   const [totalPoints, setTotalPoints] = useState(0);
 
-  useEffect(() => {
-    loadChallenges();
-    loadUserProgress();
-  }, [selectedType]);
-
-  const loadChallenges = async () => {
+  const loadChallenges = useCallback(async () => {
     try {
       let query = supabase
         .from('daily_challenges')
@@ -65,9 +60,9 @@ export default function Challenges() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedType]);
 
-  const loadUserProgress = async () => {
+  const loadUserProgress = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -94,7 +89,12 @@ export default function Challenges() {
     } catch (error) {
       challengesLogger.error('Error loading progress:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadChallenges();
+    loadUserProgress();
+  }, [loadChallenges, loadUserProgress]);
 
   const handleClaimReward = async (challenge: Challenge) => {
     const progress = userProgress.get(challenge.id);
