@@ -81,12 +81,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
   };
 
   // Deep Enhance: Select best video source
-  const videoSrc = (post.processing_status === 'ready' && post.enhanced_url) 
+  const isVideo = post.type === 'video';
+  const videoSrc = (isVideo && post.processing_status === 'ready' && post.enhanced_url) 
     ? post.enhanced_url 
-    : (post.media_url || post.original_url || '');
+    : (post.media_url || (isVideo ? post.original_url : '') || '');
 
   // Deep Enhance: Visual Filters
-  const filterStyle = post.visual_filter && post.visual_filter !== 'none' 
+  const filterStyle = isVideo && post.visual_filter && post.visual_filter !== 'none' 
     ? { filter: post.visual_filter } 
     : {};
 
@@ -136,13 +137,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
 
       {/* Deep Enhance Status Badge (Top Right) */}
       <div className="absolute top-16 right-4 z-20 flex flex-col gap-2 items-end">
-         {post.processing_status === 'ready' && post.enhanced_url && (
+         {post.type === 'video' && post.processing_status === 'ready' && post.enhanced_url && (
             <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                <span>✨</span>
                <span>4K ULTRA</span>
             </div>
          )}
-         {post.processing_status === 'processing' && (
+         {post.type === 'video' && post.processing_status === 'processing' && (
             <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
                <span className="animate-spin">⚙️</span>
                <span>Enhancing...</span>
@@ -327,7 +328,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
         prevProps.isActive === nextProps.isActive &&
         prevProps.post.fire_count === nextProps.post.fire_count &&
         prevProps.post.comment_count === nextProps.post.comment_count &&
-        prevProps.post.processing_status === nextProps.post.processing_status
+        prevProps.post.comment_count === nextProps.post.comment_count &&
+        ((prevProps.post.type === 'video' && nextProps.post.type === 'video') ? 
+            prevProps.post.processing_status === nextProps.post.processing_status : 
+            true)
     );
 });
 

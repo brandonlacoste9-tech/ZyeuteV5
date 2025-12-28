@@ -9,7 +9,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../Button';
 import { cn } from '../../lib/utils';
 import tiGuyEmblem from '@assets/TI-GUY_NEW_SHARP_1765507001190.jpg';
-import { TiGuyChatResponseSchema } from '../../lib/schemas/ai';
+import { TiGuyChatResponseSchema } from '../../schemas/ai';
 
 interface Message {
   id: string;

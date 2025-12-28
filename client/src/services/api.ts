@@ -9,7 +9,7 @@ import type { Post, User, Story, Comment, Notification } from '@/types';
 const apiLogger = logger.withContext('API');
 
 import { supabase } from '@/lib/supabase';
-import { AIImageResponseSchema, type AIImageResponse } from '@/lib/schemas/ai';
+import { AIImageResponseSchema, type AIImageResponse } from '@/schemas/ai';
 
 // Base API call helper
 async function apiCall<T>(
