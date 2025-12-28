@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../../contexts/AuthContext';
 import Login from '../Login';
 import Signup from '../Signup';
 import ForgotPassword from '../ForgotPassword';
@@ -20,8 +21,21 @@ vi.mock('../../lib/supabase', () => ({
       signUp: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
       resetPasswordForEmail: vi.fn(() => Promise.resolve({ error: null })),
       updateUser: vi.fn(() => Promise.resolve({ error: null })),
+      onAuthStateChange: vi.fn(() => ({
+        data: { subscription: { unsubscribe: vi.fn() } }
+      }))
     }
   }
+}));
+
+// Mock getUserProfile API call
+vi.mock('../../services/api', () => ({
+  getUserProfile: vi.fn(() => Promise.resolve(null))
+}));
+
+// Mock admin check
+vi.mock('../../lib/admin', () => ({
+  checkIsAdmin: vi.fn(() => Promise.resolve(false))
 }));
 
 // Mock logger
@@ -54,6 +68,17 @@ vi.mock('../../lib/constants', () => ({
   GUEST_VIEWS_KEY: 'zyeute_guest_views_count'
 }));
 
+// Helper function to render components with providers
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
 describe('Password Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,11 +86,7 @@ describe('Password Management', () => {
 
   describe('Login Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -73,11 +94,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility when clicking eye icon', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -97,11 +114,7 @@ describe('Password Management', () => {
     });
 
     it('should render forgot password link', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const forgotLink = screen.getByText('Mot de passe oublié?');
       expect(forgotLink).toBeInTheDocument();
@@ -111,11 +124,7 @@ describe('Password Management', () => {
 
   describe('Signup Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -123,11 +132,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -257,11 +262,7 @@ describe('Password Management', () => {
 
   describe('Accessibility', () => {
     it('should have proper aria-labels on password toggle buttons', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const toggleButtons = screen.getAllByRole('button');
       const toggleButton = toggleButtons.find(btn => 
