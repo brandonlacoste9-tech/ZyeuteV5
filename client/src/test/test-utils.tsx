@@ -64,6 +64,17 @@ export function renderWithProviders(
  * Returns a mock object that mimics the Supabase auth API
  */
 export const createMockSupabaseClient = () => {
+  const mockChain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    update: vi.fn().mockResolvedValue({ data: null, error: null }),
+    delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+
   return {
     auth: {
       getSession: vi.fn().mockResolvedValue({
@@ -83,13 +94,7 @@ export const createMockSupabaseClient = () => {
         error: null,
       }),
     },
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-    update: vi.fn().mockResolvedValue({ data: null, error: null }),
-    delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+    from: vi.fn().mockReturnValue(mockChain),
   };
 };
 
@@ -121,6 +126,15 @@ export const createMockSession = (overrides = {}) => {
   };
 };
 
-// Re-export everything from @testing-library/react
-export * from '@testing-library/react';
+// Re-export commonly used testing utilities
+export {
+  screen,
+  waitFor,
+  within,
+  act,
+  fireEvent,
+  cleanup,
+  renderHook,
+  waitForElementToBeRemoved,
+} from '@testing-library/react';
 export { default as userEvent } from '@testing-library/user-event';
