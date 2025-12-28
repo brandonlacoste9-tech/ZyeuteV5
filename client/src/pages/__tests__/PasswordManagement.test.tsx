@@ -10,6 +10,8 @@ import Login from '../Login';
 import Signup from '../Signup';
 import ForgotPassword from '../ForgotPassword';
 import ResetPassword from '../ResetPassword';
+import { FactoryThemeProvider } from '../../providers/FactoryThemeProvider';
+import { AppConfig } from '../../config/factory';
 
 // Mock Supabase
 vi.mock('../../lib/supabase', () => ({
@@ -78,11 +80,13 @@ vi.mock('../../lib/constants', () => ({
 // Helper function to render components with providers
 const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
-      <AuthProvider>
-        {component}
-      </AuthProvider>
-    </BrowserRouter>
+    <FactoryThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          {component}
+        </AuthProvider>
+      </BrowserRouter>
+    </FactoryThemeProvider>
   );
 };
 
@@ -94,7 +98,6 @@ describe('Password Management', () => {
   describe('Login Page', () => {
     it('should render password input with toggle button', () => {
       renderWithProviders(<Login />);
-      render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -103,7 +106,6 @@ describe('Password Management', () => {
 
     it('should toggle password visibility when clicking eye icon', () => {
       renderWithProviders(<Login />);
-      render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -124,7 +126,6 @@ describe('Password Management', () => {
 
     it('should render forgot password link', () => {
       renderWithProviders(<Login />);
-      render(<Login />);
 
       const forgotLink = screen.getByText('Mot de passe oublié?');
       expect(forgotLink).toBeInTheDocument();
@@ -135,7 +136,6 @@ describe('Password Management', () => {
   describe('Signup Page', () => {
     it('should render password input with toggle button', () => {
       renderWithProviders(<Signup />);
-      render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -144,7 +144,6 @@ describe('Password Management', () => {
 
     it('should toggle password visibility', () => {
       renderWithProviders(<Signup />);
-      render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -163,7 +162,7 @@ describe('Password Management', () => {
 
   describe('ForgotPassword Page', () => {
     it('should render email input and submit button', () => {
-      render(<ForgotPassword />);
+      renderWithProviders(<ForgotPassword />);
 
       expect(screen.getByPlaceholderText('ton@email.com')).toBeInTheDocument();
       expect(screen.getByText('Envoyer le lien de réinitialisation')).toBeInTheDocument();
@@ -176,7 +175,7 @@ describe('Password Management', () => {
         error: null 
       });
 
-      render(<ForgotPassword />);
+      renderWithProviders(<ForgotPassword />);
 
       const emailInput = screen.getByPlaceholderText('ton@email.com');
       const submitButton = screen.getByText('Envoyer le lien de réinitialisation');
@@ -195,7 +194,7 @@ describe('Password Management', () => {
       // Mock URL search params
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(<ResetPassword />);
+      renderWithProviders(<ResetPassword />);
 
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       expect(passwordInputs).toHaveLength(2);
@@ -206,7 +205,7 @@ describe('Password Management', () => {
     it('should validate password matching', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(<ResetPassword />);
+      renderWithProviders(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -223,7 +222,7 @@ describe('Password Management', () => {
     it('should validate minimum password length', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(<ResetPassword />);
+      renderWithProviders(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -240,7 +239,7 @@ describe('Password Management', () => {
     it('should show error for invalid token', async () => {
       window.history.pushState({}, '', '/reset-password?token=invalid');
 
-      render(<ResetPassword />);
+      renderWithProviders(<ResetPassword />);
 
       await waitFor(() => {
         expect(screen.getByText(/Lien de réinitialisation invalide ou expiré/)).toBeInTheDocument();
@@ -251,7 +250,6 @@ describe('Password Management', () => {
   describe('Accessibility', () => {
     it('should have proper aria-labels on password toggle buttons', () => {
       renderWithProviders(<Login />);
-      render(<Login />);
 
       const toggleButtons = screen.getAllByRole('button');
       const toggleButton = toggleButtons.find(btn => 

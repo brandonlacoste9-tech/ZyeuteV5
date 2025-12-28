@@ -138,6 +138,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
 
     // Initialize from saved state or defaults
     const savedState = getFeedState(stateKey);
+
+    // Scroll Velocity Tracking
+    const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
     
     // We use a ref for posts to ensure the cleanup function has the latest value
     // without triggering excessive re-renders/saves during normal operation
@@ -313,9 +316,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
             </div>
         );
     }
-
-    // Scroll Velocity Tracking
-    const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
 
     // Data object passed to rows
     const itemData: RowData = {

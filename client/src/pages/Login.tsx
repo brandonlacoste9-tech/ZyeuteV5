@@ -12,13 +12,16 @@ import { logger } from '../lib/logger';
 import copy from '../lib/copy';
 import { GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '../lib/constants';
 import { getCurrentUser, signIn, signInWithGoogle } from '../lib/supabase';
+import { AppConfig } from '@/config/factory';
+import { useTranslation } from '@/i18n';
 
 const loginLogger = logger.withContext('Login');
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-
   const { enterGuestMode } = useAuth();
+  const { t } = useTranslation();
+  const { identity } = AppConfig;
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -273,10 +276,10 @@ export const Login: React.FC = () => {
               letterSpacing: '0.03em',
             }}
           >
-            Zyeuté
+            {identity.name}
           </h1>
-          <p className="text-sm font-bold tracking-[0.3em] mt-2" style={{ color: '#DAA520' }}>
-            L'APP SOCIALE DU QUÉBEC
+          <p className="text-sm font-bold tracking-[0.3em] mt-2 uppercase" style={{ color: 'var(--primary-color)' }}>
+            {identity.tagline}
           </p>
         </div>
 
@@ -480,7 +483,7 @@ export const Login: React.FC = () => {
       </div>
 
       <p className="text-center text-xs mt-8" style={{ color: '#5C4D3C' }}>
-        Fait avec fierté au Québec 🦫⚜️
+        {identity.name} &copy; {new Date().getFullYear()} - {identity.region}
       </p>
     </div>
   );
