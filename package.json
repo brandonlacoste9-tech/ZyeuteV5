@@ -33,7 +33,8 @@
     "test:payments": "playwright test tests/comprehensive/06-payments.spec.ts",
     "test:navigation": "playwright test tests/comprehensive/07-navigation.spec.ts",
     "test:accessibility": "playwright test tests/comprehensive/08-accessibility.spec.ts",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "prepare": "husky"
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.2",
@@ -145,7 +146,9 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.1.0",
     "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
     "jsdom": "^27.3.0",
+    "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
     "prettier": "^3.0.0",
     "tailwindcss": "^4.1.14",
@@ -160,5 +163,14 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   }
 }
