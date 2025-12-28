@@ -1,5 +1,8 @@
 # Zyeuté V5 - Le Réseau Social du Québec ⚜️
 
+[![CI](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/ci.yml/badge.svg)](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/ci.yml)
+[![Test Suite](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/test.yml/badge.svg)](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/test.yml)
+[![Security](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/security.yml/badge.svg)](https://github.com/brandonlacoste9-tech/ZyeuteV5/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.0-646CFF)](https://vitejs.dev/)
