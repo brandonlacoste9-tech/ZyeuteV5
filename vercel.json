@@ -5,6 +5,17 @@
   "installCommand": "npm install --include=dev",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/public",
+  "cacheDirectories": [
+    "node_modules",
+    ".next/cache",
+    "dist"
+  ],
+  "github": {
+    "autoAlias": true,
+    "autoJobCancelation": true,
+    "enabled": true,
+    "silent": false
+  },
   "functions": {
     "api/index.ts": {
       "maxDuration": 30

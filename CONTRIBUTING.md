@@ -23,7 +23,7 @@ Zyeuté V3 is Quebec's premier French social media platform. Whether you're fixi
 git clone https://github.com/{YOUR_GITHUB_USERNAME}/zyeute-v3.git
 cd zyeute-v3
 
-# Install dependencies
+# Install dependencies (this will also set up pre-commit hooks via Husky)
 npm install
 
 # Set up environment variables (copy and configure)
@@ -32,6 +32,14 @@ cp .env.vercel.example .env
 # Run development server
 npm run dev
 ```
+
+**Pre-commit Hooks:**
+This project uses Husky and lint-staged to automatically check your code before commits:
+- TypeScript type checking
+- ESLint for code quality
+- Prettier for code formatting
+
+These checks run automatically when you commit. If they fail, fix the issues before committing.
 
 ### 3. Find Something to Work On
 
@@ -134,9 +142,13 @@ Use our feature request template:
    - Go to the original repository
    - Click "New Pull Request"
    - Select your branch
-   - Fill out the PR template
+   - Fill out the PR template (automatically loaded)
    - Link related issues
+   - Wait for Vercel preview deployment to complete
    - Submit for review
+
+**Important:** Preview deployments are automatically created for each PR via Vercel. 
+Contributors must verify their changes in the preview environment before requesting review.
 
 #### Code Style
 
