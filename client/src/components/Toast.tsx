@@ -21,6 +21,13 @@ const Toast: React.FC<ToastProps> = ({ id, type, message, duration = 3000, onClo
   const [isVisible, setIsVisible] = React.useState(false);
   const [isExiting, setIsExiting] = React.useState(false);
 
+  const handleClose = React.useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose(id);
+    }, 300);
+  }, [id, onClose]);
+
   React.useEffect(() => {
     // Trigger enter animation
     setTimeout(() => setIsVisible(true), 10);
@@ -31,14 +38,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, message, duration = 3000, onClo
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [duration]);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onClose(id);
-    }, 300);
-  };
+  }, [duration, handleClose]);
 
   const icons = {
     success: '✓',

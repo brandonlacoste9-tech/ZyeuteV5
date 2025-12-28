@@ -46,6 +46,26 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // Session Timer & Expiry Check
+    // ✅ Properly ends guest session
+    // Handles private browsing mode gracefully
+    const endGuestSession = useCallback(() => {
+        console.log('🎭 [GuestModeContext] Ending guest session...');
+        try {
+            localStorage.removeItem(GUEST_MODE_KEY);
+            localStorage.removeItem(GUEST_TIMESTAMP_KEY);
+            localStorage.removeItem(GUEST_VIEWS_KEY);
+        } catch (e) {
+            console.warn('⚠️ [GuestModeContext] Storage cleanup failed:', e);
+        }
+        setIsGuest(false);
+        setViewsCount(0);
+        setRemainingTime(0);
+        // Only set expired if it was actually a guest session
+        if (isGuest) {
+            setIsExpired(true);
+        }
+    }, [isGuest]);
+
     useEffect(() => {
         if (!isGuest) return;
 
@@ -67,7 +87,7 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
         updateTimer();
         const interval = setInterval(updateTimer, 60000); // Update every minute
         return () => clearInterval(interval);
-    }, [isGuest]);
+    }, [isGuest, endGuestSession]);
 
     const enterGuestMode = useCallback(() => setIsGuest(true), []);
     const exitGuestMode = useCallback(() => setIsGuest(false), []);
@@ -87,26 +107,6 @@ export function GuestModeProvider({ children }: { children: ReactNode }) {
         setIsGuest(true);
         setIsExpired(false);
     }, []);
-
-    // ✅ Properly ends guest session
-    // Handles private browsing mode gracefully
-    const endGuestSession = useCallback(() => {
-        console.log('🎭 [GuestModeContext] Ending guest session...');
-        try {
-            localStorage.removeItem(GUEST_MODE_KEY);
-            localStorage.removeItem(GUEST_TIMESTAMP_KEY);
-            localStorage.removeItem(GUEST_VIEWS_KEY);
-        } catch (e) {
-            console.warn('⚠️ [GuestModeContext] Storage cleanup failed:', e);
-        }
-        setIsGuest(false);
-        setViewsCount(0);
-        setRemainingTime(0);
-        // Only set expired if it was actually a guest session
-        if (isGuest) {
-            setIsExpired(true);
-        }
-    }, [isGuest]);
 
     const incrementViews = useCallback(() => {
         setViewsCount(prev => {
