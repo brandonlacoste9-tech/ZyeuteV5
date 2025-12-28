@@ -19,6 +19,15 @@ import { useGuestMode } from '@/hooks/useGuestMode';
 
 const feedLogger = logger.withContext('Feed');
 
+// Gift emoji lookup moved outside to avoid re-creation on every render
+const GIFT_EMOJIS: Record<string, string> = {
+  comete: '☄️',
+  feuille_erable: '🍁',
+  fleur_de_lys: '⚜️',
+  feu: '🔥',
+  coeur_or: '💛',
+};
+
 
 export const Feed: React.FC = () => {
   const location = useLocation();
@@ -90,15 +99,6 @@ export const Feed: React.FC = () => {
     setGiftModalOpen(true);
   }, [currentUser]);
 
-  // Gift emoji lookup
-  const GIFT_EMOJIS: Record<string, string> = {
-    comete: '☄️',
-    feuille_erable: '🍁',
-    fleur_de_lys: '⚜️',
-    feu: '🔥',
-    coeur_or: '💛',
-  };
-
   // Handle gift sent - update gift count and show overlay
   const handleGiftSent = useCallback((giftType: string) => {
     // Trigger overlay animation
@@ -110,7 +110,7 @@ export const Feed: React.FC = () => {
     setGiftModalOpen(false);
     setSelectedRecipient(null);
     setSelectedPostId(null);
-  }, [selectedRecipient, GIFT_EMOJIS]);
+  }, [selectedRecipient]);
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">

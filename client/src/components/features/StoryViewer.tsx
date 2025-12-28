@@ -2,7 +2,7 @@
  * StoryViewer - View stories with swipe navigation (Instagram/TikTok style)
  */
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Avatar } from '../Avatar';
@@ -40,6 +40,21 @@ const StoryViewerComponent: React.FC<StoryViewerProps> = ({
   const currentStory = stories[currentIndex];
   const duration = currentStory?.duration || 5;
 
+  // Navigation handlers
+  const handleNext = useCallback(() => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      onClose();
+    }
+  }, [currentIndex, stories.length, onClose]);
+
+  const handlePrevious = useCallback(() => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  }, [currentIndex]);
+
   // Progress bar animation
   useEffect(() => {
     if (isPaused) return;
@@ -62,7 +77,7 @@ const StoryViewerComponent: React.FC<StoryViewerProps> = ({
         clearInterval(progressInterval.current);
       }
     };
-  }, [currentIndex, isPaused, duration]);
+  }, [currentIndex, isPaused, duration, handleNext]);
 
   // Mark story as viewed
   useEffect(() => {
@@ -79,21 +94,6 @@ const StoryViewerComponent: React.FC<StoryViewerProps> = ({
 
     markAsViewed();
   }, [currentStory]);
-
-  // Navigation handlers
-  const handleNext = () => {
-    if (currentIndex < stories.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      onClose();
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
 
   // Touch handlers for swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -169,7 +169,7 @@ const StoryViewerComponent: React.FC<StoryViewerProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, isPaused]);
+  }, [currentIndex, isPaused, handleNext, handlePrevious, onClose]);
 
   if (!currentStory) {
     return null;

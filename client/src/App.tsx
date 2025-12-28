@@ -21,8 +21,7 @@ import { ProtectedAdminRoute } from '@/components/auth/ProtectedAdminRoute';
 // import { SwarmDebug } from '@/components/SwarmDebug';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ColonyProvider } from '@/components/providers/colony-provider';
-import { ProtectedUserRoute } from '@/components/auth';
-import { RedirectIfAuthenticated } from '@/components/auth';
+
 import { RBACProvider } from '@/contexts/RBACContext';
 import { GUEST_SESSION_DURATION, GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '@/lib/constants';
 

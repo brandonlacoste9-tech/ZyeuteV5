@@ -9,7 +9,7 @@ import { Avatar } from '../components/Avatar';
 import { Button } from '../components/Button';
 import { FireRating } from '../components/features/FireRating';
 import { VideoPlayer } from '../components/features/VideoPlayer';
-import { CommentThread } from '../components/features/CommentThread';
+import { VirtualCommentList } from '../components/features/VirtualCommentList';
 import { GiftModal } from '../components/features/GiftModal';
 import { supabase } from '../lib/supabase';
 import { getPostById } from '../services/api';
@@ -286,22 +286,12 @@ export const PostDetail: React.FC = () => {
             </div>
 
             {/* Comments */}
-            <div className="flex-1 overflow-y-auto py-4 space-y-4">
-              {comments.map((comment) => (
-                <CommentThread
-                  key={comment.id}
-                  comment={comment}
-                  postId={id!}
-                  currentUser={currentUser}
-                />
-              ))}
-
-              {comments.length === 0 && (
-                <p className="text-center text-white/40 py-8">
-                  Pas encore de commentaires. Sois le premier!
-                </p>
-              )}
-            </div>
+            <VirtualCommentList
+              comments={comments}
+              postId={id!}
+              currentUser={currentUser}
+              className="py-4"
+            />
 
             {/* Comment input */}
             <form onSubmit={handleSubmitComment} className="pt-4 border-t border-white/10">

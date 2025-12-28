@@ -3,7 +3,7 @@
  * Real-time content moderation and user management
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Header } from '../../components/Header';
 import { Button } from '../../components/Button';
 import { Avatar } from '../../components/Avatar';
@@ -89,36 +89,7 @@ export const Moderation: React.FC = () => {
     checkAdmin();
   }, []);
 
-  // Fetch moderation logs
-  useEffect(() => {
-    if (!currentUser) return;
-    fetchLogs();
-    fetchStats();
-
-    // Subscribe to new logs
-    const channel = supabase
-      .channel('moderation_logs_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'moderation_logs',
-        },
-        () => {
-          fetchLogs();
-          fetchStats();
-          toast.info('Nouveau contenu à modérer');
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser, filter]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -148,9 +119,9 @@ export const Moderation: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -190,7 +161,36 @@ export const Moderation: React.FC = () => {
     } catch (error) {
       moderationLogger.error('Error fetching stats:', error);
     }
-  };
+  }, []);
+
+  // Fetch moderation logs
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchLogs();
+    fetchStats();
+
+    // Subscribe to new logs
+    const channel = supabase
+      .channel('moderation_logs_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'moderation_logs',
+        },
+        () => {
+          fetchLogs();
+          fetchStats();
+          toast.info('Nouveau contenu à modérer');
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser, fetchLogs, fetchStats]);
 
   const handleApprove = async (logId: string) => {
     try {
