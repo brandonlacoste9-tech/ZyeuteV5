@@ -2,6 +2,7 @@ import { colonyClient } from './ColonyClient';
 import { BeeType, SwarmResponse } from './types';
 import { deepSeekCircuit, swarmCircuit } from './CircuitBreaker';
 import { processJoualTask, generateJoualResponse, joualify } from '@/services/bees/JoualBee';
+import type { DeepSeekResponse } from '@/types/deepseek';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPREHENSIVE JOUAL SYSTEM PROMPT
@@ -248,8 +249,8 @@ export class TiGuySwarmAdapter {
       throw new Error(`DeepSeek API error: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.choices[0].message.content || "Désolé, j'ai perdu le fil.";
+    const data = await response.json() as DeepSeekResponse;
+    return data.choices[0]?.message.content || "Désolé, j'ai perdu le fil.";
   }
 
   /**
