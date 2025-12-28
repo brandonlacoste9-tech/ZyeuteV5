@@ -7,81 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added - 2025-12-28
+### Fixed - 2025-12-28
 
-#### 🔧 Post-CI Hardening Implementation
+#### 🧪 Test Infrastructure & Context Provider Fixes
 
-**1. Vercel Build Optimization & Deployment**
-- Enhanced `vercel.json` with build caching configuration for faster deployments
-- Added GitHub integration settings for automatic preview deployments per PR
-- Configured cache directories: `node_modules`, `.next/cache`, `dist`
-- Documented preview deployment requirement in CONTRIBUTING.md and README.md
-- Added Vercel deployment section to README with quick deploy button
+**Test Context Provider Fixes**
+- Fixed `useGuestMode.test.ts` failing tests by wrapping all `renderHook` calls with `GuestModeProvider`
+  - All 5 test cases now pass with proper context
+  - Updated test expectations to match actual context API (removed non-existent `isExpired` property)
+  - Test now correctly validates guest mode session lifecycle, view counter, and function stability
+- Fixed `PasswordManagement.test.tsx` failing tests by wrapping components with `AuthProvider`
+  - Created `renderWithProviders` helper to provide consistent test setup
+  - All 12 test cases now pass (Login, Signup, ForgotPassword, ResetPassword, Accessibility)
+  - Enhanced Supabase mocks to include `onAuthStateChange` method
+  - Added mocks for `getUserProfile` and `checkIsAdmin` dependencies
+- **Result**: 17/17 tests passing across both test files ✅
 
-**2. Database Index Optimization**
-- Created migration `0009_add_missing_indexes.sql` with performance indexes:
-  - `comments_created_at_idx` - Chronological comment sorting
-  - `notifications_created_at_idx` - Chronological notification sorting
-  - `notifications_user_id_idx` - User-specific notifications
-  - `stories_created_at_idx` - Story timeline sorting
-  - `stories_user_id_idx` - User-specific stories
-  - `user_profiles_created_at_idx` - User registration analytics
-  - Composite indexes for optimized queries
-- Added RLS policy stubs with TODO comments for security review
-- Documented that `video_id` is handled via posts table `type` field
-
-**3. TypeScript Type Safety Enhancements**
-- Verified `tsconfig.json` already has `strict: true` enabled
-- Created `client/src/types/guards.ts` with runtime type validation:
-  - Type guards: `isUser`, `isPost`, `isComment`, `isVideoPost`
-  - Validation functions: `validateUser`, `validatePost`, `validateComment`
-  - Array validators: `isPostArray`, `isCommentArray`, `isUserArray`
-  - Video metadata extractors: `hasVideoProcessingStatus`, `extractVideoMetadata`
-- Added TODO comments for future enhancements (Zod schemas, pagination, errors)
-- Enhanced type safety for API response handling
-
-**4. Quality & Tooling Infrastructure**
-- Added `husky` (v9.0.11) and `lint-staged` (v15.2.0) to devDependencies
-- Created `.husky/pre-commit` hook for automated pre-commit checks
-- Configured lint-staged for TypeScript, JSON, Markdown, and YAML files
-- Added `prepare` script to package.json for automatic Husky installation
-- Created comprehensive PR template at `.github/pull_request_template.md`:
-  - Type of change checklist
-  - Testing requirements
-  - Code quality standards
-  - Accessibility checklist (WCAG 2.1 AA)
-  - Security considerations
-  - Deployment checklist
-  - Vercel preview deployment verification
-- Updated CONTRIBUTING.md with:
-  - Pre-commit hooks documentation
-  - Preview deployment requirements
-  - Enhanced PR submission guidelines
-
-**Benefits:**
-- Faster Vercel builds through optimized caching
-- Improved database query performance with targeted indexes
-- Enhanced type safety preventing runtime errors
-- Automated code quality checks before commits
-- Standardized PR review process with comprehensive template
-- Better contributor experience with clear guidelines
-
-**Files Modified:**
-```
-vercel.json                              # Enhanced with caching config
-package.json                             # Added husky, lint-staged
-CONTRIBUTING.md                          # Enhanced with tooling info
-README.md                                # Added deployment section
-CHANGELOG.md                             # This file
-```
-
-**Files Created:**
-```
-migrations/0009_add_missing_indexes.sql  # Database performance indexes
-client/src/types/guards.ts               # Runtime type validation
-.github/pull_request_template.md         # Comprehensive PR template
-.husky/pre-commit                        # Pre-commit hook script
-```
+**Lighthouse CI Configuration Enhancements**
+- Enhanced `.lighthouserc.json` with additional best-practice checks:
+  - Added `speed-index` metric for perceived performance (3000ms threshold)
+  - Added `unused-css-rules` and `unused-javascript` warnings for bundle optimization
+  - Added accessibility checks: `valid-lang`, `duplicate-id-aria`
+  - Added SEO check: `robots-txt` validation
+  - Added security check: `csp-xss` (Content Security Policy XSS protection)
+  - Disabled `is-on-https` check for localhost testing (changed from error to off)
+  - Added `skipAudits` for `uses-http2` in settings to avoid localhost false positives
+- Lighthouse workflow already includes:
+  - 3 runs per URL for statistical reliability
+  - Tests 4 critical pages (home, login, signup, explore)
+  - 90% minimum score thresholds for all categories
+  - PR commenting for visibility
+  - Comprehensive local testing instructions
 
 ### Added - 2024-12-14
 

@@ -3,8 +3,9 @@
  * Tests for password show/hide toggles and password reset flow
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { render } from '../../test/utils';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../../contexts/AuthContext';
 import Login from '../Login';
 import Signup from '../Signup';
 import ForgotPassword from '../ForgotPassword';
@@ -18,13 +19,30 @@ vi.mock('../../lib/supabase', () => ({
       getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
       signInWithPassword: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
       signUp: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
-      resetPasswordForEmail: vi.fn(() => Promise.resolve({ error: null })),
-      updateUser: vi.fn(() => Promise.resolve({ error: null })),
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
-      })),
+      resetPasswordForEmail: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+      updateUser: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      onAuthStateChange: vi.fn(() => {
+        return {
+          data: { 
+            subscription: { 
+              unsubscribe: vi.fn() 
+            } 
+          },
+          error: null
+        };
+      })
     }
   }
+}));
+
+// Mock getUserProfile API call
+vi.mock('../../services/api', () => ({
+  getUserProfile: vi.fn(() => Promise.resolve(null))
+}));
+
+// Mock admin check
+vi.mock('../../lib/admin', () => ({
+  checkIsAdmin: vi.fn(() => Promise.resolve(false))
 }));
 
 // Mock logger
@@ -57,6 +75,17 @@ vi.mock('../../lib/constants', () => ({
   GUEST_VIEWS_KEY: 'zyeute_guest_views_count'
 }));
 
+// Helper function to render components with providers
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        {component}
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
 describe('Password Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -64,6 +93,7 @@ describe('Password Management', () => {
 
   describe('Login Page', () => {
     it('should render password input with toggle button', () => {
+      renderWithProviders(<Login />);
       render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
@@ -72,6 +102,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility when clicking eye icon', () => {
+      renderWithProviders(<Login />);
       render(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
@@ -92,6 +123,7 @@ describe('Password Management', () => {
     });
 
     it('should render forgot password link', () => {
+      renderWithProviders(<Login />);
       render(<Login />);
 
       const forgotLink = screen.getByText('Mot de passe oublié?');
@@ -102,6 +134,7 @@ describe('Password Management', () => {
 
   describe('Signup Page', () => {
     it('should render password input with toggle button', () => {
+      renderWithProviders(<Signup />);
       render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
@@ -110,6 +143,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility', () => {
+      renderWithProviders(<Signup />);
       render(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
@@ -216,6 +250,7 @@ describe('Password Management', () => {
 
   describe('Accessibility', () => {
     it('should have proper aria-labels on password toggle buttons', () => {
+      renderWithProviders(<Login />);
       render(<Login />);
 
       const toggleButtons = screen.getAllByRole('button');
