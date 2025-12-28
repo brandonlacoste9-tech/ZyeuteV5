@@ -9,6 +9,7 @@ import { Header } from '../components/Header';
 import { Button } from '../components/Button';
 import { generateImage } from '../services/api';
 import { toast } from '../components/Toast';
+import { AIVideoResponseSchema } from '../lib/schemas/ai';
 
 const aspectRatios = [
   { label: "Carré", value: "1:1" },
@@ -82,8 +83,12 @@ export const AIStudio: React.FC = () => {
       });
 
       const data = await response.json();
-      if (data.videoUrl) {
-        setGeneratedVideo(data.videoUrl);
+      
+      // Validate AI response
+      const validatedData = AIVideoResponseSchema.safeParse(data);
+
+      if (validatedData.success) {
+        setGeneratedVideo(validatedData.data.videoUrl);
         toast.success('Vidéo générée! 🎬');
       } else {
         toast.error(data.error || 'Échec de la génération vidéo');

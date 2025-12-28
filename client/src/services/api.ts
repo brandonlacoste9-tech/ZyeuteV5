@@ -9,6 +9,7 @@ import type { Post, User, Story } from '@/types';
 const apiLogger = logger.withContext('API');
 
 import { supabase } from '@/lib/supabase';
+import { AIImageResponseSchema, type AIImageResponse } from '@/lib/schemas/ai';
 
 // Base API call helper
 async function apiCall<T>(
@@ -332,14 +333,17 @@ export async function markAllNotificationsRead(): Promise<boolean> {
 
 // ============ AI FUNCTIONS ============
 
-export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<{ imageUrl: string; prompt: string } | null> {
-  const { data, error } = await apiCall<{ imageUrl: string; prompt: string }>('/ai/generate-image', {
+export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<AIImageResponse | null> {
+  const { data, error } = await apiCall<AIImageResponse>('/ai/generate-image', {
     method: 'POST',
     body: JSON.stringify({ prompt, aspectRatio }),
   });
 
   if (error || !data) return null;
-  return data;
+  
+  // Validate with Zod
+  const result = AIImageResponseSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
 
 // ============ HELPER FUNCTIONS ============

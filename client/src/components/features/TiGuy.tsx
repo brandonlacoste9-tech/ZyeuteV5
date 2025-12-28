@@ -9,6 +9,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '../Button';
 import { cn } from '../../lib/utils';
 import tiGuyEmblem from '@assets/TI-GUY_NEW_SHARP_1765507001190.jpg';
+import { TiGuyChatResponseSchema } from '../../lib/schemas/ai';
 
 interface Message {
   id: string;
@@ -168,11 +169,16 @@ export const TiGuy: React.FC = () => {
       });
 
       const data = await response.json();
+      
+      // Validate AI response
+      const validatedData = TiGuyChatResponseSchema.safeParse(data);
 
       clearInterval(progressInterval);
       setProgress(100);
 
-      const aiResponse = data.response || data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫";
+      const aiResponse = validatedData.success 
+        ? validatedData.data.response 
+        : (data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫");
 
       const newMessage: Message = {
         id: Date.now().toString(),
