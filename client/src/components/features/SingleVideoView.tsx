@@ -20,7 +20,7 @@ interface SingleVideoViewProps {
   onShare?: (postId: string) => void;
 }
 
-export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
+export const SingleVideoView = React.memo<SingleVideoViewProps>(({
   post,
   user,
   isActive,
@@ -319,5 +319,15 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+    // Custom comparison function for React.memo
+    // Returns true if props are equal (no re-render needed)
+    return (
+        prevProps.post.id === nextProps.post.id &&
+        prevProps.isActive === nextProps.isActive &&
+        prevProps.post.fire_count === nextProps.post.fire_count &&
+        prevProps.post.comment_count === nextProps.post.comment_count &&
+        prevProps.post.processing_status === nextProps.post.processing_status
+    );
+});
 
