@@ -10,7 +10,8 @@ import {
   jsonb,
   uuid,
   index,
-  customType
+  customType,
+  decimal,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -19,34 +20,56 @@ import { relations } from "drizzle-orm";
 // Custom Geography type for PostGIS
 export const geography = customType<{ data: string }>({
   dataType() {
-    return 'geography(Point, 4326)';
+    return "geography(Point, 4326)";
   },
 });
 
 // Custom Geometry type (for Polygons)
 export const geometry = customType<{ data: string }>({
   dataType() {
-    return 'geometry(MultiPolygon, 4326)';
+    return "geometry(MultiPolygon, 4326)";
   },
 });
 
 // Custom Vector type (for pgvector)
-export const vector = customType<{ data: number[], config: { dimensions: number } }>({
+export const vector = customType<{
+  data: number[];
+  config: { dimensions: number };
+}>({
   dataType(config) {
     return `vector(${config?.dimensions || 384})`;
   },
 });
 
 // Enums
-export const visibilityEnum = pgEnum('visibility', ['public', 'amis', 'prive']);
-export const regionEnum = pgEnum('region', [
-  'montreal', 'quebec', 'gatineau', 'sherbrooke', 'trois-rivieres',
-  'saguenay', 'levis', 'terrebonne', 'laval', 'gaspesie', 'other'
+export const visibilityEnum = pgEnum("visibility", ["public", "amis", "prive"]);
+export const regionEnum = pgEnum("region", [
+  "montreal",
+  "quebec",
+  "gatineau",
+  "sherbrooke",
+  "trois-rivieres",
+  "saguenay",
+  "levis",
+  "terrebonne",
+  "laval",
+  "gaspesie",
+  "other",
 ]);
-export const giftTypeEnum = pgEnum('gift_type', [
-  'comete', 'feuille_erable', 'fleur_de_lys', 'feu', 'coeur_or'
+export const giftTypeEnum = pgEnum("gift_type", [
+  "comete",
+  "feuille_erable",
+  "fleur_de_lys",
+  "feu",
+  "coeur_or",
 ]);
-export const roleEnum = pgEnum('user_role', ['visitor', 'citoyen', 'moderator', 'founder', 'banned']);
+export const roleEnum = pgEnum("user_role", [
+  "visitor",
+  "citoyen",
+  "moderator",
+  "founder",
+  "banned",
+]);
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
@@ -57,13 +80,15 @@ export const users = pgTable("user_profiles", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   region: text("region"),
-  role: roleEnum('role').default('citoyen'), // RBAC Role
+  role: roleEnum("role").default("citoyen"), // RBAC Role
   customPermissions: jsonb("custom_permissions").default({}), // Granular overrides
   isAdmin: boolean("is_admin").default(false),
   isPremium: boolean("is_premium").default(false),
-  plan: text("plan").default('free'),
+  plan: text("plan").default("free"),
   credits: integer("credits").default(0),
-  subscriptionTier: varchar("subscription_tier", { length: 20 }).default('free'),
+  subscriptionTier: varchar("subscription_tier", { length: 20 }).default(
+    "free",
+  ),
   location: geography("location"),
   regionId: text("region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -72,214 +97,321 @@ export const users = pgTable("user_profiles", {
 });
 
 // Posts Table mapped to publications
-export const posts = pgTable("publications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  mediaUrl: text("media_url"), // Optional in some cases?
-  originalUrl: text("original_url"), // Backup of original upload
-  enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version
-  processingStatus: text("processing_status").default('ready'), // ready, pending, processing, completed, failed
-  visualFilter: text("visual_filter").default('none'),
-  enhanceStartedAt: timestamp("enhance_started_at"),
-  enhanceFinishedAt: timestamp("enhance_finished_at"),
-  content: text("content").notNull(), // Confirmed required by DB insert error
-  caption: text("caption"),
-  visibility: text("visibilite").default('public'),
-  fireCount: integer("reactions_count").default(0),
-  commentCount: integer("comments_count").default(0),
-  isHidden: boolean("est_masque").default(false),
-  location: geography("location"),
-  regionId: text("region_id"),
-  embedding: vector("embedding", { dimensions: 384 }),
-  lastEmbeddedAt: timestamp("last_embedded_at"),
-  transcription: text("transcription"),
-  transcribedAt: timestamp("transcribed_at"),
-  aiDescription: text("ai_description"), // Ti-Guy's summary
-  aiLabels: jsonb("ai_labels").default([]), // AI generated tags
-  viralScore: integer("viral_score").default(0), // Le Buzz Predictor
-  safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
-  isModerated: boolean("is_moderated").default(false),
-  moderationApproved: boolean("moderation_approved").default(true),
-  moderationScore: integer("moderation_score").default(0),
-  moderatedAt: timestamp("moderated_at"),
-  deletedAt: timestamp("deleted_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("publications_user_id_idx").on(table.userId),
-  createdAtIdx: index("publications_created_at_idx").on(table.createdAt),
-  userCreatedIdx: index("publications_user_created_idx").on(table.userId, table.createdAt),
-  locationIndex: index("idx_publications_location").using("gist", table.location),
-  regionIndex: index("idx_publications_region_created_at").on(table.regionId, table.createdAt),
-}));
+export const posts = pgTable(
+  "publications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mediaUrl: text("media_url"), // Optional in some cases?
+    originalUrl: text("original_url"), // Backup of original upload
+    enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version
+    processingStatus: text("processing_status").default("ready"), // ready, pending, processing, completed, failed
+    visualFilter: text("visual_filter").default("none"),
+    enhanceStartedAt: timestamp("enhance_started_at"),
+    enhanceFinishedAt: timestamp("enhance_finished_at"),
+    content: text("content").notNull(), // Confirmed required by DB insert error
+    caption: text("caption"),
+    visibility: text("visibilite").default("public"),
+    fireCount: integer("reactions_count").default(0),
+    commentCount: integer("comments_count").default(0),
+    isHidden: boolean("est_masque").default(false),
+    location: geography("location"),
+    regionId: text("region_id"),
+    embedding: vector("embedding", { dimensions: 384 }),
+    lastEmbeddedAt: timestamp("last_embedded_at"),
+    transcription: text("transcription"),
+    transcribedAt: timestamp("transcribed_at"),
+    aiDescription: text("ai_description"), // Ti-Guy's summary
+    aiLabels: jsonb("ai_labels").default([]), // AI generated tags
+    viralScore: integer("viral_score").default(0), // Le Buzz Predictor
+    safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
+    isModerated: boolean("is_moderated").default(false),
+    moderationApproved: boolean("moderation_approved").default(true),
+    moderationScore: integer("moderation_score").default(0),
+    moderatedAt: timestamp("moderated_at"),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("publications_user_id_idx").on(table.userId),
+    createdAtIdx: index("publications_created_at_idx").on(table.createdAt),
+    userCreatedIdx: index("publications_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+    locationIndex: index("idx_publications_location").using(
+      "gist",
+      table.location,
+    ),
+    regionIndex: index("idx_publications_region_created_at").on(
+      table.regionId,
+      table.createdAt,
+    ),
+  }),
+);
 
 // Regions Table
-export const regions = pgTable("regions", {
-  id: text("id").primaryKey(),
-  nom: text("nom").notNull(),
-  geom: geometry("geom").notNull(),
-}, (table) => ({
-  geomIndex: index("idx_regions_geom").using("gist", table.geom),
-}));
+export const regions = pgTable(
+  "regions",
+  {
+    id: text("id").primaryKey(),
+    nom: text("nom").notNull(),
+    geom: geometry("geom").notNull(),
+  },
+  (table) => ({
+    geomIndex: index("idx_regions_geom").using("gist", table.geom),
+  }),
+);
 
 // Push Notification Devices (Phase 10)
-export const pushDevices = pgTable("poussoirs_appareils", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  deviceToken: text("device_token").notNull(),
-  platform: text("platform").notNull(), // 'ios' or 'android'
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  lastUsedAt: timestamp("last_used_at").defaultNow(),
-}, (table) => ({
-  userIdIdx: index("idx_push_devices_user_id").on(table.userId),
-  tokenIdx: index("idx_push_devices_token").on(table.deviceToken),
-}));
+export const pushDevices = pgTable(
+  "poussoirs_appareils",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    deviceToken: text("device_token").notNull(),
+    platform: text("platform").notNull(), // 'ios' or 'android'
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at").defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_push_devices_user_id").on(table.userId),
+    tokenIdx: index("idx_push_devices_token").on(table.deviceToken),
+  }),
+);
 
 // User Interactions (Phase 12 - Analytics)
-export const userInteractions = pgTable("user_interactions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  publicationId: uuid("publication_id").references(() => posts.id, { onDelete: 'cascade' }),
-  interactionType: text("interaction_type").notNull(), // 'view', 'skip', 'fire', 'comment', 'share'
-  duration: integer("duration"), // milliseconds (for views)
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("idx_interactions_user_id").on(table.userId),
-  publicationIdIdx: index("idx_interactions_publication_id").on(table.publicationId),
-  typeIdx: index("idx_interactions_type").on(table.interactionType),
-  createdAtIdx: index("idx_interactions_created_at").on(table.createdAt),
-}));
+export const userInteractions = pgTable(
+  "user_interactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    publicationId: uuid("publication_id").references(() => posts.id, {
+      onDelete: "cascade",
+    }),
+    interactionType: text("interaction_type").notNull(), // 'view', 'skip', 'fire', 'comment', 'share'
+    duration: integer("duration"), // milliseconds (for views)
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_interactions_user_id").on(table.userId),
+    publicationIdIdx: index("idx_interactions_publication_id").on(
+      table.publicationId,
+    ),
+    typeIdx: index("idx_interactions_type").on(table.interactionType),
+    createdAtIdx: index("idx_interactions_created_at").on(table.createdAt),
+  }),
+);
 
 // Comments Table - mapped to commentaires
-export const comments = pgTable("commentaires", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("publication_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  postIdIdx: index("commentaires_publication_id_idx").on(table.postId),
-  userIdIdx: index("commentaires_user_id_idx").on(table.userId),
-}));
+export const comments = pgTable(
+  "commentaires",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("publication_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    postIdIdx: index("commentaires_publication_id_idx").on(table.postId),
+    userIdIdx: index("commentaires_user_id_idx").on(table.userId),
+  }),
+);
 
 // Post Reactions (Fire) - mapped to reactions
-export const postReactions = pgTable("reactions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("publication_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  type: text("type").default('fire'),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  postIdIdx: index("reactions_publication_id_idx").on(table.postId),
-  userIdIdx: index("reactions_user_id_idx").on(table.userId),
-}));
+export const postReactions = pgTable(
+  "reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    postId: uuid("publication_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").default("fire"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    postIdIdx: index("reactions_publication_id_idx").on(table.postId),
+    userIdIdx: index("reactions_user_id_idx").on(table.userId),
+  }),
+);
 
 // Comment Reactions (Fire)
-export const commentReactions = pgTable("comment_reactions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  commentId: uuid("comment_id").notNull().references(() => comments.id, { onDelete: 'cascade' }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  commentIdIdx: index("comment_reactions_comment_id_idx").on(table.commentId),
-  userIdIdx: index("comment_reactions_user_id_idx").on(table.userId),
-}));
+export const commentReactions = pgTable(
+  "comment_reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    commentId: uuid("comment_id")
+      .notNull()
+      .references(() => comments.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    commentIdIdx: index("comment_reactions_comment_id_idx").on(table.commentId),
+    userIdIdx: index("comment_reactions_user_id_idx").on(table.userId),
+  }),
+);
 
 // Follows Table - mapped to abonnements
-export const follows = pgTable("abonnements", {
-  // abonnements seems to be a composite key table in some schemas, but Drizzle prefers PK
-  followerId: uuid("follower_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  followingId: uuid("followee_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  followerIdx: index("abonnements_follower_id_idx").on(table.followerId),
-  followingIdx: index("abonnements_followee_id_idx").on(table.followingId),
-}));
+export const follows = pgTable(
+  "abonnements",
+  {
+    // abonnements seems to be a composite key table in some schemas, but Drizzle prefers PK
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followingId: uuid("followee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    followerIdx: index("abonnements_follower_id_idx").on(table.followerId),
+    followingIdx: index("abonnements_followee_id_idx").on(table.followingId),
+  }),
+);
 
 // Stories Table
-export const stories = pgTable("stories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  mediaUrl: text("media_url").notNull(),
-  mediaType: varchar("media_type", { length: 20 }).notNull(), // 'photo', 'video'
-  caption: text("caption"),
-  viewCount: integer("view_count").default(0),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("stories_user_id_idx").on(table.userId),
-  expiresAtIdx: index("stories_expires_at_idx").on(table.expiresAt),
-}));
+export const stories = pgTable(
+  "stories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mediaUrl: text("media_url").notNull(),
+    mediaType: varchar("media_type", { length: 20 }).notNull(), // 'photo', 'video'
+    caption: text("caption"),
+    viewCount: integer("view_count").default(0),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("stories_user_id_idx").on(table.userId),
+    expiresAtIdx: index("stories_expires_at_idx").on(table.expiresAt),
+  }),
+);
 
 // Story Views Table
-export const storyViews = pgTable("story_views", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  storyId: uuid("story_id").notNull().references(() => stories.id, { onDelete: 'cascade' }),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
-}, (table) => ({
-  storyIdIdx: index("story_views_story_id_idx").on(table.storyId),
-  userIdIdx: index("story_views_user_id_idx").on(table.userId),
-}));
+export const storyViews = pgTable(
+  "story_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storyId: uuid("story_id")
+      .notNull()
+      .references(() => stories.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    storyIdIdx: index("story_views_story_id_idx").on(table.storyId),
+    userIdIdx: index("story_views_user_id_idx").on(table.userId),
+  }),
+);
 
 // Gifts Table
-export const gifts = pgTable("gifts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  senderId: uuid("sender_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  recipientId: uuid("recipient_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: 'cascade' }),
-  giftType: giftTypeEnum("gift_type").notNull(),
-  amount: integer("amount").notNull(), // in cents
-  stripePaymentId: text("stripe_payment_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  senderIdx: index("gifts_sender_id_idx").on(table.senderId),
-  recipientIdx: index("gifts_recipient_id_idx").on(table.recipientId),
-  postIdx: index("gifts_post_id_idx").on(table.postId),
-}));
+export const gifts = pgTable(
+  "gifts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    giftType: giftTypeEnum("gift_type").notNull(),
+    amount: integer("amount").notNull(), // in cents
+    stripePaymentId: text("stripe_payment_id"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    senderIdx: index("gifts_sender_id_idx").on(table.senderId),
+    recipientIdx: index("gifts_recipient_id_idx").on(table.recipientId),
+    postIdx: index("gifts_post_id_idx").on(table.postId),
+  }),
+);
 
 // Notifications Table
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  type: varchar("type", { length: 50 }).notNull(), // 'fire', 'comment', 'follow', 'mention', 'gift'
-  giftId: uuid("gift_id").references(() => gifts.id, { onDelete: 'cascade' }),
-  fromUserId: uuid("from_user_id").references(() => users.id, { onDelete: 'cascade' }),
-  postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
-  commentId: uuid("comment_id").references(() => comments.id, { onDelete: 'cascade' }),
-  storyId: uuid("story_id").references(() => stories.id, { onDelete: 'cascade' }),
-  message: text("message"),
-  isRead: boolean("is_read").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("notifications_user_id_idx").on(table.userId),
-  postIdIdx: index("notifications_post_id_idx").on(table.postId),
-  fromUserIdIdx: index("notifications_from_user_id_idx").on(table.fromUserId),
-  isReadIdx: index("notifications_is_read_idx").on(table.isRead),
-}));
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(), // 'fire', 'comment', 'follow', 'mention', 'gift'
+    giftId: uuid("gift_id").references(() => gifts.id, { onDelete: "cascade" }),
+    fromUserId: uuid("from_user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    commentId: uuid("comment_id").references(() => comments.id, {
+      onDelete: "cascade",
+    }),
+    storyId: uuid("story_id").references(() => stories.id, {
+      onDelete: "cascade",
+    }),
+    message: text("message"),
+    isRead: boolean("is_read").default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("notifications_user_id_idx").on(table.userId),
+    postIdIdx: index("notifications_post_id_idx").on(table.postId),
+    fromUserIdIdx: index("notifications_from_user_id_idx").on(table.fromUserId),
+    isReadIdx: index("notifications_is_read_idx").on(table.isRead),
+  }),
+);
 
 // Moderation Logs - Audit trail for bans and flags
-export const moderationLogs = pgTable("moderation_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }),
-  postId: uuid("post_id").references(() => posts.id, { onDelete: 'cascade' }),
-  action: text("action").notNull(), // 'ban', 'warn', 'flag', 'hide'
-  reason: text("reason").notNull(),
-  details: text("details"),
-  score: integer("score"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("moderation_logs_user_id_idx").on(table.userId),
-  actionIdx: index("moderation_logs_action_idx").on(table.action),
-}));
+export const moderationLogs = pgTable(
+  "moderation_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    action: text("action").notNull(), // 'ban', 'warn', 'flag', 'hide'
+    reason: text("reason").notNull(),
+    details: text("details"),
+    score: integer("score"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("moderation_logs_user_id_idx").on(table.userId),
+    actionIdx: index("moderation_logs_action_idx").on(table.action),
+  }),
+);
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),
-  followers: many(follows, { relationName: 'following' }),
-  following: many(follows, { relationName: 'follower' }),
+  followers: many(follows, { relationName: "following" }),
+  following: many(follows, { relationName: "follower" }),
   stories: many(stories),
 }));
 
@@ -322,27 +454,44 @@ export const upsertUserSchema = z.object({
 export const insertPostSchema = createInsertSchema(posts, {
   caption: z.string().max(2200).optional(),
   content: z.string().min(1).max(5000), // Map to required 'content' column
-}).omit({ id: true, createdAt: true, fireCount: true, commentCount: true, deletedAt: true });
+}).omit({
+  id: true,
+  createdAt: true,
+  fireCount: true,
+  commentCount: true,
+  deletedAt: true,
+});
 
 export const insertCommentSchema = createInsertSchema(comments, {
   content: z.string().min(1).max(500),
 }).omit({ id: true, createdAt: true });
 
-export const insertFollowSchema = createInsertSchema(follows).omit({ createdAt: true });
+export const insertFollowSchema = createInsertSchema(follows).omit({
+  createdAt: true,
+});
 
-export const insertStorySchema = createInsertSchema(stories).omit({ id: true, createdAt: true });
+export const insertStorySchema = createInsertSchema(stories).omit({
+  id: true,
+  createdAt: true,
+});
 
-export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
 
-export const insertGiftSchema = createInsertSchema(gifts).omit({ id: true, createdAt: true });
+export const insertGiftSchema = createInsertSchema(gifts).omit({
+  id: true,
+  createdAt: true,
+});
 
 // Gift catalog with prices in cents
 export const GIFT_CATALOG = {
-  comete: { emoji: '☄️', name: 'Comète', price: 50 },
-  feuille_erable: { emoji: '🍁', name: "Feuille d'érable", price: 50 },
-  fleur_de_lys: { emoji: '⚜️', name: 'Fleur de Lys', price: 75 },
-  feu: { emoji: '🔥', name: 'Feu', price: 100 },
-  coeur_or: { emoji: '💛', name: "Coeur d'or", price: 100 },
+  comete: { emoji: "☄️", name: "Comète", price: 50 },
+  feuille_erable: { emoji: "🍁", name: "Feuille d'érable", price: 50 },
+  fleur_de_lys: { emoji: "⚜️", name: "Fleur de Lys", price: 75 },
+  feu: { emoji: "🔥", name: "Feu", price: 100 },
+  coeur_or: { emoji: "💛", name: "Coeur d'or", price: 100 },
 } as const;
 
 export type GiftType = keyof typeof GIFT_CATALOG;
@@ -377,76 +526,113 @@ export type InsertGift = z.infer<typeof insertGiftSchema>;
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 
 // Colony Tasks Table (AI Swarm)
-export const colonyTasks = pgTable("colony_tasks", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  command: text("command").notNull(),
-  origin: text("origin").default('Ti-Guy Swarm'),
-  status: text("status").notNull().default('pending'), // pending, processing, completed, failed, async_waiting
-  priority: text("priority").default('normal'),
-  metadata: jsonb("metadata"),
-  result: jsonb("result"),
-  error: text("error"),
-  workerId: text("worker_id"),
-  startedAt: timestamp("started_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
-  falRequestId: text("fal_request_id"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  statusIdx: index("idx_colony_tasks_status").on(table.status),
-  stuckIdx: index("idx_colony_tasks_stuck").on(table.status, table.lastHeartbeat),
-}));
+export const colonyTasks = pgTable(
+  "colony_tasks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    command: text("command").notNull(),
+    origin: text("origin").default("Ti-Guy Swarm"),
+    status: text("status").notNull().default("pending"), // pending, processing, completed, failed, async_waiting
+    priority: text("priority").default("normal"),
+    metadata: jsonb("metadata"),
+    result: jsonb("result"),
+    error: text("error"),
+    workerId: text("worker_id"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
+    falRequestId: text("fal_request_id"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_colony_tasks_status").on(table.status),
+    stuckIdx: index("idx_colony_tasks_stuck").on(
+      table.status,
+      table.lastHeartbeat,
+    ),
+  }),
+);
 
 export type ColonyTask = typeof colonyTasks.$inferSelect;
 
 // Agent Memories - Core of "The Elephant" (Long-term Memory)
-export const agentMemories = pgTable("agent_memories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  content: text("content").notNull(),
-  importance: integer("importance").default(1), // 1-10
-  embedding: vector("embedding", { dimensions: 384 }), // For semantic recall
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("idx_agent_memories_user_id").on(table.userId),
-  embeddingIdx: index("idx_agent_memories_embedding").using("hnsw", table.embedding),
-}));
+export const agentMemories = pgTable(
+  "agent_memories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    content: text("content").notNull(),
+    importance: integer("importance").default(1), // 1-10
+    embedding: vector("embedding", { dimensions: 384 }), // For semantic recall
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_agent_memories_user_id").on(table.userId),
+    embeddingIdx: index("idx_agent_memories_embedding").using(
+      "hnsw",
+      table.embedding,
+    ),
+  }),
+);
 
 export type AgentMemory = typeof agentMemories.$inferSelect;
 
 // Agent Traces - "The Flight Recorder" (Observability)
-export const agentTraces = pgTable("agent_traces", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  taskId: uuid("task_id"), // Optional link to colony_tasks
-  agentId: text("agent_id").notNull(),
-  traceType: text("trace_type").notNull(), // 'thought', 'tool_call', 'error', 'result'
-  content: text("content").notNull(),
-  metadata: jsonb("metadata"), // token usage, latency, tool args
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  agentIdIdx: index("idx_agent_traces_agent_id").on(table.agentId),
-  taskIdIdx: index("idx_agent_traces_task_id").on(table.taskId),
-  createdAtIdx: index("idx_agent_traces_created_at").on(table.createdAt),
-}));
+export const agentTraces = pgTable(
+  "agent_traces",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id"), // Optional link to colony_tasks
+    agentId: text("agent_id").notNull(),
+    traceType: text("trace_type").notNull(), // 'thought', 'tool_call', 'error', 'result'
+    content: text("content").notNull(),
+    metadata: jsonb("metadata"), // token usage, latency, tool args
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    agentIdIdx: index("idx_agent_traces_agent_id").on(table.agentId),
+    taskIdIdx: index("idx_agent_traces_task_id").on(table.taskId),
+    createdAtIdx: index("idx_agent_traces_created_at").on(table.createdAt),
+  }),
+);
 
 export type AgentTrace = typeof agentTraces.$inferSelect;
 
 // Agent Facts - "The Gold Nuggets" (Distilled Knowledge)
-export const agentFacts = pgTable("agent_facts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id").references(() => users.id, { onDelete: 'cascade' }).notNull(),
-  category: text("category").notNull(), // 'preference', 'bio', 'history', 'relationship'
-  content: text("content").notNull(),
-  confidence: customType<{ data: number }>({
-    dataType() { return "decimal(3,2)"; } // 0.00 to 1.00
-  })("confidence").default({ data: 1.0 }),
-  sourceMemoryId: uuid("source_memory_id").references(() => agentMemories.id, { onDelete: 'set null' }),
-  metadata: jsonb("metadata"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => ({
-  userIdIdx: index("idx_agent_facts_user_id").on(table.userId),
-  categoryIdx: index("idx_agent_facts_category").on(table.category),
-}));
+export const agentFacts = pgTable(
+  "agent_facts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    category: text("category").notNull(), // 'preference', 'bio', 'history', 'relationship'
+    content: text("content").notNull(),
+    confidence: decimal("confidence", { precision: 3, scale: 2 }).default(
+      "1.00",
+    ),
+    sourceMemoryId: uuid("source_memory_id").references(
+      () => agentMemories.id,
+      { onDelete: "set null" },
+    ),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_agent_facts_user_id").on(table.userId),
+    categoryIdx: index("idx_agent_facts_category").on(table.category),
+  }),
+);
 
 export type AgentFact = typeof agentFacts.$inferSelect;

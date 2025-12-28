@@ -2,7 +2,7 @@
 // Clean, mythic, swarm-native — built from scratch
 // Three Bees. Three instincts. One Hive.
 
-import OpenAI from "openai";
+import { deepseek } from "../../server/ai/deepseek.js";
 import { fal } from "@fal-ai/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -57,14 +57,11 @@ Output ONLY the rewritten prompt.
 
 // --- 3. HIVE ENGINE ---
 export class HiveEngine {
-  private brain: OpenAI;
   private generalist: GoogleGenerativeAI | null = null;
 
   constructor() {
-    this.brain = new OpenAI({
-      apiKey: BEES.BRAIN_BEE.apiKey,
-      baseURL: BEES.BRAIN_BEE.baseUrl,
-    });
+    // DeepSeek is a singleton exported from the utility, no instantiation needed here
+    // this.brain = deepseek;
 
     if (BEES.GENERALIST_BEE.apiKey) {
       this.generalist = new GoogleGenerativeAI(BEES.GENERALIST_BEE.apiKey);
@@ -106,7 +103,8 @@ export class HiveEngine {
 
   // --- BRAIN_BEE (DeepSeek) ---
   private async askBrain(system: string, user: string, temp: number) {
-    const res = await this.brain.chat.completions.create({
+    // Using the imported deepseek client directly
+    const res = await deepseek.chat.completions.create({
       model: BEES.BRAIN_BEE.model,
       messages: [
         { role: "system", content: system },
@@ -141,7 +139,12 @@ export class HiveEngine {
 
   private parse(raw: string) {
     try {
-      return JSON.parse(raw.replace(/```json/g, "").replace(/```/g, "").trim());
+      return JSON.parse(
+        raw
+          .replace(/```json/g, "")
+          .replace(/```/g, "")
+          .trim(),
+      );
     } catch {
       return { target: "TI_GUY_BEE", instruction: raw };
     }
