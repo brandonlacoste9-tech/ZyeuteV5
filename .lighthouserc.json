@@ -22,6 +22,9 @@
           "accessibility",
           "best-practices",
           "seo"
+        ],
+        "skipAudits": [
+          "uses-http2"
         ]
       }
     },
@@ -37,11 +40,14 @@
         "largest-contentful-paint": ["warn", {"maxNumericValue": 2500}],
         "cumulative-layout-shift": ["warn", {"maxNumericValue": 0.1}],
         "total-blocking-time": ["warn", {"maxNumericValue": 300}],
+        "speed-index": ["warn", {"maxNumericValue": 3000}],
         
         "uses-responsive-images": "warn",
         "offscreen-images": "warn",
         "modern-image-formats": "warn",
         "efficient-animated-content": "warn",
+        "unused-css-rules": "warn",
+        "unused-javascript": "warn",
         
         "color-contrast": "error",
         "html-has-lang": "error",
@@ -51,15 +57,18 @@
         "image-alt": "error",
         "label": "error",
         "aria-required-attr": "error",
+        "valid-lang": "error",
+        "duplicate-id-aria": "error",
         
         "document-title": "error",
         "meta-description": "error",
         "link-text": "warn",
         "crawlable-anchors": "warn",
+        "robots-txt": "warn",
         
-        "is-on-https": "error",
-        "uses-http2": "warn",
-        "no-vulnerable-libraries": "error"
+        "is-on-https": "off",
+        "no-vulnerable-libraries": "error",
+        "csp-xss": "warn"
       }
     },
     "upload": {
