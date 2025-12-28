@@ -5,7 +5,17 @@
   "installCommand": "npm ci --include=dev",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/public",
-  "regions": ["iad1"],
+  "cacheDirectories": [
+    "node_modules",
+    ".next/cache",
+    "dist"
+  ],
+  "github": {
+    "autoAlias": true,
+    "autoJobCancelation": true,
+    "enabled": true,
+    "silent": false
+  },
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
