@@ -7,6 +7,8 @@ import { cn } from '../../lib/utils';
 import { logger } from '../../lib/logger';
 import { VideoSource } from '@/hooks/usePrefetchVideo';
 
+import StreamingDebugOverlay from './StreamingDebugOverlay';
+
 const videoPlayerLogger = logger.withContext('VideoPlayer');
 
 
@@ -25,6 +27,11 @@ export interface VideoPlayerProps {
   priority?: boolean;
   preload?: 'auto' | 'metadata' | 'none';
   videoSource?: VideoSource;
+  debug?: {
+    activeRequests: number;
+    concurrency: number;
+    tier: number;
+  };
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -42,6 +49,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   priority = false,
   preload = 'metadata',
   videoSource,
+  debug,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -53,6 +61,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showControls, setShowControls] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDebugEnabled, setIsDebugEnabled] = useState(false);
+
+  // Check for debug mode
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const debugParam = params.get('debug') === '1';
+    const storageParam = localStorage.getItem('debug') === 'true';
+    setIsDebugEnabled(debugParam || storageParam);
+  }, []);
 
   // MSE State
   const mseRef = useRef<MediaSource | null>(null);
@@ -446,6 +463,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onMouseLeave={() => setShowControls(false)}
       onClick={togglePlay}
     >
+      {/* Streaming Debug Overlay */}
+      {isDebugEnabled && debug && (
+        <StreamingDebugOverlay
+          url={src}
+          activeRequests={debug.activeRequests}
+          concurrency={debug.concurrency}
+          tier={debug.tier as any}
+          playheadByte={videoSource?.type === 'partial-chunks' && videoSource.totalSize && duration ? (currentTime / duration) * videoSource.totalSize : 0}
+          totalSize={videoSource?.type === 'partial-chunks' ? videoSource.totalSize : undefined}
+          ttff={metricsRef.current.timeToFirstFrame}
+          stalls={metricsRef.current.stalledCount}
+          stallDuration={metricsRef.current.totalStalledTime}
+          isMse={!!mseUrl}
+          isFallback={!mseUrl && videoSource?.type === 'partial-chunks'}
+        />
+      )}
+
       {/* Video Element */}
       {/* Preload prioritized poster */}
       {priority && poster && (

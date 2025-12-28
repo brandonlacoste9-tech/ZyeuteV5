@@ -87,7 +87,7 @@ const FeedRow = memo(({
     // Smart Prefetching (Tier 2 only fetches full blob)
     // For Tier 0/1 we just pass the original URL and let SingleVideoView handle preload attr
     // But usePrefetchVideo handles cache lookup too
-    const { source, isCached } = usePrefetchVideo(videoUrl, preloadTier);
+    const { source, isCached, debug } = usePrefetchVideo(videoUrl, preloadTier);
 
     if (!post) return <div style={style} />;
 
@@ -104,6 +104,7 @@ const FeedRow = memo(({
                 preload={preloadTier >= 2 ? 'auto' : (preloadTier === 1 ? 'metadata' : 'none')}
                 videoSource={source} // Pass the full source object (MSE or Blob or URL)
                 isCached={isCached}
+                debug={debug}
             />
         </div>
     );

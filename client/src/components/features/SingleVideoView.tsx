@@ -23,6 +23,11 @@ interface SingleVideoViewProps {
   preload?: 'auto' | 'metadata' | 'none';
   videoSource?: import('@/hooks/usePrefetchVideo').VideoSource;
   isCached?: boolean;
+  debug?: {
+    activeRequests: number;
+    concurrency: number;
+    tier: number;
+  };
 }
 
 export const SingleVideoView = React.memo<SingleVideoViewProps>(({
@@ -36,6 +41,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
   preload = 'metadata',
   videoSource,
   isCached,
+  debug,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null);
   const { tap, impact } = useHaptics();
@@ -120,6 +126,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
             priority={priority}
             preload={isActive ? 'auto' : preload}
             videoSource={videoSource}
+            debug={debug}
           />
         ) : (
           <Image

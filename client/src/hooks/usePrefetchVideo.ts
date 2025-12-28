@@ -16,6 +16,11 @@ export type VideoSource =
 interface UsePrefetchVideoResult {
   source: VideoSource;
   isCached: boolean;
+  debug?: {
+    activeRequests: number;
+    concurrency: number;
+    tier: PreloadTier;
+  };
 }
 
 // Global network speed estimate (bytes per ms)
@@ -63,10 +68,18 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
   }, [url]);
 
   const [source, setSource] = useState<VideoSource>(getCacheState());
+  const [debugInfo, setDebugInfo] = useState({ requests: 0, concurrency: 1 });
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeRequestsRef = useRef(0);
 
   const isCached = source.type !== 'url';
+
+  const updateDebug = useCallback(() => {
+    setDebugInfo({ 
+        requests: activeRequestsRef.current, 
+        concurrency: getAdaptiveConcurrency() 
+    });
+  }, []);
 
   useEffect(() => {
     const cached = getCacheState();
@@ -79,11 +92,15 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
       abortControllerRef.current.abort();
     }
 
-    if (tier === 0 || !url) return;
+    if (tier === 0 || !url) {
+        setDebugInfo({ requests: 0, concurrency: 1 });
+        return;
+    };
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
     activeRequestsRef.current = 0;
+    updateDebug();
 
     const fetchNextChunk = async () => {
         if (controller.signal.aborted) return;
@@ -93,18 +110,18 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
 
         const startByte = videoCache.getNextByteToFetch(url);
         if (currentEntry?.totalSize && startByte >= currentEntry.totalSize) {
-             // We reached the end of the file
              return;
         }
 
         // Backpressure check
         const memoryUsage = videoCache.getMemoryUsage(url);
         if (memoryUsage > 5 * 1024 * 1024 && tier < 2) {
-             // For non-active videos, don't exceed 5MB
              return;
         }
 
         activeRequestsRef.current++;
+        updateDebug();
+
         try {
             const chunkSize = getAdaptiveChunkSize();
             const endByte = startByte + chunkSize - 1;
@@ -140,7 +157,6 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
                 });
             }
 
-            // Sliding Window: If we still need more chunks, spawn another request
             const targetChunks = tier === 1 ? 4 : (tier === 3 ? 3 : 200);
             const currentChunksCount = updated?.chunks.length || 0;
             
@@ -154,6 +170,7 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
             }
         } finally {
             activeRequestsRef.current--;
+            updateDebug();
         }
     };
 
@@ -164,13 +181,11 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
 
         while (activeRequestsRef.current < concurrency && (currentCount + activeRequestsRef.current) < targetTotal) {
             fetchNextChunk();
-            // Break loop if we can't spawn (fetchNextChunk handles safety internally)
             if (activeRequestsRef.current >= concurrency) break;
         }
     };
 
     const fetchRemainingFull = async () => {
-         // Tier 2: Fetch Remaining as Blob (Promote)
          if (tier === 2 && !controller.signal.aborted) {
               const updated = videoCache.getEntry(url);
               if (updated?.type !== 'full') {
@@ -188,8 +203,19 @@ export function usePrefetchVideo(url: string, tier: PreloadTier): UsePrefetchVid
     fillWorkerPool(limit);
     if (tier === 2) fetchRemainingFull();
 
-    return () => controller.abort();
-  }, [url, tier, getCacheState]);
+    return () => {
+        controller.abort();
+        setDebugInfo({ requests: 0, concurrency: 1 });
+    };
+  }, [url, tier, getCacheState, updateDebug]);
 
-  return { source, isCached };
+  return { 
+    source, 
+    isCached,
+    debug: {
+        activeRequests: debugInfo.requests,
+        concurrency: debugInfo.concurrency,
+        tier
+    }
+  };
 }

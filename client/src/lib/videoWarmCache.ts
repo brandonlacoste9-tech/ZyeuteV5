@@ -35,6 +35,13 @@ const MAX_VIDEO_MEMORY = 30 * 1024 * 1024; // 30MB per video limit
 class VideoWarmCache {
   private cache: Map<string, CacheEntry> = new Map();
   private maxCapacity = 2; 
+  
+  // Instrumentation
+  public stats = {
+    compactionCount: 0,
+    evictionCount: 0,
+    chunkRemovals: 0
+  };
 
   /**
    * Add a chunk
@@ -106,6 +113,9 @@ class VideoWarmCache {
         }
     }
     compacted.push(current);
+    if (entry.chunks.length > compacted.length) {
+        this.stats.compactionCount++;
+    }
     entry.chunks = compacted;
   }
 
@@ -126,6 +136,7 @@ class VideoWarmCache {
     });
 
     if (entry.chunks.length < initialCount) {
+        this.stats.chunkRemovals += (initialCount - entry.chunks.length);
         cacheLogger.debug(`Evicted consumed chunks for ${url.slice(0, 20)}. Memory: ${(this.getMemoryUsage(url)/1024/1024).toFixed(2)}MB`);
     }
   }
@@ -206,6 +217,7 @@ class VideoWarmCache {
     }
 
     if (oldestUrl) {
+      this.stats.evictionCount++;
       this.remove(oldestUrl);
     }
   }
