@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
+import { expect, afterEach, vi, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
 
@@ -9,6 +9,43 @@ expect.extend(matchers);
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+});
+
+// Mock Supabase client before any tests run
+beforeAll(() => {
+  vi.mock('@/lib/supabase', () => ({
+    supabase: {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({
+          data: { session: null },
+          error: null,
+        }),
+        onAuthStateChange: vi.fn().mockReturnValue({
+          data: {
+            subscription: {
+              unsubscribe: vi.fn(),
+            },
+          },
+        }),
+        signOut: vi.fn().mockResolvedValue({ error: null }),
+        signInWithPassword: vi.fn().mockResolvedValue({
+          data: { user: null, session: null },
+          error: null,
+        }),
+        signUp: vi.fn().mockResolvedValue({
+          data: { user: null, session: null },
+          error: null,
+        }),
+      },
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+      update: vi.fn().mockResolvedValue({ data: null, error: null }),
+      delete: vi.fn().mockResolvedValue({ data: null, error: null }),
+    },
+  }));
 });
 
 // Mock window.matchMedia
