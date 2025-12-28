@@ -5,6 +5,7 @@ let videoQueueInstance: Queue | null = null;
 let analyticsQueueInstance: Queue | null = null;
 let blockchainQueueInstance: Queue | null = null;
 let memoryQueueInstance: Queue | null = null;
+let privacyQueueInstance: Queue | null = null;
 
 const connection = {
   host: process.env.REDIS_HOST,
@@ -107,6 +108,25 @@ export const getMemoryQueue = (): Queue => {
   console.log("🔌 Initializing Memory Queue Redis connection...");
   memoryQueueInstance = new Queue("zyeute-memory-miner", { connection });
   return memoryQueueInstance;
+};
+
+// 🔒 QUEUE 5: Loi 25 Compliance (Privacy Auditor)
+export const getPrivacyQueue = (): Queue => {
+  if (privacyQueueInstance) {
+    return privacyQueueInstance;
+  }
+
+  if (!process.env.REDIS_HOST) {
+    console.warn("⚠️ REDIS_HOST not defined. Privacy queue disabled.");
+    return {
+      add: async () => console.log("Mock Privacy Queue: Job added"),
+      close: async () => console.log("Mock Privacy Queue: Close called"),
+    } as unknown as Queue;
+  }
+
+  console.log("🔌 Initializing Privacy Queue Redis connection...");
+  privacyQueueInstance = new Queue("zyeute-privacy-auditor", { connection });
+  return privacyQueueInstance;
 };
 
 // Export type for TypeScript usage

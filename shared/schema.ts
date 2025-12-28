@@ -70,6 +70,11 @@ export const roleEnum = pgEnum("user_role", [
   "founder",
   "banned",
 ]);
+export const hiveEnum = pgEnum("hive_id", [
+  "quebec", // default: fr-CA
+  "mexico", // es-MX
+  "south", // es-SUR (LatAm)
+]);
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
@@ -94,6 +99,7 @@ export const users = pgTable("user_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
   tiGuyCommentsEnabled: boolean("ti_guy_comments_enabled").default(true),
+  hiveId: hiveEnum("hive_id").default("quebec"),
 });
 
 // Posts Table mapped to publications
@@ -131,6 +137,7 @@ export const posts = pgTable(
     moderationApproved: boolean("moderation_approved").default(true),
     moderationScore: integer("moderation_score").default(0),
     moderatedAt: timestamp("moderated_at"),
+    hiveId: hiveEnum("hive_id").default("quebec"), // Content is siloed by hive
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -569,6 +576,8 @@ export const agentMemories = pgTable(
     importance: integer("importance").default(1), // 1-10
     embedding: vector("embedding", { dimensions: 384 }), // For semantic recall
     metadata: jsonb("metadata"),
+    auditStatus: text("audit_status").default("pending"), // 'pending', 'safe', 'flagged', 'redacted'
+    lastAuditedAt: timestamp("last_audited_at"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

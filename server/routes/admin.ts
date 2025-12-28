@@ -7,6 +7,7 @@ import {
   users,
 } from "../../shared/schema.js";
 import { eq, desc, and } from "drizzle-orm";
+import { getPrivacyQueue } from "../queue.js";
 
 const router = Router();
 
@@ -97,6 +98,20 @@ router.delete("/traces", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("Clear traces error:", error);
     res.status(500).json({ error: "Failed to clear traces" });
+  }
+});
+
+// POST /api/admin/audit - Trigger Loi 25 Compliance Audit
+router.post("/audit", requireAdmin, async (req, res) => {
+  try {
+    const privacyQueue = getPrivacyQueue();
+    // Add job to queue
+    await privacyQueue.add("manual-audit", { userId: req.userId, force: true });
+
+    res.json({ success: true, message: "Privacy Audit Triggered" });
+  } catch (error) {
+    console.error("Audit trigger error:", error);
+    res.status(500).json({ error: "Failed to trigger audit" });
   }
 });
 

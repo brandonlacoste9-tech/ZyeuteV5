@@ -10,6 +10,7 @@ import { notifyCompletion, sendProgress } from "./services/notifications.js";
 import { scoutVideo } from "./services/videoEnrichment.js";
 import { postTiGuyFirstComment } from "./services/engagementService.js";
 import { MemoryMinerBee } from "./ai/bees/memory-miner.js";
+import { PrivacyAuditorBee } from "./ai/bees/privacy-auditor.js";
 import { HiveTask } from "./ai/types.js";
 
 const connection = {
@@ -188,3 +189,24 @@ memoryWorker.on("completed", (job) => {
 memoryWorker.on("failed", (job, err) => {
   console.log(`[MemoryWorker] Job ${job?.id} failed with ${err.message}`);
 });
+
+// --- PRIVACY AUDITOR WORKER ---
+export const privacyWorker = new Worker(
+  "zyeute-privacy-auditor",
+  async (job) => {
+    console.log(`[PrivacyWorker] 🔒 Starting Privacy Audit...`);
+    try {
+      const auditor = new PrivacyAuditorBee();
+      const result = await auditor.run({ limit: 50, force: true });
+      console.log(`[PrivacyWorker] ✅ Compliance Check Complete:`, result);
+      return result;
+    } catch (error) {
+      console.error(`[PrivacyWorker] 🚨 Audit failed:`, error);
+      throw error;
+    }
+  },
+  {
+    connection,
+    concurrency: 1,
+  },
+);

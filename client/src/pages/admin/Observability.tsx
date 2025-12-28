@@ -19,6 +19,8 @@ interface Memory {
   importance: number;
   metadata: any;
   createdAt: string;
+  auditStatus?: "pending" | "safe" | "flagged" | "redacted";
+  lastAuditedAt?: string;
 }
 
 interface Fact {
@@ -29,7 +31,9 @@ interface Fact {
 }
 
 export const Observability: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"traces" | "memories">("traces");
+  const [activeTab, setActiveTab] = useState<
+    "traces" | "memories" | "compliance"
+  >("traces");
   const [traces, setTraces] = useState<Trace[]>([]);
 
   // Memory Inspector State
@@ -97,6 +101,25 @@ export const Observability: React.FC = () => {
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
     setTraces([]);
+    setTraces([]);
+  };
+
+  const runAudit = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/audit", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) {
+        alert("🕵️ Privacy Audit started! Check back in a few moments.");
+        fetchMemories(); // Refresh list to see 'pending' status if changed
+      }
+    } catch (e) {
+      console.error("Audit trigger failed", e);
+    }
   };
 
   return (
@@ -117,6 +140,12 @@ export const Observability: React.FC = () => {
             className={`px-4 py-2 ${activeTab === "memories" ? "text-gold-400 border-b-2 border-gold-400" : "text-white/50"}`}
           >
             Memory Inspector
+          </button>
+          <button
+            onClick={() => setActiveTab("compliance")}
+            className={`px-4 py-2 ${activeTab === "compliance" ? "text-green-400 border-b-2 border-green-400" : "text-white/50"}`}
+          >
+            Loi 25 Compliance
           </button>
         </div>
 

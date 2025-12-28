@@ -3,10 +3,11 @@
  * Provides a centered mobile app aesthetic on desktop with customizable border glow
  */
 
-import React, { ReactNode } from 'react';
-import { useBorderColor } from '@/contexts/BorderColorContext';
-import { GuestBanner } from '@/components/GuestBanner';
-import { BottomNav } from '@/components/BottomNav';
+import React, { ReactNode } from "react";
+import { useBorderColor } from "@/contexts/BorderColorContext";
+import { GuestBanner } from "@/components/GuestBanner";
+import { BottomNav } from "@/components/BottomNav";
+import { HiveSelector } from "@/components/features/HiveSelector";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -21,14 +22,12 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       0 0 40px rgba(255, 191, 0, 0.3),
       inset 0 0 30px rgba(255, 191, 0, 0.15)
     `,
-    border: '2px solid rgba(255, 191, 0, 0.6)',
-    transition: 'box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out',
+    border: "2px solid rgba(255, 191, 0, 0.6)",
+    transition: "box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out",
   };
 
   return (
-    <div
-      className="h-screen w-full flex justify-center items-center leather-dark p-4 overflow-hidden"
-    >
+    <div className="h-screen w-full flex justify-center items-center leather-dark p-4 overflow-hidden">
       <div
         className="w-full max-w-md h-full flex flex-col text-white overflow-hidden rounded-3xl relative shadow-2xl"
         style={{
@@ -46,12 +45,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         <div
           className="absolute inset-0 pointer-events-none rounded-3xl"
           style={{
-            background: 'radial-gradient(ellipse at 50% 0%, rgba(255, 215, 0, 0.1) 0%, transparent 40%)',
+            background:
+              "radial-gradient(ellipse at 50% 0%, rgba(255, 215, 0, 0.1) 0%, transparent 40%)",
           }}
         />
 
         {/* Scrollable Content Area */}
         <div className="relative z-10 flex-1 overflow-y-auto scrollbar-hide pb-16">
+          {/* Global Hive Selector - Top Right Overlay */}
+          <div className="absolute top-4 right-4 z-50">
+            <HiveSelector />
+          </div>
           {children}
         </div>
 
