@@ -24,6 +24,7 @@ interface VideoCardProps {
   onComment?: (postId: string) => void;
   onShare?: (postId: string) => void;
   onGift?: (postId: string, recipient: User) => void;
+  priority?: boolean;
 }
 
 const VideoCardComponent: React.FC<VideoCardProps> = ({
@@ -36,6 +37,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   onComment,
   onShare,
   onGift,
+  priority = false,
 }) => {
   const navigate = useNavigate();
   const { tap } = useHaptics();
@@ -100,6 +102,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             size="md"
             isVerified={userToUse.is_verified}
             className="ring-2 ring-gold-500/20"
+            userId={userToUse.id}
           />
         </Link>
         <div className="flex-1">
@@ -145,6 +148,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             autoPlay={autoPlay}
             muted={muted}
             loop
+            priority={priority}
           />
         ) : (
           <div className="relative w-full h-full group/media">
@@ -152,7 +156,8 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               src={post.media_url}
               alt={post.caption || 'Photo'}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105"
-              loading="lazy"
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : 'auto'}
             />
             {/* Photo hover overlay with subtle gold effect */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/media:opacity-100 transition-opacity duration-300" />

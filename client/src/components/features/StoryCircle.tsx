@@ -14,6 +14,7 @@ export interface StoryCircleProps {
   isOwnStory?: boolean;
   onClick?: () => void;
   className?: string;
+  priority?: boolean;
 }
 
 export const StoryCircle: React.FC<StoryCircleProps> = ({
@@ -23,6 +24,7 @@ export const StoryCircle: React.FC<StoryCircleProps> = ({
   isOwnStory = false,
   onClick,
   className,
+  priority = false,
 }) => {
   const hasStory = !!story;
 
@@ -39,6 +41,18 @@ export const StoryCircle: React.FC<StoryCircleProps> = ({
       onClick={handleClick}
       className={cn('flex flex-col items-center gap-2 flex-shrink-0', className)}
     >
+      {/* Preload story media if high priority */}
+      {priority && story?.media_url && (
+        <img 
+          src={story.media_url} 
+          alt="" 
+          className="hidden" 
+          fetchPriority="low" // Reduced priority for hidden preload content compared to avatar
+          onLoad={() => { /* Cache warm */ }}
+          onError={() => {}}
+        />
+      )}
+
       {/* Story ring */}
       <div
         className={cn(
@@ -55,6 +69,8 @@ export const StoryCircle: React.FC<StoryCircleProps> = ({
               src={user.avatar_url}
               alt={user.display_name || user.username}
               className="w-full h-full object-cover"
+              fetchPriority={priority ? 'high' : 'auto'}
+              loading={priority ? 'eager' : 'lazy'}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
@@ -105,6 +121,7 @@ export const StoryCarousel: React.FC<{
             user={currentUser}
             isOwnStory
             story={stories.find(s => s.user.id === currentUser.id)?.story}
+            priority={true}
             onClick={() => {
               const currentUserStory = stories.find(s => s.user.id === currentUser.id)?.story;
               if (currentUserStory && onStoryClick) {
@@ -123,6 +140,7 @@ export const StoryCarousel: React.FC<{
               user={user}
               story={story}
               isViewed={isViewed}
+              priority={index < 3}
               onClick={() => {
                 if (story && onStoryClick) {
                   // Get all stories for this user

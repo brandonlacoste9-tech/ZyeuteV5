@@ -46,6 +46,7 @@ export const Notifications: React.FC = () => {
                       src={notification.actor.avatar_url}
                       size="md"
                       isVerified={notification.actor.is_verified}
+                      userId={notification.actor.id}
                     />
                   )}
 

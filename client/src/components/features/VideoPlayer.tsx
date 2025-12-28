@@ -5,6 +5,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import { logger } from '../../lib/logger';
+import { VideoSource } from '@/hooks/usePrefetchVideo';
 
 const videoPlayerLogger = logger.withContext('VideoPlayer');
 
@@ -21,6 +22,9 @@ export interface VideoPlayerProps {
   onPause?: () => void;
   style?: React.CSSProperties;
   videoStyle?: React.CSSProperties;
+  priority?: boolean;
+  preload?: 'auto' | 'metadata' | 'none';
+  videoSource?: VideoSource;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -35,6 +39,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPause,
   style,
   videoStyle,
+  priority = false,
+  preload = 'metadata',
+  videoSource,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -47,10 +54,161 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // MSE State
+  const mseRef = useRef<MediaSource | null>(null);
+  const [mseUrl, setMseUrl] = useState<string | null>(null);
+
+  // Determine effective source
+  const effectiveSrc = mseUrl || (videoSource?.type === 'blob' || videoSource?.type === 'url' ? videoSource.src : src);
+
+  // Metrics
+  const metricsRef = useRef({
+    startTime: 0,
+    timeToFirstFrame: 0,
+    stalledCount: 0,
+    totalStalledTime: 0,
+    lastStallStart: 0,
+  });
+
+  // MSE Pipeline & Multi-Chunk Append
+  const sourceBufferRef = useRef<SourceBuffer | null>(null);
+  const pendingChunksRef = useRef<ArrayBuffer[]>([]);
+  const [mseRetryCount, setMseRetryCount] = useState(0);
+
+  // Report playhead to cache for eviction
+  useEffect(() => {
+    if (videoSource?.type !== 'partial-chunks' || !videoSource.totalSize || !duration) return;
+    
+    const interval = setInterval(() => {
+        if (!videoRef.current || videoRef.current.paused || !videoSource.totalSize) return;
+        const playheadByte = (videoRef.current.currentTime / duration) * videoSource.totalSize;
+        import('@/lib/videoWarmCache').then(({ videoCache }) => {
+            videoCache.clearConsumedChunks(src, playheadByte);
+        });
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [src, videoSource, duration]);
+
+  useEffect(() => {
+    if (videoSource?.type !== 'partial-chunks') {
+        if (mseUrl) {
+            URL.revokeObjectURL(mseUrl);
+            setMseUrl(null);
+            mseRef.current = null;
+            sourceBufferRef.current = null;
+            pendingChunksRef.current = [];
+        }
+        return;
+    }
+
+    if (!videoRef.current) return;
+    
+    if (mseRef.current && sourceBufferRef.current) {
+        const sb = sourceBufferRef.current;
+        const currentChunks = videoSource.chunks;
+        const lastAppendedByte = (sb as any)._lastByte || -1;
+        
+        const newChunks = currentChunks.filter(c => c.start > lastAppendedByte);
+        if (newChunks.length > 0) {
+            newChunks.forEach(c => {
+                pendingChunksRef.current.push(c.data);
+                (sb as any)._lastByte = Math.max((sb as any)._lastByte || 0, c.end);
+            });
+            
+            if (!sb.updating && pendingChunksRef.current.length > 0) {
+                const data = pendingChunksRef.current.shift();
+                if (data) sb.appendBuffer(data);
+            }
+        }
+        return;
+    }
+
+    const mediaSource = new MediaSource();
+    const url = URL.createObjectURL(mediaSource);
+    setMseUrl(url);
+    mseRef.current = mediaSource;
+
+    const processQueue = () => {
+        const sb = sourceBufferRef.current;
+        if (!sb || sb.updating || pendingChunksRef.current.length === 0) return;
+        
+        const data = pendingChunksRef.current.shift();
+        if (data) {
+            try {
+                sb.appendBuffer(data);
+            } catch (e: any) {
+                if (e.name === 'QuotaExceededError') {
+                    videoPlayerLogger.warn('MSE Quota Exceeded. Clearing cache buffer...');
+                    // Attempt to clear some buffer if possible, or just ignore this chunk for now
+                    // SourceBuffer.remove() could be used here but it's complex.
+                    // For now, we signal a retry or fallback.
+                }
+                videoPlayerLogger.error('MSE Append Error:', e);
+            }
+        }
+    };
+
+    const handleSourceOpen = () => {
+        try {
+            if (mediaSource.readyState !== 'open') return;
+            
+            const mimeType = videoSource.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+            if (!MediaSource.isTypeSupported(mimeType)) {
+                videoPlayerLogger.warn(`MSE Type not supported: ${mimeType}. Falling back to URL.`);
+                setMseUrl(null); // Force fallback to URL
+                return;
+            }
+
+            const sb = mediaSource.addSourceBuffer(mimeType);
+            sourceBufferRef.current = sb;
+            
+            sb.addEventListener('updateend', () => {
+                processQueue();
+                if (videoSource.totalSize && (sb as any)._lastByte >= videoSource.totalSize - 1) {
+                    if (mediaSource.readyState === 'open' && !sb.updating) {
+                        mediaSource.endOfStream();
+                    }
+                }
+            });
+
+            videoSource.chunks.forEach(c => {
+                pendingChunksRef.current.push(c.data);
+                (sb as any)._lastByte = Math.max((sb as any)._lastByte || 0, c.end);
+            });
+            processQueue();
+            
+        } catch (e) {
+            videoPlayerLogger.error('MSE Init Error:', e);
+            if (mseRetryCount < 1) {
+                setMseRetryCount(c => c + 1);
+            } else {
+                setHasError(true);
+            }
+        }
+    };
+
+    mediaSource.addEventListener('sourceopen', handleSourceOpen);
+
+    return () => {
+        mediaSource.removeEventListener('sourceopen', handleSourceOpen);
+        pendingChunksRef.current = [];
+        setTimeout(() => URL.revokeObjectURL(url), 100); 
+    };
+  }, [videoSource, mseRetryCount]);
+
   // Handle video source errors gracefully
   const handleError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
     const error = video.error;
+    
+    // Soft Fallback: If MSE fails, try raw URL once before giving up
+    if (mseUrl) {
+         videoPlayerLogger.warn('MSE playback failed, falling back to raw URL');
+         setMseUrl(null);
+         return;
+    }
+
     videoPlayerLogger.error('Video playback error:', {
       code: error?.code,
       message: error?.message,
@@ -60,7 +218,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsLoading(false);
   };
 
-  // Handle video loaded successfully
+  // Metrics collection
+  const handlePlaying = () => {
+    if (metricsRef.current.startTime && !metricsRef.current.timeToFirstFrame) {
+        metricsRef.current.timeToFirstFrame = Date.now() - metricsRef.current.startTime;
+        videoPlayerLogger.debug(`TTFF for ${src.slice(-10)}: ${metricsRef.current.timeToFirstFrame}ms`);
+    }
+    if (metricsRef.current.lastStallStart) {
+        metricsRef.current.totalStalledTime += Date.now() - metricsRef.current.lastStallStart;
+        metricsRef.current.lastStallStart = 0;
+    }
+  };
+
+  const handleWaiting = () => {
+    metricsRef.current.stalledCount++;
+    metricsRef.current.lastStallStart = Date.now();
+  };
+
   const handleCanPlay = () => {
     setIsLoading(false);
     setHasError(false);
@@ -69,6 +243,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Handle loading started
   const handleLoadStart = () => {
     setIsLoading(true);
+    metricsRef.current.startTime = Date.now();
   };
 
   // Reset states when source changes
@@ -195,8 +370,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('ended', handleEnded);
+      
+      // Log Metrics on unmount
+      if (metricsRef.current.startTime) {
+          videoPlayerLogger.info(`Playback Metrics for ${src.slice(-15)}:`, {
+              ttff: metricsRef.current.timeToFirstFrame,
+              stalls: metricsRef.current.stalledCount,
+              totalStallTime: metricsRef.current.totalStalledTime,
+              mse: !!mseUrl,
+              fallback: !mseUrl && videoSource?.type === 'partial-chunks'
+          });
+      }
     };
-  }, [onEnded]);
+  }, [onEnded, src, mseUrl, videoSource]);
 
   // Format time (seconds to MM:SS)
   const formatTime = (seconds: number) => {
@@ -261,16 +447,29 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onClick={togglePlay}
     >
       {/* Video Element */}
+      {/* Preload prioritized poster */}
+      {priority && poster && (
+        <img 
+          src={poster} 
+          alt="" 
+          className="hidden" 
+          fetchPriority="high"
+          onError={() => {}} // Ignore errors on preload
+        />
+      )}
       <video
         ref={videoRef}
-        src={src}
+        src={effectiveSrc}
         poster={poster}
         playsInline
+        preload={preload}
         className="w-full h-full object-cover"
         style={videoStyle}
         onError={handleError}
         onCanPlay={handleCanPlay}
         onLoadStart={handleLoadStart}
+        onPlaying={handlePlaying}
+        onWaiting={handleWaiting}
         // Controlled props handled by useEffects now
       />
 

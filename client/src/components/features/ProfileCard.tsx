@@ -36,6 +36,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             size="2xl"
             isVerified={user.is_verified}
             isOnline={user.is_online}
+            userId={user.id}
           />
         </Link>
 
@@ -128,6 +129,7 @@ export const ProfileCardCompact: React.FC<{
           src={user.avatar_url}
           size="md"
           isVerified={user.is_verified}
+          userId={user.id}
         />
         <div className="flex-1 min-w-0">
           <p className="text-white font-semibold truncate">

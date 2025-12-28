@@ -17,6 +17,9 @@ import { formatNumber, getTimeAgo } from '../lib/utils';
 import { toast } from '../components/Toast';
 import type { Post, Comment as CommentType, User } from '../types';
 import { logger } from '../lib/logger';
+import { PostDetailSkeleton } from '@/components/ui/Skeleton';
+import { usePrefetchVideo } from '@/hooks/usePrefetchVideo';
+import { Image } from '@/components/Image';
 
 const postDetailLogger = logger.withContext('PostDetail');
 
@@ -185,11 +188,7 @@ export const PostDetail: React.FC = () => {
   };
 
   if (isLoading || !post) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-gold-400 animate-pulse">Chargement...</div>
-      </div>
-    );
+    return <PostDetailSkeleton />;
   }
 
   return (
@@ -200,22 +199,7 @@ export const PostDetail: React.FC = () => {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Media */}
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-900 edge-glow">
-            {post.type === 'video' ? (
-              <VideoPlayer
-                src={post.media_url}
-                poster={post.media_url}
-                autoPlay={true}
-                muted={false}
-                loop={true}
-                className="w-full h-full"
-              />
-            ) : (
-              <img
-                src={post.media_url}
-                alt={post.caption || 'Post'}
-                className="w-full h-full object-cover"
-              />
-            )}
+            <PostDetailMedia post={post} />
           </div>
 
           {/* Content */}
@@ -227,6 +211,7 @@ export const PostDetail: React.FC = () => {
                   src={post.user.avatar_url}
                   size="md"
                   isVerified={post.user.is_verified}
+                  userId={post.user.id}
                 />
                 <div className="flex-1">
                   <p className="text-white font-semibold">
@@ -328,6 +313,38 @@ export const PostDetail: React.FC = () => {
       )}
     </div>
   );
+};
+
+const PostDetailMedia = ({ post }: { post: Post }) => {
+    // Always prefetch full video for detail view (Tier 2)
+    const videoUrl = post.type === 'video' ? (post.media_url) : '';
+    const { source } = usePrefetchVideo(videoUrl, 2);
+
+    if (post.type === 'video') {
+         return (
+            <VideoPlayer
+                src={post.media_url}
+                poster={post.media_url}
+                autoPlay={true}
+                muted={false}
+                loop={true}
+                className="w-full h-full"
+                priority={true}
+                preload="auto"
+                videoSource={source}
+            />
+         );
+    }
+    
+    return (
+        <Image
+            src={post.media_url}
+            alt={post.caption || 'Post'}
+            className="w-full h-full object-cover"
+            fetchPriority="high"
+            loading="eager"
+        />
+    );
 };
 
 export default PostDetail;

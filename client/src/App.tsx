@@ -12,6 +12,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { BorderColorProvider } from '@/contexts/BorderColorContext';
 import { MainLayout } from '@/components/MainLayout';
 import { PageTransition } from '@/components/AnimatedRoutes';
+import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { TiGuy } from '@/components/features/TiGuy';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { GuestModeProvider } from '@/contexts/GuestModeContext';
@@ -23,6 +24,9 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ColonyProvider } from '@/components/providers/colony-provider';
 
 import { RBACProvider } from '@/contexts/RBACContext';
+import { NavigationStateProvider } from '@/contexts/NavigationStateContext';
+import { NetworkQueueProvider } from '@/contexts/NetworkQueueContext';
+import { OfflineIndicator } from '@/components/features/OfflineIndicator';
 import { GUEST_SESSION_DURATION, GUEST_MODE_KEY, GUEST_TIMESTAMP_KEY, GUEST_VIEWS_KEY } from '@/lib/constants';
 
 // Core Pages - Eagerly loaded (frequently accessed)
@@ -130,11 +134,14 @@ function App() {
             <GuestModeProvider>
             <ColonyProvider>
              <RBACProvider>
-              <GlobalAuthLoader>
+              <NavigationStateProvider>
+              <NetworkQueueProvider>
+               <GlobalAuthLoader>
                 <BorderColorProvider>
                 <BrowserRouter>
                   {/* Achievement Listener (Global) */}
                   <AchievementListener />
+                  <OfflineIndicator />
 
                   <Suspense fallback={<LoadingScreen />}>
                     <Routes>
@@ -185,9 +192,9 @@ function App() {
                                   path="/feed"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Feed />
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -195,9 +202,9 @@ function App() {
                                   path="/explore"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Explore />
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -205,11 +212,11 @@ function App() {
                                   path="/upload"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Suspense fallback={<LazyLoadFallback />}>
                                           <Upload />
                                         </Suspense>
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -237,9 +244,9 @@ function App() {
                                   path="/profile/:slug"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Profile />
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -247,11 +254,11 @@ function App() {
                                   path="/p/:id"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Suspense fallback={<LazyLoadFallback />}>
                                           <PostDetail />
                                         </Suspense>
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -259,11 +266,11 @@ function App() {
                                   path="/settings"
                                   element={
                                     <ProtectedRoute>
-                                      <ErrorBoundary>
+                                      <RouteErrorBoundary>
                                         <Suspense fallback={<LazyLoadFallback />}>
                                           <Settings />
                                         </Suspense>
-                                      </ErrorBoundary>
+                                      </RouteErrorBoundary>
                                     </ProtectedRoute>
                                   }
                                 />
@@ -581,6 +588,8 @@ function App() {
                 </BrowserRouter>
               </BorderColorProvider>
               </GlobalAuthLoader>
+               </NetworkQueueProvider>
+              </NavigationStateProvider>
              </RBACProvider>
             </ColonyProvider>
             </GuestModeProvider>

@@ -210,6 +210,7 @@ const StoryViewerComponent: React.FC<StoryViewerProps> = ({
                 size="sm"
                 isVerified={currentStory.user.is_verified}
                 className="ring-2 ring-white"
+                userId={currentStory.user.id}
               />
               <div>
                 <p className="text-white font-semibold text-sm">

@@ -204,6 +204,7 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
           size="sm"
           isVerified={comment.user.is_verified}
           className="flex-shrink-0"
+          userId={comment.user.id}
         />
       )}
 

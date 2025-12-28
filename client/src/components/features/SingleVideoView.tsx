@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { VideoPlayer } from './VideoPlayer';
 import { Avatar } from '../Avatar';
+import { Image } from '../Image';
 import { useHaptics } from '@/hooks/useHaptics';
 import { usePresence } from '@/hooks/usePresence';
 import type { Post, User } from '@/types';
@@ -18,6 +19,10 @@ interface SingleVideoViewProps {
   onFireToggle?: (postId: string, currentFire: number) => void;
   onComment?: (postId: string) => void;
   onShare?: (postId: string) => void;
+  priority?: boolean;
+  preload?: 'auto' | 'metadata' | 'none';
+  videoSource?: import('@/hooks/usePrefetchVideo').VideoSource;
+  isCached?: boolean;
 }
 
 export const SingleVideoView = React.memo<SingleVideoViewProps>(({
@@ -27,6 +32,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
   onFireToggle,
   onComment,
   onShare,
+  priority = false,
+  preload = 'metadata',
+  videoSource,
+  isCached,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null);
   const { tap, impact } = useHaptics();
@@ -107,14 +116,19 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
             muted={!isActive}
             loop
             className="w-full h-full object-cover"
-            style={filterStyle} 
+            style={filterStyle}
+            priority={priority}
+            preload={isActive ? 'auto' : preload}
+            videoSource={videoSource}
           />
         ) : (
-          <img
+          <Image
             src={post.media_url}
             alt={post.caption || 'Post media'}
             className="w-full h-full object-cover"
             style={filterStyle}
+            fetchPriority={priority ? 'high' : 'auto'}
+            loading={priority ? 'eager' : 'lazy'}
           />
         )}
       </div>
@@ -164,6 +178,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(({
             size="md"
             isVerified={user.is_verified}
             className="ring-2 ring-gold-500/40"
+            userId={user.id}
           />
         </Link>
         <div className="flex-1">

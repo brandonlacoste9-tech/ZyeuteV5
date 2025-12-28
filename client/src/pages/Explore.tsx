@@ -11,20 +11,58 @@ import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from '@/lib/quebecFeatures';
 import { formatNumber } from '@/lib/utils';
 import { useHaptics } from '@/hooks/useHaptics';
 import { toast } from '@/components/Toast';
-import type { Post } from '@/types';
+import { useNavigationState } from '@/contexts/NavigationStateContext';
+import type { Post, User } from '@/types';
 import { logger } from '../lib/logger';
 import { QuebecHashtags } from '@/components/trending/QuebecHashtags';
+import { ErrorBoundary, ErrorFallback } from '@/components/ErrorBoundary';
+import { ExploreGridSkeleton } from '@/components/ui/Skeleton';
 
 const exploreLogger = logger.withContext('Explore');
 
-
 export const Explore: React.FC = () => {
-  const [posts, setPosts] = React.useState<Post[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedRegion, setSelectedRegion] = React.useState('');
-  const [selectedHashtag, setSelectedHashtag] = React.useState('');
+  const { getFeedState, saveFeedState } = useNavigationState();
+  const savedState = getFeedState('explore');
+
+  // Initialize from saved state
+  const [posts, setPosts] = React.useState<Post[]>(savedState?.posts || []);
+  const [isLoading, setIsLoading] = React.useState(!savedState?.posts?.length);
+  const [searchQuery, setSearchQuery] = React.useState(savedState?.filters?.searchQuery || '');
+  const [selectedRegion, setSelectedRegion] = React.useState(savedState?.filters?.selectedRegion || '');
+  const [selectedHashtag, setSelectedHashtag] = React.useState(savedState?.filters?.selectedHashtag || '');
   const { tap } = useHaptics();
+
+  // Refs for persistence
+  const stateRef = React.useRef({
+    posts,
+    searchQuery,
+    selectedRegion,
+    selectedHashtag
+  });
+
+  React.useEffect(() => {
+    stateRef.current = { posts, searchQuery, selectedRegion, selectedHashtag };
+  }, [posts, searchQuery, selectedRegion, selectedHashtag]);
+
+  // Save state on unmount
+  React.useEffect(() => {
+    // Restore scroll position if saved
+    if (savedState) {
+      window.scrollTo(0, savedState.scrollOffset);
+    }
+
+    return () => {
+      saveFeedState('explore', {
+        posts: stateRef.current.posts as Array<Post & { user: User }>,
+        scrollOffset: window.scrollY,
+        filters: {
+          searchQuery: stateRef.current.searchQuery,
+          selectedRegion: stateRef.current.selectedRegion,
+          selectedHashtag: stateRef.current.selectedHashtag
+        }
+      });
+    };
+  }, []); // Only run on mount/unmount
 
   // Memoize trending hashtags slice (constant array operation)
   // Performance optimization: Only compute once since QUEBEC_HASHTAGS doesn't change
@@ -34,6 +72,14 @@ export const Explore: React.FC = () => {
 
   // Fetch posts
   const fetchPosts = React.useCallback(async () => {
+    // Skip fetch if we have saved posts and haven't changed filters
+    if (savedState?.posts?.length && 
+        searchQuery === savedState.filters?.searchQuery &&
+        selectedRegion === savedState.filters?.selectedRegion &&
+        selectedHashtag === savedState.filters?.selectedHashtag) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Use centralized API function - get all posts then filter client-side
@@ -70,7 +116,7 @@ export const Explore: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedRegion, selectedHashtag, searchQuery]);
+  }, [selectedRegion, selectedHashtag, searchQuery, savedState]);
 
   React.useEffect(() => {
     fetchPosts();
@@ -232,11 +278,8 @@ export const Explore: React.FC = () => {
         )}
 
         {/* Posts Grid */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 border-4 border-gold-500 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-leather-300">Chargement...</p>
-          </div>
+        {posts.length === 0 && isLoading ? (
+           <ExploreGridSkeleton />
         ) : posts.length === 0 ? (
           <div className="leather-card rounded-2xl p-12 text-center stitched">
             <div className="text-6xl mb-4">🦫</div>
@@ -258,57 +301,59 @@ export const Explore: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
-            {posts.map((post) => (
-              <Link
-                key={post.id}
-                to={`/p/${post.id}`}
-                className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
-              >
-                <img
-                  src={post.thumbnail_url || post.media_url}
-                  alt={post.caption || 'Post'}
-                  className="w-full h-full object-cover"
-                />
+          <ErrorBoundary fallback={<ErrorFallback onRetry={() => fetchPosts()} />}>
+            <div className="grid grid-cols-3 gap-2">
+              {posts.map((post) => (
+                <Link
+                  key={post.id}
+                  to={`/p/${post.id}`}
+                  className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                >
+                  <img
+                    src={post.thumbnail_url || post.media_url}
+                    alt={post.caption || 'Post'}
+                    className="w-full h-full object-cover"
+                  />
 
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
-                    {/* Stats */}
-                    <div className="flex items-center gap-3 text-white text-sm">
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                        </svg>
-                        <span className="font-bold">{formatNumber(post.fire_count)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <span className="font-bold">{formatNumber(post.comment_count)}</span>
-                      </div>
-                    </div>
-
-                    {/* User */}
-                    {post.user && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gold-500 flex items-center justify-center text-xs font-bold">
-                          {post.user.username?.[0]?.toUpperCase()}
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
+                      {/* Stats */}
+                      <div className="flex items-center gap-3 text-white text-sm">
+                        <div className="flex items-center gap-1">
+                          <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                          </svg>
+                          <span className="font-bold">{formatNumber(post.fire_count)}</span>
                         </div>
-                        <span className="text-white text-xs font-semibold truncate">
-                          @{post.user.username}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span className="font-bold">{formatNumber(post.comment_count)}</span>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Gold corner accent */}
-                <div className="absolute top-0 right-0 w-6 h-6 bg-gold-gradient opacity-30" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
-              </Link>
-            ))}
-          </div>
+                      {/* User */}
+                      {post.user && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gold-500 flex items-center justify-center text-xs font-bold">
+                            {post.user.username?.[0]?.toUpperCase()}
+                          </div>
+                          <span className="text-white text-xs font-semibold truncate">
+                            @{post.user.username}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Gold corner accent */}
+                  <div className="absolute top-0 right-0 w-6 h-6 bg-gold-gradient opacity-30" style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+                </Link>
+              ))}
+            </div>
+          </ErrorBoundary>
         )}
       </div>
 
