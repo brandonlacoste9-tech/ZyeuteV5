@@ -4,8 +4,8 @@
  * NOW WITH VIRTUALIZATION by REACT-WINDOW
  */
 
-import React, { useState, useEffect, useRef, useCallback, memo, ReactElement, ReactNode } from 'react';
-import { List } from 'react-window';
+import React, { useState, useEffect, useRef, useCallback, memo, ReactElement } from 'react';
+import { List, ListImperativeAPI } from 'react-window';
 
 // Support for react-window 2.x which renamed FixedSizeList to List
 interface RowData {
@@ -83,7 +83,7 @@ const FeedRow = memo(({
 });
 
 export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVideoChange }) => {
-    const listRef = useRef<any>(null);
+    const listRef = useRef<ListImperativeAPI>(null);
     const { tap } = useHaptics();
 
     const [posts, setPosts] = useState<Array<Post & { user: User }>>([]);
@@ -142,7 +142,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
     }, [fetchVideoFeed]);
 
     // Handle rows rendered (new API name in 2.x)
-    const onRowsRendered = useCallback(({ visibleRows }: any) => {
+    const onRowsRendered = useCallback((visibleRows: { startIndex: number; stopIndex: number }) => {
         const { startIndex, stopIndex } = visibleRows;
         // We assume the top-most visible item is the "current" one in a snap-scroll context
         const newIndex = startIndex;
@@ -216,14 +216,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({ className, onVid
         <div className={cn("w-full h-full bg-black", className)}>
             <AutoSizer>
                 {({ height, width }) => (
-                    <List
+                    <List<RowData>
                         listRef={listRef}
                         className="no-scrollbar snap-y snap-mandatory scroll-smooth"
                         style={{ height, width }}
                         rowCount={posts.length}
                         rowHeight={height} // Full screen height per item
-                        rowProps={itemData as any}
-                        rowComponent={FeedRow as any}
+                        rowProps={itemData}
+                        rowComponent={FeedRow as unknown as (props: FeedRowProps) => ReactElement}
                         onRowsRendered={onRowsRendered}
                         overscanCount={1} // Only render 1 item above/below viewport
                     />
