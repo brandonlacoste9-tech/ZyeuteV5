@@ -137,6 +137,7 @@
     "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/ui": "^4.0.15",
+    "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.8",

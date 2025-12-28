@@ -5,11 +5,7 @@
   "installCommand": "npm ci --include=dev",
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/public",
-  "cacheDirectories": [
-    "node_modules",
-    ".next/cache",
-    "dist"
-  ],
+
   "github": {
     "autoAlias": true,
     "autoJobCancelation": true,
