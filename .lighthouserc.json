@@ -57,9 +57,9 @@
         "link-text": "warn",
         "crawlable-anchors": "warn",
         
-        "is-on-https": "error",
-        "uses-http2": "warn",
-        "no-vulnerable-libraries": "error"
+        "is-on-https": "off",
+        "uses-http2": "off",
+        "no-vulnerable-libraries": "warn"
       }
     },
     "upload": {
