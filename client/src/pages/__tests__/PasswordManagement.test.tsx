@@ -19,11 +19,18 @@ vi.mock('../../lib/supabase', () => ({
       getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
       signInWithPassword: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
       signUp: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
-      resetPasswordForEmail: vi.fn(() => Promise.resolve({ error: null })),
-      updateUser: vi.fn(() => Promise.resolve({ error: null })),
-      onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
-      }))
+      resetPasswordForEmail: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+      updateUser: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      onAuthStateChange: vi.fn(() => {
+        return {
+          data: { 
+            subscription: { 
+              unsubscribe: vi.fn() 
+            } 
+          },
+          error: null
+        };
+      })
     }
   }
 }));

@@ -96,8 +96,8 @@ describe('useGuestMode', () => {
     rerender();
     const secondIncrementViews = result.current.incrementViews;
     
-    // incrementViews is recreated on each render since it's not memoized
-    // This test verifies the function works correctly even if reference changes
+    // incrementViews is not wrapped in useCallback, so it's recreated on each render
+    // This test verifies the function remains callable even with reference changes
     expect(typeof firstIncrementViews).toBe('function');
     expect(typeof secondIncrementViews).toBe('function');
   });
