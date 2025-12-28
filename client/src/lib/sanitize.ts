@@ -131,7 +131,7 @@ export function sanitizeFileName(input: string): string {
   
   // Remove path traversal attempts
   let sanitized = input.replace(/\.\./g, '');
-  sanitized = sanitized.replace(/[\/\\]/g, '');
+  sanitized = sanitized.replace(/[/\\]/g, '');
   
   // Only allow safe characters
   sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, '_');

@@ -4,11 +4,12 @@
  */
 
 import { logger } from '@/lib/logger';
-import type { Post, User, Story } from '@/types';
+import type { Post, User, Story, Comment, Notification } from '@/types';
 
 const apiLogger = logger.withContext('API');
 
 import { supabase } from '@/lib/supabase';
+import { AIImageResponseSchema, type AIImageResponse } from '@/schemas/ai';
 
 // Base API call helper
 async function apiCall<T>(
@@ -163,6 +164,7 @@ export async function createPost(postData: {
   hashtags?: string[];
   region?: string;
   visibility?: string;
+  visualFilter?: string;
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>('/posts', {
     method: 'POST',
@@ -198,14 +200,14 @@ export async function toggleCommentFire(commentId: string): Promise<boolean> {
 
 // ============ COMMENTS FUNCTIONS ============
 
-export async function getPostComments(postId: string): Promise<any[]> {
-  const { data, error } = await apiCall<{ comments: any[] }>(`/posts/${postId}/comments`);
+export async function getPostComments(postId: string): Promise<Comment[]> {
+  const { data, error } = await apiCall<{ comments: Comment[] }>(`/posts/${postId}/comments`);
   if (error || !data) return [];
   return data.comments || [];
 }
 
-export async function addComment(postId: string, content: string): Promise<any | null> {
-  const { data, error } = await apiCall<{ comment: any }>(`/posts/${postId}/comments`, {
+export async function addComment(postId: string, content: string): Promise<Comment | null> {
+  const { data, error } = await apiCall<{ comment: Comment }>(`/posts/${postId}/comments`, {
     method: 'POST',
     body: JSON.stringify({ content }),
   });
@@ -270,7 +272,7 @@ export async function getStories(
   // Group stories by user
   const storyMap = new Map<string, { user: User; story: Story; isViewed: boolean }>();
 
-  (data.stories || []).forEach((story: any) => {
+  (data.stories || []).forEach((story: Record<string, any>) => {
     if (story.user && !storyMap.has(story.user.id)) {
       storyMap.set(story.user.id, {
         user: mapBackendUser(story.user),
@@ -314,8 +316,8 @@ export async function markStoryViewed(storyId: string): Promise<boolean> {
 
 // ============ NOTIFICATIONS FUNCTIONS ============
 
-export async function getNotifications(): Promise<any[]> {
-  const { data, error } = await apiCall<{ notifications: any[] }>('/notifications');
+export async function getNotifications(): Promise<Notification[]> {
+  const { data, error } = await apiCall<{ notifications: Notification[] }>('/notifications');
   if (error || !data) return [];
   return data.notifications || [];
 }
@@ -332,14 +334,17 @@ export async function markAllNotificationsRead(): Promise<boolean> {
 
 // ============ AI FUNCTIONS ============
 
-export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<{ imageUrl: string; prompt: string } | null> {
-  const { data, error } = await apiCall<{ imageUrl: string; prompt: string }>('/ai/generate-image', {
+export async function generateImage(prompt: string, aspectRatio: string = "1:1"): Promise<AIImageResponse | null> {
+  const { data, error } = await apiCall<AIImageResponse>('/ai/generate-image', {
     method: 'POST',
     body: JSON.stringify({ prompt, aspectRatio }),
   });
 
   if (error || !data) return null;
-  return data;
+  
+  // Validate with Zod
+  const result = AIImageResponseSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
 
 // ============ HELPER FUNCTIONS ============
@@ -352,8 +357,8 @@ function isVideoUrl(url?: string): boolean {
 }
 
 // Map backend user fields (camelCase) to frontend fields (snake_case where needed)
-function mapBackendUser(user: any): User {
-  if (!user) return user;
+function mapBackendUser(user: Record<string, any>): User {
+  if (!user) return user as unknown as User;
   return {
     id: user.id,
     username: user.username,
@@ -374,10 +379,12 @@ function mapBackendUser(user: any): User {
     // RBAC Fields
     role: user.role || 'citoyen',
     custom_permissions: user.custom_permissions || {},
+    // Ti-Guy Preferences
+    tiGuyCommentsEnabled: user.tiGuyCommentsEnabled !== undefined ? user.tiGuyCommentsEnabled : (user.ti_guy_comments_enabled !== undefined ? user.ti_guy_comments_enabled : true),
   } as User;
 }
 
-function mapBackendPost(p: any): Post | null {
+function mapBackendPost(p: Record<string, any>): Post | null {
     // Return a default safe object or throw/return null if critical data is missing
     if (!p || !p.id) {
         return null;
@@ -409,8 +416,8 @@ function mapBackendPost(p: any): Post | null {
 }
 
 // Map backend story fields
-function mapBackendStory(story: any): Story {
-  if (!story) return story;
+function mapBackendStory(story: Record<string, any>): Story {
+  if (!story) return story as unknown as Story;
   const mediaType = story.mediaType || story.media_type || 'photo';
   return {
     id: story.id,

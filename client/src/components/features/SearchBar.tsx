@@ -250,6 +250,7 @@ const SearchBarComponent: React.FC<SearchBarProps> = ({
                         src={(result.data as User).avatar_url}
                         size="sm"
                         isVerified={(result.data as User).is_verified}
+                        userId={(result.data as User).id}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-semibold truncate">

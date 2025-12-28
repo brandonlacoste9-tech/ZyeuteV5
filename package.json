@@ -15,6 +15,7 @@
     "preflight": "npm run check && npm run lint && npm run build && npm run test",
     "worker": "tsx server/startWorker.ts",
     "db:push": "drizzle-kit push",
+    "prepare": "husky",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration",
     "test:all": "vitest run",
@@ -89,7 +90,6 @@
     "lucide-react": "^0.545.0",
     "memoizee": "^0.4.17",
     "next-themes": "^0.4.6",
-    "openai": "^6.15.0",
     "openid-client": "^6.8.1",
     "pg": "^8.16.3",
     "react": "^19.2.0",
@@ -130,18 +130,25 @@
     "@types/node": "^20.19.27",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@types/react-window": "^2.0.0",
     "@types/socket.io-client": "^3.0.0",
     "@types/uuid": "^11.0.0",
     "@types/ws": "^8.5.13",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/ui": "^4.0.15",
+    "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.8",
     "esbuild": "^0.27.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "happy-dom": "^20.0.11",
+    "husky": "^9.0.11",
     "jsdom": "^27.3.0",
+    "lint-staged": "^15.2.0",
     "postcss": "^8.5.6",
     "prettier": "^3.0.0",
     "tailwindcss": "^4.1.14",
@@ -150,6 +157,15 @@
     "typescript": "5.6.3",
     "vite": "^7.1.9",
     "vitest": "^4.0.15"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "overrides": {
     "esbuild": "^0.27.2"

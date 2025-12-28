@@ -1,5 +1,5 @@
 import { db } from "../storage.js";
-import { posts } from "../../shared/schema.js";
+import { posts, users } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 
 export async function updatePostStatus(
@@ -29,4 +29,12 @@ export async function saveVideoUrls(
             processingStatus: 'completed',
         })
         .where(eq(posts.id, postId));
+}
+export async function isTiGuyCommentEnabled(userId: string): Promise<boolean> {
+  const result = await db.select({ enabled: users.tiGuyCommentsEnabled })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+    
+  return result[0]?.enabled ?? true;
 }

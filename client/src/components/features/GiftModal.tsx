@@ -203,7 +203,7 @@ export const GiftModal: React.FC<GiftModalProps> = ({
           
           {/* Recipient */}
           <div className="flex items-center gap-3 mt-3">
-            <Avatar src={recipient.avatar_url} size="sm" isVerified={recipient.is_verified} />
+            <Avatar src={recipient.avatar_url} size="sm" isVerified={recipient.is_verified} userId={recipient.id} />
             <div>
               <p className="text-black font-semibold text-sm">
                 Pour {recipient.display_name || recipient.username}

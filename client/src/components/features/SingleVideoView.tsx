@@ -7,8 +7,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { VideoPlayer } from './VideoPlayer';
 import { Avatar } from '../Avatar';
+import { Image } from '../Image';
 import { useHaptics } from '@/hooks/useHaptics';
 import { usePresence } from '@/hooks/usePresence';
+import { InteractiveText } from '../InteractiveText';
+import { TiGuyInsight } from '../TiGuyInsight';
 import type { Post, User } from '@/types';
 
 interface SingleVideoViewProps {
@@ -18,15 +21,29 @@ interface SingleVideoViewProps {
   onFireToggle?: (postId: string, currentFire: number) => void;
   onComment?: (postId: string) => void;
   onShare?: (postId: string) => void;
+  priority?: boolean;
+  preload?: 'auto' | 'metadata' | 'none';
+  videoSource?: import('@/hooks/usePrefetchVideo').VideoSource;
+  isCached?: boolean;
+  debug?: {
+    activeRequests: number;
+    concurrency: number;
+    tier: number;
+  };
 }
 
-export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
+export const SingleVideoView = React.memo<SingleVideoViewProps>(({
   post,
   user,
   isActive,
   onFireToggle,
   onComment,
   onShare,
+  priority = false,
+  preload = 'metadata',
+  videoSource,
+  isCached,
+  debug,
 }) => {
   const videoRef = useRef<HTMLDivElement>(null);
   const { tap, impact } = useHaptics();
@@ -81,12 +98,13 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
   };
 
   // Deep Enhance: Select best video source
-  const videoSrc = (post.processing_status === 'ready' && post.enhanced_url) 
+  const isVideo = post.type === 'video';
+  const videoSrc = (isVideo && post.processing_status === 'ready' && post.enhanced_url) 
     ? post.enhanced_url 
-    : (post.media_url || post.original_url || '');
+    : (post.media_url || (isVideo ? post.original_url : '') || '');
 
   // Deep Enhance: Visual Filters
-  const filterStyle = post.visual_filter && post.visual_filter !== 'none' 
+  const filterStyle = isVideo && post.visual_filter && post.visual_filter !== 'none' 
     ? { filter: post.visual_filter } 
     : {};
 
@@ -106,14 +124,20 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
             muted={!isActive}
             loop
             className="w-full h-full object-cover"
-            style={filterStyle} 
+            style={filterStyle}
+            priority={priority}
+            preload={isActive ? 'auto' : preload}
+            videoSource={videoSource}
+            debug={debug}
           />
         ) : (
-          <img
+          <Image
             src={post.media_url}
             alt={post.caption || 'Post media'}
             className="w-full h-full object-cover"
             style={filterStyle}
+            fetchPriority={priority ? 'high' : 'auto'}
+            loading={priority ? 'eager' : 'lazy'}
           />
         )}
       </div>
@@ -136,13 +160,13 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
 
       {/* Deep Enhance Status Badge (Top Right) */}
       <div className="absolute top-16 right-4 z-20 flex flex-col gap-2 items-end">
-         {post.processing_status === 'ready' && post.enhanced_url && (
+         {post.type === 'video' && post.processing_status === 'ready' && post.enhanced_url && (
             <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                <span>✨</span>
                <span>4K ULTRA</span>
             </div>
          )}
-         {post.processing_status === 'processing' && (
+         {post.type === 'video' && post.processing_status === 'processing' && (
             <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
                <span className="animate-spin">⚙️</span>
                <span>Enhancing...</span>
@@ -163,6 +187,7 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
             size="md"
             isVerified={user.is_verified}
             className="ring-2 ring-gold-500/40"
+            userId={user.id}
           />
         </Link>
         <div className="flex-1">
@@ -199,6 +224,16 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
 
       {/* Bottom Content Area */}
       <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-20">
+        {/* Ti-Guy Insight */}
+        {post.ai_description && (
+          <div className="mb-4">
+            <TiGuyInsight 
+              summary={post.ai_description} 
+              labels={post.ai_labels || []} 
+            />
+          </div>
+        )}
+
         {/* Caption */}
         {post.caption && (
           <div className="mb-4">
@@ -209,9 +244,7 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
             >
               {user.username}
             </Link>
-            <span className="text-white text-sm leading-relaxed">
-              {post.caption}
-            </span>
+            <InteractiveText text={post.caption} className="text-white text-sm leading-relaxed" />
           </div>
         )}
 
@@ -319,5 +352,18 @@ export const SingleVideoView: React.FC<SingleVideoViewProps> = ({
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+    // Custom comparison function for React.memo
+    // Returns true if props are equal (no re-render needed)
+    return (
+        prevProps.post.id === nextProps.post.id &&
+        prevProps.isActive === nextProps.isActive &&
+        prevProps.post.fire_count === nextProps.post.fire_count &&
+        prevProps.post.comment_count === nextProps.post.comment_count &&
+        prevProps.post.comment_count === nextProps.post.comment_count &&
+        ((prevProps.post.type === 'video' && nextProps.post.type === 'video') ? 
+            prevProps.post.processing_status === nextProps.post.processing_status : 
+            true)
+    );
+});
 

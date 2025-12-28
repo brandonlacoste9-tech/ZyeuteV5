@@ -1,0 +1,99 @@
+
+import { useState, useEffect, useRef } from 'react';
+import { useInView } from 'react-intersection-observer';
+import { PreloadTier } from './usePrefetchVideo';
+import { useNetworkStatus } from './useNetworkStatus';
+
+interface VideoActivationResult {
+  ref: (node?: Element | null) => void;
+  shouldPlay: boolean;
+  preloadTier: PreloadTier;
+}
+
+/**
+ * Determines when a video should play or preload based on
+ * visibility, scroll velocity, and network status.
+ */
+export function useVideoActivation(
+  isFastScrolling: boolean,
+  isMediumScrolling: boolean,
+  isSlowScrolling: boolean, // For detecting idle/predictive moments
+  priority: boolean = false, // Focused item
+  predictive: boolean = false // Item before/after focus
+): VideoActivationResult {
+  const isOnline = useNetworkStatus();
+  
+  // Intersection Observer to track visibility
+  const { ref, inView, entry } = useInView({
+    threshold: [0, 0.25, 0.5, 0.75, 1.0],
+    rootMargin: '300px 0px 300px 0px' // Increased buffer for predictive
+  });
+
+  const [shouldPlay, setShouldPlay] = useState(false);
+  const [preloadTier, setPreloadTier] = useState<PreloadTier>(0);
+  const [isEngaged, setIsEngaged] = useState(false);
+  const engagementTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const visibilityRatio = entry?.intersectionRatio || 0;
+  const isActuallyVisible = visibilityRatio > 0;
+  const isFocused = visibilityRatio > 0.6; // Stricter focus
+
+  // Engagement Tracker
+  useEffect(() => {
+    if (shouldPlay && isFocused) {
+        if (!engagementTimerRef.current) {
+            engagementTimerRef.current = setTimeout(() => {
+                setIsEngaged(true);
+            }, 3000); 
+        }
+    } else {
+        if (engagementTimerRef.current) {
+            clearTimeout(engagementTimerRef.current);
+            engagementTimerRef.current = null;
+        }
+        setIsEngaged(false);
+    }
+    return () => {
+        if (engagementTimerRef.current) clearTimeout(engagementTimerRef.current);
+    };
+  }, [shouldPlay, isFocused]);
+
+  useEffect(() => {
+    // 1. Playback Logic
+    let nextShouldPlay = false;
+    if (!isFastScrolling && (isFocused || (priority && visibilityRatio > 0.3))) {
+       nextShouldPlay = true;
+    } 
+    setShouldPlay(nextShouldPlay);
+
+    // 2. Preload Tiering Logic
+    let nextTier: PreloadTier = 0;
+
+    if (isFastScrolling) {
+      // Predictive: If scrolling fast, we abort via usePrefetchVideo cleanup
+      nextTier = 0;
+    } else if (isEngaged && isFocused) {
+      // Aggressive Mode (Engagement-Driven)
+      nextTier = 2; // Full prefetch
+    } else if (isFocused || priority) {
+      // Main focused item - Tier 1 or 2 based on speed
+      nextTier = isSlowScrolling ? 2 : 1; 
+    } else if (isActuallyVisible || inView) {
+      // Nearby/Visible
+      nextTier = 1;
+    } else if (predictive && isSlowScrolling) {
+      // Predictive fetch for neighbors when idle
+      nextTier = 3; 
+    } else {
+      nextTier = 0;
+    }
+
+    setPreloadTier(nextTier);
+  }, [isFastScrolling, isMediumScrolling, isSlowScrolling, isFocused, isActuallyVisible, inView, priority, predictive, isEngaged]);
+
+  return {
+    ref,
+    shouldPlay,
+    preloadTier
+  };
+}

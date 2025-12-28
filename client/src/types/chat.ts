@@ -9,4 +9,5 @@ export interface ChatMessage {
   sender: Sender;
   text: string;
   timestamp: Date;
+  image?: string;
 }

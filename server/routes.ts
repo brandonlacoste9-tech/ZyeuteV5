@@ -9,7 +9,8 @@ import {
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { fal } from "@fal-ai/client";
-import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, FAL_PRESETS } from "./v3-swarm.js";
+import { v3TiGuyChat, v3Flow, v3Feed, v3Microcopy, v3Mod, FAL_PRESETS } from "./v3-swarm.js";
+import { lookupWord } from "./utils/dictionary.js";
 import emailAutomation from "./email-automation.js";
 // Import Studio API routes
 import studioRoutes from "./routes/studio.js";
@@ -20,6 +21,7 @@ import debugRoutes from "./api/debug.js";
 // Import tracing utilities
 import { traced, traceDatabase, traceExternalAPI, traceStripe, traceSupabase, addSpanAttributes } from "./tracer.js";
 import { getVideoQueue } from './queue.js';
+import { joualizeText, type JoualStyle } from "./services/joualizer.js";
 
 // Configure FAL client
 fal.config({
@@ -78,6 +80,15 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     const userId = await verifyAuthToken(token);
 
     if (userId) {
+      // Check if user is banned
+      const user = await storage.getUser(userId);
+      if (user?.role === 'banned') {
+        return res.status(403).json({ 
+          error: "Votre compte a été désactivé en raison d'une violation grave de nos protocoles de sécurité. Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
+          isBanned: true
+        });
+      }
+      
       req.userId = userId;
       return next();
     }
@@ -216,13 +227,14 @@ export async function registerRoutes(
   // Update current user profile
   app.patch("/api/users/me", requireAuth, async (req, res) => {
     try {
-      const { displayName, bio, avatarUrl, region } = req.body;
+      const { displayName, bio, avatarUrl, region, tiGuyCommentsEnabled } = req.body;
 
       const updated = await storage.updateUser(req.userId!, {
         displayName,
         bio,
         avatarUrl,
         region,
+        tiGuyCommentsEnabled,
       });
 
       if (!updated) {
@@ -284,6 +296,28 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get smart feed error:", error);
       res.status(500).json({ error: "Failed to get smart recommendations" });
+    }
+  });
+
+  // [NEW] Joualizer Rewrite Engine
+  app.post("/api/ai/joualize", requireAuth, aiRateLimiter, async (req, res) => {
+    try {
+      const { text, style } = req.body;
+
+      if (!text || typeof text !== 'string') {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const validStyles: JoualStyle[] = ['street', 'old', 'enhanced'];
+      if (!style || !validStyles.includes(style as JoualStyle)) {
+        return res.status(400).json({ error: "Invalid style. Use 'street', 'old', or 'enhanced'." });
+      }
+
+      const rewrittenText = await joualizeText(text, style as JoualStyle);
+      res.json({ originalText: text, rewrittenText, style });
+    } catch (error) {
+      console.error("Joualizer error:", error);
+      res.status(500).json({ error: "Failed to joualize text" });
     }
   });
 
@@ -435,7 +469,35 @@ export async function registerRoutes(
         return res.status(400).json({ error: parsed.error.errors[0].message });
       }
 
-      const post = await storage.createPost(parsed.data);
+      // [PHASE 9] Synchronous AI Moderation
+      const moderationContent = `${parsed.data.caption || ''} ${parsed.data.content || ''}`;
+      const modResult = await v3Mod(moderationContent);
+
+      if (modResult.is_minor_danger) {
+        console.error(`🚨 Child Safety Violation: Banning user ${req.userId}`);
+        
+        // Record persistent moderation log
+        await storage.createModerationLog({
+          userId: req.userId!,
+          action: 'ban',
+          reason: 'minor_danger',
+          details: modResult.reason,
+          score: 10
+        });
+
+        await storage.updateUser(req.userId!, { 
+          role: 'banned', 
+          bio: 'COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.' 
+        });
+        return res.status(403).json({ error: "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro)." });
+      }
+
+      const post = await storage.createPost({
+        ...parsed.data,
+        isModerated: true,
+        moderationApproved: modResult.status === 'approved',
+        isHidden: modResult.status !== 'approved'
+      });
 
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
@@ -445,7 +507,13 @@ export async function registerRoutes(
         visual_filter: req.body.visual_filter || 'prestige'
       });
 
-      res.status(201).json({ post });
+      res.status(201).json({ 
+        post, 
+        moderation: {
+          approved: modResult.status === 'approved',
+          reason: modResult.status !== 'approved' ? modResult.reason : null
+        }
+      });
     } catch (error) {
       console.error("Create post error:", error);
       res.status(500).json({ error: "Failed to create post" });
@@ -1308,6 +1376,23 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Get user gifts error:", error);
       res.status(500).json({ error: "Failed to get gifts" });
+    }
+  });
+
+  // [TI-SCRIPT] Dictionary Lookup Route
+  app.get("/api/dictionary/lookup/:word", async (req, res) => {
+    try {
+      const { word } = req.params;
+      const entry = await lookupWord(word);
+      
+      if (!entry) {
+        return res.status(404).json({ error: "Mot non trouvé dans le dictionnaire local." });
+      }
+
+      res.json(entry);
+    } catch (error: any) {
+      console.error("Dictionary lookup error:", error);
+      res.status(500).json({ error: "Erreur lors de la recherche dans le dictionnaire." });
     }
   });
 

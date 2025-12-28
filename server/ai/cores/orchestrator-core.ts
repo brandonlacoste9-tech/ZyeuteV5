@@ -54,7 +54,7 @@ export class OrchestratorCore {
             const beeModule = await import(`../bees/${bee.id}`);
 
             if (beeModule && typeof beeModule.run === 'function') {
-                const result = await beeModule.run(task.payload);
+                const result = await beeModule.run(task);
                 const executionTime = Date.now() - startTime;
 
                 const taskResult: HiveTaskResult = {

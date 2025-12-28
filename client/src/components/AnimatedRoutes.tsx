@@ -32,8 +32,20 @@ const pageVariants = {
   },
 };
 
+// Main tabs should switch instantly without animation
+const TAB_ROUTES = ['/', '/feed', '/explore', '/notifications', '/upload'];
+
 export const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
   const location = useLocation();
+  
+  // Check if current route is a main tab or profile page
+  const isTab = TAB_ROUTES.some(r => location.pathname === r) || location.pathname.startsWith('/profile');
+
+  // If it's a main tab, render immediately without transition
+  // This prevents layout jumps and makes navigation feel "native"
+  if (isTab) {
+    return <div className="w-full h-full">{children}</div>;
+  }
 
   return (
     <AnimatePresence mode="wait">

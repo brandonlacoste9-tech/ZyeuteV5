@@ -3,14 +3,10 @@
  * Summarizes platform metrics using DeepSeek
  */
 
-import OpenAI from 'openai';
+import { deepseek } from '../deepseek.js';
 
-const deepseek = new OpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: 'https://api.deepseek.com',
-});
-
-export async function run(payload: any) {
+export async function run(task: any) {
+    const payload = task.payload || {};
     const metrics = payload.metrics || payload;
     const period = payload.period || 'today';
 

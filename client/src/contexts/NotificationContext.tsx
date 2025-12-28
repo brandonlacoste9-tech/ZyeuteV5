@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import { type Session } from '@supabase/supabase-js';
 import { toast } from '../components/Toast';
 import type { Notification } from '../types';
+import { NotificationSchema } from '../schemas/common';
 import { logger } from '../lib/logger';
 
 const notificationContextLogger = logger.withContext('NotificationContext');
@@ -67,8 +68,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       if (data) {
-        setNotifications(data);
-        const unread = data.filter((n: Notification) => !n.is_read).length;
+        const parsed = data.map((n: any) => NotificationSchema.parse(n));
+        setNotifications(parsed);
+        const unread = parsed.filter((n: Notification) => !n.is_read).length;
         setUnreadCount(unread);
       }
     } catch (error) {
@@ -99,8 +101,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           table: 'notifications',
           filter: `user_id=eq.${currentUserId}`,
         },
-        async (payload: { new: Notification }) => {
-          const newNotification = payload.new;
+        async (payload: { new: any }) => {
+          const rawNotification = payload.new;
+          const newNotification = NotificationSchema.parse(rawNotification);
 
           // Fetch actor details
           const { data: actor } = await supabase
@@ -185,12 +188,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const actor = notification.actor;
     if (!actor) return;
 
-    const messages = {
+    const messages: Record<string, string> = {
       fire: `${actor.display_name || actor.username} a trouvé ta publi malade! 🔥`,
       comment: `${actor.display_name || actor.username} a jasé sur ta publication 💬`,
       follow: `${actor.display_name || actor.username} commence à te suivre! 👤`,
       gift: `${actor.display_name || actor.username} t'a envoyé un cadeau! 🎁`,
       mention: `${actor.display_name || actor.username} t'a mentionné! @`,
+      story_view: `${actor.display_name || actor.username} a vu ta story! 👀`,
     };
 
     toast.info(messages[notification.type] || 'Nouvelle notification!');

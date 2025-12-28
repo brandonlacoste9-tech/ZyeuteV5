@@ -12,6 +12,7 @@ import { moderateContent } from '../../services/moderationService';
 import { getTimeAgo, formatNumber } from '../../lib/utils';
 import { validateComment, sanitizeText } from '../../lib/validation';
 import { checkRateLimit, RATE_LIMITS } from '../../lib/rateLimiter';
+import { InteractiveText } from '../InteractiveText';
 import type { Comment as CommentType, User } from '../../types';
 import { logger } from '../../lib/logger';
 
@@ -204,6 +205,7 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
           size="sm"
           isVerified={comment.user.is_verified}
           className="flex-shrink-0"
+          userId={comment.user.id}
         />
       )}
 
@@ -221,15 +223,10 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
           </span>
         </div>
 
-        {/* Comment text - sanitized for XSS protection */}
-        <p 
-          className="text-white text-sm mb-2 break-words"
-          dangerouslySetInnerHTML={{ 
-            __html: DOMPurify.sanitize(comment.content || comment.text || '', {
-              ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br'],
-              ALLOWED_ATTR: []
-            })
-          }}
+        {/* Comment text */}
+        <InteractiveText 
+          text={comment.content || comment.text || ''} 
+          className="text-white text-sm mb-2 block break-words"
         />
 
         {/* Actions */}

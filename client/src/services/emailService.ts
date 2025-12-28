@@ -3,20 +3,15 @@
  * Uses OpenAI for content generation
  */
 
-import OpenAI from 'openai';
 import { logger } from '@/lib/logger';
 
 const emailServiceLogger = logger.withContext('EmailService');
 
-// Initialize OpenAI
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-const openai = apiKey ? new OpenAI({
-  apiKey: apiKey,
-  dangerouslyAllowBrowser: true
-}) : null;
+// API Keys
+const deepSeekApiKey = import.meta.env.VITE_DEEPSEEK_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
 
 export const generateMarketingEmail = async (prompt: string): Promise<{ subject: string; body: string }> => {
-  if (!openai) {
+  if (!deepSeekApiKey) {
     // Mock response if no API key
     return {
       subject: "🔥 Nouvelles de Zyeuté!",
@@ -25,22 +20,32 @@ export const generateMarketingEmail = async (prompt: string): Promise<{ subject:
   }
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "Tu es un expert en marketing par courriel pour une audience québécoise. Tu parles un français québécois engageant, amical et coloré (joual léger). Génère un objet et un corps de courriel HTML."
-        },
-        {
-          role: "user",
-          content: `Sujet de la campagne: "${prompt}". Génère un objet (subject) et un corps (body) en HTML. Réponds en JSON format: { "subject": "...", "body": "..." }`
-        }
-      ],
-      response_format: { type: "json_object" }
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deepSeekApiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          {
+            role: "system",
+            content: "Tu es un expert en marketing par courriel pour une audience québécoise. Tu parles un français québécois engageant, amical et coloré (joual léger). Génère un objet et un corps de courriel HTML."
+          },
+          {
+            role: "user",
+            content: `Sujet de la campagne: "${prompt}". Génère un objet (subject) et un corps (body) en HTML. Réponds en JSON format: { "subject": "...", "body": "..." }`
+          }
+        ],
+        response_format: { type: "json_object" }
+      })
     });
 
-    const resultText = response.choices[0].message.content || "{}";
+    if (!response.ok) throw new Error(`DeepSeek API error: ${response.status}`);
+
+    const data = await response.json();
+    const resultText = data.choices[0].message.content || "{}";
     return JSON.parse(resultText);
   } catch (error) {
     emailServiceLogger.error('Error generating email:', error);

@@ -19,6 +19,7 @@ export interface SettingsPreferences {
     filterOffensive: boolean;
     autoHide: boolean;
     allowGifs: boolean;
+    tiGuyCommentsEnabled: boolean;
   };
   sharing: {
     allowShares: boolean;
@@ -110,6 +111,7 @@ const basePreferences: SettingsPreferences = {
     filterOffensive: true,
     autoHide: true,
     allowGifs: true,
+    tiGuyCommentsEnabled: true,
   },
   sharing: {
     allowShares: true,

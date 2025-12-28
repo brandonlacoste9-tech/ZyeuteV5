@@ -1,141 +1,89 @@
-// ... imports
-import { neurosphere, DeepSeekMessage } from '../lib/ai/deepseek.js';
+import { neurosphere } from '../lib/ai/deepseek.js';
 import { geminiCortex } from '../lib/ai/gemini.js';
 import { db } from '../lib/db.js';
-// ...
+import { LlmAgent } from '../lib/agents/LlmAgent.js';
+import { AgentTask } from '../lib/agents/BaseAgent.js';
 
-// ... (findPollen update)
-  private async findPollen(): Promise<ColonyTask | null> {
-    const { data, error } = await db
-      .from('colony_tasks')
-      .select('*')
-      .eq('status', 'pending')
-      .in('command', ['content_advice', 'moderation', 'scan_moderation', 'bug_report', 'check_vitals', 'generate_video', 'visual_analysis']) // Added visual_analysis
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
-// ...
-
-// ... (processTask update)
-    // Command: Visual Analysis (Gemini)
-    if (task.command === 'visual_analysis') {
-         if (!payload.imageUrl) return "Error: No Image URL provided";
-         
-         // Fetch image buffer (mock or real)
-         // For now, we assume simple text fallback if no buffer logic exists, 
-         // but strictly we'd fetch the URL here.
-         return await geminiCortex.chat(`Detailed visual analysis of: ${payload.imageUrl}. Context: ${payload.prompt || 'Describe this.'}`);
-    }
-
-    // Command: Check Vitals
-    if (task.command === 'check_vitals') {
-        return JSON.stringify({
-            status: 'NOMINAL',
-            heartbeat: 'STABLE',
-            caffeine_level: 'HIGH',
-            active_bees: 3,
-            visual_cortex: geminiCortex['isReady'] ? 'ONLINE' : 'OFFLINE', // Report Gemini status
-            timestamp: new Date().toISOString()
-        });
-    }
-// ... (rest of function)
-
-interface ColonyTask {
-  id: string;
-  command: string; // Matched to DB
-  payload: any;
-  metadata?: any; // Add metadata support
-
-  payload: any;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  result?: any;
-  created_at: string;
-}
-
-export class DeepSeekBee {
-  private isAwake = false;
+export class DeepSeekBee extends LlmAgent {
   private isForaging = false;
   private pollInterval = 5000;
-  private beeId = 'bee_deepseek_v3_01';
 
   constructor() {
-    console.log(`🐝 [${this.beeId}] Initialized. Waiting for signal...`);
+    super(
+      'bee_deepseek_v3_01', 
+      neurosphere,
+      "Tu es l'intelligence de Zyeuté. ADN Québécois. Respecte la Loi 25 sur la protection des données."
+    );
   }
 
+  public async onStartup() {
+    console.log(`🐝 [${this.agentId}] Hive Link Established via ADK App. Polling for tasks...`);
+  }
+
+  public async onShutdown() {
+    console.log(`🐝 [${this.agentId}] Agent going to sleep safely.`);
+  }
+
+  public async onStart() {}
+  public async onStop() {}
+
   public wakeUp() {
-    if (this.isAwake) return;
-    this.isAwake = true;
-    console.log(`🐝 [${this.beeId}] Hive Link Established. Polling for tasks...`);
-    
-    // Start the heartbeat
-    setInterval(() => this.forage(), this.pollInterval);
+    this.start();
   }
 
   /**
    * The Safe Forage Loop
-   * Replaces Math.random() with specific DB queries.
    */
-  private async forage() {
+  protected async forage() {
     if (this.isForaging) return;
     this.isForaging = true;
 
     try {
-      // 1. SENSE: Query the database for pending tasks
-      const task = await this.findPollen(); 
+      const { data: task, error } = await db
+        .from('colony_tasks')
+        .select('*')
+        .eq('status', 'pending')
+        .in('command', ['content_advice', 'moderation', 'scan_moderation', 'bug_report', 'check_vitals', 'generate_video', 'visual_analysis'])
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
 
-      if (!task) {
-        // No tasks found. The Bee sleeps safely. No spam.
-        // console.log('zzz...'); 
+      if (error || !task) {
         this.isForaging = false;
         return;
       }
 
-      console.log(`🐝 [${this.beeId}] 🌸 Task Detected: [${task.type}] - ID: ${task.id}`);
+      console.log(`🐝 [${this.agentId}] 🌸 Task Detected: [${task.command}] - ID: ${task.id}`);
 
-      // 2. DIGEST: Lock the task so other bees don't take it
-      await this.claimTask(task.id);
+      // Claim Task
+      await db.from('colony_tasks').update({ status: 'processing' }).eq('id', task.id);
 
       try {
-        // 3. THINK & ACT: Process logic
-        const result = await this.processTask(task);
+        const result = await this.processTask(task as unknown as AgentTask);
         
-        // 4. MEMORIZE: Save result
-        await this.depositHoney(task.id, result);
+        // Deposit Honey
+        await db.from('colony_tasks').update({ 
+          status: 'completed', 
+          result: typeof result === 'string' ? result : JSON.stringify(result) 
+        }).eq('id', task.id);
       } catch (processingError: any) {
-        console.error(`🐝 [${this.beeId}] Processing Error:`, processingError);
-        await this.failTask(task.id, processingError.message || String(processingError));
+        console.error(`🐝 [${this.agentId}] Processing Error:`, processingError);
+        await db.from('colony_tasks').update({ 
+          status: 'failed', 
+          result: processingError.message || String(processingError) 
+        }).eq('id', task.id);
       }
 
     } catch (error) {
-      console.error(`🐝 [${this.beeId}] Loop Error:`, error);
+      console.error(`🐝 [${this.agentId}] Loop Error:`, error);
     } finally {
       this.isForaging = false;
     }
   }
 
-  // --- Database Interactions ---
-
-  private async findPollen(): Promise<ColonyTask | null> {
-    const { data, error } = await db
-      .from('colony_tasks')
-      .select('*')
-      .eq('status', 'pending')
-      .in('command', ['content_advice', 'moderation', 'scan_moderation', 'bug_report', 'check_vitals', 'generate_video']) // Updated whitelist
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // Ignore "no rows found"
-      console.error('Error finding pollen:', error.message);
-    }
-    return data;
-  }
-
-  // ... (claimTask, depositHoney, failTask remain the same) ...
-
   // --- Cognitive Processing ---
 
-  private async processTask(task: ColonyTask): Promise<string> {
+  protected async processTask(task: AgentTask): Promise<string> {
     const payload = typeof task.payload === 'string' ? JSON.parse(task.payload) : (task.payload || task.metadata || {});
 
     // Command: Bug Report -> GitHub Issue
@@ -193,6 +141,19 @@ export class DeepSeekBee {
          });
     }
 
+    // Command: Visual Analysis (Using Gemini Tools)
+    if (task.command === 'visual_analysis') {
+         if (!payload.imageUrl) return "Error: No Image URL provided";
+         return await geminiCortex.chat(`Detailed visual analysis of: ${payload.imageUrl}. Context: ${payload.prompt || 'Describe this.'}`);
+    }
+
+    // Command: Research (Using MCP Tool)
+    if (task.command === 'research') {
+        const query = payload.query || payload.text;
+        if (!query) return "Error: No research query provided";
+        return await this.executeTool('perplexity_research', { query });
+    }
+
     // Handle other types (content_advice, moderation)
     let systemPrompt = '';
     let userContent = '';
@@ -206,13 +167,12 @@ export class DeepSeekBee {
     }
 
     if (systemPrompt) {
-       const messages: DeepSeekMessage[] = [
+      return await this.think([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent }
-      ];
-      return await neurosphere.think(messages);
+      ], task.id);
     }
 
-    return `Command '${task.command}' processed (default handler)`;
+    return `Command '${task.command}' processed by ${this.agentId}`;
   }
 }

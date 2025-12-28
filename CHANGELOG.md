@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2025-12-28
+
+#### 🧪 Test Infrastructure & Context Provider Fixes
+
+**Test Context Provider Fixes**
+- Fixed `useGuestMode.test.ts` failing tests by wrapping all `renderHook` calls with `GuestModeProvider`
+  - All 5 test cases now pass with proper context
+  - Updated test expectations to match actual context API (removed non-existent `isExpired` property)
+  - Test now correctly validates guest mode session lifecycle, view counter, and function stability
+- Fixed `PasswordManagement.test.tsx` failing tests by wrapping components with `AuthProvider`
+  - Created `renderWithProviders` helper to provide consistent test setup
+  - All 12 test cases now pass (Login, Signup, ForgotPassword, ResetPassword, Accessibility)
+  - Enhanced Supabase mocks to include `onAuthStateChange` method
+  - Added mocks for `getUserProfile` and `checkIsAdmin` dependencies
+- **Result**: 17/17 tests passing across both test files ✅
+
+**Lighthouse CI Configuration Enhancements**
+- Enhanced `.lighthouserc.json` with additional best-practice checks:
+  - Added `speed-index` metric for perceived performance (3000ms threshold)
+  - Added `unused-css-rules` and `unused-javascript` warnings for bundle optimization
+  - Added accessibility checks: `valid-lang`, `duplicate-id-aria`
+  - Added SEO check: `robots-txt` validation
+  - Added security check: `csp-xss` (Content Security Policy XSS protection)
+  - Disabled `is-on-https` check for localhost testing (changed from error to off)
+  - Added `skipAudits` for `uses-http2` in settings to avoid localhost false positives
+- Lighthouse workflow already includes:
+  - 3 runs per URL for statistical reliability
+  - Tests 4 critical pages (home, login, signup, explore)
+  - 90% minimum score thresholds for all categories
+  - PR commenting for visibility
+  - Comprehensive local testing instructions
+
 ### Added - 2024-12-14
 
 #### 🐛 Bug & Feature Tracking Ecosystem

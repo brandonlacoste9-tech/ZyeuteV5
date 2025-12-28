@@ -41,19 +41,13 @@
  * ```
  */
 
-import OpenAI from 'openai';
 import { logger } from '@/lib/logger';
 
 const tiGuyAgentLogger = logger.withContext('TiGuyAgent');
 
-// Initialize OpenAI client
-// NOTE: Using client-side OpenAI is for demo/development purposes
+// NOTE: Using client-side AI is for demo/development purposes
 // In production, this should be moved to a server-side endpoint to protect the API key
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-const openai = apiKey ? new OpenAI({
-  apiKey,
-  dangerouslyAllowBrowser: true // SECURITY WARNING: Exposes API key in client code. Use server-side proxy in production.
-}) : null;
+const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
 
 export type TiGuyInput = {
   text: string;
@@ -69,51 +63,79 @@ export type TiGuyResponse = {
 };
 
 /**
+ * Helper to call DeepSeek API via fetch
+ */
+async function callDeepSeek(prompt: string) {
+  if (!apiKey) {
+    tiGuyAgentLogger.warn('⚠️ No API Key found. Using demo response.');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.8,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    tiGuyAgentLogger.error('DeepSeek Fetch Error:', error);
+    return null;
+  }
+}
+
+/**
  * Ti-Guy Agent - Generate Quebec-style content using AI
  * @param input - User text and intent for content generation
  * @returns Response with caption, emojis, tags, moderation flag, and Ti-Guy's reply
  */
 export const TiGuyAgent = async (input: TiGuyInput): Promise<TiGuyResponse | null> => {
-  // Demo mode if no API key
-  if (!openai) {
-    tiGuyAgentLogger.warn('⚠️ No OpenAI API Key found. Using demo response.');
+  const prompt = `
+    Tu es Ti-Guy, un assistant AI 100% Québécois. 
+    Parle en Joual, sois drôle, franc, jamais en français standard.
+
+    CONTEXTE:
+    Intent: ${input.intent}
+    Texte utilisateur: "${input.text}"
+
+    GÉNÈRE:
+    - Une caption punchée en Joual
+    - Une liste de 3 à 5 emojis pertinents
+    - 1 à 3 tags québécois (ex: Poutine, Hiver, Construction)
+    - Un flag true si le contenu est inapproprié ou sensible
+    - Une réponse signature de Ti-Guy (genre: "C'est ben correct ça, mon loup!")
+
+    FORMATE ta réponse en JSON:
+    {
+      "caption": string,
+      "emojis": string[],
+      "tags": string[],
+      "flagged": boolean,
+      "reply": string
+    }
+  `;
+
+  const responseJson = await callDeepSeek(prompt);
+  
+  if (!responseJson) {
     return generateDemoResponse(input);
   }
 
   try {
-    const prompt = `
-      Tu es Ti-Guy, un assistant AI 100% Québécois. 
-      Parle en Joual, sois drôle, franc, jamais en français standard.
-
-      CONTEXTE:
-      Intent: ${input.intent}
-      Texte utilisateur: "${input.text}"
-
-      GÉNÈRE:
-      - Une caption punchée en Joual
-      - Une liste de 3 à 5 emojis pertinents
-      - 1 à 3 tags québécois (ex: Poutine, Hiver, Construction)
-      - Un flag true si le contenu est inapproprié ou sensible
-      - Une réponse signature de Ti-Guy (genre: "C'est ben correct ça, mon loup!")
-
-      FORMATE ta réponse en JSON:
-      {
-        "caption": string,
-        "emojis": string[],
-        "tags": string[],
-        "flagged": boolean,
-        "reply": string
-      }
-    `;
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // Using GPT-4 Omni (latest multimodal model)
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.8,
-      response_format: { type: "json_object" } // Ensure JSON response
-    });
-
-    const content = response.choices[0].message?.content ?? '';
+    const content = responseJson.choices[0].message?.content ?? '';
     const parsed = JSON.parse(content) as TiGuyResponse;
     
     // Validate response structure
@@ -124,8 +146,8 @@ export const TiGuyAgent = async (input: TiGuyInput): Promise<TiGuyResponse | nul
     
     return parsed;
   } catch (error) {
-    tiGuyAgentLogger.error('Ti-Guy Error:', error);
-    return null;
+    tiGuyAgentLogger.error('Ti-Guy Parsing Error:', error);
+    return generateDemoResponse(input);
   }
 };
 

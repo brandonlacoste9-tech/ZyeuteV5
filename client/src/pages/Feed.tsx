@@ -12,6 +12,8 @@ import { GiftOverlay } from '@/components/features/GiftOverlay';
 import { Onboarding, useOnboarding } from '@/components/Onboarding';
 import { getCurrentUser, getStories } from '@/services/api';
 import { ContinuousFeed } from '@/components/features/ContinuousFeed';
+import { ErrorBoundary, ErrorFallback } from '@/components/ErrorBoundary';
+import { AvatarSkeleton } from '@/components/ui/Skeleton';
 
 import type { User, Story } from '@/types';
 import { logger } from '../lib/logger';
@@ -19,12 +21,22 @@ import { useGuestMode } from '@/hooks/useGuestMode';
 
 const feedLogger = logger.withContext('Feed');
 
+// Gift emoji lookup moved outside to avoid re-creation on every render
+const GIFT_EMOJIS: Record<string, string> = {
+  comete: '☄️',
+  feuille_erable: '🍁',
+  fleur_de_lys: '⚜️',
+  feu: '🔥',
+  coeur_or: '💛',
+};
+
 
 export const Feed: React.FC = () => {
   const location = useLocation();
 
   // State for stories and user (restored)
   const [stories, setStories] = React.useState<Array<{ user: User; story?: Story; isViewed?: boolean }>>([]);
+  const [isLoadingStories, setIsLoadingStories] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
 
   const { showOnboarding, isChecked, completeOnboarding } = useOnboarding();
@@ -64,6 +76,8 @@ export const Feed: React.FC = () => {
         setStories(storyList);
       } catch (error) {
         feedLogger.error('Error fetching stories:', error);
+      } finally {
+        setIsLoadingStories(false);
       }
     };
 
@@ -90,15 +104,6 @@ export const Feed: React.FC = () => {
     setGiftModalOpen(true);
   }, [currentUser]);
 
-  // Gift emoji lookup
-  const GIFT_EMOJIS: Record<string, string> = {
-    comete: '☄️',
-    feuille_erable: '🍁',
-    fleur_de_lys: '⚜️',
-    feu: '🔥',
-    coeur_or: '💛',
-  };
-
   // Handle gift sent - update gift count and show overlay
   const handleGiftSent = useCallback((giftType: string) => {
     // Trigger overlay animation
@@ -110,7 +115,7 @@ export const Feed: React.FC = () => {
     setGiftModalOpen(false);
     setSelectedRecipient(null);
     setSelectedPostId(null);
-  }, [selectedRecipient, GIFT_EMOJIS]);
+  }, [selectedRecipient]);
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
@@ -150,9 +155,17 @@ export const Feed: React.FC = () => {
         </div>
 
         {/* Stories Section (Integrated into Header area) */}
-        {stories.length > 0 && (
+        {isLoadingStories ? (
+            <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5 flex gap-4 px-4 overflow-x-hidden">
+                {[1,2,3,4,5].map(i => (
+                    <AvatarSkeleton key={i} size="w-16 h-16" className="rounded-full border-2 border-neutral-800" />
+                ))}
+            </div>
+        ) : stories.length > 0 && (
           <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5">
-            <StoryCarousel stories={stories} />
+            <ErrorBoundary fallback={<div className="h-24 flex items-center justify-center text-xs text-white/30">Histoires indisponibles</div>}>
+              <StoryCarousel stories={stories} />
+            </ErrorBoundary>
           </div>
         )}
 
@@ -165,7 +178,9 @@ export const Feed: React.FC = () => {
         {/* KryptoTrac Integration */}
 
         
-        <ContinuousFeed />
+        <ErrorBoundary fallback={<ErrorFallback onRetry={() => window.location.reload()} />}>
+          <ContinuousFeed />
+        </ErrorBoundary>
       </div>
 
       {/* Premium Chat Button - Ti-Guy Bronze Emblem */}

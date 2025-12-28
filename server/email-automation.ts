@@ -11,16 +11,10 @@
  * Uses Resend integration for email delivery
  */
 
-import OpenAI from 'openai';
+import { deepseek } from './ai/deepseek.js';
 import { storage } from './storage.js';
 import { sendEmail } from './resend-client.js';
 import { renderEmail, EmailType as ReactEmailType } from './email-templates.js';
-
-// Initialize DeepSeek client
-const deepseek = new OpenAI({
-  baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY,
-});
 
 // Email automation configuration
 export const EMAIL_CONFIG = {

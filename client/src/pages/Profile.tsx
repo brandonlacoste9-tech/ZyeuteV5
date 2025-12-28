@@ -18,6 +18,7 @@ import { IoShareOutline } from 'react-icons/io5';
 import type { User, Post } from '@/types';
 import { logger } from '../lib/logger';
 import { QuebecEmptyState } from '@/components/ui/QuebecEmptyState';
+import { ProfileSkeleton } from '@/components/ui/Skeleton';
 
 const profileLogger = logger.withContext('Profile');
 
@@ -131,7 +132,7 @@ export const Profile: React.FC = () => {
 
     // Fetch immediately - don't wait for anything
     fetchUser();
-  }, [slug, navigate]);
+  }, [slug, navigate, currentUser?.id]);
 
   // Fetch user posts
   React.useEffect(() => {
@@ -184,11 +185,7 @@ export const Profile: React.FC = () => {
   }, [posts]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-black leather-overlay flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-gold-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !user) {
@@ -223,6 +220,8 @@ export const Profile: React.FC = () => {
                 src={user.avatar_url || 'https://via.placeholder.com/150/FFBF00/000000?text=' + (user.username?.[0] || 'U')}
                 alt={user.display_name || user.username}
                 objectFit="cover"
+                fetchPriority="high"
+                loading="eager"
               />
             </div>
             <button
@@ -413,7 +412,7 @@ export const Profile: React.FC = () => {
             />
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              {posts.map((post) => (
+              {posts.map((post, index) => (
                 <Link
                   key={post.id}
                   to={`/p/${post.id}`}
@@ -423,6 +422,8 @@ export const Profile: React.FC = () => {
                     src={post.media_url}
                     alt={post.caption || 'Post'}
                     objectFit="cover"
+                    fetchPriority={index < 6 ? "high" : "auto"}
+                    loading={index < 6 ? "eager" : "lazy"}
                   />
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">

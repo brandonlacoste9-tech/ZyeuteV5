@@ -15,6 +15,7 @@ const reportModalLogger = logger.withContext('ReportModal');
 
 
 type ReportType =
+  | 'luring_grooming'
   | 'bullying'
   | 'harassment'
   | 'hate_speech'
@@ -35,6 +36,12 @@ interface ReportOption {
 }
 
 const REPORT_OPTIONS: ReportOption[] = [
+  {
+    id: 'luring_grooming',
+    label: 'Leurre ou grooming (Mineurs)',
+    emoji: '🛡️',
+    description: 'Interaction inappropriée avec un mineur (TOLÉRANCE ZÉRO)',
+  },
   {
     id: 'bullying',
     label: 'Intimidation ou harcèlement',
@@ -294,6 +301,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               </label>
             </div>
           )}
+
+          {/* [PHASE 9] Zero Tolerance Safety Policy Notice */}
+          <div className="mt-6 mb-6 bg-red-500/10 border border-red-500/40 rounded-xl p-4 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+            <div className="flex gap-4">
+              <span className="text-2xl">🛡️</span>
+              <div className="flex-1">
+                <p className="text-red-400 font-bold mb-1 uppercase tracking-wider text-xs">Politique de sécurité Zyeuté</p>
+                <p className="text-white/80 text-xs leading-relaxed">
+                  Zyeuté applique une politique de <span className="text-red-400 font-bold">tolérance zéro</span> concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs. Toute tentative détectée entraîne la désactivation permanente du compte et le signalement requis.
+                </p>
+              </div>
+            </div>
+          </div>
 
           {/* Information Box */}
           <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">

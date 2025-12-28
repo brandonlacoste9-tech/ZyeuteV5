@@ -68,11 +68,72 @@ The app will start at `http://localhost:3000`.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please check the `CONTRIBUTING.md` file (coming soon) and ensure you run the preflight check:
+We welcome contributions! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+
+### Quick Contribution Workflow
 
 ```bash
-npm run preflight
+# Fork and clone the repository
+git clone https://github.com/{YOUR_USERNAME}/ZyeuteV5.git
+cd ZyeuteV5
+
+# Install dependencies (sets up pre-commit hooks automatically)
+npm install
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make your changes and test
+npm run check    # TypeScript check
+npm run lint     # Linting
+npm run test     # Run tests
+npm run build    # Build verification
+
+# Commit (pre-commit hooks will run automatically)
+git add .
+git commit -m "feat: your feature description"
+
+# Push and create Pull Request
+git push origin feature/your-feature-name
 ```
+
+### Pre-commit Checks
+
+This project uses Husky and lint-staged to ensure code quality:
+- ✅ TypeScript type checking
+- ✅ ESLint for code standards
+- ✅ Prettier for consistent formatting
+
+### Vercel Deployment & Preview
+
+- **Production:** Automatically deployed from `main` branch
+- **Preview Deployments:** Created automatically for every PR
+- **Contributors:** Must test preview deployments before requesting review
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed deployment information.
+
+---
+
+## 📦 Deployment
+
+### Vercel (Recommended)
+
+Zyeuté V5 is optimized for Vercel deployment with automated preview deployments for PRs.
+
+**Environment Variables Required:**
+See `.env.vercel.example` for the complete list. Key variables include:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `STRIPE_SECRET_KEY`
+- `DATABASE_URL`
+
+**Deployment Configuration:**
+- Build caching enabled for faster deployments
+- Preview deployments mandatory for all PRs
+- Automatic deployment from `main` branch to production
+
+**Quick Deploy:**
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/brandonlacoste9-tech/ZyeuteV5)
 
 ---
 

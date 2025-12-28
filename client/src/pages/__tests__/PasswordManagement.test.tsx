@@ -5,10 +5,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '../../contexts/AuthContext';
 import Login from '../Login';
 import Signup from '../Signup';
 import ForgotPassword from '../ForgotPassword';
 import ResetPassword from '../ResetPassword';
+import { FactoryThemeProvider } from '../../providers/FactoryThemeProvider';
+import { AppConfig } from '../../config/factory';
 
 // Mock Supabase
 vi.mock('../../lib/supabase', () => ({
@@ -18,10 +21,30 @@ vi.mock('../../lib/supabase', () => ({
       getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
       signInWithPassword: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
       signUp: vi.fn(() => Promise.resolve({ data: { user: null, session: null }, error: null })),
-      resetPasswordForEmail: vi.fn(() => Promise.resolve({ error: null })),
-      updateUser: vi.fn(() => Promise.resolve({ error: null })),
+      resetPasswordForEmail: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+      updateUser: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      onAuthStateChange: vi.fn(() => {
+        return {
+          data: { 
+            subscription: { 
+              unsubscribe: vi.fn() 
+            } 
+          },
+          error: null
+        };
+      })
     }
   }
+}));
+
+// Mock getUserProfile API call
+vi.mock('../../services/api', () => ({
+  getUserProfile: vi.fn(() => Promise.resolve(null))
+}));
+
+// Mock admin check
+vi.mock('../../lib/admin', () => ({
+  checkIsAdmin: vi.fn(() => Promise.resolve(false))
 }));
 
 // Mock logger
@@ -54,6 +77,19 @@ vi.mock('../../lib/constants', () => ({
   GUEST_VIEWS_KEY: 'zyeute_guest_views_count'
 }));
 
+// Helper function to render components with providers
+const renderWithProviders = (component: React.ReactElement) => {
+  return render(
+    <FactoryThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          {component}
+        </AuthProvider>
+      </BrowserRouter>
+    </FactoryThemeProvider>
+  );
+};
+
 describe('Password Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,11 +97,7 @@ describe('Password Management', () => {
 
   describe('Login Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -73,11 +105,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility when clicking eye icon', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -97,11 +125,7 @@ describe('Password Management', () => {
     });
 
     it('should render forgot password link', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const forgotLink = screen.getByText('Mot de passe oublié?');
       expect(forgotLink).toBeInTheDocument();
@@ -111,11 +135,7 @@ describe('Password Management', () => {
 
   describe('Signup Page', () => {
     it('should render password input with toggle button', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       expect(passwordInput).toBeInTheDocument();
@@ -123,11 +143,7 @@ describe('Password Management', () => {
     });
 
     it('should toggle password visibility', () => {
-      render(
-        <BrowserRouter>
-          <Signup />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Signup />);
 
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const toggleButtons = screen.getAllByRole('button');
@@ -146,11 +162,7 @@ describe('Password Management', () => {
 
   describe('ForgotPassword Page', () => {
     it('should render email input and submit button', () => {
-      render(
-        <BrowserRouter>
-          <ForgotPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ForgotPassword />);
 
       expect(screen.getByPlaceholderText('ton@email.com')).toBeInTheDocument();
       expect(screen.getByText('Envoyer le lien de réinitialisation')).toBeInTheDocument();
@@ -163,11 +175,7 @@ describe('Password Management', () => {
         error: null 
       });
 
-      render(
-        <BrowserRouter>
-          <ForgotPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ForgotPassword />);
 
       const emailInput = screen.getByPlaceholderText('ton@email.com');
       const submitButton = screen.getByText('Envoyer le lien de réinitialisation');
@@ -186,11 +194,7 @@ describe('Password Management', () => {
       // Mock URL search params
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ResetPassword />);
 
       const passwordInputs = screen.getAllByPlaceholderText('••••••••');
       expect(passwordInputs).toHaveLength(2);
@@ -201,11 +205,7 @@ describe('Password Management', () => {
     it('should validate password matching', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -222,11 +222,7 @@ describe('Password Management', () => {
     it('should validate minimum password length', async () => {
       window.history.pushState({}, '', '/reset-password?token=test&type=recovery');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ResetPassword />);
 
       const [passwordInput, confirmInput] = screen.getAllByPlaceholderText('••••••••');
       const submitButton = screen.getByText('Réinitialiser le mot de passe');
@@ -243,11 +239,7 @@ describe('Password Management', () => {
     it('should show error for invalid token', async () => {
       window.history.pushState({}, '', '/reset-password?token=invalid');
 
-      render(
-        <BrowserRouter>
-          <ResetPassword />
-        </BrowserRouter>
-      );
+      renderWithProviders(<ResetPassword />);
 
       await waitFor(() => {
         expect(screen.getByText(/Lien de réinitialisation invalide ou expiré/)).toBeInTheDocument();
@@ -257,11 +249,7 @@ describe('Password Management', () => {
 
   describe('Accessibility', () => {
     it('should have proper aria-labels on password toggle buttons', () => {
-      render(
-        <BrowserRouter>
-          <Login />
-        </BrowserRouter>
-      );
+      renderWithProviders(<Login />);
 
       const toggleButtons = screen.getAllByRole('button');
       const toggleButton = toggleButtons.find(btn => 

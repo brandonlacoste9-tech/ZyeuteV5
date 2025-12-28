@@ -136,6 +136,14 @@ const ZyeuteLogin: React.FC = () => {
           <p className="signup-text">Pas encore icitte?<br /><strong>Embarque!</strong></p>
         </div>
 
+        {/* [PHASE 9] Zero Tolerance Safety Policy Footer */}
+        <div className="max-w-xs mx-auto mt-6 px-4 py-3 bg-red-500/5 backdrop-blur-md border border-red-500/20 rounded-xl text-center shadow-lg">
+          <p className="text-[10px] text-red-400 font-bold uppercase tracking-[2px] mb-1">Sécurité Zyeuté</p>
+          <p className="text-[10px] text-white/40 leading-tight">
+            Politique de <span className="text-red-400">tolérance zéro</span> : toute forme de leurre ou grooming de mineurs entraîne un bannissement permanent immédiat.
+          </p>
+        </div>
+
         {biometricAvailable && (
           <button 
             type="button" 

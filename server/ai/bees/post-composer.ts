@@ -6,7 +6,8 @@
 import { v3TiGuy, v3Feed } from '../../v3-swarm.js';
 import { generateImage } from '../media/image-engine.js';
 
-export async function run(payload: any) {
+export async function run(task: any) {
+    const payload = task.payload || {};
     const prompt = payload.prompt || 'Share something about Quebec';
     const includeImage = payload.includeImage !== false;
 

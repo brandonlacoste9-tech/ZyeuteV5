@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
   users, posts, comments, follows, postReactions, commentReactions,
-  stories, storyViews, notifications, gifts,
+  stories, storyViews, notifications, gifts, moderationLogs,
   type User, type InsertUser, type Post, type InsertPost,
   type Comment, type InsertComment, type Follow, type InsertFollow,
   type Story, type InsertStory, type Notification, type InsertNotification,
@@ -83,6 +83,17 @@ export interface IStorage {
 
   // Colony Tasks (AI Hive)
   createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask>;
+
+  // Moderation Logs
+  createModerationLog(log: {
+    userId?: string;
+    postId?: string;
+    action: string;
+    reason: string;
+    details?: string;
+    score?: number;
+  }): Promise<void>;
+  getModerationLogsByUser(userId: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -524,9 +535,23 @@ export class DatabaseStorage implements IStorage {
 
     if (!existing[0]) {
       await db.insert(storyViews).values({ storyId, userId });
-      await db.update(stories)
+      
+      const storyResult = await db.update(stories)
         .set({ viewCount: sql`${stories.viewCount} + 1` })
-        .where(eq(stories.id, storyId));
+        .where(eq(stories.id, storyId))
+        .returning();
+
+      const story = storyResult[0];
+      if (story && story.userId !== userId) {
+        // Create notification for story view
+        await this.createNotification({
+          userId: story.userId,
+          fromUserId: userId,
+          type: 'story_view',
+          message: 'a vu votre story',
+          storyId: storyId,
+        });
+      }
     }
   }
 
@@ -624,15 +649,44 @@ export class DatabaseStorage implements IStorage {
 
   // Colony Tasks
   async createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask> {
-    const result = await db.insert(colonyTasks).values({
-      command: task.command,
-      origin: task.origin,
-      status: 'pending',
-      priority: task.priority === 'high' ? 'high' : 'normal',
-      metadata: task.metadata,
-      workerId: task.workerId
-    }).returning();
-    return result[0];
+    return traceDatabase("INSERT", "colony_tasks", async (span) => {
+      const result = await db.insert(colonyTasks).values({
+        command: task.command,
+        origin: task.origin,
+        priority: task.priority || 'normal',
+        metadata: task.metadata || {},
+        workerId: task.workerId,
+        status: 'pending'
+      }).returning();
+      return result[0];
+    });
+  }
+
+  // Moderation Logs
+  async createModerationLog(log: {
+    userId?: string;
+    postId?: string;
+    action: string;
+    reason: string;
+    details?: string;
+    score?: number;
+  }): Promise<void> {
+    await traceDatabase("INSERT", "moderation_logs", async (span) => {
+      await db.insert(moderationLogs).values({
+        userId: log.userId,
+        postId: log.postId,
+        action: log.action,
+        reason: log.reason,
+        details: log.details,
+        score: log.score,
+      });
+    });
+  }
+
+  async getModerationLogsByUser(userId: string): Promise<any[]> {
+    return traceDatabase("SELECT", "moderation_logs", async (span) => {
+      return db.select().from(moderationLogs).where(eq(moderationLogs.userId, userId)).orderBy(desc(moderationLogs.createdAt));
+    });
   }
 }
 

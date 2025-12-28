@@ -13,6 +13,8 @@ interface Props {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  resetKeys?: any[];
+  onReset?: () => void;
 }
 
 interface State {
@@ -122,13 +124,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
     }
   }
 
+  componentDidUpdate(prevProps: Props) {
+    // If resetKeys change, reset the error state
+    if (this.props.resetKeys && prevProps.resetKeys !== this.props.resetKeys) {
+      this.handleRetry();
+    }
+  }
+
   handleRetry = () => {
-    logger.info('User initiated error recovery retry');
+    logger.info('Resetting error boundary state');
     this.setState({ 
       hasError: false, 
       error: null, 
       errorInfo: null,
+      errorCount: 0
     });
+    this.props.onReset?.();
   };
 
   render() {
