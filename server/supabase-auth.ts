@@ -2,30 +2,32 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { traceSupabase } from "./tracer.js";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// FALLBACK: Prioritize Anon Key for verification as Service Role Key is reporting invalid
+const SUPABASE_KEY =
+  process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Track if Supabase is properly configured
-const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY);
 
 if (!isSupabaseConfigured) {
-  console.warn("⚠️ Supabase environment variables missing. JWT Auth will fail.");
-  console.warn("   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.");
+  console.warn(
+    "⚠️ Supabase environment variables missing. JWT Auth will fail.",
+  );
+  console.warn(
+    "   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY.",
+  );
 }
 
-// Create the Supabase admin client only if properly configured
+// Create the Supabase client
 let supabaseAdmin: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {
-  supabaseAdmin = createClient(
-    SUPABASE_URL!,
-    SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
+  supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_KEY!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 /**
@@ -39,28 +41,32 @@ export async function verifyAuthToken(token: string): Promise<string | null> {
     return null;
   }
 
-  return traceSupabase("auth.getUser", { "auth.method": "jwt_verification" }, async (span) => {
-    try {
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
+  return traceSupabase(
+    "auth.getUser",
+    { "auth.method": "jwt_verification" },
+    async (span) => {
+      try {
+        const { data, error } = await supabaseAdmin.auth.getUser(token);
 
-      if (error || !data.user) {
-        if (error) {
-          console.error("JWT Verification failed:", error.message);
-          span.setAttributes({ "auth.error": error.message });
+        if (error || !data.user) {
+          if (error) {
+            console.error("JWT Verification failed:", error.message);
+            span.setAttributes({ "auth.error": error.message });
+          }
+          span.setAttributes({ "auth.success": false });
+          return null;
         }
+
+        span.setAttributes({
+          "auth.success": true,
+          "auth.user_id": data.user.id,
+        });
+        return data.user.id;
+      } catch (err) {
+        console.error("Unexpected auth error:", err);
         span.setAttributes({ "auth.success": false });
         return null;
       }
-
-      span.setAttributes({
-        "auth.success": true,
-        "auth.user_id": data.user.id,
-      });
-      return data.user.id;
-    } catch (err) {
-      console.error("Unexpected auth error:", err);
-      span.setAttributes({ "auth.success": false });
-      return null;
-    }
-  });
+    },
+  );
 }

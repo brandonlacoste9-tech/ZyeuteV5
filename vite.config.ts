@@ -2,24 +2,23 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { fileURLToPath } from "url";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const isReplit = process.env.REPL_ID !== undefined;
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    metaImagesPlugin(),
-  ],
+  plugins: [react(), tailwindcss(), metaImagesPlugin()],
   optimizeDeps: {
-    include: ['react-window', 'react-virtualized-auto-sizer'],
+    include: ["react-window", "react-virtualized-auto-sizer"],
   },
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@": path.resolve(__dirname, "client", "src"),
+      "@shared": path.resolve(__dirname, "shared"),
+      "@assets": path.resolve(__dirname, "attached_assets"),
     },
   },
   css: {
@@ -27,9 +26,9 @@ export default defineConfig({
       plugins: [],
     },
   },
-  root: path.resolve(import.meta.dirname, "client"),
+  root: path.resolve(__dirname, "client"),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
     // Chunk size warning limit (KB)
     chunkSizeWarningLimit: 1000,
@@ -67,13 +66,13 @@ export default defineConfig({
           "ui-icons": ["lucide-react", "react-icons"],
 
           // Supabase chunk
-          "supabase": ["@supabase/supabase-js"],
+          supabase: ["@supabase/supabase-js"],
 
           // Form handling
-          "forms": ["react-hook-form", "@hookform/resolvers", "zod"],
+          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
 
           // Utilities
-          "utils": [
+          utils: [
             "clsx",
             "class-variance-authority",
             "tailwind-merge",
@@ -93,6 +92,14 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
+    // Proxy API requests to the backend
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     allowedHosts: true,
     fs: {
       strict: true,

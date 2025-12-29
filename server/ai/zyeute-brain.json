@@ -1,0 +1,113 @@
+{
+  "brazil_filters": {
+    "rio_sunset": {
+      "id": "rio_sunset",
+      "name": "Rio Sunset",
+      "prompt": "cinematic photo of Ipanema beach at sunset, golden hour, warm orange and pink sky, ocean reflections, tropical luxury, 8k",
+      "vibe_score": 98,
+      "luxury_score": 90,
+      "tags": ["beach", "sunset", "tropical", "luxury"]
+    },
+    "sao_paulo_concrete": {
+      "id": "sao_paulo_concrete",
+      "name": "São Paulo Concrete",
+      "prompt": "urban photography of São Paulo skyline, concrete jungle, high contrast, sharp architectural lines, modern luxury, dramatic lighting",
+      "vibe_score": 95,
+      "luxury_score": 88,
+      "tags": ["urban", "modern", "concrete", "architecture"]
+    },
+    "bahia_tropical": {
+      "id": "bahia_tropical",
+      "name": "Bahia Tropical",
+      "prompt": "vibrant street photography of Pelourinho Bahia, colorful colonial houses, bright sunlight, deep blues and greens, energetic, festive",
+      "vibe_score": 99,
+      "luxury_score": 85,
+      "tags": ["colorful", "culture", "festive", "bright"]
+    },
+    "amazon_green": {
+      "id": "amazon_green",
+      "name": "Amazon Green",
+      "prompt": "nature photography of Amazon rainforest, deep lush greens, soft filtered sunlight, mystical atmosphere, high resolution, macro details",
+      "vibe_score": 92,
+      "luxury_score": 85,
+      "tags": ["nature", "green", "forest", "mystical"]
+    },
+    "copacabana_night": {
+      "id": "copacabana_night",
+      "name": "Copacabana Night",
+      "prompt": "night photography of Copacabana boardwalk, neon lights, busy nightlife, cinematic reflections, vibrant and lively, sharp focus",
+      "vibe_score": 94,
+      "luxury_score": 89,
+      "tags": ["night", "neon", "party", "lively"]
+    }
+  },
+  "behavior_predictions": [
+    {
+      "trigger": "user_posts_at_2am",
+      "prediction": "balada_night",
+      "action": "boost_neon_filters",
+      "confidence": 0.85
+    },
+    {
+      "trigger": "user_uses_slang",
+      "prediction": "carioca_local",
+      "action": "enable_girias_captions",
+      "confidence": 0.95
+    },
+    {
+      "trigger": "photo_contains_beach",
+      "prediction": "tropical_mode",
+      "action": "suggest_warm_filters",
+      "confidence": 0.92
+    }
+  ],
+  "optimization_rules": {
+    "low_light": {
+      "detection_threshold": 0.3,
+      "action": "increase_exposure_0.5",
+      "filter_boost": "neon_boost"
+    },
+    "high_noise": {
+      "detection_threshold": 0.7,
+      "action": "apply_denoise_mild",
+      "filter_boost": "film_grain_mask"
+    },
+    "blurry_face": {
+      "detection_threshold": 0.6,
+      "action": "fal_face_enhance",
+      "priority": "high"
+    }
+  },
+  "caption_templates": [
+    "✨ Vibes do Rio hoje 🌴",
+    "Mano, que dia incrível! ☀️",
+    "Só vibrando alto ✨",
+    "Cafézinho e paz ☕",
+    "Aquele pique de domingo 💯",
+    "Brasilzão que eu amo 🇧🇷",
+    "Natureza perfeita 🌿",
+    "Rolezinho com a galera 🚀",
+    "Sem filtro, só beleza 😍",
+    "Energia surreal! ⚡",
+    "Tudo nosso, nada deles 👊",
+    "Sextou com S de Saudade? Não, de Sol! ☀️",
+    "Vivendo o momento ✨",
+    "Gratidão total 🙏",
+    "Segue o fluxo 🌊"
+  ],
+  "argentina_filters": {
+    "buenos_aires_nocturna": {
+      "id": "buenos_aires_nocturna",
+      "name": "Baires Night",
+      "prompt": "night photography of Obelisco Buenos Aires, 9 de Julio avenue, long exposure light trails, city lights, cinematic, high contrast, 8k",
+      "vibe_score": 98,
+      "luxury_score": 92,
+      "tags": ["urban", "night", "city", "iconic"]
+    }
+  },
+  "monitoring": {
+    "version": "1.2.0-AR",
+    "last_updated": "2025-12-29",
+    "maintainer": "ColonyOS"
+  }
+}

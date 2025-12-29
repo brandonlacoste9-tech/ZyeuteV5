@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: zyeute-api
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zyeute-db
+          property: connectionString
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: PYTHON_KERNEL_URL
+        value: https://zyeute-kernel.modal.run
+
+databases:
+  - name: zyeute-db
+    plan: starter
+    region: ohio

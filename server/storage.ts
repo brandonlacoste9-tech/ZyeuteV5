@@ -1,13 +1,35 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import {
-  users, posts, comments, follows, postReactions, commentReactions,
-  stories, storyViews, notifications, gifts, moderationLogs,
-  type User, type InsertUser, type Post, type InsertPost,
-  type Comment, type InsertComment, type Follow, type InsertFollow,
-  type Story, type InsertStory, type Notification, type InsertNotification,
-  type Gift, type InsertGift, type GiftType, type UpsertUser,
-  colonyTasks, type ColonyTask
+  users,
+  posts,
+  comments,
+  follows,
+  postReactions,
+  commentReactions,
+  stories,
+  storyViews,
+  notifications,
+  gifts,
+  moderationLogs,
+  type User,
+  type InsertUser,
+  type Post,
+  type InsertPost,
+  type Comment,
+  type InsertComment,
+  type Follow,
+  type InsertFollow,
+  type Story,
+  type InsertStory,
+  type Notification,
+  type InsertNotification,
+  type Gift,
+  type InsertGift,
+  type GiftType,
+  type UpsertUser,
+  colonyTasks,
+  type ColonyTask,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -31,6 +53,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   // getUserByReplitId removed - legacy
+  getUserHive(userId: string): Promise<string>;
   createUser(user: InsertUser & { id: string }): Promise<User>;
   // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
@@ -38,23 +61,53 @@ export interface IStorage {
   // Posts
   getPost(id: string): Promise<(Post & { user: User }) | undefined>;
   getPostsByUser(userId: string, limit?: number): Promise<Post[]>;
-  getFeedPosts(userId: string, page: number, limit: number): Promise<(Post & { user: User; isFired: boolean })[]>;
-  getExplorePosts(page: number, limit: number): Promise<(Post & { user: User })[]>;
-  getNearbyPosts(lat: number, lon: number, radiusMeters?: number): Promise<(Post & { user: User })[]>;
-  getRegionalTrendingPosts(regionId: string, limit?: number, before?: Date): Promise<(Post & { user: User })[]>;
-  getSmartRecommendations(embedding: number[], limit?: number): Promise<(Post & { user: User })[]>;
+  getFeedPosts(
+    userId: string,
+    page: number,
+    limit: number,
+    hiveId?: string,
+  ): Promise<(Post & { user: User; isFired: boolean })[]>;
+  getExplorePosts(
+    page: number,
+    limit: number,
+    hiveId?: string,
+  ): Promise<(Post & { user: User })[]>;
+  getNearbyPosts(
+    lat: number,
+    lon: number,
+    radiusMeters?: number,
+  ): Promise<(Post & { user: User })[]>;
+  getRegionalTrendingPosts(
+    regionId: string,
+    limit?: number,
+    before?: Date,
+  ): Promise<(Post & { user: User })[]>;
+  getSmartRecommendations(
+    embedding: number[],
+    limit?: number,
+    hiveId?: string,
+  ): Promise<(Post & { user: User })[]>;
   createPost(post: InsertPost): Promise<Post>;
   deletePost(id: string): Promise<boolean>;
-  // incrementPostViews removed - not in schema
+  incrementPostViews(id: string): Promise<number>;
+  markPostBurned(id: string, reason: string): Promise<void>;
 
   // Comments
-  getPostComments(postId: string): Promise<(Comment & { user: User; isFired: boolean })[]>;
+  getPostComments(
+    postId: string,
+  ): Promise<(Comment & { user: User; isFired: boolean })[]>;
   createComment(comment: InsertComment): Promise<Comment>;
   deleteComment(id: string): Promise<boolean>;
 
   // Reactions
-  togglePostReaction(postId: string, userId: string): Promise<{ added: boolean; newCount: number }>;
-  toggleCommentReaction(commentId: string, userId: string): Promise<{ added: boolean; newCount: number }>;
+  togglePostReaction(
+    postId: string,
+    userId: string,
+  ): Promise<{ added: boolean; newCount: number }>;
+  toggleCommentReaction(
+    commentId: string,
+    userId: string,
+  ): Promise<{ added: boolean; newCount: number }>;
   hasUserFiredPost(postId: string, userId: string): Promise<boolean>;
 
   // Follows
@@ -65,12 +118,17 @@ export interface IStorage {
   getFollowing(userId: string): Promise<User[]>;
 
   // Stories
-  getActiveStories(userId?: string): Promise<(Story & { user: User; isViewed: boolean })[]>;
+  getActiveStories(
+    userId?: string,
+  ): Promise<(Story & { user: User; isViewed: boolean })[]>;
   createStory(story: InsertStory): Promise<Story>;
   markStoryViewed(storyId: string, userId: string): Promise<void>;
 
   // Notifications
-  getUserNotifications(userId: string, limit?: number): Promise<(Notification & { fromUser?: User })[]>;
+  getUserNotifications(
+    userId: string,
+    limit?: number,
+  ): Promise<(Notification & { fromUser?: User })[]>;
   createNotification(notification: InsertNotification): Promise<Notification>;
   markNotificationRead(id: string): Promise<void>;
   markAllNotificationsRead(userId: string): Promise<void>;
@@ -79,10 +137,19 @@ export interface IStorage {
   createGift(gift: InsertGift): Promise<Gift>;
   getPostGiftCount(postId: string): Promise<number>;
   getGiftsByPost(postId: string): Promise<(Gift & { sender: User })[]>;
-  getUserReceivedGifts(userId: string, limit?: number): Promise<(Gift & { sender: User; post: Post })[]>;
+  getUserReceivedGifts(
+    userId: string,
+    limit?: number,
+  ): Promise<(Gift & { sender: User; post: Post })[]>;
 
   // Colony Tasks (AI Hive)
-  createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask>;
+  createColonyTask(task: {
+    command: string;
+    origin: string;
+    priority?: string;
+    metadata?: any;
+    workerId?: string;
+  }): Promise<ColonyTask>;
 
   // Moderation Logs
   createModerationLog(log: {
@@ -94,6 +161,7 @@ export interface IStorage {
     score?: number;
   }): Promise<void>;
   getModerationLogsByUser(userId: string): Promise<any[]>;
+  cleanupExpiredEphemeralPosts(): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -101,7 +169,11 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     return traceDatabase("SELECT", "users", async (span) => {
       span.setAttributes({ "db.user_id": id });
-      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .limit(1);
       return result[0];
     });
   }
@@ -109,14 +181,21 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return traceDatabase("SELECT", "users", async (span) => {
       span.setAttributes({ "db.username": username });
-      const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
       return result[0];
     });
   }
 
-
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
     return result[0];
   }
 
@@ -128,12 +207,21 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
-    const result = await db.update(users)
+  async updateUser(
+    id: string,
+    updates: Partial<User>,
+  ): Promise<User | undefined> {
+    const result = await db
+      .update(users)
       .set({ ...updates, createdAt: undefined }) // Prevent updating createdAt
       .where(eq(users.id, id))
       .returning();
     return result[0];
+  }
+
+  async getUserHive(userId: string): Promise<string> {
+    const user = await this.getUser(userId);
+    return user?.hiveId || "quebec";
   }
 
   // Posts
@@ -155,17 +243,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPostsByUser(userId: string, limit: number = 50): Promise<Post[]> {
-    return await db.select()
+    return await db
+      .select()
       .from(posts)
-      .where(and(
-        eq(posts.userId, userId),
-        or(eq(posts.isHidden, false), isNull(posts.isHidden))
-      ))
+      .where(
+        and(
+          eq(posts.userId, userId),
+          or(eq(posts.isHidden, false), isNull(posts.isHidden)),
+        ),
+      )
       .orderBy(desc(posts.createdAt))
       .limit(limit);
   }
 
-  async getFeedPosts(userId: string, page: number, limit: number): Promise<(Post & { user: User; isFired: boolean })[]> {
+  async getFeedPosts(
+    userId: string,
+    page: number,
+    limit: number,
+    hiveId: string = "quebec",
+  ): Promise<(Post & { user: User; isFired: boolean })[]> {
     const offset = page * limit;
 
     // Get users that the current user follows
@@ -174,7 +270,7 @@ export class DatabaseStorage implements IStorage {
       .from(follows)
       .where(eq(follows.followerId, userId));
 
-    const followingIds = followingUsers.map(f => f.id);
+    const followingIds = followingUsers.map((f) => f.id);
 
     // Include the current user's posts too
     followingIds.push(userId);
@@ -192,28 +288,38 @@ export class DatabaseStorage implements IStorage {
         postReactions,
         and(
           eq(postReactions.postId, posts.id),
-          eq(postReactions.userId, userId)
-        )
+          eq(postReactions.userId, userId),
+        ),
       )
-      .where(and(
-        inArray(posts.userId, followingIds.length > 0 ? followingIds : [userId]),
-        or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-        eq(posts.visibility, 'public')
-      ))
+      .where(
+        and(
+          inArray(
+            posts.userId,
+            followingIds.length > 0 ? followingIds : [userId],
+          ),
+          or(eq(posts.isHidden, false), isNull(posts.isHidden)),
+          eq(posts.visibility, "public"),
+          eq(posts.hiveId, hiveId as any), // Filter by Hive
+        ),
+      )
       .orderBy(desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
 
     return result
-      .filter(r => r.user)
-      .map(r => ({
+      .filter((r) => r.user)
+      .map((r) => ({
         ...r.post,
         user: r.user!,
         isFired: !!r.reaction,
       }));
   }
 
-  async getExplorePosts(page: number, limit: number): Promise<(Post & { user: User })[]> {
+  async getExplorePosts(
+    page: number,
+    limit: number,
+    hiveId: string = "quebec",
+  ): Promise<(Post & { user: User })[]> {
     const offset = page * limit;
 
     const result = await db
@@ -223,25 +329,36 @@ export class DatabaseStorage implements IStorage {
       })
       .from(posts)
       .leftJoin(users, eq(posts.userId, users.id))
-      .where(and(
-        or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-        eq(posts.visibility, 'public')
-      ))
+      .where(
+        and(
+          or(eq(posts.isHidden, false), isNull(posts.isHidden)),
+          eq(posts.visibility, "public"),
+          eq(posts.hiveId, hiveId as any),
+        ),
+      )
       .orderBy(desc(posts.fireCount), desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
 
     return result
-      .filter(r => r.user)
-      .map(r => ({
+      .filter((r) => r.user)
+      .map((r) => ({
         ...r.post,
         user: r.user!,
       }));
   }
 
-  async getNearbyPosts(lat: number, lon: number, radiusMeters: number = 50000): Promise<(Post & { user: User })[]> {
+  async getNearbyPosts(
+    lat: number,
+    lon: number,
+    radiusMeters: number = 50000,
+  ): Promise<(Post & { user: User })[]> {
     return traceDatabase("SELECT", "nearby_publications", async (span) => {
-      span.setAttributes({ "db.lat": lat, "db.lon": lon, "db.radius": radiusMeters });
+      span.setAttributes({
+        "db.lat": lat,
+        "db.lon": lon,
+        "db.radius": radiusMeters,
+      });
 
       const result = await db
         .select({
@@ -250,19 +367,25 @@ export class DatabaseStorage implements IStorage {
         })
         .from(posts)
         .leftJoin(users, eq(posts.userId, users.id))
-        .where(sql`ST_DWithin(${posts.location}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography, ${radiusMeters})`)
+        .where(
+          sql`ST_DWithin(${posts.location}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography, ${radiusMeters})`,
+        )
         .orderBy(desc(posts.createdAt));
 
       return result
-        .filter(r => r.user)
-        .map(r => ({
+        .filter((r) => r.user)
+        .map((r) => ({
           ...r.post,
           user: r.user!,
         }));
     });
   }
 
-  async getRegionalTrendingPosts(regionId: string, limit: number = 20, before?: Date): Promise<(Post & { user: User })[]> {
+  async getRegionalTrendingPosts(
+    regionId: string,
+    limit: number = 20,
+    before?: Date,
+  ): Promise<(Post & { user: User })[]> {
     return traceDatabase("SELECT", "regional_trending_mv", async (span) => {
       span.setAttributes({ "db.region_id": regionId, "db.limit": limit });
 
@@ -278,25 +401,32 @@ export class DatabaseStorage implements IStorage {
         .innerJoin(users, eq(posts.userId, users.id))
         .innerJoin(
           sql`public.tendances_par_region_mv`,
-          eq(sql`public.tendances_par_region_mv.publication_id`, posts.id)
+          eq(sql`public.tendances_par_region_mv.publication_id`, posts.id),
         )
         .where(
           and(
             eq(posts.regionId, regionId),
-            sql`public.tendances_par_region_mv.created_at < ${beforeTimestamp}`
-          )
+            sql`public.tendances_par_region_mv.created_at < ${beforeTimestamp}`,
+          ),
         )
-        .orderBy(desc(sql`public.tendances_par_region_mv.score`), desc(posts.createdAt))
+        .orderBy(
+          desc(sql`public.tendances_par_region_mv.score`),
+          desc(posts.createdAt),
+        )
         .limit(limit);
 
-      return result.map(r => ({
+      return result.map((r) => ({
         ...r.post,
         user: r.user,
       }));
     });
   }
 
-  async getSmartRecommendations(embedding: number[], limit: number = 20): Promise<(Post & { user: User })[]> {
+  async getSmartRecommendations(
+    embedding: number[],
+    limit: number = 20,
+    hiveId: string = "quebec",
+  ): Promise<(Post & { user: User })[]> {
     return traceDatabase("SELECT", "smart_recommendations", async (span) => {
       span.setAttributes({ "db.limit": limit });
 
@@ -311,13 +441,16 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(posts.isHidden, false),
             isNull(posts.deletedAt),
-            sql`embedding IS NOT NULL`
-          )
+            sql`embedding IS NOT NULL`,
+            eq(posts.hiveId, hiveId as any),
+          ),
         )
-        .orderBy(desc(sql`1 - (embedding <=> ${JSON.stringify(embedding)}::vector)`))
+        .orderBy(
+          desc(sql`1 - (embedding <=> ${JSON.stringify(embedding)}::vector)`),
+        )
         .limit(limit);
 
-      return result.map(r => ({
+      return result.map((r) => ({
         ...r.post,
         user: r.user,
       }));
@@ -325,7 +458,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPost(post: InsertPost): Promise<Post> {
-    const result = await db.insert(posts).values(post as any).returning();
+    const result = await db
+      .insert(posts)
+      .values(post as any)
+      .returning();
     return result[0];
   }
 
@@ -337,12 +473,30 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async incrementPostViews(id: string): Promise<void> {
-    // No-op: viewCount not in schema
+  async incrementPostViews(id: string): Promise<number> {
+    const result = await db
+      .update(posts)
+      .set({ viewCount: sql`${posts.viewCount} + 1` })
+      .where(eq(posts.id, id))
+      .returning();
+    return result[0]?.viewCount || 0;
+  }
+
+  async markPostBurned(id: string, _reason: string): Promise<void> {
+    await db
+      .update(posts)
+      .set({
+        burnedAt: new Date(),
+        isHidden: true,
+        processingStatus: "failed", // Marker for burned content
+      })
+      .where(eq(posts.id, id));
   }
 
   // Comments
-  async getPostComments(postId: string): Promise<(Comment & { user: User; isFired: boolean })[]> {
+  async getPostComments(
+    postId: string,
+  ): Promise<(Comment & { user: User; isFired: boolean })[]> {
     const result = await db
       .select({
         comment: comments,
@@ -356,8 +510,8 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(comments.createdAt));
 
     return result
-      .filter(r => r.user)
-      .map(r => ({
+      .filter((r) => r.user)
+      .map((r) => ({
         ...r.comment,
         user: r.user!,
         isFired: false, // comment_reactions might not exist or be different in this schema
@@ -370,7 +524,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteComment(id: string): Promise<boolean> {
-    const comment = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+    const comment = await db
+      .select()
+      .from(comments)
+      .where(eq(comments.id, id))
+      .limit(1);
     if (!comment[0]) return false;
 
     await db.delete(comments).where(eq(comments.id, id));
@@ -378,32 +536,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Reactions
-  async togglePostReaction(postId: string, userId: string): Promise<{ added: boolean; newCount: number }> {
+  async togglePostReaction(
+    postId: string,
+    userId: string,
+  ): Promise<{ added: boolean; newCount: number }> {
     const existing = await db
       .select()
       .from(postReactions)
-      .where(and(
-        eq(postReactions.postId, postId),
-        eq(postReactions.userId, userId)
-      ))
+      .where(
+        and(eq(postReactions.postId, postId), eq(postReactions.userId, userId)),
+      )
       .limit(1);
 
     if (existing[0]) {
       // Remove reaction
-      await db.delete(postReactions).where(eq(postReactions.id, existing[0].id));
+      await db
+        .delete(postReactions)
+        .where(eq(postReactions.id, existing[0].id));
 
-      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const post = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.id, postId))
+        .limit(1);
       return { added: false, newCount: post[0]?.fireCount || 0 };
     } else {
       // Add reaction
       await db.insert(postReactions).values({ postId, userId });
 
-      const post = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+      const post = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.id, postId))
+        .limit(1);
       return { added: true, newCount: post[0]?.fireCount || 0 };
     }
   }
 
-  async toggleCommentReaction(_commentId: string, _userId: string): Promise<{ added: boolean; newCount: number }> {
+  async toggleCommentReaction(
+    _commentId: string,
+    _userId: string,
+  ): Promise<{ added: boolean; newCount: number }> {
     // commentaires table does not have a reactions_count/fire_count column in the current schema
     return { added: false, newCount: 0 };
   }
@@ -412,10 +585,9 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(postReactions)
-      .where(and(
-        eq(postReactions.postId, postId),
-        eq(postReactions.userId, userId)
-      ))
+      .where(
+        and(eq(postReactions.postId, postId), eq(postReactions.userId, userId)),
+      )
       .limit(1);
 
     return result.length > 0;
@@ -428,10 +600,12 @@ export class DatabaseStorage implements IStorage {
     const existing = await db
       .select()
       .from(follows)
-      .where(and(
-        eq(follows.followerId, followerId),
-        eq(follows.followingId, followingId)
-      ))
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId),
+        ),
+      )
       .limit(1);
 
     if (existing[0]) return false;
@@ -440,13 +614,18 @@ export class DatabaseStorage implements IStorage {
     return true;
   }
 
-  async unfollowUser(followerId: string, followingId: string): Promise<boolean> {
+  async unfollowUser(
+    followerId: string,
+    followingId: string,
+  ): Promise<boolean> {
     const result = await db
       .delete(follows)
-      .where(and(
-        eq(follows.followerId, followerId),
-        eq(follows.followingId, followingId)
-      ))
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId),
+        ),
+      )
       .returning();
 
     if (result.length === 0) return false;
@@ -458,10 +637,12 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(follows)
-      .where(and(
-        eq(follows.followerId, followerId),
-        eq(follows.followingId, followingId)
-      ))
+      .where(
+        and(
+          eq(follows.followerId, followerId),
+          eq(follows.followingId, followingId),
+        ),
+      )
       .limit(1);
 
     return result.length > 0;
@@ -474,7 +655,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(follows.followerId, users.id))
       .where(eq(follows.followingId, userId));
 
-    return result.filter(r => r.user).map(r => r.user!);
+    return result.filter((r) => r.user).map((r) => r.user!);
   }
 
   async getFollowing(userId: string): Promise<User[]> {
@@ -484,11 +665,13 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(follows.followingId, users.id))
       .where(eq(follows.followerId, userId));
 
-    return result.filter(r => r.user).map(r => r.user!);
+    return result.filter((r) => r.user).map((r) => r.user!);
   }
 
   // Stories
-  async getActiveStories(userId?: string): Promise<(Story & { user: User; isViewed: boolean })[]> {
+  async getActiveStories(
+    userId?: string,
+  ): Promise<(Story & { user: User; isViewed: boolean })[]> {
     const now = new Date();
 
     const result = await db
@@ -503,15 +686,15 @@ export class DatabaseStorage implements IStorage {
         storyViews,
         and(
           eq(storyViews.storyId, stories.id),
-          userId ? eq(storyViews.userId, userId) : sql`false`
-        )
+          userId ? eq(storyViews.userId, userId) : sql`false`,
+        ),
       )
       .where(sql`${stories.expiresAt} > ${now}`)
       .orderBy(desc(stories.createdAt));
 
     return result
-      .filter(r => r.user)
-      .map(r => ({
+      .filter((r) => r.user)
+      .map((r) => ({
         ...r.story,
         user: r.user!,
         isViewed: !!r.view,
@@ -527,16 +710,16 @@ export class DatabaseStorage implements IStorage {
     const existing = await db
       .select()
       .from(storyViews)
-      .where(and(
-        eq(storyViews.storyId, storyId),
-        eq(storyViews.userId, userId)
-      ))
+      .where(
+        and(eq(storyViews.storyId, storyId), eq(storyViews.userId, userId)),
+      )
       .limit(1);
 
     if (!existing[0]) {
       await db.insert(storyViews).values({ storyId, userId });
-      
-      const storyResult = await db.update(stories)
+
+      const storyResult = await db
+        .update(stories)
         .set({ viewCount: sql`${stories.viewCount} + 1` })
         .where(eq(stories.id, storyId))
         .returning();
@@ -547,8 +730,8 @@ export class DatabaseStorage implements IStorage {
         await this.createNotification({
           userId: story.userId,
           fromUserId: userId,
-          type: 'story_view',
-          message: 'a vu votre story',
+          type: "story_view",
+          message: "a vu votre story",
           storyId: storyId,
         });
       }
@@ -556,7 +739,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Notifications
-  async getUserNotifications(userId: string, limit: number = 50): Promise<(Notification & { fromUser?: User })[]> {
+  async getUserNotifications(
+    userId: string,
+    limit: number = 50,
+  ): Promise<(Notification & { fromUser?: User })[]> {
     const result = await db
       .select({
         notification: notifications,
@@ -568,30 +754,36 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(notifications.createdAt))
       .limit(limit);
 
-    return result.map(r => ({
+    return result.map((r) => ({
       ...r.notification,
       fromUser: r.fromUser || undefined,
     }));
   }
 
-  async createNotification(notification: InsertNotification): Promise<Notification> {
-    const result = await db.insert(notifications).values(notification).returning();
+  async createNotification(
+    notification: InsertNotification,
+  ): Promise<Notification> {
+    const result = await db
+      .insert(notifications)
+      .values(notification)
+      .returning();
     return result[0];
   }
 
   async markNotificationRead(id: string): Promise<void> {
-    await db.update(notifications)
+    await db
+      .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.id, id));
   }
 
   async markAllNotificationsRead(userId: string): Promise<void> {
-    await db.update(notifications)
+    await db
+      .update(notifications)
       .set({ isRead: true })
-      .where(and(
-        eq(notifications.userId, userId),
-        eq(notifications.isRead, false)
-      ));
+      .where(
+        and(eq(notifications.userId, userId), eq(notifications.isRead, false)),
+      );
   }
 
   // Gifts
@@ -620,13 +812,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gifts.postId, postId))
       .orderBy(desc(gifts.createdAt));
 
-    return result.map(r => ({
+    return result.map((r) => ({
       ...r.gift,
       sender: r.sender,
     }));
   }
 
-  async getUserReceivedGifts(userId: string, limit: number = 50): Promise<(Gift & { sender: User; post: Post })[]> {
+  async getUserReceivedGifts(
+    userId: string,
+    limit: number = 50,
+  ): Promise<(Gift & { sender: User; post: Post })[]> {
     const result = await db
       .select({
         gift: gifts,
@@ -640,7 +835,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(gifts.createdAt))
       .limit(limit);
 
-    return result.map(r => ({
+    return result.map((r) => ({
       ...r.gift,
       sender: r.sender,
       post: r.post,
@@ -648,16 +843,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Colony Tasks
-  async createColonyTask(task: { command: string; origin: string; priority?: string; metadata?: any; workerId?: string }): Promise<ColonyTask> {
+  async createColonyTask(task: {
+    command: string;
+    origin: string;
+    priority?: string;
+    metadata?: any;
+    workerId?: string;
+  }): Promise<ColonyTask> {
     return traceDatabase("INSERT", "colony_tasks", async (span) => {
-      const result = await db.insert(colonyTasks).values({
-        command: task.command,
-        origin: task.origin,
-        priority: task.priority || 'normal',
-        metadata: task.metadata || {},
-        workerId: task.workerId,
-        status: 'pending'
-      }).returning();
+      const result = await db
+        .insert(colonyTasks)
+        .values({
+          command: task.command,
+          origin: task.origin,
+          priority: task.priority || "normal",
+          metadata: task.metadata || {},
+          workerId: task.workerId,
+          status: "pending",
+        })
+        .returning();
       return result[0];
     });
   }
@@ -685,8 +889,23 @@ export class DatabaseStorage implements IStorage {
 
   async getModerationLogsByUser(userId: string): Promise<any[]> {
     return traceDatabase("SELECT", "moderation_logs", async (span) => {
-      return db.select().from(moderationLogs).where(eq(moderationLogs.userId, userId)).orderBy(desc(moderationLogs.createdAt));
+      return db
+        .select()
+        .from(moderationLogs)
+        .where(eq(moderationLogs.userId, userId))
+        .orderBy(desc(moderationLogs.createdAt));
     });
+  }
+
+  async cleanupExpiredEphemeralPosts(): Promise<number> {
+    // Delete posts that are ephemeral and marked as burned
+    const result = await db
+      .delete(posts)
+      .where(
+        and(eq(posts.isEphemeral, true), sql`${posts.burnedAt} IS NOT NULL`),
+      )
+      .returning();
+    return result.length;
   }
 }
 

@@ -28,6 +28,7 @@ import studioRoutes from "./routes/studio.js";
 import enhanceRoutes from "./routes/enhance.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
+import aiRoutes from "./routes/ai.routes.js";
 import debugRoutes from "./api/debug.js";
 import adminRoutes from "./routes/admin.js";
 // Import tracing utilities
@@ -41,6 +42,7 @@ import {
 } from "./tracer.js";
 import { getVideoQueue } from "./queue.js";
 import { joualizeText, type JoualStyle } from "./services/joualizer.js";
+import { VertexBridge } from "./ai/vertex-bridge.js";
 
 // Configure FAL client
 fal.config({
@@ -157,12 +159,14 @@ export async function registerRoutes(
   // Apply general rate limiting to all other API routes
   app.use("/api", generalRateLimiter);
 
+  // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
+  app.use("/api/ai", aiRoutes);
+
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
 
-  // ============ DEEP ENHANCE ROUTES ============
-  // enhanceRoutes handles /posts/:id/enhance, mounted at /api so it becomes /api/posts/:id/enhance
-  app.use("/api", requireAuth, enhanceRoutes);
+  // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
+  // enhanceRoutes moved to end of file
 
   // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
 
@@ -337,11 +341,9 @@ export async function registerRoutes(
 
       const validStyles: JoualStyle[] = ["street", "old", "enhanced"];
       if (!style || !validStyles.includes(style as JoualStyle)) {
-        return res
-          .status(400)
-          .json({
-            error: "Invalid style. Use 'street', 'old', or 'enhanced'.",
-          });
+        return res.status(400).json({
+          error: "Invalid style. Use 'street', 'old', or 'enhanced'.",
+        });
       }
 
       const rewrittenText = await joualizeText(text, style as JoualStyle);
@@ -352,12 +354,15 @@ export async function registerRoutes(
     }
   });
 
-  // [NEW] Infinite Scroll Feed - Cursor-based Pagination
+  // [NEW] Infinite Scroll Feed - Cursor-based Pagination with Hive Filtering
   app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const cursor = req.query.cursor as string | undefined;
       const feedType = (req.query.type as string) || "explore"; // 'feed', 'explore', 'smart'
+      const hiveId =
+        (req.query.hive as string) ||
+        (req.userId ? await storage.getUserHive(req.userId) : "quebec");
 
       let posts: any[] = [];
 
@@ -365,24 +370,29 @@ export async function registerRoutes(
       if (req.userId && feedType === "feed") {
         // User's personalized feed
         const page = cursor ? parseInt(cursor) : 0;
-        posts = await storage.getFeedPosts(req.userId, page, limit + 1);
+        posts = await storage.getFeedPosts(req.userId, page, limit + 1, hiveId);
       } else if (feedType === "smart" && req.userId) {
         // Smart recommendations (if user provides embedding)
         const embedding = req.query.embedding
           ? JSON.parse(req.query.embedding as string)
           : null;
         if (embedding) {
-          posts = await storage.getSmartRecommendations(embedding, limit + 1);
+          posts = await storage.getSmartRecommendations(
+            embedding,
+            limit + 1,
+            hiveId,
+          );
         } else {
           posts = await storage.getExplorePosts(
             cursor ? parseInt(cursor) : 0,
             limit + 1,
+            hiveId,
           );
         }
       } else {
         // Explore/public feed (default)
         const page = cursor ? parseInt(cursor) : 0;
-        posts = await storage.getExplorePosts(page, limit + 1);
+        posts = await storage.getExplorePosts(page, limit + 1, hiveId);
       }
 
       // Check if there are more posts
@@ -399,6 +409,7 @@ export async function registerRoutes(
         nextCursor,
         hasMore,
         feedType,
+        hiveId,
       });
     } catch (error) {
       console.error("Get infinite feed error:", error);
@@ -406,14 +417,15 @@ export async function registerRoutes(
     }
   });
 
-  // Get explore posts (public, popular)
+  // Get explore posts (public, popular) with Hive filtering
   app.get("/api/explore", async (req, res) => {
     try {
       const page = parseInt(req.query.page as string) || 0;
       const limit = parseInt(req.query.limit as string) || 20;
+      const hiveId = (req.query.hive as string) || "quebec";
 
-      const posts = await storage.getExplorePosts(page, limit);
-      res.json({ posts });
+      const posts = await storage.getExplorePosts(page, limit, hiveId);
+      res.json({ posts, hiveId });
     } catch (error) {
       console.error("Get explore error:", error);
       res.status(500).json({ error: "Failed to get explore posts" });
@@ -473,10 +485,38 @@ export async function registerRoutes(
         isFired = await storage.hasUserFiredPost(req.params.id, req.userId);
       }
 
-      // Increment view count
-      await storage.incrementPostViews(req.params.id);
+      // Handle ephemeral posts (Fantasma Mode)
+      let viewCountIncremented = false;
+      if (req.userId && post.isEphemeral) {
+        // Increment view count for ephemeral posts
+        const newViewCount = await storage.incrementPostViews(req.params.id);
+        viewCountIncremented = true;
 
-      res.json({ post: { ...post, isFired } });
+        // Check if post should be deleted (view count exceeded)
+        if (post.maxViews && newViewCount >= post.maxViews) {
+          // Mark post as burned (deleted due to ephemeral expiration)
+          await storage.markPostBurned(req.params.id, "view_limit_exceeded");
+          // Note: Post content deletion will be handled by a cleanup job
+        }
+      } else if (!post.isEphemeral) {
+        // Only increment views for non-ephemeral posts
+        await storage.incrementPostViews(req.params.id);
+      }
+
+      res.json({
+        post: {
+          ...post,
+          isFired,
+          // Don't show content if ephemeral and user has already viewed it
+          content:
+            post.isEphemeral &&
+            viewCountIncremented &&
+            post.maxViews &&
+            (post.viewCount || 0) >= post.maxViews
+              ? "[Contenido eliminado - Fantasma expirado]"
+              : post.content,
+        },
+      });
     } catch (error) {
       console.error("Get post error:", error);
       res.status(500).json({ error: "Failed to get post" });
@@ -499,12 +539,17 @@ export async function registerRoutes(
     }
   });
 
-  // Create post
+  // Create post with Hive assignment
   app.post("/api/posts", requireAuth, async (req, res) => {
     try {
+      // Get user's hive (default to quebec if not set)
+      const user = await storage.getUser(req.userId!);
+      const hiveId = user?.hiveId || "quebec";
+
       const parsed = insertPostSchema.safeParse({
         ...req.body,
         userId: req.userId,
+        hiveId, // Assign post to user's hive
       });
 
       if (!parsed.success) {
@@ -531,19 +576,29 @@ export async function registerRoutes(
           role: "banned",
           bio: "COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
         });
-        return res
-          .status(403)
-          .json({
-            error:
-              "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
-          });
+        return res.status(403).json({
+          error:
+            "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
+        });
       }
+
+      // Handle ephemeral posts (Fantasma Mode)
+      const isEphemeral = req.body.isEphemeral === true;
+      const maxViews = isEphemeral
+        ? parseInt(req.body.maxViews) || 1
+        : undefined;
+      const expiresAt = isEphemeral
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : undefined; // 24 hours
 
       const post = await storage.createPost({
         ...parsed.data,
         isModerated: true,
         moderationApproved: modResult.status === "approved",
         isHidden: modResult.status !== "approved",
+        isEphemeral,
+        maxViews,
+        expiresAt,
       });
 
       // Queue video for processing by Colony OS workers
@@ -923,11 +978,9 @@ export async function registerRoutes(
         res.json({ response });
       } catch (error: any) {
         console.error("Ti-Guy AI error:", error);
-        res
-          .status(500)
-          .json({
-            error: error.message || "Ti-Guy est fatigué, réessaie plus tard!",
-          });
+        res.status(500).json({
+          error: error.message || "Ti-Guy est fatigué, réessaie plus tard!",
+        });
       }
     },
   );
@@ -1424,7 +1477,24 @@ export async function registerRoutes(
       }
 
       const recipientId = paymentIntent.metadata.recipientId;
-      const giftInfo = GIFT_CATALOG[giftType as GiftType];
+
+      // Get recipient's hive for regional gift filtering
+      const recipient = await storage.getUser(recipientId);
+      const recipientHive = recipient?.hiveId || "quebec";
+
+      // Filter available gifts by hive
+      const availableGifts = Object.entries(
+        GIFT_CATALOG as Record<string, any>,
+      ).filter(([key, gift]) => !gift.hive || gift.hive === recipientHive);
+
+      const availableGiftTypes = Object.fromEntries(availableGifts);
+      const giftInfo = availableGiftTypes[giftType as GiftType];
+
+      if (!giftInfo) {
+        return res.status(400).json({
+          error: `Gift type '${giftType}' not available in hive '${recipientHive}'`,
+        });
+      }
 
       // Create the gift
       const gift = await storage.createGift({
@@ -1457,6 +1527,50 @@ export async function registerRoutes(
       res
         .status(500)
         .json({ error: error.message || "Failed to confirm gift" });
+    }
+  });
+
+  // Get available gifts for a hive
+  app.get("/api/gifts/catalog/:hiveId?", async (req, res) => {
+    try {
+      const hiveId = req.params.hiveId || "quebec";
+
+      // Filter gifts by hive (universal + regional)
+      const availableGifts = Object.entries(
+        GIFT_CATALOG as Record<string, any>,
+      ).filter(([key, gift]) => !gift.hive || gift.hive === hiveId);
+
+      const giftCatalog = Object.fromEntries(availableGifts);
+
+      res.json({
+        hiveId,
+        gifts: giftCatalog,
+      });
+    } catch (error: any) {
+      console.error("Get gift catalog error:", error);
+      res.status(500).json({ error: "Failed to get gift catalog" });
+    }
+  });
+
+  // Clean up expired ephemeral posts (Fantasma Mode maintenance)
+  app.post("/api/admin/cleanup-ephemeral", requireAuth, async (req, res) => {
+    try {
+      // Only allow admin users
+      const user = await storage.getUser(req.userId!);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const deletedCount = await storage.cleanupExpiredEphemeralPosts();
+
+      res.json({
+        success: true,
+        deletedCount,
+        message: `Cleaned up ${deletedCount} expired ephemeral posts`,
+      });
+    } catch (error: any) {
+      console.error("Cleanup ephemeral posts error:", error);
+      res.status(500).json({ error: "Failed to cleanup ephemeral posts" });
     }
   });
 
@@ -1545,9 +1659,29 @@ export async function registerRoutes(
     }
   });
 
-  // Start Colony OS metrics reporting
-  const { startMetricsReporting } = await import("./colony/metrics-bridge.js");
-  startMetricsReporting();
+  // ============ BOOTSTRAP AI / SWARM ROUTES ============
+  // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
+  app.use("/api/ai", aiRoutes);
+
+  // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes
+  /*
+  app.get("/api/ai/search", ...);
+  app.post("/api/ai/ingest", ...);
+  */
+
+  // Start Colony OS metrics reporting (Safe Mode)
+  try {
+    const { startMetricsReporting } =
+      await import("./colony/metrics-bridge.js");
+    startMetricsReporting();
+  } catch (error) {
+    console.warn(
+      "[Colony Bridge] Metrics reporting disabled (module not found or failed to load).",
+    );
+  }
+  // ============ DEEP ENHANCE ROUTES (Moved here) ============
+  app.use("/api", requireAuth, enhanceRoutes);
+
   console.log("✅ Colony OS metrics bridge initialized");
 
   return httpServer;

@@ -37,7 +37,10 @@
     "test:report": "playwright show-report"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.1",
     "@fal-ai/client": "^1.7.2",
+    "@fal-ai/serverless-client": "^0.15.0",
+    "@google-cloud/discoveryengine": "^2.5.2",
     "@google-cloud/storage": "^7.18.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
@@ -136,8 +139,8 @@
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",
     "@vitejs/plugin-react": "^5.0.4",
-    "@vitest/ui": "^4.0.15",
     "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/ui": "^4.0.15",
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^0.31.8",

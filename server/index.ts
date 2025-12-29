@@ -1,11 +1,11 @@
-import 'dotenv/config'; // Load environment variables from .env
-import 'express-async-errors';
+import "dotenv/config"; // Load environment variables from .env
+import "express-async-errors";
 import express, { type Request, Response, NextFunction } from "express";
 // --- OpenTelemetry Tracing (Disabled temporarily due to version mismatch) ---
 // import '../tracing-setup';
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
-import tiGuyRouter from './routes/tiguy.js';
+import tiGuyRouter from "./routes/tiguy.js";
 import { createServer } from "http";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
 
@@ -87,7 +87,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  app.use('/api/tiguy', tiGuyRouter);
+  app.use("/api/tiguy", tiGuyRouter);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

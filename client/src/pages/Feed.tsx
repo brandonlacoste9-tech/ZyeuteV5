@@ -3,39 +3,41 @@
  * Leather post cards with gold accents and stitching
  */
 
-import React, { useState, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ChatButton } from '@/components/ChatButton';
-import { StoryCarousel } from '@/components/features/StoryCircle';
-import { GiftModal } from '@/components/features/GiftModal';
-import { GiftOverlay } from '@/components/features/GiftOverlay';
-import { Onboarding, useOnboarding } from '@/components/Onboarding';
-import { getCurrentUser, getStories } from '@/services/api';
-import { ContinuousFeed } from '@/components/features/ContinuousFeed';
-import { ErrorBoundary, ErrorFallback } from '@/components/ErrorBoundary';
-import { AvatarSkeleton } from '@/components/ui/Skeleton';
+import React, { useState, useCallback } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { ChatButton } from "@/components/ChatButton";
+import { StoryCarousel } from "@/components/features/StoryCircle";
+import { GiftModal } from "@/components/features/GiftModal";
+import { GiftOverlay } from "@/components/features/GiftOverlay";
+import { Onboarding, useOnboarding } from "@/components/Onboarding";
+import { getCurrentUser, getStories } from "@/services/api";
+import { ContinuousFeed } from "@/components/features/ContinuousFeed";
+import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
+import { AvatarSkeleton } from "@/components/ui/Skeleton";
 
-import type { User, Story } from '@/types';
-import { logger } from '../lib/logger';
-import { useGuestMode } from '@/hooks/useGuestMode';
+import type { User, Story } from "@/types";
+import { logger } from "../lib/logger";
+import { useGuestMode } from "@/hooks/useGuestMode";
+import { DailyGratteuxModal } from "@/components/gamification/DailyGratteuxModal";
 
-const feedLogger = logger.withContext('Feed');
+const feedLogger = logger.withContext("Feed");
 
 // Gift emoji lookup moved outside to avoid re-creation on every render
 const GIFT_EMOJIS: Record<string, string> = {
-  comete: '☄️',
-  feuille_erable: '🍁',
-  fleur_de_lys: '⚜️',
-  feu: '🔥',
-  coeur_or: '💛',
+  comete: "☄️",
+  feuille_erable: "🍁",
+  fleur_de_lys: "⚜️",
+  feu: "🔥",
+  coeur_or: "💛",
 };
-
 
 export const Feed: React.FC = () => {
   const location = useLocation();
 
   // State for stories and user (restored)
-  const [stories, setStories] = React.useState<Array<{ user: User; story?: Story; isViewed?: boolean }>>([]);
+  const [stories, setStories] = React.useState<
+    Array<{ user: User; story?: Story; isViewed?: boolean }>
+  >([]);
   const [isLoadingStories, setIsLoadingStories] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
 
@@ -49,9 +51,9 @@ export const Feed: React.FC = () => {
 
   // Gift overlay animation state
   const [showGiftOverlay, setShowGiftOverlay] = useState(false);
-  const [sentGiftEmoji, setSentGiftEmoji] = useState('');
-  const [sentGiftType, setSentGiftType] = useState('');
-  const [sentGiftRecipientName, setSentGiftRecipientName] = useState('');
+  const [sentGiftEmoji, setSentGiftEmoji] = useState("");
+  const [sentGiftType, setSentGiftType] = useState("");
+  const [sentGiftRecipientName, setSentGiftRecipientName] = useState("");
 
   // Increment guest view counter on page load
   React.useEffect(() => {
@@ -75,7 +77,7 @@ export const Feed: React.FC = () => {
         const storyList = await getStories(currentUser?.id);
         setStories(storyList);
       } catch (error) {
-        feedLogger.error('Error fetching stories:', error);
+        feedLogger.error("Error fetching stories:", error);
       } finally {
         setIsLoadingStories(false);
       }
@@ -85,40 +87,53 @@ export const Feed: React.FC = () => {
   }, [currentUser]);
 
   // Handle gift button click
-  const handleGift = useCallback((postId: string, recipient: User) => {
-    const guestMode = localStorage.getItem('zyeute_guest_mode');
-    if (guestMode === 'true') {
-      alert('Inscrivez-vous pour envoyer des cadeaux ! 🎁');
-      return;
-    }
-    if (!currentUser) {
-      alert('Tu dois être connecté pour envoyer un cadeau! 🎁');
-      return;
-    }
-    if (currentUser.id === recipient.id) {
-      alert('Tu ne peux pas t\'envoyer un cadeau! 😅');
-      return;
-    }
-    setSelectedPostId(postId);
-    setSelectedRecipient(recipient);
-    setGiftModalOpen(true);
-  }, [currentUser]);
+  const handleGift = useCallback(
+    (postId: string, recipient: User) => {
+      const guestMode = localStorage.getItem("zyeute_guest_mode");
+      if (guestMode === "true") {
+        alert("Inscrivez-vous pour envoyer des cadeaux ! 🎁");
+        return;
+      }
+      if (!currentUser) {
+        alert("Tu dois être connecté pour envoyer un cadeau! 🎁");
+        return;
+      }
+      if (currentUser.id === recipient.id) {
+        alert("Tu ne peux pas t'envoyer un cadeau! 😅");
+        return;
+      }
+      setSelectedPostId(postId);
+      setSelectedRecipient(recipient);
+      setGiftModalOpen(true);
+    },
+    [currentUser],
+  );
 
   // Handle gift sent - update gift count and show overlay
-  const handleGiftSent = useCallback((giftType: string) => {
-    // Trigger overlay animation
-    setSentGiftType(giftType);
-    setSentGiftEmoji(GIFT_EMOJIS[giftType] || '🎁');
-    setSentGiftRecipientName(selectedRecipient?.display_name || selectedRecipient?.username || 'Créateur');
-    setShowGiftOverlay(true);
+  const handleGiftSent = useCallback(
+    (giftType: string) => {
+      // Trigger overlay animation
+      setSentGiftType(giftType);
+      setSentGiftEmoji(GIFT_EMOJIS[giftType] || "🎁");
+      setSentGiftRecipientName(
+        selectedRecipient?.display_name ||
+          selectedRecipient?.username ||
+          "Créateur",
+      );
+      setShowGiftOverlay(true);
 
-    setGiftModalOpen(false);
-    setSelectedRecipient(null);
-    setSelectedPostId(null);
-  }, [selectedRecipient]);
+      setGiftModalOpen(false);
+      setSelectedRecipient(null);
+      setSelectedPostId(null);
+    },
+    [selectedRecipient],
+  );
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
+      {/* Daily Bonus Modal */}
+      <DailyGratteuxModal />
+
       {/* First-time user onboarding */}
       {isChecked && showOnboarding && (
         <Onboarding onComplete={completeOnboarding} />
@@ -136,8 +151,18 @@ export const Feed: React.FC = () => {
                 to="/notifications"
                 className="relative text-stone-400 hover:text-gold-400 transition-colors group"
               >
-                <svg className="w-6 h-6 group-hover:drop-shadow-[0_0_5px_rgba(255,191,0,0.5)] transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <svg
+                  className="w-6 h-6 group-hover:drop-shadow-[0_0_5px_rgba(255,191,0,0.5)] transition-all"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
                 </svg>
                 {/* Notification badge */}
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full border border-gold-500 text-[10px] font-bold text-white flex items-center justify-center shadow-sm">
@@ -156,17 +181,29 @@ export const Feed: React.FC = () => {
 
         {/* Stories Section (Integrated into Header area) */}
         {isLoadingStories ? (
-            <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5 flex gap-4 px-4 overflow-x-hidden">
-                {[1,2,3,4,5].map(i => (
-                    <AvatarSkeleton key={i} size="w-16 h-16" className="rounded-full border-2 border-neutral-800" />
-                ))}
-            </div>
-        ) : stories.length > 0 && (
-          <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5">
-            <ErrorBoundary fallback={<div className="h-24 flex items-center justify-center text-xs text-white/30">Histoires indisponibles</div>}>
-              <StoryCarousel stories={stories} />
-            </ErrorBoundary>
+          <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5 flex gap-4 px-4 overflow-x-hidden">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <AvatarSkeleton
+                key={i}
+                size="w-16 h-16"
+                className="rounded-full border-2 border-neutral-800"
+              />
+            ))}
           </div>
+        ) : (
+          stories.length > 0 && (
+            <div className="py-2 bg-black/40 backdrop-blur-sm border-t border-white/5">
+              <ErrorBoundary
+                fallback={
+                  <div className="h-24 flex items-center justify-center text-xs text-white/30">
+                    Histoires indisponibles
+                  </div>
+                }
+              >
+                <StoryCarousel stories={stories} />
+              </ErrorBoundary>
+            </div>
+          )
         )}
 
         {/* Gold accent line */}
@@ -177,8 +214,9 @@ export const Feed: React.FC = () => {
       <div className="flex-1 w-full bg-black relative">
         {/* KryptoTrac Integration */}
 
-        
-        <ErrorBoundary fallback={<ErrorFallback onRetry={() => window.location.reload()} />}>
+        <ErrorBoundary
+          fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
+        >
           <ContinuousFeed />
         </ErrorBoundary>
       </div>

@@ -71,9 +71,10 @@ export const roleEnum = pgEnum("user_role", [
   "banned",
 ]);
 export const hiveEnum = pgEnum("hive_id", [
-  "quebec", // default: fr-CA
+  "quebec", // fr-CA
+  "brazil", // pt-BR
+  "argentina", // es-AR
   "mexico", // es-MX
-  "south", // es-SUR (LatAm)
 ]);
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
@@ -100,6 +101,8 @@ export const users = pgTable("user_profiles", {
   updatedAt: timestamp("updated_at").defaultNow(),
   tiGuyCommentsEnabled: boolean("ti_guy_comments_enabled").default(true),
   hiveId: hiveEnum("hive_id").default("quebec"),
+  // Gamification (Le Gratteux)
+  lastDailyBonus: timestamp("last_daily_bonus"),
 });
 
 // Posts Table mapped to publications
@@ -138,6 +141,12 @@ export const posts = pgTable(
     moderationScore: integer("moderation_score").default(0),
     moderatedAt: timestamp("moderated_at"),
     hiveId: hiveEnum("hive_id").default("quebec"), // Content is siloed by hive
+    // Ephemeral Logic (The "Burn" Protocol)
+    isEphemeral: boolean("is_ephemeral").default(false),
+    viewCount: integer("view_count").default(0),
+    maxViews: integer("max_views").default(1),
+    expiresAt: timestamp("expires_at"),
+    burnedAt: timestamp("burned_at"), // The "Scar" - remains after content deletion
     deletedAt: timestamp("deleted_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
@@ -467,6 +476,8 @@ export const insertPostSchema = createInsertSchema(posts, {
   fireCount: true,
   commentCount: true,
   deletedAt: true,
+  viewCount: true,
+  burnedAt: true,
 });
 
 export const insertCommentSchema = createInsertSchema(comments, {
@@ -492,13 +503,23 @@ export const insertGiftSchema = createInsertSchema(gifts).omit({
   createdAt: true,
 });
 
-// Gift catalog with prices in cents
+// Regional Gift catalog with cultural items (prices in cents)
 export const GIFT_CATALOG = {
+  // Universal gifts
   comete: { emoji: "☄️", name: "Comète", price: 50 },
-  feuille_erable: { emoji: "🍁", name: "Feuille d'érable", price: 50 },
-  fleur_de_lys: { emoji: "⚜️", name: "Fleur de Lys", price: 75 },
   feu: { emoji: "🔥", name: "Feu", price: 100 },
   coeur_or: { emoji: "💛", name: "Coeur d'or", price: 100 },
+
+  // Regional gifts by hive
+  sirop_erable: {
+    emoji: "🍁",
+    name: "Sirop d'érable",
+    price: 75,
+    hive: "quebec",
+  },
+  cafe: { emoji: "☕", name: "Café brasileiro", price: 60, hive: "south" }, // Brazil
+  mate: { emoji: "🧉", name: "Mate argentino", price: 70, hive: "south" }, // Argentina
+  taco: { emoji: "🌮", name: "Taco auténtico", price: 80, hive: "mexico" },
 } as const;
 
 export type GiftType = keyof typeof GIFT_CATALOG;

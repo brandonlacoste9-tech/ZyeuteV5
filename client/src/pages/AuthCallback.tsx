@@ -1,224 +1,113 @@
 /**
  * OAuth Callback Handler
  * Handles the OAuth redirect from providers like Google
- * 
+ *
  * Supports both:
  * 1. Hash-based OAuth (automatic with detectSessionInUrl)
  * 2. Code-based OAuth (explicit exchangeCodeForSession)
  */
 
-import React, { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { LoadingScreen } from '@/components/LoadingScreen';
-import { logger } from '../lib/logger';
+import React, { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { logger } from "../lib/logger";
 
-const authCallbackLogger = logger.withContext('AuthCallback');
-
+const authCallbackLogger = logger.withContext("AuthCallback");
 
 const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const processedRef = React.useRef(false); // Ref to prevention double-fire in Strict Mode
 
   useEffect(() => {
-    // Log current URL state immediately for debugging
-    authCallbackLogger.debug('🔍 AuthCallback mounted');
-    authCallbackLogger.debug('Current URL:', window.location.href);
-    authCallbackLogger.debug('Hash:', window.location.hash);
-    authCallbackLogger.debug('Search params:', window.location.search);
+    // Prevent double invocation
+    if (processedRef.current) return;
+    processedRef.current = true;
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let hasNavigated = false;
-    let authSubscription: { unsubscribe: () => void } | null = null;
+    const handleAuth = async () => {
+      authCallbackLogger.debug("🔍 AuthCallback processing...");
 
-    const exchangeCode = async () => {
-      // Check for OAuth error in URL parameters
-      const error = searchParams.get('error');
-      const errorDescription = searchParams.get('error_description');
-
-      authCallbackLogger.debug('Checking for OAuth error:', error);
-
-      if (error) {
-        authCallbackLogger.error('❌ OAuth error:', error, errorDescription);
-        hasNavigated = true;
-        navigate(`/login?error=${encodeURIComponent(error || 'oauth_failed')}`, { replace: true });
+      // 1. Check for specific error params
+      const errorStr = searchParams.get("error");
+      const errorDesc = searchParams.get("error_description");
+      if (errorStr) {
+        authCallbackLogger.error("OAuth Error:", errorStr, errorDesc);
+        navigate(`/login?error=${encodeURIComponent(errorStr)}`, {
+          replace: true,
+        });
         return;
       }
 
-      // Check for code-based OAuth (query params)
-      const code = searchParams.get('code');
-      const provider = searchParams.get('provider') || 'google'; // Default to google if not specified
-
-      authCallbackLogger.debug('Code param:', code);
-      authCallbackLogger.debug('Provider param:', provider);
-
+      // 2. Check for Code (PKCE Flow)
+      const code = searchParams.get("code");
       if (code) {
-        // Explicit code exchange flow
-        authCallbackLogger.debug('Exchanging OAuth code for session...', { code, provider });
-
-        try {
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-
-          if (exchangeError) {
-            authCallbackLogger.error('OAuth exchange error:', exchangeError);
-            hasNavigated = true;
-            navigate(`/login?error=${encodeURIComponent(exchangeError.message || 'exchange_failed')}`, { replace: true });
-            return;
-          }
-
-          if (data?.session) {
-            authCallbackLogger.debug('✅ Session established:', {
-              user: data.session.user?.email,
-              expiresAt: data.session.expires_at,
-            });
-            hasNavigated = true;
-            navigate('/', { replace: true });
-            return;
-          } else {
-            authCallbackLogger.warn('No session in exchange response');
-            hasNavigated = true;
-            navigate('/login?error=no_session', { replace: true });
-            return;
-          }
-        } catch (error: any) {
-          authCallbackLogger.error('OAuth exchange exception:', error);
-          hasNavigated = true;
-          navigate(`/login?error=${encodeURIComponent(error?.message || 'exchange_exception')}`, { replace: true });
+        authCallbackLogger.debug("Exchange code detected.");
+        const { data, error } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          authCallbackLogger.error("Exchange failed:", error);
+          navigate(`/login?error=${encodeURIComponent(error.message)}`, {
+            replace: true,
+          });
+          return;
+        }
+        if (data?.session) {
+          authCallbackLogger.debug("Session established via Code Exchange.");
+          // Wait a tick to ensure storage sync
+          setTimeout(() => navigate("/", { replace: true }), 100);
           return;
         }
       }
 
-      // Hash-based OAuth flow (detectSessionInUrl handles this automatically)
-      authCallbackLogger.debug('No code param found, checking for hash-based OAuth...');
-      authCallbackLogger.debug('Hash contains access_token:', window.location.hash.includes('access_token'));
-      authCallbackLogger.debug('Hash contains type:', window.location.hash.includes('type='));
+      // 3. Check for implicit hash fragment (Supabase often handles this automatically)
+      // We'll give Supabase a moment to detect the session from the URL hash
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-      // Listen for auth state changes to know when session is ready
-      const { data } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
-        const subscription = (data as any).subscription || data;
-        authCallbackLogger.debug('🔔 Auth state change:', event, session ? 'has session' : 'no session');
+      if (session) {
+        authCallbackLogger.debug("Session detected automatically.");
+        navigate("/", { replace: true });
+        return;
+      }
 
-        if (event === 'SIGNED_IN' && session) {
-          authCallbackLogger.debug('✅ Signed in via hash-based OAuth:', {
-            user: session.user?.email,
-            expiresAt: session.expires_at,
-          });
-          hasNavigated = true;
-          if (timeoutId) clearTimeout(timeoutId);
-          if (authSubscription) authSubscription.unsubscribe();
-          navigate('/', { replace: true });
-        } else if (event === 'SIGNED_OUT') {
-          authCallbackLogger.debug('Signed out');
-          hasNavigated = true;
-          if (timeoutId) clearTimeout(timeoutId);
-          if (authSubscription) authSubscription.unsubscribe();
-          navigate('/login', { replace: true });
-        } else if (event === 'TOKEN_REFRESHED' && session) {
-          authCallbackLogger.debug('Token refreshed');
-          hasNavigated = true;
-          if (timeoutId) clearTimeout(timeoutId);
-          if (authSubscription) authSubscription.unsubscribe();
-          navigate('/', { replace: true });
-        }
-      });
-
-      // Store the subscription object to be used for cleanup
-      authSubscription = (data as any).subscription || data;
-
-      // Also check current session immediately in case auth already completed
-      const checkSession = async () => {
-        try {
-          authCallbackLogger.debug('🔍 Checking for existing session...');
-          // Supabase's detectSessionInUrl should have processed hash-based OAuth already
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            authCallbackLogger.error('❌ Session error:', sessionError);
+      // 4. Fallback listener
+      // If code/hash wasn't immediately present or processed, listen for the event
+      const { data: authData } = supabase.auth.onAuthStateChange(
+        (event: any, session: any) => {
+          if (event === "SIGNED_IN" && session) {
+            authCallbackLogger.debug("Signed In event captured.");
+            authData.subscription.unsubscribe();
+            navigate("/", { replace: true });
           }
+        },
+      );
 
-          if (session) {
-            authCallbackLogger.debug('✅ Session found immediately:', {
-              user: session.user?.email,
-              expiresAt: session.expires_at,
-            });
-            hasNavigated = true;
-            if (timeoutId) clearTimeout(timeoutId);
-            if (authSubscription) authSubscription.unsubscribe();
-            navigate('/', { replace: true });
-            return;
+      // Timeout fallback if nothing happens
+      setTimeout(() => {
+        // Final check
+        supabase.auth.getSession().then(({ data: sessionData }: any) => {
+          if (sessionData.session) {
+            navigate("/", { replace: true });
+          } else {
+            authCallbackLogger.warn("Auth timeout - redirecting to login");
+            navigate("/login?error=timeout", { replace: true });
           }
-
-          authCallbackLogger.debug('⏳ No session yet, waiting for OAuth token exchange...');
-
-          // If no session yet, wait a bit for OAuth token exchange to complete
-          timeoutId = setTimeout(async () => {
-            if (hasNavigated) {
-              authCallbackLogger.debug('Already navigated, skipping retry');
-              return;
-            }
-
-            authCallbackLogger.debug('🔄 Retrying session check...');
-            try {
-              const { data: { session: retrySession }, error: retryError } = await supabase.auth.getSession();
-
-              if (retryError) {
-                authCallbackLogger.error('❌ Retry session error:', retryError);
-              }
-
-              if (retrySession) {
-                authCallbackLogger.debug('✅ Session found on retry:', {
-                  user: retrySession.user?.email,
-                });
-                hasNavigated = true;
-                if (authSubscription) authSubscription.unsubscribe();
-                navigate('/', { replace: true });
-              } else {
-                // Still no session after delay - likely a failed OAuth flow
-                authCallbackLogger.warn('❌ No session established after OAuth callback');
-                authCallbackLogger.warn('Current URL:', window.location.href);
-                authCallbackLogger.warn('Hash:', window.location.hash);
-                authCallbackLogger.warn('Search:', window.location.search);
-                authCallbackLogger.warn('This usually means:');
-                authCallbackLogger.warn('  1. OAuth callback URL not in Supabase Redirect URLs');
-                authCallbackLogger.warn('  2. Google OAuth redirect URI mismatch');
-                authCallbackLogger.warn('  3. Session not being stored properly');
-                hasNavigated = true;
-                if (authSubscription) authSubscription.unsubscribe();
-                navigate('/login?error=no_session', { replace: true });
-              }
-            } catch (error) {
-              authCallbackLogger.error('❌ Auth callback retry error:', error);
-              hasNavigated = true;
-              if (authSubscription) authSubscription.unsubscribe();
-              navigate('/login?error=callback_failed', { replace: true });
-            }
-          }, 3000); // Wait 3 seconds for OAuth token exchange
-        } catch (error) {
-          authCallbackLogger.error('❌ Auth callback error:', error);
-          hasNavigated = true;
-          if (timeoutId) clearTimeout(timeoutId);
-          if (authSubscription) authSubscription.unsubscribe();
-          navigate('/login?error=callback_error', { replace: true });
-        }
-      };
-
-      checkSession();
+        });
+      }, 4000);
     };
 
-    exchangeCode();
-
-    // Cleanup function to prevent memory leaks
-    return () => {
-      if (authSubscription) {
-        authSubscription.unsubscribe();
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
+    handleAuth();
   }, [navigate, searchParams]);
 
-  return <LoadingScreen message="Connexion en cours..." />;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black gap-4">
+      <LoadingScreen message="Connexion sécurisée..." />
+      <p className="text-zinc-500 text-xs">Vérification des identifiants...</p>
+    </div>
+  );
 };
 
 export default AuthCallback;

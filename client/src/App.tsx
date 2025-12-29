@@ -70,6 +70,11 @@ const WatchLive = lazy(() => import("@/pages/WatchLive"));
 const LiveDiscover = lazy(() => import("@/pages/LiveDiscover"));
 const AIStudio = lazy(() => import("@/pages/AIStudio"));
 const LaZyeute = lazy(() => import("@/pages/LaZyeute"));
+const Pulse = lazy(() =>
+  import("@/components/skins/SkinSelector").then((module) => ({
+    default: module.SkinSelector,
+  })),
+);
 
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
@@ -315,7 +320,159 @@ function App() {
                                                   </ProtectedRoute>
                                                 }
                                               />
-                                              {/* Sub-routes */}
+                                              {/* Regional Skins Waitlist */}
+                                              <Route
+                                                path="/pulse"
+                                                element={
+                                                  <Suspense
+                                                    fallback={
+                                                      <LazyLoadFallback />
+                                                    }
+                                                  >
+                                                    <MainLayout>
+                                                      <Pulse />
+                                                    </MainLayout>
+                                                  </Suspense>
+                                                }
+                                              />
+                                              {/* Settings Sub-routes */}
+                                              <Route
+                                                path="/settings/tags"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <TagsSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/comments"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <CommentsSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/sharing"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <SharingSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/restricted"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <RestrictedAccountsSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/favorites"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <FavoritesSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/muted"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <MutedAccountsSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/content"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <ContentPreferencesSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/media"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <MediaSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/audio"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <AudioSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/storage"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <StorageSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/app"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <AppSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/region"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <RegionSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/language"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <LanguageSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/voice"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <VoiceSettingsPage />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/profile"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <ProfileEditSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/privacy"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <PrivacySettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/settings/notifications"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <NotificationSettings />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              {/* Fallback for unknown settings routes returns to main settings */}
                                               <Route
                                                 path="/settings/*"
                                                 element={

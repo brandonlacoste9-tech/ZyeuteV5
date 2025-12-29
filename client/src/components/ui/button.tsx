@@ -2,58 +2,67 @@
  * Gold-themed Button component for Zyeuté
  */
 
-import React from 'react';
-import { cn } from '../../lib/utils';
+import React from "react";
+import { cn } from "../../lib/utils";
 
-export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'icon' | 'destructive';
+import { Slot } from "@radix-ui/react-slot";
+
+export type ButtonVariant =
+  | "primary"
+  | "outline"
+  | "ghost"
+  | "icon"
+  | "destructive";
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       className,
-      variant = 'primary',
-      size = 'md',
+      variant = "primary",
+      size = "md",
       isLoading = false,
       leftIcon,
       rightIcon,
       children,
       disabled,
+      asChild = false,
       ...props
     },
-    ref
+    ref,
   ) => {
-    const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2';
+    const Comp = asChild ? Slot : "button";
+    const baseStyles =
+      "inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2";
 
     const variants = {
-      primary: 'bg-gold-gradient text-black shadow-gold hover:shadow-gold-lg hover:scale-105 active:scale-95',
-      outline: 'border-2 border-gold-500 text-gold-500 hover:bg-gold-500/10 hover:border-gold-400',
-      ghost: 'text-gold-500 hover:bg-gold-500/10',
-      icon: 'text-white hover:text-gold-400 hover:bg-white/10',
-      destructive: 'bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-500/20',
+      primary:
+        "bg-gold-gradient text-black shadow-gold hover:shadow-gold-lg hover:scale-105 active:scale-95",
+      outline:
+        "border-2 border-gold-500 text-gold-500 hover:bg-gold-500/10 hover:border-gold-400",
+      ghost: "text-gold-500 hover:bg-gold-500/10",
+      icon: "text-white hover:text-gold-400 hover:bg-white/10",
+      destructive:
+        "bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-500/20",
     };
 
     const sizes = {
-      sm: 'px-3 py-1.5 text-sm rounded-lg',
-      md: 'px-4 py-2 text-base rounded-xl',
-      lg: 'px-6 py-3 text-lg rounded-2xl',
+      sm: "px-3 py-1.5 text-sm rounded-lg",
+      md: "px-4 py-2 text-base rounded-xl",
+      lg: "px-6 py-3 text-lg rounded-2xl",
     };
 
     return (
-      <button
+      <Comp
         ref={ref}
-        className={cn(
-          baseStyles,
-          variants[variant],
-          sizes[size],
-          className
-        )}
+        className={cn(baseStyles, variants[variant], sizes[size], className)}
         disabled={disabled || isLoading}
         {...props}
       >
@@ -85,12 +94,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {children}
 
         {rightIcon && <span className="ml-2">{rightIcon}</span>}
-      </button>
+      </Comp>
     );
-  }
+  },
 );
 
-Button.displayName = 'Button';
+Button.displayName = "Button";
 
 /**
  * Specialized Play Button for video thumbnails
@@ -130,10 +139,10 @@ export const FireButton: React.FC<{
   <button
     onClick={onClick}
     className={cn(
-      'text-2xl transition-all duration-200',
+      "text-2xl transition-all duration-200",
       active
-        ? 'scale-125 drop-shadow-[0_0_8px_rgba(255,165,0,0.8)] animate-pulse'
-        : 'grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:scale-110'
+        ? "scale-125 drop-shadow-[0_0_8px_rgba(255,165,0,0.8)] animate-pulse"
+        : "grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:scale-110",
     )}
     aria-label={`Fire level ${level}`}
   >
