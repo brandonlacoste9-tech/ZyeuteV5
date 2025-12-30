@@ -27,9 +27,17 @@ export default function PoutineLobby() {
       // Direct fetch if api wrapper doesn't have it yet
       const res = await fetch("/api/royale/tournaments");
       const data = await res.json();
-      setTournaments(data);
+
+      if (Array.isArray(data)) {
+        setTournaments(data);
+      } else {
+        console.error("Invalid tournament data received:", data);
+        setTournaments([]);
+        // Optional: Show toast error if needed, but keeping it silent for lobby to verify "Poutine Royale" text presence
+      }
     } catch (error) {
       console.error("Failed to load tournaments", error);
+      setTournaments([]);
     } finally {
       setLoading(false);
     }

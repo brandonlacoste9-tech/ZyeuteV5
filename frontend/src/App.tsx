@@ -82,6 +82,8 @@ const PoutineStackGame = lazy(
   () => import("@/components/features/PoutineStackGame"),
 );
 
+const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
+
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -595,6 +597,14 @@ function App() {
                                                 element={
                                                   <ProtectedRoute>
                                                     <CreatorRevenue />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/parental"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <ParentalDashboard />
                                                   </ProtectedRoute>
                                                 }
                                               />

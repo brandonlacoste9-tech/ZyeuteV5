@@ -39,10 +39,15 @@ async function apiCall<T>(
       credentials: "include", // Include cookies for session
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      return { data: null, error: data.error || "Request failed" };
+      // If 500 or 503, return a specific error that can be swallowed by resilient endpoints
+      if (response.status >= 500) {
+        apiLogger.error(`Server error ${response.status} at ${endpoint}`);
+        return { data: null, error: "Server Unavailable" };
+      }
+      return { data: null, error: (data && data.error) || "Request failed" };
     }
 
     return { data, error: null };
@@ -125,22 +130,27 @@ export async function getFeedPosts(
   page: number = 0,
   limit: number = 20,
 ): Promise<Post[]> {
-  const { data, error } = await apiCall<{ posts: Post[] }>(
-    `/feed?page=${page}&limit=${limit}`,
-  );
+  try {
+    const { data, error } = await apiCall<{ posts: Post[] }>(
+      `/feed?page=${page}&limit=${limit}`,
+    );
 
-  if (error || !data) {
-    apiLogger.warn("No feed data returned");
+    if (error || !data) {
+      apiLogger.warn("Feed unavailable, returning empty array logic.");
+      return [];
+    }
+
+    // Use robust mapping and filtering
+    return (data.posts || [])
+      .map(mapBackendPost)
+      .filter(
+        (post: Post | null): post is Post =>
+          post !== null && !!post.id && !!post.media_url,
+      );
+  } catch (err) {
+    // Final safety net
     return [];
   }
-
-  // Use robust mapping and filtering
-  return (data.posts || [])
-    .map(mapBackendPost)
-    .filter(
-      (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!post.media_url,
-    );
 }
 
 export async function getExplorePosts(

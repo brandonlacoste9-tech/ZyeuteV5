@@ -723,27 +723,7 @@ export const beeSpawns = pgTable("bee_spawns", {
   isSafe: boolean("is_safe").default(true),
 });
 
-// Poutine Tournaments (Royale Engine)
-export const poutineTournaments = pgTable("poutine_tournaments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: varchar("title", { length: 100 }).notNull(),
-  entryFee: integer("entry_fee").default(50).notNull(), // in Piasses
-  totalPool: integer("total_pool").default(0),
-  status: tournamentStatusEnum("status").default("active"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  endsAt: timestamp("ends_at").notNull(),
-});
-
-// Poutine Scores (The "Squeak" Ledger)
-export const poutineScores = pgTable("poutine_scores", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tournamentId: uuid("tournament_id").references(() => poutineTournaments.id),
-  userId: uuid("user_id").references(() => users.id),
-  score: integer("score").notNull(),
-  metadata: jsonb("metadata"), // stack height, momentum, etc.
-  payout: integer("payout").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// Duplicate tables removed in favor of tournaments and royaleScores defined below
 
 // Waitlist (The Swarm Growth Engine)
 export const waitlist = pgTable("waitlist", {

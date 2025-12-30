@@ -212,8 +212,6 @@ export const Feed: React.FC = () => {
 
       {/* Main Content - Continuous Video Feed */}
       <div className="flex-1 w-full bg-black relative">
-        {/* KryptoTrac Integration */}
-
         <ErrorBoundary
           fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
         >
