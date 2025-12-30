@@ -1,6 +1,6 @@
 import { db } from "../db.js";
 import { agentMemories, agentFacts } from "../../../../../shared/schema.js";
-import { getEmbeddings } from "../../../../../server/ai/google.js";
+import { getEmbeddings } from "../../../../../backend/ai/google.js";
 import { eq, and, sql, desc } from "drizzle-orm";
 
 /**

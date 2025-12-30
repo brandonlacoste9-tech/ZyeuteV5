@@ -1,0 +1,1682 @@
+import type { Express, Request, Response, NextFunction } from "express";
+import type { Server } from "http";
+import rateLimit from "express-rate-limit";
+import { storage } from "./storage.js";
+import {
+  insertUserSchema,
+  insertPostSchema,
+  insertCommentSchema,
+  insertStorySchema,
+  GIFT_CATALOG,
+  type GiftType,
+} from "../shared/schema.js";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+import { fal } from "@fal-ai/client";
+import {
+  v3TiGuyChat,
+  v3Flow,
+  v3Feed,
+  v3Microcopy,
+  v3Mod,
+  FAL_PRESETS,
+} from "./v3-swarm.js";
+import { lookupWord } from "./utils/dictionary.js";
+import emailAutomation from "./email-automation.js";
+// Import Studio API routes
+import studioRoutes from "./routes/studio.js";
+import enhanceRoutes from "./routes/enhance.js";
+// [NEW] Import the JWT verifier
+import { verifyAuthToken } from "./supabase-auth.js";
+import aiRoutes from "./routes/ai.routes.js";
+import debugRoutes from "./api/debug.js";
+import adminRoutes from "./routes/admin.js";
+import { healthRouter } from "./routes/health.js";
+// Import tracing utilities
+import {
+  traced,
+  traceDatabase,
+  traceExternalAPI,
+  traceStripe,
+  traceSupabase,
+  addSpanAttributes,
+} from "./tracer.js";
+import { getVideoQueue } from "./queue.js";
+import { joualizeText, type JoualStyle } from "./services/joualizer.js";
+import { VertexBridge } from "./ai/vertex-bridge.js";
+
+// Configure FAL client
+fal.config({
+  credentials: process.env.FAL_API_KEY,
+});
+
+// Rate limiters for different endpoint types
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 minutes per IP
+  message: { error: "Trop de requêtes AI. Réessaie dans quelques minutes! 🦫" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // 5 auth attempts per minute per IP (stricter to prevent brute force)
+  message: {
+    error: "Trop de tentatives de connexion. Réessaie dans une minute.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // 60 requests per 15 minutes per IP
+  message: { error: "Trop de requêtes. Réessaie bientôt!" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stripe configuration - only initialize if API key is present
+import Stripe from "stripe";
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+let stripe: Stripe | null = null;
+
+if (STRIPE_SECRET_KEY) {
+  stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: "2025-12-15.clover",
+  });
+} else {
+  console.warn(
+    "⚠️ STRIPE_SECRET_KEY not found - payment features will be disabled",
+  );
+}
+
+// [UPDATED] Hybrid Auth Middleware
+// Accepts:
+// 1. Authorization: Bearer <jwt> (New, Stateless)
+// 2. Cookie Session (Legacy, Stateful)
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Strategy: Check for Supabase JWT (Bearer Token)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+
+    if (userId) {
+      // Check if user is banned
+      const user = await storage.getUser(userId);
+      if (user?.role === "banned") {
+        return res.status(403).json({
+          error:
+            "Votre compte a été désactivé en raison d'une violation grave de nos protocoles de sécurité. Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
+          isBanned: true,
+        });
+      }
+
+      req.userId = userId;
+      return next();
+    }
+  }
+
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+async function optionalAuth(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+
+    if (userId) {
+      req.userId = userId;
+    }
+  }
+  next();
+}
+
+export async function registerRoutes(
+  httpServer: Server,
+  app: Express,
+): Promise<Server> {
+  // ============ HEALTH & SYSTEM ROUTES ============
+  app.use("/api", healthRouter);
+
+  // [NEW] Debug and Scalability Diagnostics
+  app.use("/api/debug", debugRoutes);
+
+  // [NEW] Admin Observability Dashboard
+  app.use("/api/admin", requireAuth, adminRoutes);
+
+  // Apply general rate limiting to all other API routes
+
+  // Apply general rate limiting to all other API routes
+  app.use("/api", generalRateLimiter);
+
+  // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
+  app.use("/api/ai", aiRoutes);
+
+  // ============ STUDIO AI HIVE ROUTES ============
+  app.use("/api/studio", requireAuth, studioRoutes);
+
+  // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
+  // enhanceRoutes moved to end of file
+
+  // ============ LEGACY AUTH ROUTES (for backward compatibility) ============
+
+  /* LEGACY SIGNUP REMOVED - Using Supabase Auth
+  // Sign up
+  app.post("/api/auth/signup", authRateLimiter, async (req, res) => {
+     // ... implementation removed ...
+     res.status(410).json({ error: "Please use Supabase Auth" });
+  });
+  */
+
+  /* LEGACY LOGIN REMOVED - Using Supabase Auth
+  // Login
+  app.post("/api/auth/login", authRateLimiter, async (req, res) => {
+     res.status(410).json({ error: "Please use Supabase Auth" });
+  });
+  */
+
+  // Legacy /api/auth/logout removed - Frontend uses Supabase signOut directly
+
+  // [NEW] Resolve username to email (Helper for login with username)
+  app.post("/api/auth/resolve-email", authRateLimiter, async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username || typeof username !== "string") {
+        return res.status(400).json({ error: "Username is required" });
+      }
+
+      // Sanitize username
+      const cleanUsername = username.trim().toLowerCase();
+
+      const user = await storage.getUserByUsername(cleanUsername);
+      if (user && user.email) {
+        // Return email so frontend can use it for Supabase auth
+        return res.json({ email: user.email });
+      }
+
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    } catch (error) {
+      console.error("Resolve email error:", error);
+      res.status(500).json({ error: "Failed to resolve username" });
+    }
+  });
+
+  // [RESTORED] Get current user profile (bridged via JWT)
+  // This is needed because frontend/src/services/api.ts still calls /auth/me
+  // to get the full profile data (coins, region, etc.) which isn't in the JWT.
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      // const { password: _, ...safeUser } = user;
+      // res.json({ user: safeUser });
+      res.json({ user: user }); // User object from Drizzle should be safe now
+    } catch (error) {
+      console.error("Get me error:", error);
+      res.status(500).json({ error: "Failed to get user profile" });
+    }
+  });
+
+  // ============ USER ROUTES ============
+
+  // Get user by username
+  app.get("/api/users/:username", optionalAuth, async (req, res) => {
+    try {
+      const user = await storage.getUserByUsername(req.params.username);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const safeUser = user;
+
+      // Check if current user follows this user
+      let isFollowing = false;
+      if (req.userId && req.userId !== user.id) {
+        isFollowing = await storage.isFollowing(req.userId, user.id);
+      }
+
+      res.json({ user: { ...safeUser, isFollowing } });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // Update current user profile
+  app.patch("/api/users/me", requireAuth, async (req, res) => {
+    try {
+      const { displayName, bio, avatarUrl, region, tiGuyCommentsEnabled } =
+        req.body;
+
+      const updated = await storage.updateUser(req.userId!, {
+        displayName,
+        bio,
+        avatarUrl,
+        region,
+        tiGuyCommentsEnabled,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const safeUser = updated;
+      res.json({ user: safeUser });
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // ============ POSTS ROUTES ============
+
+  // Get feed posts - supports guest mode (returns explore posts for guests)
+  app.get("/api/feed", optionalAuth, async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      // If authenticated, return personalized feed
+      // If guest (no auth), return explore posts
+      if (req.userId) {
+        const posts = await storage.getFeedPosts(req.userId, page, limit);
+        res.json({ posts });
+      } else {
+        // Guest mode: return explore posts
+        const posts = await storage.getExplorePosts(page, limit);
+        res.json({ posts, isGuestMode: true });
+      }
+    } catch (error) {
+      console.error("Get feed error:", error);
+      res.status(500).json({ error: "Failed to get feed" });
+    }
+  });
+
+  // Get Smart "Pour Toi" Feed - Uses Vector Recommendations
+  app.get("/api/feed/smart", optionalAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      // Initial version: Use a fixed embedding for testing or search-based
+      // In a real scenario, we'd fetch the user's "interest profile" embedding
+      // or embed the search query if one exists.
+      let embedding = req.query.embedding
+        ? JSON.parse(req.query.embedding as string)
+        : null;
+
+      if (!embedding) {
+        // Fallback: Just return explore posts if no vector provided yet
+        const posts = await storage.getExplorePosts(0, limit);
+        return res.json({ posts, isFallback: true });
+      }
+
+      const posts = await storage.getSmartRecommendations(embedding, limit);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get smart feed error:", error);
+      res.status(500).json({ error: "Failed to get smart recommendations" });
+    }
+  });
+
+  // [NEW] Joualizer Rewrite Engine
+  app.post("/api/ai/joualize", requireAuth, aiRateLimiter, async (req, res) => {
+    try {
+      const { text, style } = req.body;
+
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const validStyles: JoualStyle[] = ["street", "old", "enhanced"];
+      if (!style || !validStyles.includes(style as JoualStyle)) {
+        return res.status(400).json({
+          error: "Invalid style. Use 'street', 'old', or 'enhanced'.",
+        });
+      }
+
+      const rewrittenText = await joualizeText(text, style as JoualStyle);
+      res.json({ originalText: text, rewrittenText, style });
+    } catch (error) {
+      console.error("Joualizer error:", error);
+      res.status(500).json({ error: "Failed to joualize text" });
+    }
+  });
+
+  // [NEW] Infinite Scroll Feed - Cursor-based Pagination with Hive Filtering
+  app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const cursor = req.query.cursor as string | undefined;
+      const feedType = (req.query.type as string) || "explore"; // 'feed', 'explore', 'smart'
+      const hiveId =
+        (req.query.hive as string) ||
+        (req.userId ? await storage.getUserHive(req.userId) : "quebec");
+
+      let posts: any[] = [];
+
+      // Determine which feed to fetch
+      if (req.userId && feedType === "feed") {
+        // User's personalized feed
+        const page = cursor ? parseInt(cursor) : 0;
+        posts = await storage.getFeedPosts(req.userId, page, limit + 1, hiveId);
+      } else if (feedType === "smart" && req.userId) {
+        // Smart recommendations (if user provides embedding)
+        const embedding = req.query.embedding
+          ? JSON.parse(req.query.embedding as string)
+          : null;
+        if (embedding) {
+          posts = await storage.getSmartRecommendations(
+            embedding,
+            limit + 1,
+            hiveId,
+          );
+        } else {
+          posts = await storage.getExplorePosts(
+            cursor ? parseInt(cursor) : 0,
+            limit + 1,
+            hiveId,
+          );
+        }
+      } else {
+        // Explore/public feed (default)
+        const page = cursor ? parseInt(cursor) : 0;
+        posts = await storage.getExplorePosts(page, limit + 1, hiveId);
+      }
+
+      // Check if there are more posts
+      const hasMore = posts.length > limit;
+      const items = hasMore ? posts.slice(0, -1) : posts;
+
+      // Calculate next cursor
+      const nextCursor = hasMore
+        ? (cursor ? parseInt(cursor) + 1 : 1).toString()
+        : null;
+
+      res.json({
+        posts: items,
+        nextCursor,
+        hasMore,
+        feedType,
+        hiveId,
+      });
+    } catch (error) {
+      console.error("Get infinite feed error:", error);
+      res.status(500).json({ error: "Failed to load feed" });
+    }
+  });
+
+  // Get explore posts (public, popular) with Hive filtering
+  app.get("/api/explore", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const hiveId = (req.query.hive as string) || "quebec";
+
+      const posts = await storage.getExplorePosts(page, limit, hiveId);
+      res.json({ posts, hiveId });
+    } catch (error) {
+      console.error("Get explore error:", error);
+      res.status(500).json({ error: "Failed to get explore posts" });
+    }
+  });
+
+  // Get nearby posts
+  app.get("/api/posts/nearby", optionalAuth, async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lon = parseFloat(req.query.lon as string);
+      const radius = parseInt(req.query.radius as string) || 50000;
+
+      if (isNaN(lat) || isNaN(lon)) {
+        return res.status(400).json({ error: "Lat and Lon are required" });
+      }
+
+      const posts = await storage.getNearbyPosts(lat, lon, radius);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get nearby error:", error);
+      res.status(500).json({ error: "Failed to get nearby posts" });
+    }
+  });
+
+  // Get regional trending posts
+  app.get("/api/posts/trending/:regionId", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const before = req.query.before
+        ? new Date(req.query.before as string)
+        : undefined;
+
+      const posts = await storage.getRegionalTrendingPosts(
+        req.params.regionId,
+        limit,
+        before,
+      );
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get regional trending error:", error);
+      res.status(500).json({ error: "Failed to get regional trending posts" });
+    }
+  });
+
+  // Get single post
+  app.get("/api/posts/:id", optionalAuth, async (req, res) => {
+    try {
+      const post = await storage.getPost(req.params.id);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      // Check if current user has fired this post
+      let isFired = false;
+      if (req.userId) {
+        isFired = await storage.hasUserFiredPost(req.params.id, req.userId);
+      }
+
+      // Handle ephemeral posts (Fantasma Mode)
+      let viewCountIncremented = false;
+      if (req.userId && post.isEphemeral) {
+        // Increment view count for ephemeral posts
+        const newViewCount = await storage.incrementPostViews(req.params.id);
+        viewCountIncremented = true;
+
+        // Check if post should be deleted (view count exceeded)
+        if (post.maxViews && newViewCount >= post.maxViews) {
+          // Mark post as burned (deleted due to ephemeral expiration)
+          await storage.markPostBurned(req.params.id, "view_limit_exceeded");
+          // Note: Post content deletion will be handled by a cleanup job
+        }
+      } else if (!post.isEphemeral) {
+        // Only increment views for non-ephemeral posts
+        await storage.incrementPostViews(req.params.id);
+      }
+
+      res.json({
+        post: {
+          ...post,
+          isFired,
+          // Don't show content if ephemeral and user has already viewed it
+          content:
+            post.isEphemeral &&
+            viewCountIncremented &&
+            post.maxViews &&
+            (post.viewCount || 0) >= post.maxViews
+              ? "[Contenido eliminado - Fantasma expirado]"
+              : post.content,
+        },
+      });
+    } catch (error) {
+      console.error("Get post error:", error);
+      res.status(500).json({ error: "Failed to get post" });
+    }
+  });
+
+  // Get user's posts
+  app.get("/api/users/:username/posts", async (req, res) => {
+    try {
+      const user = await storage.getUserByUsername(req.params.username);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const posts = await storage.getPostsByUser(user.id);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get user posts error:", error);
+      res.status(500).json({ error: "Failed to get posts" });
+    }
+  });
+
+  // Create post with Hive assignment
+  app.post("/api/posts", requireAuth, async (req, res) => {
+    try {
+      // Get user's hive (default to quebec if not set)
+      const user = await storage.getUser(req.userId!);
+      const hiveId = user?.hiveId || "quebec";
+
+      const parsed = insertPostSchema.safeParse({
+        ...req.body,
+        userId: req.userId,
+        hiveId, // Assign post to user's hive
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      // [PHASE 9] Synchronous AI Moderation
+      const moderationContent = `${parsed.data.caption || ""} ${parsed.data.content || ""}`;
+      const modResult = await v3Mod(moderationContent);
+
+      if (modResult.is_minor_danger) {
+        console.error(`🚨 Child Safety Violation: Banning user ${req.userId}`);
+
+        // Record persistent moderation log
+        await storage.createModerationLog({
+          userId: req.userId!,
+          action: "ban",
+          reason: "minor_danger",
+          details: modResult.reason,
+          score: 10,
+        });
+
+        await storage.updateUser(req.userId!, {
+          role: "banned",
+          bio: "COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
+        });
+        return res.status(403).json({
+          error:
+            "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
+        });
+      }
+
+      // Handle ephemeral posts (Fantasma Mode)
+      const isEphemeral = req.body.isEphemeral === true;
+      const maxViews = isEphemeral
+        ? parseInt(req.body.maxViews) || 1
+        : undefined;
+      const expiresAt = isEphemeral
+        ? new Date(Date.now() + 24 * 60 * 60 * 1000)
+        : undefined; // 24 hours
+
+      const post = await storage.createPost({
+        ...parsed.data,
+        isModerated: true,
+        moderationApproved: modResult.status === "approved",
+        isHidden: modResult.status !== "approved",
+        isEphemeral,
+        maxViews,
+        expiresAt,
+      });
+
+      // Queue video for processing by Colony OS workers
+      const videoQueue = getVideoQueue();
+      await videoQueue.add("processVideo", {
+        videoUrl: post.mediaUrl,
+        userId: req.userId,
+        visual_filter: req.body.visual_filter || "prestige",
+      });
+
+      res.status(201).json({
+        post,
+        moderation: {
+          approved: modResult.status === "approved",
+          reason: modResult.status !== "approved" ? modResult.reason : null,
+        },
+      });
+    } catch (error) {
+      console.error("Create post error:", error);
+      res.status(500).json({ error: "Failed to create post" });
+    }
+  });
+
+  // Delete post
+  app.delete("/api/posts/:id", requireAuth, async (req, res) => {
+    try {
+      const post = await storage.getPost(req.params.id);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      if (post.userId !== req.userId) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      await storage.deletePost(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete post error:", error);
+      res.status(500).json({ error: "Failed to delete post" });
+    }
+  });
+
+  // ============ REACTIONS ROUTES ============
+
+  // Toggle fire reaction on post
+  app.post("/api/posts/:id/fire", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.togglePostReaction(
+        req.params.id,
+        req.userId!,
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Toggle fire error:", error);
+      res.status(500).json({ error: "Failed to toggle reaction" });
+    }
+  });
+
+  // ============ COMMENTS ROUTES ============
+
+  // Get post comments
+  app.get("/api/posts/:id/comments", async (req, res) => {
+    try {
+      const comments = await storage.getPostComments(req.params.id);
+      res.json({ comments });
+    } catch (error) {
+      console.error("Get comments error:", error);
+      res.status(500).json({ error: "Failed to get comments" });
+    }
+  });
+
+  // Add comment
+  app.post("/api/posts/:id/comments", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertCommentSchema.safeParse({
+        postId: req.params.id,
+        userId: req.userId,
+        content: req.body.content,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      const comment = await storage.createComment(parsed.data);
+
+      // Get user info for response
+      const user = await storage.getUser(req.userId!);
+
+      res.status(201).json({
+        comment: { ...comment, user, isFired: false },
+      });
+    } catch (error) {
+      console.error("Create comment error:", error);
+      res.status(500).json({ error: "Failed to create comment" });
+    }
+  });
+
+  // Delete comment
+  app.delete("/api/comments/:id", requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteComment(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete comment error:", error);
+      res.status(500).json({ error: "Failed to delete comment" });
+    }
+  });
+
+  // Toggle fire on comment
+  app.post("/api/comments/:id/fire", requireAuth, async (req, res) => {
+    try {
+      const result = await storage.toggleCommentReaction(
+        req.params.id,
+        req.userId!,
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("Toggle comment fire error:", error);
+      res.status(500).json({ error: "Failed to toggle reaction" });
+    }
+  });
+
+  // ============ FOLLOWS ROUTES ============
+
+  // Follow user
+  app.post("/api/users/:id/follow", requireAuth, async (req, res) => {
+    try {
+      if (req.params.id === req.userId) {
+        return res.status(400).json({ error: "Cannot follow yourself" });
+      }
+
+      const success = await storage.followUser(req.userId!, req.params.id);
+      res.json({ success, isFollowing: success });
+    } catch (error) {
+      console.error("Follow error:", error);
+      res.status(500).json({ error: "Failed to follow user" });
+    }
+  });
+
+  // Unfollow user
+  app.delete("/api/users/:id/follow", requireAuth, async (req, res) => {
+    try {
+      const success = await storage.unfollowUser(req.userId!, req.params.id);
+      res.json({ success, isFollowing: false });
+    } catch (error) {
+      console.error("Unfollow error:", error);
+      res.status(500).json({ error: "Failed to unfollow user" });
+    }
+  });
+
+  // Get followers
+  app.get("/api/users/:id/followers", async (req, res) => {
+    try {
+      const followers = await storage.getFollowers(req.params.id);
+      res.json({
+        followers: followers.map((f) => {
+          return f;
+        }),
+      });
+    } catch (error) {
+      console.error("Get followers error:", error);
+      res.status(500).json({ error: "Failed to get followers" });
+    }
+  });
+
+  // Get following
+  app.get("/api/users/:id/following", async (req, res) => {
+    try {
+      const following = await storage.getFollowing(req.params.id);
+      res.json({
+        following: following.map((f) => {
+          return f;
+        }),
+      });
+    } catch (error) {
+      console.error("Get following error:", error);
+      res.status(500).json({ error: "Failed to get following" });
+    }
+  });
+
+  // ============ STORIES ROUTES ============
+
+  // Get active stories
+  app.get("/api/stories", optionalAuth, async (req, res) => {
+    try {
+      const userId = req.userId;
+      const stories = await storage.getActiveStories(userId);
+      res.json({ stories });
+    } catch (error) {
+      console.error("Get stories error:", error);
+      res.status(500).json({ error: "Failed to get stories" });
+    }
+  });
+
+  // Create story
+  app.post("/api/stories", requireAuth, async (req, res) => {
+    try {
+      // Stories expire after 24 hours
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      const parsed = insertStorySchema.safeParse({
+        ...req.body,
+        userId: req.userId,
+        expiresAt,
+      });
+
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+
+      const story = await storage.createStory(parsed.data);
+      res.status(201).json({ story });
+    } catch (error) {
+      console.error("Create story error:", error);
+      res.status(500).json({ error: "Failed to create story" });
+    }
+  });
+
+  // Mark story as viewed
+  app.post("/api/stories/:id/view", requireAuth, async (req, res) => {
+    try {
+      await storage.markStoryViewed(req.params.id, req.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark story viewed error:", error);
+      res.status(500).json({ error: "Failed to mark story viewed" });
+    }
+  });
+
+  // ============ NOTIFICATIONS ROUTES ============
+
+  // Get notifications
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const notifications = await storage.getUserNotifications(req.userId!);
+      res.json({ notifications });
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ error: "Failed to get notifications" });
+    }
+  });
+
+  // Mark notification as read
+  app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
+    try {
+      await storage.markNotificationRead(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark notification read error:", error);
+      res.status(500).json({ error: "Failed to mark notification read" });
+    }
+  });
+
+  // Mark all notifications as read
+  app.post("/api/notifications/read-all", requireAuth, async (req, res) => {
+    try {
+      await storage.markAllNotificationsRead(req.userId!);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Mark all notifications read error:", error);
+      res.status(500).json({ error: "Failed to mark notifications read" });
+    }
+  });
+
+  // ============ AI GENERATION ROUTES ============
+
+  // Generate image with Flux
+  app.post(
+    "/api/ai/generate-image",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { prompt, aspectRatio = "1:1" } = req.body;
+
+        if (!prompt || typeof prompt !== "string") {
+          return res.status(400).json({ error: "Prompt is required" });
+        }
+
+        if (!process.env.FAL_API_KEY) {
+          return res.status(500).json({ error: "FAL API key not configured" });
+        }
+
+        console.log(
+          `Generating image with Flux: "${prompt.substring(0, 50)}..."`,
+        );
+
+        const result = await traceExternalAPI(
+          "fal-ai",
+          "flux/schnell",
+          "POST",
+          async (span) => {
+            span.setAttributes({
+              "ai.model": "flux-schnell",
+              "ai.prompt_length": prompt.length,
+              "ai.aspect_ratio": aspectRatio,
+            });
+
+            return fal.subscribe("fal-ai/flux/schnell", {
+              input: {
+                prompt,
+                image_size:
+                  aspectRatio === "16:9"
+                    ? "landscape_16_9"
+                    : aspectRatio === "9:16"
+                      ? "portrait_16_9"
+                      : aspectRatio === "4:3"
+                        ? "landscape_4_3"
+                        : aspectRatio === "3:4"
+                          ? "portrait_4_3"
+                          : "square",
+                num_images: 1,
+              },
+              logs: true,
+              onQueueUpdate: (update) => {
+                if (update.status === "IN_PROGRESS") {
+                  console.log("Flux generation in progress...");
+                }
+              },
+            });
+          },
+        );
+
+        const images = (result.data as any)?.images || [];
+        if (images.length === 0) {
+          return res.status(500).json({ error: "No image generated" });
+        }
+
+        res.json({
+          imageUrl: images[0].url,
+          prompt,
+        });
+      } catch (error: any) {
+        console.error("AI image generation error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate image" });
+      }
+    },
+  );
+
+  // Ti-Guy AI Chat (V3-TI-GUY from swarm)
+  app.post(
+    "/api/ai/tiguy-chat",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { message, conversationHistory = [] } = req.body;
+
+        if (!message || typeof message !== "string") {
+          return res.status(400).json({ error: "Message is required" });
+        }
+
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        // Use V3-TI-GUY from the swarm architecture
+        const formattedHistory = conversationHistory
+          .slice(-10)
+          .map((msg: any) => ({
+            role: msg.sender === "user" ? "user" : "assistant",
+            content: msg.text,
+          }));
+
+        const response = await v3TiGuyChat(message, formattedHistory);
+
+        res.json({ response });
+      } catch (error: any) {
+        console.error("Ti-Guy AI error:", error);
+        res.status(500).json({
+          error: error.message || "Ti-Guy est fatigué, réessaie plus tard!",
+        });
+      }
+    },
+  );
+
+  // V3 Flow - Orchestrated AI actions
+  app.post("/api/v3/flow", aiRateLimiter, requireAuth, async (req, res) => {
+    try {
+      const { action, context } = req.body;
+
+      if (!action || typeof action !== "string") {
+        return res.status(400).json({ error: "Action is required" });
+      }
+
+      if (!process.env.DEEPSEEK_API_KEY) {
+        return res
+          .status(500)
+          .json({ error: "DeepSeek API key not configured" });
+      }
+
+      const result = await v3Flow(action, context);
+      res.json(result);
+    } catch (error: any) {
+      console.error("V3 Flow error:", error);
+      res.status(500).json({ error: error.message || "V3 flow failed" });
+    }
+  });
+
+  // V3 Feed - Generate AI feed items
+  app.post(
+    "/api/v3/feed-item",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { context } = req.body;
+
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        const feedItem = await v3Feed(context);
+        res.json(feedItem);
+      } catch (error: any) {
+        console.error("V3 Feed error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate feed item" });
+      }
+    },
+  );
+
+  // V3 Microcopy - Generate UI text in Ti-Guy voice
+  app.post(
+    "/api/v3/microcopy",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { type, context } = req.body;
+
+        if (
+          !type ||
+          ![
+            "loading",
+            "error",
+            "success",
+            "onboarding",
+            "empty_state",
+          ].includes(type)
+        ) {
+          return res.status(400).json({ error: "Valid type is required" });
+        }
+
+        if (!process.env.DEEPSEEK_API_KEY) {
+          return res
+            .status(500)
+            .json({ error: "DeepSeek API key not configured" });
+        }
+
+        const text = await v3Microcopy(type, context);
+        res.json({ text });
+      } catch (error: any) {
+        console.error("V3 Microcopy error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate microcopy" });
+      }
+    },
+  );
+
+  // Get FAL presets
+  app.get("/api/v3/fal-presets", requireAuth, (req, res) => {
+    res.json(FAL_PRESETS);
+  });
+
+  // Generate video with Kling (image-to-video)
+  app.post(
+    "/api/ai/generate-video",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const {
+          imageUrl,
+          prompt = "Animate this image with natural movement",
+        } = req.body;
+
+        if (!imageUrl || typeof imageUrl !== "string") {
+          return res.status(400).json({ error: "Image URL is required" });
+        }
+
+        if (!process.env.FAL_API_KEY) {
+          return res.status(500).json({ error: "FAL API key not configured" });
+        }
+
+        console.log(`Generating video with Kling from image...`);
+
+        const result = await fal.subscribe(
+          "fal-ai/kling-video/v2/master/image-to-video",
+          {
+            input: {
+              image_url: imageUrl,
+              prompt,
+              duration: "5" as const,
+            },
+            logs: true,
+            onQueueUpdate: (update) => {
+              if (update.status === "IN_PROGRESS") {
+                console.log("Kling video generation in progress...");
+              }
+            },
+          },
+        );
+
+        const video = (result.data as any)?.video;
+        if (!video?.url) {
+          return res.status(500).json({ error: "No video generated" });
+        }
+
+        res.json({
+          videoUrl: video.url,
+          prompt,
+        });
+      } catch (error: any) {
+        console.error("AI video generation error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to generate video" });
+      }
+    },
+  );
+
+  // ============ STRIPE SUBSCRIPTION ROUTES ============
+
+  // Create checkout session for premium subscription
+  app.post("/api/stripe/create-checkout", requireAuth, async (req, res) => {
+    try {
+      if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+      }
+
+      const user = await storage.getUser(req.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const session = await traceStripe(
+        "checkout.sessions.create",
+        async (span) => {
+          span.setAttributes({ "stripe.user_id": user.id });
+          return stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "subscription",
+            line_items: [
+              {
+                price_data: {
+                  currency: "cad",
+                  product_data: {
+                    name: "Zyeuté VIP",
+                    description:
+                      "Accès premium avec Ti-Guy AI, création avancée, et plus!",
+                  },
+                  unit_amount: 999, // $9.99 CAD
+                  recurring: {
+                    interval: "month",
+                  },
+                },
+                quantity: 1,
+              },
+            ],
+            success_url: `${req.headers.origin}/premium?success=true`,
+            cancel_url: `${req.headers.origin}/premium?canceled=true`,
+            customer_email: user.email || undefined,
+            metadata: {
+              userId: user.id,
+            },
+          });
+        },
+      );
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Stripe checkout error:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to create checkout session" });
+    }
+  });
+
+  // Get subscription status
+  app.get("/api/stripe/subscription-status", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      res.json({
+        isPremium:
+          user.subscriptionTier !== null && user.subscriptionTier !== "free",
+        subscriptionEnd: null, // Would track in DB
+      });
+    } catch (error: any) {
+      console.error("Subscription status error:", error);
+      res.status(500).json({ error: "Failed to get subscription status" });
+    }
+  });
+
+  // ============ EMAIL AUTOMATION ROUTES ============
+
+  // Admin middleware for email management routes
+  async function requireAdmin(req: Request, res: Response, next: NextFunction) {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await storage.getUser(req.userId);
+    if (!user || !(user as any).isAdmin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+  }
+
+  // Get pending emails (admin only)
+  app.get("/api/email/pending", requireAdmin, async (req, res) => {
+    try {
+      const pendingEmails = emailAutomation.getPendingEmails();
+      res.json({
+        count: pendingEmails.length,
+        emails: pendingEmails.map((e) => ({
+          id: e.id,
+          type: e.emailType,
+          scheduledFor: e.scheduledFor,
+          status: e.status,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Email pending error:", error);
+      res.status(500).json({ error: "Failed to get pending emails" });
+    }
+  });
+
+  // Process email queue (admin only - in production use cron job)
+  app.post("/api/email/process-queue", requireAdmin, async (req, res) => {
+    try {
+      const sentCount = await emailAutomation.processEmailQueue();
+      res.json({
+        success: true,
+        processed: sentCount,
+        message: `Processed ${sentCount} emails`,
+      });
+    } catch (error: any) {
+      console.error("Email queue processing error:", error);
+      res.status(500).json({ error: "Failed to process email queue" });
+    }
+  });
+
+  // Send test welcome email (for testing)
+  app.post("/api/email/send-welcome", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const result = await emailAutomation.sendEmailNow(userId, "welcome");
+
+      if (result.success) {
+        res.json({ success: true, message: "Welcome email sent!" });
+      } else {
+        res.status(500).json({ error: result.error || "Failed to send email" });
+      }
+    } catch (error: any) {
+      console.error("Send welcome email error:", error);
+      res.status(500).json({ error: "Failed to send welcome email" });
+    }
+  });
+
+  // Resend webhook handler for tracking email events
+  app.post("/api/email/webhook", async (req, res) => {
+    try {
+      const event = req.body;
+      console.log(`[Resend Webhook] Event received:`, event.type);
+
+      switch (event.type) {
+        case "email.sent":
+          console.log(`[Resend] Email sent: ${event.data?.email_id}`);
+          break;
+        case "email.delivered":
+          console.log(`[Resend] Email delivered: ${event.data?.email_id}`);
+          break;
+        case "email.opened":
+          console.log(`[Resend] Email opened: ${event.data?.email_id}`);
+          break;
+        case "email.clicked":
+          console.log(`[Resend] Email link clicked: ${event.data?.email_id}`);
+          break;
+        case "email.bounced":
+          console.error(`[Resend] Email bounced: ${event.data?.email_id}`);
+          break;
+        case "email.complained":
+          console.error(
+            `[Resend] Email spam complaint: ${event.data?.email_id}`,
+          );
+          break;
+        default:
+          console.log(`[Resend] Unknown event: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error("Webhook error:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+
+  // Preview email content (for testing)
+  app.post("/api/email/preview", requireAuth, async (req, res) => {
+    try {
+      const { emailType, username } = req.body;
+
+      if (!emailType || !username) {
+        return res
+          .status(400)
+          .json({ error: "emailType and username required" });
+      }
+
+      const content = await emailAutomation.generatePersonalizedContent(
+        emailType,
+        username,
+        req.body.context,
+      );
+
+      res.json(content);
+    } catch (error: any) {
+      console.error("Email preview error:", error);
+      res.status(500).json({ error: "Failed to generate email preview" });
+    }
+  });
+
+  // Manually trigger onboarding sequence (for testing)
+  app.post("/api/email/trigger-onboarding", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      emailAutomation.scheduleOnboardingSequence(userId);
+      res.json({
+        success: true,
+        message: "Onboarding sequence scheduled",
+      });
+    } catch (error: any) {
+      console.error("Email trigger error:", error);
+      res.status(500).json({ error: "Failed to trigger onboarding" });
+    }
+  });
+
+  // Cancel pending emails for current user only (user can cancel their own)
+  app.delete("/api/email/cancel", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const { emailType } = req.body;
+
+      // Users can only cancel their own emails
+      const cancelled = emailAutomation.cancelPendingEmails(userId, emailType);
+      res.json({
+        success: true,
+        cancelled,
+        message: `Cancelled ${cancelled} pending emails`,
+      });
+    } catch (error: any) {
+      console.error("Email cancel error:", error);
+      res.status(500).json({ error: "Failed to cancel emails" });
+    }
+  });
+
+  // ============ VIRTUAL GIFTS ROUTES ============
+
+  // Get gift catalog
+  app.get("/api/gifts/catalog", (req, res) => {
+    res.json({
+      gifts: Object.entries(GIFT_CATALOG).map(([type, info]) => ({
+        type,
+        ...info,
+        priceDisplay: `$${(info.price / 100).toFixed(2)}`,
+      })),
+    });
+  });
+
+  // Create payment intent for gift purchase
+  app.post(
+    "/api/gifts/create-payment-intent",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { giftType, postId } = req.body;
+
+        if (!stripe) {
+          return res.status(500).json({ error: "Stripe not configured" });
+        }
+
+        // Validate gift type
+        if (!giftType || !(giftType in GIFT_CATALOG)) {
+          return res.status(400).json({ error: "Invalid gift type" });
+        }
+
+        // Validate post exists and get recipient
+        const post = await storage.getPost(postId);
+        if (!post) {
+          return res.status(404).json({ error: "Post not found" });
+        }
+
+        const senderId = req.userId!;
+        const recipientId = post.userId;
+
+        // Can't gift your own post
+        if (senderId === recipientId) {
+          return res
+            .status(400)
+            .json({ error: "Tu peux pas t'envoyer un cadeau à toi-même! 🎁" });
+        }
+
+        const giftInfo = GIFT_CATALOG[giftType as GiftType];
+        const amount = giftInfo.price;
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: "cad",
+          metadata: {
+            type: "gift",
+            giftType,
+            postId,
+            senderId,
+            recipientId,
+          },
+        });
+
+        res.json({
+          clientSecret: paymentIntent.client_secret,
+          amount,
+          giftInfo,
+        });
+      } catch (error: any) {
+        console.error("Gift payment intent error:", error);
+        res
+          .status(500)
+          .json({ error: error.message || "Failed to create payment intent" });
+      }
+    },
+  );
+
+  // Confirm gift after successful payment
+  app.post("/api/gifts/confirm", requireAuth, async (req, res) => {
+    try {
+      const { paymentIntentId, giftType, postId } = req.body;
+      const senderId = req.userId!;
+
+      if (!paymentIntentId || !giftType || !postId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Verify payment was successful
+      if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+      }
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (paymentIntent.status !== "succeeded") {
+        return res.status(400).json({ error: "Payment not completed" });
+      }
+
+      // Verify metadata matches
+      if (
+        paymentIntent.metadata.postId !== postId ||
+        paymentIntent.metadata.giftType !== giftType ||
+        paymentIntent.metadata.senderId !== senderId
+      ) {
+        return res.status(400).json({ error: "Payment verification failed" });
+      }
+
+      const recipientId = paymentIntent.metadata.recipientId;
+
+      // Get recipient's hive for regional gift filtering
+      const recipient = await storage.getUser(recipientId);
+      const recipientHive = recipient?.hiveId || "quebec";
+
+      // Filter available gifts by hive
+      const availableGifts = Object.entries(
+        GIFT_CATALOG as Record<string, any>,
+      ).filter(([key, gift]) => !gift.hive || gift.hive === recipientHive);
+
+      const availableGiftTypes = Object.fromEntries(availableGifts);
+      const giftInfo = availableGiftTypes[giftType as GiftType];
+
+      if (!giftInfo) {
+        return res.status(400).json({
+          error: `Gift type '${giftType}' not available in hive '${recipientHive}'`,
+        });
+      }
+
+      // Create the gift
+      const gift = await storage.createGift({
+        senderId,
+        recipientId,
+        postId,
+        giftType,
+        amount: giftInfo.price,
+        stripePaymentId: paymentIntentId,
+      });
+
+      // Create notification for recipient
+      const sender = await storage.getUser(senderId);
+      await storage.createNotification({
+        userId: recipientId,
+        type: "gift",
+        fromUserId: senderId,
+        postId,
+        giftId: gift.id,
+        message: `${sender?.displayName || sender?.username} t'a envoyé un ${giftInfo.emoji} ${giftInfo.name}!`,
+      });
+
+      res.json({
+        success: true,
+        gift,
+        giftInfo,
+      });
+    } catch (error: any) {
+      console.error("Gift confirm error:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to confirm gift" });
+    }
+  });
+
+  // Get available gifts for a hive
+  app.get("/api/gifts/catalog/:hiveId?", async (req, res) => {
+    try {
+      const hiveId = req.params.hiveId || "quebec";
+
+      // Filter gifts by hive (universal + regional)
+      const availableGifts = Object.entries(
+        GIFT_CATALOG as Record<string, any>,
+      ).filter(([key, gift]) => !gift.hive || gift.hive === hiveId);
+
+      const giftCatalog = Object.fromEntries(availableGifts);
+
+      res.json({
+        hiveId,
+        gifts: giftCatalog,
+      });
+    } catch (error: any) {
+      console.error("Get gift catalog error:", error);
+      res.status(500).json({ error: "Failed to get gift catalog" });
+    }
+  });
+
+  // Clean up expired ephemeral posts (Fantasma Mode maintenance)
+  app.post("/api/admin/cleanup-ephemeral", requireAuth, async (req, res) => {
+    try {
+      // Only allow admin users
+      const user = await storage.getUser(req.userId!);
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const deletedCount = await storage.cleanupExpiredEphemeralPosts();
+
+      res.json({
+        success: true,
+        deletedCount,
+        message: `Cleaned up ${deletedCount} expired ephemeral posts`,
+      });
+    } catch (error: any) {
+      console.error("Cleanup ephemeral posts error:", error);
+      res.status(500).json({ error: "Failed to cleanup ephemeral posts" });
+    }
+  });
+
+  // Get gifts for a post
+  app.get("/api/posts/:id/gifts", async (req, res) => {
+    try {
+      const postId = req.params.id;
+      const gifts = await storage.getGiftsByPost(postId);
+      const count = await storage.getPostGiftCount(postId);
+
+      // Group by gift type for display
+      const giftCounts: Record<string, number> = {};
+      gifts.forEach((g) => {
+        giftCounts[g.giftType] = (giftCounts[g.giftType] || 0) + 1;
+      });
+
+      res.json({
+        totalCount: count,
+        giftCounts,
+        recentGifts: gifts.slice(0, 5).map((g) => ({
+          id: g.id,
+          type: g.giftType,
+          sender: {
+            id: g.sender.id,
+            username: g.sender.username,
+            displayName: g.sender.displayName,
+            avatarUrl: g.sender.avatarUrl,
+          },
+          createdAt: g.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get post gifts error:", error);
+      res.status(500).json({ error: "Failed to get gifts" });
+    }
+  });
+
+  // Get user's received gifts
+  app.get("/api/users/me/gifts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const gifts = await storage.getUserReceivedGifts(userId);
+
+      res.json({
+        gifts: gifts.map((g) => ({
+          id: g.id,
+          type: g.giftType,
+          amount: g.amount,
+          sender: {
+            id: g.sender.id,
+            username: g.sender.username,
+            displayName: g.sender.displayName,
+            avatarUrl: g.sender.avatarUrl,
+          },
+          post: {
+            id: g.post.id,
+            mediaUrl: g.post.mediaUrl,
+          },
+          createdAt: g.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get user gifts error:", error);
+      res.status(500).json({ error: "Failed to get gifts" });
+    }
+  });
+
+  // [TI-SCRIPT] Dictionary Lookup Route
+  app.get("/api/dictionary/lookup/:word", async (req, res) => {
+    try {
+      const { word } = req.params;
+      const entry = await lookupWord(word);
+
+      if (!entry) {
+        return res
+          .status(404)
+          .json({ error: "Mot non trouvé dans le dictionnaire local." });
+      }
+
+      res.json(entry);
+    } catch (error: any) {
+      console.error("Dictionary lookup error:", error);
+      res
+        .status(500)
+        .json({ error: "Erreur lors de la recherche dans le dictionnaire." });
+    }
+  });
+
+  // ============ BOOTSTRAP AI / SWARM ROUTES ============
+  // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
+  app.use("/api/ai", aiRoutes);
+
+  // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes
+  /*
+  app.get("/api/ai/search", ...);
+  app.post("/api/ai/ingest", ...);
+  */
+
+  // Start Colony OS metrics reporting (Safe Mode)
+  try {
+    const { startMetricsReporting } =
+      await import("./colony/metrics-bridge.js");
+    startMetricsReporting();
+  } catch (error) {
+    console.warn(
+      "[Colony Bridge] Metrics reporting disabled (module not found or failed to load).",
+    );
+  }
+  // ============ DEEP ENHANCE ROUTES (Moved here) ============
+  app.use("/api", requireAuth, enhanceRoutes);
+
+  console.log("✅ Colony OS metrics bridge initialized");
+
+  return httpServer;
+}
