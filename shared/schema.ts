@@ -12,6 +12,8 @@ import {
   index,
   customType,
   decimal,
+  serial,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -37,7 +39,7 @@ export const vector = customType<{
   config: { dimensions: number };
 }>({
   dataType(config) {
-    return `vector(${config?.dimensions || 384})`;
+    return `vector(${config?.dimensions || 768})`;
   },
 });
 
@@ -77,6 +79,40 @@ export const hiveEnum = pgEnum("hive_id", [
   "mexico", // es-MX
 ]);
 
+// --- HIVE ECONOMY ENUMS ---
+export const creditTypeEnum = pgEnum("credit_type", [
+  "karma",
+  "cash",
+  "legendary",
+]);
+export const transactionStatusEnum = pgEnum("transaction_status", [
+  "pending",
+  "completed",
+  "failed",
+  "reversed",
+]);
+export const transactionTypeEnum = pgEnum("transaction_type", [
+  "gift",
+  "purchase",
+  "payout",
+  "bond",
+  "reward",
+  "tournament_entry",
+  "tournament_win",
+]);
+export const tournamentStatusEnum = pgEnum("tournament_status", [
+  "active",
+  "calculating",
+  "completed",
+  "cancelled",
+]);
+export const processingStatusEnum = pgEnum("processing_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+]);
+
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
   id: uuid("id").primaryKey(), // FK to auth.users.id
@@ -101,8 +137,23 @@ export const users = pgTable("user_profiles", {
   updatedAt: timestamp("updated_at").defaultNow(),
   tiGuyCommentsEnabled: boolean("ti_guy_comments_enabled").default(true),
   hiveId: hiveEnum("hive_id").default("quebec"),
-  // Gamification (Le Gratteux)
+  // Hive Economy (Le Protocole d'Économie Sociale) 🚀
+  karmaCredits: integer("karma_credits").default(0), // Points de Karma (non-monétaire)
+  cashCredits: integer("cash_credits").default(0), // Piasses/Huards (cents)
+  totalGiftsSent: integer("total_gifts_sent").default(0),
+  totalGiftsReceived: integer("total_gifts_received").default(0),
+  legendaryBadges: jsonb("legendary_badges").default([]), // NFT pointers / Quebec Heritage
+  taxId: varchar("tax_id", { length: 50 }), // Pour la conformité fiscale (Loi 25)
+  beeAlias: varchar("bee_alias", { length: 50 }), // Anonymous alias (e.g., Ti-Guy77)
+  // Gamification Fields
+  nectarPoints: integer("nectar_points").default(0),
+  currentStreak: integer("current_streak").default(0),
+  maxStreak: integer("max_streak").default(0),
   lastDailyBonus: timestamp("last_daily_bonus"),
+  unlockedHives: jsonb("unlocked_hives").default(["quebec"]),
+  parentId: uuid("parent_id").references((): AnyPgColumn => users.id, {
+    onDelete: "set null",
+  }), // For Parental Controls
 });
 
 // Posts Table mapped to publications
@@ -116,7 +167,9 @@ export const posts = pgTable(
     mediaUrl: text("media_url"), // Optional in some cases?
     originalUrl: text("original_url"), // Backup of original upload
     enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version
-    processingStatus: text("processing_status").default("ready"), // ready, pending, processing, completed, failed
+    processingStatus:
+      processingStatusEnum("processing_status").default("pending"),
+    mediaMetadata: jsonb("media_metadata").default({}), // Key moments, AI tags, etc.
     visualFilter: text("visual_filter").default("none"),
     enhanceStartedAt: timestamp("enhance_started_at"),
     enhanceFinishedAt: timestamp("enhance_finished_at"),
@@ -128,7 +181,7 @@ export const posts = pgTable(
     isHidden: boolean("est_masque").default(false),
     location: geography("location"),
     regionId: text("region_id"),
-    embedding: vector("embedding", { dimensions: 384 }),
+    embedding: vector("embedding", { dimensions: 768 }),
     lastEmbeddedAt: timestamp("last_embedded_at"),
     transcription: text("transcription"),
     transcribedAt: timestamp("transcribed_at"),
@@ -403,26 +456,6 @@ export const notifications = pgTable(
   }),
 );
 
-// Moderation Logs - Audit trail for bans and flags
-export const moderationLogs = pgTable(
-  "moderation_logs",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
-    action: text("action").notNull(), // 'ban', 'warn', 'flag', 'hide'
-    reason: text("reason").notNull(),
-    details: text("details"),
-    score: integer("score"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => ({
-    userIdIdx: index("moderation_logs_user_id_idx").on(table.userId),
-    actionIdx: index("moderation_logs_action_idx").on(table.action),
-  }),
-);
-
-// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),
@@ -498,12 +531,12 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+// Regional Gift catalog with cultural items (prices in cents)
 export const insertGiftSchema = createInsertSchema(gifts).omit({
   id: true,
   createdAt: true,
 });
 
-// Regional Gift catalog with cultural items (prices in cents)
 export const GIFT_CATALOG = {
   // Universal gifts
   comete: { emoji: "☄️", name: "Comète", price: 50 },
@@ -520,6 +553,12 @@ export const GIFT_CATALOG = {
   cafe: { emoji: "☕", name: "Café brasileiro", price: 60, hive: "south" }, // Brazil
   mate: { emoji: "🧉", name: "Mate argentino", price: 70, hive: "south" }, // Argentina
   taco: { emoji: "🌮", name: "Taco auténtico", price: 80, hive: "mexico" },
+  starbucks_cafe: {
+    emoji: "☕",
+    name: "Café Starbucks",
+    price: 550,
+    hive: "global",
+  },
 } as const;
 
 export type GiftType = keyof typeof GIFT_CATALOG;
@@ -595,7 +634,7 @@ export const agentMemories = pgTable(
       .notNull(),
     content: text("content").notNull(),
     importance: integer("importance").default(1), // 1-10
-    embedding: vector("embedding", { dimensions: 384 }), // For semantic recall
+    embedding: vector("embedding", { dimensions: 768 }), // For semantic recall
     metadata: jsonb("metadata"),
     auditStatus: text("audit_status").default("pending"), // 'pending', 'safe', 'flagged', 'redacted'
     lastAuditedAt: timestamp("last_audited_at"),
@@ -612,7 +651,111 @@ export const agentMemories = pgTable(
   }),
 );
 
-export type AgentMemory = typeof agentMemories.$inferSelect;
+// --- HIVE ECONOMY PROTOCOL TABLES ---
+
+// The Great Ledger (Le Grand Livre des Piasses)
+export const transactions = pgTable(
+  "transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    senderId: uuid("sender_id").references(() => users.id),
+    receiverId: uuid("receiver_id").references(() => users.id),
+    amount: integer("amount").notNull(), // Amount in base unit (cents or points)
+    creditType: creditTypeEnum("credit_type").default("cash"),
+    type: transactionTypeEnum("transaction_type").notNull(),
+    status: transactionStatusEnum("status").default("pending"),
+    feeAmount: integer("fee_amount").default(0), // Dynamic Platform Fee (5-12%)
+    taxAmount: integer("tax_amount").default(0), // QST/GST calculation
+    metadata: jsonb("metadata").default({}), // e.g., { message: "Pour ta poutine!", location: "Montreal" }
+    hiveId: hiveEnum("hive_id").default("quebec"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    senderIdx: index("idx_transactions_sender").on(table.senderId),
+    receiverIdx: index("idx_transactions_receiver").on(table.receiverId),
+  }),
+);
+
+// Hive Bonds (Les Obligations de la Ruche)
+export const hiveBonds = pgTable("hive_bonds", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  creatorId: uuid("creator_id")
+    .references(() => users.id)
+    .notNull(),
+  title: varchar("title", { length: 100 }).notNull(),
+  description: text("description"),
+  targetAmount: integer("target_amount").notNull(),
+  currentAmount: integer("current_amount").default(0),
+  currency: creditTypeEnum("currency").default("cash"),
+  status: text("status").default("active"), // active, reached, expired
+  expiresAt: timestamp("expires_at"),
+  contributors: jsonb("contributors").default([]), // Array of {userId, amount, timestamp}
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// --- SAFE SWARM & ROYALE ENGINE TABLES ---
+
+// Parental Controls (The Honey-Fence)
+export const parentalControls = pgTable("parental_controls", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  childUserId: uuid("child_user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  homeLat: decimal("home_lat", { precision: 10, scale: 7 }),
+  homeLng: decimal("home_lng", { precision: 10, scale: 7 }),
+  allowedRadiusMeters: integer("allowed_radius_meters").default(500),
+  curfewStart: varchar("curfew_start", { length: 5 }).default("20:00"), // 24h format
+  curfewEnd: varchar("curfew_end", { length: 5 }).default("07:00"),
+  notificationsEnabled: boolean("notifications_enabled").default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bee Spawns (Swarm AR)
+export const beeSpawns = pgTable("bee_spawns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  hiveId: hiveEnum("hive_id").default("quebec"),
+  type: text("type").notNull(), // worker, drone, queen
+  rewardAmount: integer("reward_amount").notNull(), // Piasses
+  location: geography("location").notNull(),
+  spawnedAt: timestamp("spawned_at").defaultNow(),
+  expiresAt: timestamp("expires_at"),
+  capturedBy: uuid("captured_by").references(() => users.id),
+  isSafe: boolean("is_safe").default(true),
+});
+
+// Poutine Tournaments (Royale Engine)
+export const poutineTournaments = pgTable("poutine_tournaments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: varchar("title", { length: 100 }).notNull(),
+  entryFee: integer("entry_fee").default(50).notNull(), // in Piasses
+  totalPool: integer("total_pool").default(0),
+  status: tournamentStatusEnum("status").default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  endsAt: timestamp("ends_at").notNull(),
+});
+
+// Poutine Scores (The "Squeak" Ledger)
+export const poutineScores = pgTable("poutine_scores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tournamentId: uuid("tournament_id").references(() => poutineTournaments.id),
+  userId: uuid("user_id").references(() => users.id),
+  score: integer("score").notNull(),
+  metadata: jsonb("metadata"), // stack height, momentum, etc.
+  payout: integer("payout").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Waitlist (The Swarm Growth Engine)
+export const waitlist = pgTable("waitlist", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).unique().notNull(),
+  referralCode: varchar("referral_code", { length: 10 }).unique().notNull(),
+  referredById: uuid("referred_by_id").references((): any => waitlist.id),
+  referralCount: integer("referral_count").default(0),
+  queuePosition: serial("queue_position"), // Initial rank
+  founderBadgeUnlocked: boolean("founder_badge_unlocked").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
 
 // Agent Traces - "The Flight Recorder" (Observability)
 export const agentTraces = pgTable(
@@ -666,3 +809,35 @@ export const agentFacts = pgTable(
 );
 
 export type AgentFact = typeof agentFacts.$inferSelect;
+
+// Moderation Logs (The "Sin Bin")
+export const moderationLogs = pgTable(
+  "moderation_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    action: varchar("action", { length: 50 }).notNull(), // 'ban', 'warn', 'shadowban'
+    reason: text("reason"),
+    details: text("details"),
+    score: integer("score").default(0), // Severity score
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_moderation_logs_user_id").on(table.userId),
+    actionIdx: index("idx_moderation_logs_action").on(table.action),
+  }),
+);
+
+export type ModerationLog = typeof moderationLogs.$inferSelect;
+
+export type ParentalControl = typeof parentalControls.$inferSelect;
+
+export const insertParentalControlSchema = createInsertSchema(
+  parentalControls,
+).omit({
+  id: true,
+  updatedAt: true,
+});
+export type InsertParentalControl = z.infer<typeof insertParentalControlSchema>;

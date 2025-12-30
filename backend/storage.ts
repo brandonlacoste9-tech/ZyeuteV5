@@ -153,8 +153,7 @@ export interface IStorage {
 
   // Moderation Logs
   createModerationLog(log: {
-    userId?: string;
-    postId?: string;
+    userId: string;
     action: string;
     reason: string;
     details?: string;
@@ -868,8 +867,7 @@ export class DatabaseStorage implements IStorage {
 
   // Moderation Logs
   async createModerationLog(log: {
-    userId?: string;
-    postId?: string;
+    userId: string;
     action: string;
     reason: string;
     details?: string;
@@ -878,7 +876,6 @@ export class DatabaseStorage implements IStorage {
     await traceDatabase("INSERT", "moderation_logs", async (span) => {
       await db.insert(moderationLogs).values({
         userId: log.userId,
-        postId: log.postId,
         action: log.action,
         reason: log.reason,
         details: log.details,
