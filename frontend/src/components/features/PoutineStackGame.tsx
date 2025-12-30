@@ -119,11 +119,28 @@ export const PoutineStackGame: React.FC = () => {
   const submitScore = async () => {
     setIsSubmitting(true);
     try {
-      await axios.post("/api/royale/submit", {
-        tournamentId,
-        score: score,
-        layers: pieces.length,
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/royale/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tournamentId,
+          score: score,
+          layers: pieces.length,
+          metadata: {
+            // Future metadata like tap timings
+            playedAt: new Date().toISOString(),
+          },
+        }),
       });
+
+      if (!res.ok) {
+        throw new Error("Failed to submit");
+      }
+
       navigate("/arcade");
     } catch (error) {
       console.error("Failed to submit score:", error);

@@ -76,6 +76,12 @@ const Pulse = lazy(() =>
   })),
 );
 
+const ArcadeHub = lazy(() => import("@/pages/ArcadeHub"));
+const PoutineLobby = lazy(() => import("@/pages/PoutineLobby"));
+const PoutineStackGame = lazy(
+  () => import("@/components/features/PoutineStackGame"),
+);
+
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -592,6 +598,24 @@ function App() {
                                                   </ProtectedRoute>
                                                 }
                                               />
+                                              {/* Arcade Routes */}
+                                              <Route
+                                                path="/arcade"
+                                                element={<ArcadeHub />}
+                                              />
+                                              <Route
+                                                path="/games/poutine"
+                                                element={<PoutineLobby />}
+                                              />
+                                              <Route
+                                                path="/games/poutine/play/:tournamentId"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <PoutineStackGame />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+
                                               <Route
                                                 path="*"
                                                 element={

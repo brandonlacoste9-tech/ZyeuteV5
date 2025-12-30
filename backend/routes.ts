@@ -44,6 +44,7 @@ import {
 import { getVideoQueue } from "./queue.js";
 import { joualizeText, type JoualStyle } from "./services/joualizer.js";
 import { VertexBridge } from "./ai/vertex-bridge.js";
+import { RoyaleService } from "./services/royale-service.js";
 
 // Configure FAL client
 fal.config({
@@ -775,6 +776,55 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get following error:", error);
       res.status(500).json({ error: "Failed to get following" });
+    }
+  });
+
+  // ============ POUTINE ROYALE (ARCADE) ROUTES ============
+  app.get("/api/royale/tournaments", async (_req, res) => {
+    try {
+      const tournaments = await RoyaleService.getActiveTournaments();
+      res.json(tournaments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/royale/join", requireAuth, async (req, res) => {
+    try {
+      const result = await RoyaleService.joinTournament(
+        req.userId!,
+        req.body.tournamentId,
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/royale/submit", requireAuth, async (req, res) => {
+    try {
+      const { tournamentId, score, layers, metadata } = req.body;
+      const result = await RoyaleService.submitScore(
+        req.userId!,
+        tournamentId,
+        score,
+        layers,
+        metadata,
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/royale/leaderboard/:tournamentId", async (req, res) => {
+    try {
+      const leaderboard = await RoyaleService.getLeaderboard(
+        req.params.tournamentId,
+      );
+      res.json(leaderboard);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

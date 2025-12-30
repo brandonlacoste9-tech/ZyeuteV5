@@ -834,6 +834,41 @@ export type ModerationLog = typeof moderationLogs.$inferSelect;
 
 export type ParentalControl = typeof parentalControls.$inferSelect;
 
+export const tournaments = pgTable("tournaments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  title: text("title").notNull(),
+  entryFee: integer("entry_fee").notNull(),
+  prizePool: integer("prize_pool").default(0).notNull(),
+  status: text("status").notNull(), // 'active', 'completed'
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const royaleScores = pgTable(
+  "royale_scores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id)
+      .notNull(),
+    tournamentId: uuid("tournament_id")
+      .references(() => tournaments.id)
+      .notNull(),
+    score: integer("score").notNull(),
+    layers: integer("layers").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    tournamentIdx: index("idx_royale_scores_tournament").on(table.tournamentId),
+    userIdIdx: index("idx_royale_scores_user").on(table.userId),
+  }),
+);
+
 export const insertParentalControlSchema = createInsertSchema(
   parentalControls,
 ).omit({
