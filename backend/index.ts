@@ -9,6 +9,10 @@ import tiGuyRouter from "./routes/tiguy.js";
 import { createServer } from "http";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
 
+console.log("🚀 Starting ZyeuteV5 backend...");
+console.log("📍 Environment:", process.env.NODE_ENV);
+console.log("🔌 Port:", process.env.PORT || 5000);
+
 const app = express();
 
 // Trust proxy for proper IP detection behind reverse proxy
@@ -87,45 +91,36 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  app.use("/api/tiguy", tiGuyRouter);
-  await registerRoutes(httpServer, app);
+  try {
+    app.use("/api/tiguy", tiGuyRouter);
+    await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+      res.status(status).json({ message });
+    });
 
-    // Record exception in trace (disabled)
-    // recordException(err, {
-    //   "error.status": status,
-    //   "error.message": message,
-    // });
+    if (process.env.NODE_ENV === "production") {
+      serveStatic(app);
+    } else {
+      const { setupVite } = await import("./vite.js");
+      await setupVite(httpServer, app);
+    }
 
-    res.status(status).json({ message });
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite.js");
-    await setupVite(httpServer, app);
+    const port = parseInt(process.env.PORT || "5000", 10);
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+      },
+      () => {
+        log(`serving on port ${port}`);
+        console.log(`🏥 Health check available at /api/health`);
+      },
+    );
+  } catch (error) {
+    console.error("❌ CRITICAL STARTUP ERROR:", error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0", // Allow external access for browser viewing
-      // reusePort: true, // Linux-only, disabled for Windows
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
 })();

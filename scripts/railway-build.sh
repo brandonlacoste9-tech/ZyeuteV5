@@ -25,6 +25,20 @@ else
     npm install lightningcss-linux-x64-gnu --force
 fi
 
+if [ -d "node_modules/@tailwindcss/oxide-linux-x64-gnu" ]; then
+    echo "✅ Tailwind Oxide native module found"
+else
+    echo "❌ Tailwind Oxide native module missing - installing..."
+    npm install @tailwindcss/oxide-linux-x64-gnu --force
+fi
+
+if [ -d "node_modules/@esbuild/linux-x64" ]; then
+    echo "✅ Esbuild Linux native module found"
+else
+    echo "❌ Esbuild Linux native module missing - installing..."
+    npm install @esbuild/linux-x64 --force
+fi
+
 # Run the build
 echo "🔨 Running vite build..."
 npm run build
