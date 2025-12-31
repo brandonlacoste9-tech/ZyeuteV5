@@ -49,8 +49,7 @@ initializeVertexAI().catch(() => {
 export async function getVertexGeminiModel(
   modelName:
     | "gemini-1.5-flash"
-    | "gemini-1.5-pro"
-    | "gemini-1.5-pro-vision" = "gemini-1.5-flash",
+    | "gemini-1.5-pro" = "gemini-1.5-flash",
   systemInstruction?: string,
 ) {
   const client = await initializeVertexAI();

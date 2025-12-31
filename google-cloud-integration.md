@@ -115,7 +115,7 @@ export const generateImage = async (
   aspectRatio: '1:1' | '16:9' | '9:16' = '1:1'
 ): Promise<string> => {
   const visionModel = vertexAI.getGenerativeModel({
-    model: 'gemini-1.5-pro-vision',
+    model: 'gemini-1.5-pro',
   });
 
   const imagePrompt = 

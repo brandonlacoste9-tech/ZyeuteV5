@@ -4,8 +4,8 @@
  * Supports Quebec-focused content generation and customer service
  */
 
-import { VertexAI } from "@google-cloud/vertexai";
-import { SpeechClient } from "@google-cloud/speech";
+import { VertexAI, HarmCategory, HarmBlockThreshold } from "@google-cloud/vertexai";
+import { SpeechClient, protos } from "@google-cloud/speech";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { logger } from "../utils/logger.js";
 import { traceExternalAPI, addSpanAttributes } from "../tracer.js";
@@ -137,12 +137,12 @@ export async function generateWithTIGuy(
       },
       safetySettings: [
         {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
         },
         {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE",
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
         },
       ],
     });
@@ -257,7 +257,7 @@ export async function transcribeAudio(
     };
 
     const config = {
-      encoding: "LINEAR16" as const,
+      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
       sampleRateHertz: 16000,
       languageCode: language,
       enableWordTimeOffsets: true,
