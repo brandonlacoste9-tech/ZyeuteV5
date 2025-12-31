@@ -36,6 +36,11 @@ export const VertexBridge = {
    * @param query The natural language query (e.g., "What is the vibe of Quebec?")
    */
   async searchMemory(query: string) {
+    // Try to initialize client if not already done
+    if (!client) {
+      await initializeClient();
+    }
+
     if (!process.env.VERTEX_DATA_STORE_ID || !client) {
       logger.warn(
         "[VertexBridge] VERTEX_DATA_STORE_ID not set or client not available. Mocking response.",
