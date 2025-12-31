@@ -4,7 +4,8 @@ nixPkgs = ["nodejs-22_x", "npm-10_x"]
 [phases.install]
 cmds = [
   "npm ci --include=optional",
-  "npm install @rollup/rollup-linux-x64-gnu --force"
+  "npm install @rollup/rollup-linux-x64-gnu --force",
+  "npm install lightningcss-linux-x64-gnu --force"
 ]
 
 [phases.build]
