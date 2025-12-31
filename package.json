@@ -34,7 +34,8 @@
     "test:payments": "playwright test tests/comprehensive/06-payments.spec.ts",
     "test:navigation": "playwright test tests/comprehensive/07-navigation.spec.ts",
     "test:accessibility": "playwright test tests/comprehensive/08-accessibility.spec.ts",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "prepare": "node -e \"try{const fs=require('fs');const path=require('path');const {execSync}=require('child_process');const huskyPath=path.join(process.cwd(),'node_modules','.bin','husky');if(fs.existsSync(huskyPath)){execSync(huskyPath,{stdio:'inherit'});}}catch(e){if(e.code!=='ENOENT')throw e}\""
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.1",
