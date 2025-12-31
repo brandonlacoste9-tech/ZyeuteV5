@@ -5,12 +5,14 @@ nixPkgs = ["nodejs-22_x", "npm-10_x"]
 cmds = [
   "npm ci --include=optional",
   "npm install @rollup/rollup-linux-x64-gnu --force",
-  "npm install lightningcss-linux-x64-gnu --force"
+  "npm install lightningcss-linux-x64-gnu --force",
+  "npm install @tailwindcss/oxide-linux-x64-gnu --force",
+  "npm install @esbuild/linux-x64 --force"
 ]
 
 [phases.build]
 cmds = [
-  "npm run build"
+  "bash scripts/railway-build.sh"
 ]
 
 [start]
