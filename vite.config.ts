@@ -7,8 +7,6 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const isReplit = process.env.REPL_ID !== undefined;
-
 export default defineConfig({
   plugins: [react(), tailwindcss(), metaImagesPlugin()],
   optimizeDeps: {

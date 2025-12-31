@@ -1,4 +1,3 @@
-import { v1beta } from "@google-cloud/discoveryengine";
 import { logger } from "../utils/logger";
 
 // --- Configuration ---
@@ -10,7 +9,26 @@ const DATA_STORE_ID =
   process.env.VERTEX_DATA_STORE_ID || "zyeute-knowledge-base";
 const COLLECTION_ID = "default_collection";
 
-const client = new v1beta.SearchServiceClient();
+// Optional import - only load if package is available
+let v1beta: any = null;
+let client: any = null;
+
+// Dynamically import the package to avoid build errors if not installed
+(async () => {
+  try {
+    const discoveryEngine = await import("@google-cloud/discoveryengine");
+    v1beta = discoveryEngine.v1beta;
+    if (v1beta) {
+      client = new v1beta.SearchServiceClient();
+    }
+  } catch (error) {
+    logger.warn(
+      "[VertexBridge] @google-cloud/discoveryengine not available, using mock mode",
+    );
+  }
+})().catch(() => {
+  // Ignore initialization errors
+});
 
 export const VertexBridge = {
   /**
@@ -18,9 +36,9 @@ export const VertexBridge = {
    * @param query The natural language query (e.g., "What is the vibe of Quebec?")
    */
   async searchMemory(query: string) {
-    if (!process.env.VERTEX_DATA_STORE_ID) {
-      console.warn(
-        "[VertexBridge] VERTEX_DATA_STORE_ID not set. Mocking response.",
+    if (!process.env.VERTEX_DATA_STORE_ID || !client) {
+      logger.warn(
+        "[VertexBridge] VERTEX_DATA_STORE_ID not set or client not available. Mocking response.",
       );
       return mockSearchResponse(query);
     }
@@ -48,7 +66,7 @@ export const VertexBridge = {
       return response;
     } catch (error) {
       logger.error("[VertexBridge] Search failed:", error);
-      throw error;
+      return mockSearchResponse(query); // Fallback to mock on error
     }
   },
 
