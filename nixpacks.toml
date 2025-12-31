@@ -1,3 +1,6 @@
+[phases.setup]
+nixPkgs = ["nodejs-22_x", "npm-10_x"]
+
 [phases.install]
 cmds = [
   "npm ci --include=optional",
@@ -7,7 +10,7 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "bash scripts/railway-build.sh"
+  "npm run build"
 ]
 
 [start]
