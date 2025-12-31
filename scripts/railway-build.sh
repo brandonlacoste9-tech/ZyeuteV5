@@ -1,24 +1,23 @@
 #!/bin/bash
 
-# Railway-specific build script to handle rollup native module issues
+# Railway build script - simplified approach
 echo "🚀 Starting Railway build process..."
 
-# Ensure we're in the right directory
-cd /app
+# Clean install to ensure fresh dependencies
+echo "🧹 Performing clean npm install..."
+rm -rf node_modules package-lock.json
+npm install
 
-# Force install rollup native modules before build
-echo "📦 Installing rollup native modules..."
-npm install @rollup/rollup-linux-x64-gnu --no-save --force
-
-# Verify installation
+# Verify rollup installation
+echo "🔍 Verifying rollup native module..."
 if [ -d "node_modules/@rollup/rollup-linux-x64-gnu" ]; then
-    echo "✅ Rollup native module installed successfully"
+    echo "✅ Rollup native module found"
 else
-    echo "❌ Failed to install rollup native module"
-    exit 1
+    echo "❌ Rollup native module missing - attempting manual install..."
+    npm install @rollup/rollup-linux-x64-gnu --force
 fi
 
-# Now run the normal build
+# Run the build
 echo "🔨 Running vite build..."
 npm run build
 
