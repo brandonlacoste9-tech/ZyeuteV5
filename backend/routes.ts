@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 import rateLimit from "express-rate-limit";
+import { sql } from "drizzle-orm";
 import { storage } from "./storage.js";
 import {
   insertUserSchema,
@@ -9,6 +10,7 @@ import {
   insertStorySchema,
   GIFT_CATALOG,
   type GiftType,
+  users,
 } from "../shared/schema.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -31,6 +33,7 @@ import { verifyAuthToken } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
 import debugRoutes from "./api/debug.js";
 import adminRoutes from "./routes/admin.js";
+import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
 // Import tracing utilities
 import {
@@ -45,6 +48,8 @@ import { getVideoQueue } from "./queue.js";
 import { joualizeText, type JoualStyle } from "./services/joualizer.js";
 import { VertexBridge } from "./ai/vertex-bridge.js";
 import { RoyaleService } from "./services/royale-service.js";
+import { hiveTapService } from "./services/hive-tap-service.js";
+import { giftbitService } from "./services/giftbit-service.js";
 
 // Configure FAL client
 fal.config({
@@ -1703,9 +1708,169 @@ export async function registerRoutes(
     }
   });
 
+  // ============ PARENTAL CONTROLS ROUTES ============
+
+  // Link a child account
+  app.post("/api/parental/link", requireAuth, async (req, res) => {
+    try {
+      const parentId = req.userId!;
+      const { childUsername } = req.body;
+
+      if (!childUsername) {
+        return res.status(400).json({ error: "Nom d'utilisateur requis." });
+      }
+
+      const child = await storage.linkChild(parentId, childUsername);
+      if (!child) {
+        return res
+          .status(404)
+          .json({ error: "Utilisateur introuvable. T'es sûr du nom?" });
+      }
+
+      res.json({ success: true, child });
+    } catch (error: any) {
+      console.error("Link child error:", error);
+      res.status(500).json({ error: "Erreur lors du jumelage." });
+    }
+  });
+
+  // Get children linked to parent
+  app.get("/api/parental/children", requireAuth, async (req, res) => {
+    try {
+      const parentId = req.userId!;
+      const children = await storage.getChildren(parentId);
+      res.json({ children });
+    } catch (error: any) {
+      console.error("Get children error:", error);
+      res.status(500).json({ error: "Erreur lors de la récupération." });
+    }
+  });
+
+  // Get parental controls for a child
+  app.get(
+    "/api/parental/controls/:childId",
+    requireAuth,
+    async (req, res: Response) => {
+      try {
+        const parentId = req.userId!;
+        const { childId } = req.params;
+
+        // Verify parent owns this child
+        const child = await storage.getUser(childId);
+        if (!child || child.parentId !== parentId) {
+          return res.status(403).json({ error: "Accès refusé. Pas ton kid!" });
+        }
+
+        const controls = await storage.getParentalControls(childId);
+        res.json({ controls: controls || {} });
+      } catch (error: any) {
+        console.error("Get controls error:", error);
+        res.status(500).json({ error: "Erreur serveur." });
+      }
+    },
+  );
+
+  // Update parental controls
+  app.post("/api/parental/controls", requireAuth, async (req, res) => {
+    try {
+      const parentId = req.userId!;
+      const { childUserId, ...controlsData } = req.body;
+
+      if (!childUserId) {
+        return res.status(400).json({ error: "ID de l'enfant requis." });
+      }
+
+      // Verify parent owns this child
+      const child = await storage.getUser(childUserId);
+      if (!child || child.parentId !== parentId) {
+        return res.status(403).json({ error: "Accès refusé." });
+      }
+
+      const updated = await storage.upsertParentalControls({
+        childUserId,
+        ...controlsData,
+      });
+
+      res.json({ success: true, controls: updated });
+    } catch (error: any) {
+      console.error("Update controls error:", error);
+      res.status(500).json({ error: "Erreur lors de la sauvegarde." });
+    }
+  });
+
+  // --- HIVE TAP ROUTES (Shadow Ledger) ---
+  app.post("/api/hive-tap/token", requireAuth, async (req, res) => {
+    try {
+      const senderId = req.userId!;
+      const { amount, location } = req.body;
+      const token = await hiveTapService.generateHandshakeToken(
+        senderId,
+        amount,
+        location,
+      );
+      res.json({ token });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/hive-tap/process", requireAuth, async (req, res) => {
+    try {
+      const receiverId = req.userId!;
+      const { token, location } = req.body;
+      const result = await hiveTapService.processIncomingTap(
+        receiverId,
+        token,
+        location,
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // --- VOUCHER & PAYOUT ROUTES (Giftbit Integration) ---
+  app.post("/api/vouchers/payout", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const { brandCode, amountInCents, recipientEmail, firstName, lastName } =
+        req.body;
+
+      // 1. Initial deduction (Safe)
+      const success = await storage.updateUser(userId, {
+        cashCredits: sql`${users.cashCredits} - ${amountInCents}`,
+      } as any);
+
+      if (!success) {
+        return res
+          .status(400)
+          .json({ error: "Balance insuffisante pour ce cadeau." });
+      }
+
+      // 2. Process Order via Giftbit
+      const order = await giftbitService.placeOrder({
+        userId,
+        brandCode,
+        priceInCents: amountInCents,
+        recipientEmail,
+        recipientFirstName: firstName,
+        recipientLastName: lastName,
+      });
+
+      res.json({ success: true, order });
+    } catch (error: any) {
+      console.error("Payout error:", error);
+      res.status(500).json({
+        error:
+          "Erreur lors de l'envoi du cadeau. Le remboursement est en cours.",
+      });
+    }
+  });
+
   // ============ BOOTSTRAP AI / SWARM ROUTES ============
   // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
   app.use("/api/ai", aiRoutes);
+  app.use("/api/moderation", requireAuth, moderationRoutes);
 
   // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes
   /*

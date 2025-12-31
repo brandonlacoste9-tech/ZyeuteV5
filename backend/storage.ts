@@ -30,6 +30,9 @@ import {
   type UpsertUser,
   colonyTasks,
   type ColonyTask,
+  parentalControls,
+  type ParentalControl,
+  type InsertParentalControl,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -161,6 +164,26 @@ export interface IStorage {
   }): Promise<void>;
   getModerationLogsByUser(userId: string): Promise<any[]>;
   cleanupExpiredEphemeralPosts(): Promise<number>;
+  // Parental Controls
+  getParentalControls(childId: string): Promise<ParentalControl | undefined>;
+  upsertParentalControls(
+    controls: InsertParentalControl,
+  ): Promise<ParentalControl>;
+  linkChild(parentId: string, childUsername: string): Promise<User | undefined>;
+  getChildren(parentId: string): Promise<User[]>;
+
+  // Shadow Ledger & Credits
+  executeTransfer(
+    senderId: string,
+    receiverId: string,
+    amount: number,
+  ): Promise<boolean>;
+  refundPiasses(userId: string, amount: number, reason: string): Promise<void>;
+  awardKarma(userId: string, amount: number, reason: string): Promise<void>;
+  creditPiasses(userId: string, amount: number): Promise<boolean>;
+
+  // Moderation
+  getModerationHistory(userId: string): Promise<{ violations: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -903,6 +926,163 @@ export class DatabaseStorage implements IStorage {
       )
       .returning();
     return result.length;
+  }
+
+  // Parental Controls
+  async getParentalControls(
+    childId: string,
+  ): Promise<ParentalControl | undefined> {
+    return traceDatabase("SELECT", "parental_controls", async () => {
+      const result = await db
+        .select()
+        .from(parentalControls)
+        .where(eq(parentalControls.childUserId, childId))
+        .limit(1);
+      return result[0];
+    });
+  }
+
+  async upsertParentalControls(
+    controls: InsertParentalControl,
+  ): Promise<ParentalControl> {
+    return traceDatabase("UPSERT", "parental_controls", async () => {
+      const existing = await this.getParentalControls(controls.childUserId);
+      if (existing) {
+        const result = await db
+          .update(parentalControls)
+          .set({
+            ...controls,
+            updatedAt: new Date(),
+          })
+          .where(eq(parentalControls.childUserId, controls.childUserId))
+          .returning();
+        return result[0];
+      } else {
+        const result = await db
+          .insert(parentalControls)
+          .values(controls)
+          .returning();
+        return result[0];
+      }
+    });
+  }
+
+  async linkChild(
+    parentId: string,
+    childUsername: string,
+  ): Promise<User | undefined> {
+    return traceDatabase("UPDATE", "users", async () => {
+      const child = await this.getUserByUsername(childUsername);
+      if (!child) return undefined;
+
+      const result = await db
+        .update(users)
+        .set({ parentId })
+        .where(eq(users.id, child.id))
+        .returning();
+      return result[0];
+    });
+  }
+
+  async getChildren(parentId: string): Promise<User[]> {
+    return traceDatabase("SELECT", "users", async () => {
+      return db.select().from(users).where(eq(users.parentId, parentId));
+    });
+  }
+
+  // Shadow Ledger & Credits
+  async executeTransfer(
+    senderId: string,
+    receiverId: string,
+    amount: number,
+  ): Promise<boolean> {
+    return traceDatabase("TRANSACTION", "execute_transfer", async () => {
+      try {
+        return await db.transaction(async (tx) => {
+          // 1. Check Sender Balance
+          const sender = await tx
+            .select()
+            .from(users)
+            .where(eq(users.id, senderId))
+            .limit(1);
+
+          if (!sender[0] || (sender[0].cashCredits || 0) < amount) {
+            return false;
+          }
+
+          // 2. Decrement Sender
+          await tx
+            .update(users)
+            .set({ cashCredits: sql`${users.cashCredits} - ${amount}` })
+            .where(eq(users.id, senderId));
+
+          // 3. Increment Receiver
+          await tx
+            .update(users)
+            .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
+            .where(eq(users.id, receiverId));
+
+          // 4. Log Tap Event (Optional: Record in transactions table)
+          // For now, atomic update is enough.
+          return true;
+        });
+      } catch (error) {
+        console.error("Execute transfer transaction failed:", error);
+        return false;
+      }
+    });
+  }
+
+  async refundPiasses(
+    userId: string,
+    amount: number,
+    _reason: string,
+  ): Promise<void> {
+    await traceDatabase("UPDATE", "refund_piasses", async () => {
+      await db
+        .update(users)
+        .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
+        .where(eq(users.id, userId));
+    });
+  }
+
+  async awardKarma(
+    userId: string,
+    amount: number,
+    _reason: string,
+  ): Promise<void> {
+    await traceDatabase("UPDATE", "award_karma", async () => {
+      await db
+        .update(users)
+        .set({ karmaCredits: sql`${users.karmaCredits} + ${amount}` })
+        .where(eq(users.id, userId));
+    });
+  }
+
+  async creditPiasses(userId: string, amount: number): Promise<boolean> {
+    return traceDatabase("UPDATE", "credit_piasses", async () => {
+      const result = await db
+        .update(users)
+        .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
+        .where(eq(users.id, userId))
+        .returning();
+      return !!result[0];
+    });
+  }
+
+  async getModerationHistory(userId: string): Promise<{ violations: number }> {
+    return traceDatabase("SELECT", "moderation_history", async () => {
+      const logs = await db
+        .select()
+        .from(moderationLogs)
+        .where(eq(moderationLogs.userId, userId));
+
+      // Count major actions as violations
+      const violations = logs.filter((l) =>
+        ["ban", "warn", "shadowban", "block"].includes(l.action),
+      ).length;
+      return { violations };
+    });
   }
 }
 

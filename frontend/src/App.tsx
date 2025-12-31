@@ -83,6 +83,7 @@ const PoutineStackGame = lazy(
 );
 
 const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
+const HiveTap = lazy(() => import("@/pages/HiveTap"));
 
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
@@ -294,6 +295,24 @@ function App() {
                                                       <PostDetail />
                                                     </Suspense>
                                                   </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/posts/:id"
+                                                element={
+                                                  <Navigate
+                                                    to="/p/:id"
+                                                    replace
+                                                  />
+                                                }
+                                              />
+                                              <Route
+                                                path="/profile"
+                                                element={
+                                                  <Navigate
+                                                    to="/profile/me"
+                                                    replace
+                                                  />
                                                 }
                                               />
                                               <Route
@@ -622,6 +641,14 @@ function App() {
                                                 element={
                                                   <ProtectedRoute>
                                                     <PoutineStackGame />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/hive-tap"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <HiveTap />
                                                   </ProtectedRoute>
                                                 }
                                               />

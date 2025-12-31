@@ -222,7 +222,7 @@ export const TiGuy: React.FC = () => {
       {/* Chat window - Luxury Leather Emblem Design */}
       {isOpen && (
         <div
-          className="fixed bottom-24 right-4 z-50 w-80 max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden"
+          className="fixed bottom-24 right-4 z-[60] w-80 max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden"
           style={{
             background:
               "linear-gradient(135deg, #1a1512 0%, #0d0a08 50%, #1a1512 100%)",
@@ -469,6 +469,7 @@ export const TiGuy: React.FC = () => {
             style={{
               background: "linear-gradient(180deg, #2d2218 0%, #1a1512 100%)",
               borderTop: "2px solid #4a3b22",
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
             }}
           >
             <form
@@ -482,6 +483,10 @@ export const TiGuy: React.FC = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                onFocus={() => {
+                  // Ensure visible on focus for mobile
+                  window.scrollTo(0, document.body.scrollHeight);
+                }}
                 placeholder="Pose une question..."
                 className="w-full px-4 py-3 rounded-xl text-sm transition-all"
                 style={{

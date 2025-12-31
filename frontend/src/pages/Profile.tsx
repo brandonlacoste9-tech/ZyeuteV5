@@ -23,7 +23,7 @@ import { formatNumber } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
 import { IoShareOutline } from "react-icons/io5";
 import type { User, Post } from "@/types";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 import { QuebecEmptyState } from "@/components/ui/QuebecEmptyState";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 
@@ -43,7 +43,7 @@ const ProfileStat: React.FC<{ value: number | string; label: string }> = ({
 );
 
 export const Profile: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { tap, impact } = useHaptics();
 
@@ -57,7 +57,7 @@ export const Profile: React.FC = () => {
     "posts",
   );
 
-  const isOwnProfile = slug === "me" || user?.id === currentUser?.id;
+  const isOwnProfile = username === "me" || user?.id === currentUser?.id;
 
   // Fetch current user
   React.useEffect(() => {
@@ -76,7 +76,7 @@ export const Profile: React.FC = () => {
       setError(null);
       try {
         // Handle Guest Mode for /profile/me
-        if (slug === "me") {
+        if (username === "me") {
           // If accessing /me but context says guest, show guest stub user
           // We can't use useAuth hook inside useEffect easily without refactoring,
           // but we can check the localStorage key as a fallback or assume
@@ -125,7 +125,10 @@ export const Profile: React.FC = () => {
           }
         } else {
           // Regular profile lookup by username
-          const profileUser = await getUserProfile(slug || "", currentUser?.id);
+          const profileUser = await getUserProfile(
+            username || "",
+            currentUser?.id,
+          );
           if (profileUser) {
             setUser(profileUser);
             setError(null);
@@ -137,7 +140,7 @@ export const Profile: React.FC = () => {
       } catch (error) {
         profileLogger.error("[Profile] Error fetching user:", error);
         setError("Failed to load profile. Please try again.");
-        if (slug !== "me") {
+        if (username !== "me") {
           navigate("/");
         }
       } finally {
@@ -145,19 +148,23 @@ export const Profile: React.FC = () => {
       }
     };
 
-    if (!slug) return;
+    if (!username) return;
 
     // Fetch immediately - don't wait for anything
     fetchUser();
-  }, [slug, navigate, currentUser?.id]);
+  }, [username, navigate, currentUser?.id]);
 
   // Fetch user posts
   React.useEffect(() => {
     const fetchPosts = async () => {
       if (!user) return;
-
-      const userPosts = await getUserPosts(user.id);
-      setPosts(userPosts);
+      try {
+        const userPosts = await getUserPosts(user.id);
+        setPosts(userPosts || []);
+      } catch (err) {
+        profileLogger.error("[Profile] Error fetching user posts:", err);
+        setPosts([]);
+      }
     };
 
     fetchPosts();
@@ -166,10 +173,14 @@ export const Profile: React.FC = () => {
   // Check if following
   React.useEffect(() => {
     const checkFollowStatus = async () => {
-      if (!user || !currentUser || isOwnProfile) return;
+      if (!user || !currentUser || isOwnProfile || user.id === "guest") return;
 
-      const following = await checkFollowing(currentUser.id, user.id);
-      setIsFollowing(following);
+      try {
+        const following = await checkFollowing(currentUser.id, user.id);
+        setIsFollowing(following);
+      } catch (err) {
+        profileLogger.error("[Profile] Error checking follow status:", err);
+      }
     };
 
     checkFollowStatus();

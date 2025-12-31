@@ -7,8 +7,12 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background: #0f0f0f; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
         .container { max-width: 800px; width: 100%; text-align: center; }
-        .btn { background: linear-gradient(135deg, #FFD700, #DAA520); border: none; padding: 15px 30px; font-size: 1.2rem; font-weight: bold; color: #1a1a1a; cursor: pointer; border-radius: 8px; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn { background: linear-gradient(135deg, #FFD700, #DAA520); border: none; padding: 15px 30px; font-size: 1.2rem; font-weight: bold; color: #1a1a1a; cursor: pointer; border-radius: 8px; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); margin: 10px; }
+        .btn-red { background: linear-gradient(135deg, #ff4d4d, #cc0000); color: white; }
+        .btn-purple { background: linear-gradient(135deg, #a855f7, #7e22ce); color: white; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(218, 165, 32, 0.4); }
+        .btn-red:hover { box-shadow: 0 6px 12px rgba(204, 0, 0, 0.4); }
+        .btn-purple:hover { box-shadow: 0 6px 12px rgba(126, 34, 206, 0.4); }
         .btn:active { transform: translateY(1px); }
         pre { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: left; overflow-x: auto; max-height: 400px; border: 1px solid #333; margin-bottom: 20px; white-space: pre-wrap; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; color: #a0a0a0; }
         h1 { color: #FFD700; margin-bottom: 2rem; }
@@ -58,13 +62,97 @@ Go through the `src/pages` directory. For every page:
 - Do not change `api.ts` (it is already hardened).
 - Focus on the **Page Components**.</pre>
         
-        <button class="btn" onclick="copyPrompt()">📋 COPY PROMPT</button>
+        <button class="btn" onclick="copyPrompt('promptText')">📋 COPY UI HARDENING PROMPT</button>
         <div id="successMsg" class="success-msg">Copied to clipboard! Ready to paste into Cursor.</div>
+
+        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #333; width: 100%;">
+
+        <h1>Deep Clean & Debug Protocol</h1>
+        <pre id="deepCleanText"># Cursor Agent Prompt: The "Deep Clean" Protocol
+
+**Role:** You are a Senior Software Architect and "Code Cleaner" with a license to kill (dead code).
+
+**Objective:**
+Perform a "Heavy Debug & Deep Clean" of the entire **Zyeuté V5** repository.
+Your goal is to reduce technical debt, remove unused files, standardize structure, and fix hidden bugs.
+
+**Phase 1: The Audit (Look in every crack)**
+1.  **Unused Files**: Scan for files that are never imported. List them.
+    - *Action*: Delete them if they are clearly remnants of old versions (e.g., `old_api.ts`, `temp_component.tsx`).
+2.  **Duplicate Logic**: Look for duplicate utilities (e.g., `api.ts` vs `fetcher.ts`, or multiple `use-toast` implementations).
+    - *Action*: Consolidate into the single source of truth (`src/services/api.ts`, `src/hooks/use-toast.ts`).
+3.  **Type Safety**: Run `tsc --noEmit` and identify the "soft spots" (any usage of `any` that can be easily fixed).
+    - *Action*: Fix them.
+
+**Phase 2: The Structure (Add Structure)**
+1.  **Folder Consistency**:
+    - Ensure all services are in `frontend/src/services` or `backend/services`.
+    - Ensure all UI components are in `components/ui`.
+    - Ensure all ShadCN components use `components/ui` and not local forks.
+2.  **Import Cleanups**:
+    - Fix relative imports to use aliases (e.g., change `../../components` to `@/components`).
+
+**Phase 3: The Purge (Delete what we don't need)**
+1.  **Dead Dependencies**: specific check on `package.json` for unused packages.
+2.  **Commented Out Code**: Remove large blocks of commented-out code.
+3.  **Console Logs**: Remove `console.log` statements (keep `console.error` for `catch` blocks).
+
+**Phase 4: "Heavy Debug" (Fix it)**
+1.  **React Strict Mode**: Ensure no components crash due to double-mounting.
+2.  **Hydration Errors**: Check for generic HTML nesting errors (e.g., `<div>` inside `<p>`).
+
+**Execution Rules:**
+- **One Component at a time**: Don't break the build.
+- **Verify**: After every major delete, ensure the app still builds.
+- **Ask Permission**: Before deleting a "Large" folder or file that looks important, ask me. For small files, just do it.
+
+**Start command:**
+"I am ready. Initialize the Deep Clean Protocol. Where should I start?"</pre>
+        <button class="btn btn-red" onclick="copyPrompt('deepCleanText')">🧹 COPY DEEP CLEAN PROMPT</button>
+
+        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #333; width: 100%;">
+
+        <h1>Claude Agent Context</h1>
+        <pre id="claudeText"># Claude System Prompt: Zyeuté V5 Architect
+
+**Role:** You are a Senior Frontend Architect & Full-Stack Engineer working on **Zyeuté V5**, a premium "Quebec-Themed" social media platform.
+
+**Tech Stack:**
+- **Frontend:** React 19, Vite, Tailwind CSS (v4), Framer Motion, ShadCN UI, Lucide React.
+- **Backend:** Node.js (Express), Drizzle ORM, PostgreSQL (Supabase), Redis (BullMQ).
+- **Language:** TypeScript (Strict Mode).
+
+**Core Philosophy:**
+1.  **"Indestructible UI"**: No white screens. Always handle `loading` and `error` states gracefully with skeletons or error cards.
+2.  **"Quebec Premium" Aesthetic**: Use Gold (`#D4AF37`) and Black (`#0f0f0f`) color palettes. The app should feel expansive and expensive.
+3.  **Strict Typing**: No `any`. Use interfaces.
+4.  **Functional React**: No class components. Use Hooks (`useState`, `useEffect`, `useQuery`).
+
+**Coding Rules for You:**
+1.  **ShadCN First**: Always check `src/components/ui` before building a new component. Use `Button`, `Card`, `Toast` (via `sonner`) from the library.
+2.  **Tailwind Utility**: Do not write custom CSS classes unless absolutely necessary. Use Tailwind utilities (e.g., `flex gap-4 p-4`).
+3.  **File Structure**:
+    - Pages go in `frontend/src/pages`.
+    - Reusable logic goes in `frontend/src/hooks` or `services`.
+    - Types go in `shared/schema.ts` (if shared) or locally if private.
+
+**Current Context:**
+- The backend might be unstable (500 errors). Ensure the frontend is **resilient** to this (swallow errors, show empty states).
+- We are currently hardening the UI and running "Deep Cleans".
+
+**How to Answer:**
+- Be concise.
+- Provide full, copy-pasteable code blocks.
+- Explain "Why" before showing "How".
+- If modifying a file, show the *entire* file if it's small, or clear `// ... existing code` markers if it's large.</pre>
+        <button class="btn btn-purple" onclick="copyPrompt('claudeText')">🤖 COPY CLAUDE PROMPT</button>
+
+
     </div>
 
     <script>
-        function copyPrompt() {
-            const text = document.getElementById('promptText').innerText;
+        function copyPrompt(elementId) {
+            const text = document.getElementById(elementId).innerText;
             navigator.clipboard.writeText(text).then(() => {
                 const msg = document.getElementById('successMsg');
                 msg.style.opacity = '1';

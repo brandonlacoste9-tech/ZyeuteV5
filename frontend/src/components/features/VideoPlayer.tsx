@@ -543,6 +543,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         src={effectiveSrc}
         poster={poster}
         playsInline
+        crossOrigin="anonymous"
         preload={preload}
         className="w-full h-full object-cover"
         style={videoStyle}

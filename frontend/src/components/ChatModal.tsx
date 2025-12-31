@@ -207,7 +207,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex items-end justify-center",
+        "fixed inset-0 z-[60] flex items-end justify-center",
         "transition-transform duration-300 ease-out",
         isVisible ? "translate-y-0" : "translate-y-full",
       )}
@@ -422,7 +422,13 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         </div>
 
         {/* Input Area */}
-        <div className="p-5 pb-8 border-t border-gold-500/30 bg-neutral-900/90 backdrop-blur-xl relative z-10">
+        <div
+          className="p-5 border-t border-gold-500/30 bg-neutral-900/90 backdrop-blur-xl relative z-10"
+          style={{
+            paddingBottom:
+              "calc(max(1.25rem, env(safe-area-inset-bottom)) + 0.5rem)",
+          }}
+        >
           {imagePreview && (
             <div className="mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="relative inline-block group">

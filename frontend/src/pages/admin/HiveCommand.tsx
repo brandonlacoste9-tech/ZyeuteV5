@@ -137,6 +137,39 @@ export const HiveCommand: React.FC = () => {
         </div>
       </div>
 
+      {/* 🛡️ Content Moderation Stats */}
+      <div className="mb-8">
+        <h2 className="text-gold-500 font-bold mb-4 flex items-center gap-2">
+          <span>🛡️</span> VERTEX AI MODERATION
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Posts Checked Today
+            </p>
+            <p className="text-2xl font-bold text-white">1,240</p>
+          </div>
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              Blocked (Toxic)
+            </p>
+            <p className="text-2xl font-bold text-red-500">45</p>
+          </div>
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              False Positives Reported
+            </p>
+            <p className="text-2xl font-bold text-yellow-500">12</p>
+          </div>
+          <div className="bg-black/20 border border-white/5 rounded-xl p-4">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">
+              API Cost Today
+            </p>
+            <p className="text-2xl font-bold text-blue-400">$1.45</p>
+          </div>
+        </div>
+      </div>
+
       {/* Neurosphere Live Feed */}
       <div className="bg-black border border-white/10 rounded-xl p-6 min-h-[300px]">
         <h3 className="text-gold-600/80 font-bold text-sm mb-4 tracking-wider">

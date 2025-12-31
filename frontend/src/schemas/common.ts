@@ -52,6 +52,10 @@ const BaseUserSchema = z
 
     // Gamification
     last_daily_bonus: z.string().nullable().optional(),
+
+    // Parent Link
+    parent_id: z.string().nullable().optional(),
+    parentId: z.string().nullable().optional(), // Compat
   })
   .strict();
 
@@ -111,6 +115,10 @@ export const UserSchema = z.preprocess((val: any) => {
 
     // Gamification
     last_daily_bonus: val.lastDailyBonus || val.last_daily_bonus || null,
+
+    // Parent Link
+    parent_id: val.parentId || val.parent_id || null,
+    parentId: val.parentId || val.parent_id || null,
   };
 }, BaseUserSchema);
 

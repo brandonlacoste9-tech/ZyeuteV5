@@ -436,6 +436,44 @@ export async function generateImage(
   return result.success ? result.data : null;
 }
 
+// ============ PARENTAL CONTROLS FUNCTIONS ============
+
+export async function linkChild(childUsername: string): Promise<User | null> {
+  const { data, error } = await apiCall<{ child: User }>("/parental/link", {
+    method: "POST",
+    body: JSON.stringify({ childUsername }),
+  });
+  if (error || !data) return null;
+  return mapBackendUser(data.child);
+}
+
+export async function getChildren(): Promise<User[]> {
+  const { data, error } = await apiCall<{ children: User[] }>(
+    "/parental/children",
+  );
+  if (error || !data) return [];
+  return (data.children || []).map(mapBackendUser);
+}
+
+export async function getParentalControls(childId: string): Promise<any> {
+  const { data, error } = await apiCall<{ controls: any }>(
+    `/parental/controls/${childId}`,
+  );
+  if (error || !data) return null;
+  return data.controls;
+}
+
+export async function updateParentalControls(
+  childUserId: string,
+  controls: any,
+): Promise<boolean> {
+  const { error } = await apiCall("/parental/controls", {
+    method: "POST",
+    body: JSON.stringify({ childUserId, ...controls }),
+  });
+  return !error;
+}
+
 // ============ HELPER FUNCTIONS ============
 
 // Helper to detect video file extensions

@@ -21,8 +21,8 @@ export default function ArcadeHub() {
       title: "Hive Tap",
       description: "Check-in rapide NFC pour domination territoriale.",
       icon: <FaHive className="w-12 h-12 text-purple-500" />,
-      status: "COMING SOON",
-      path: null,
+      status: "LIVE",
+      path: "/hive-tap",
     },
     {
       id: "trivia",

@@ -10,6 +10,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import axios from "axios";
+import { useAuth } from "@/contexts/AuthContext";
+import { ParentalService } from "@/services/parental-service";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface Piece {
   id: number;
@@ -31,19 +34,38 @@ export const PoutineStackGame: React.FC = () => {
   const [speed, setSpeed] = useState(2);
   const [timeLeft, setTimeLeft] = useState(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [restriction, setRestriction] = useState<string | null>(null);
+  const [visualBuzz, setVisualBuzz] = useState(false);
+  const { user } = useAuth();
+  const { tap, impact, error: hapticError } = useHaptics();
 
   const gameLoopRef = useRef<number | null>(null);
+
+  // Check Parental Restrictions
+  useEffect(() => {
+    const checkRestrictions = async () => {
+      if (user?.parentId || user?.parent_id) {
+        const status = await ParentalService.checkParentalStatus(user.id);
+        if (!status.allowed) {
+          setRestriction(status.reason || "Accès restreint");
+        }
+      }
+    };
+    checkRestrictions();
+  }, [user]);
 
   // Base width of pieces (decreases as you go up)
   const getPieceWidth = (count: number) => Math.max(10, 40 - count * 1.5);
 
   const startNewGame = () => {
+    if (restriction) return;
     setIsPlaying(true);
     setIsGameOver(false);
     setScore(0);
     setPieces([]);
     setSpeed(2);
     setTimeLeft(60);
+    tap();
   };
 
   const handleTap = useCallback(() => {
@@ -77,11 +99,15 @@ export const PoutineStackGame: React.FC = () => {
     if (!success) {
       setIsGameOver(true);
       setIsPlaying(false);
+      hapticError();
       return;
     }
 
     setPieces((prev) => [...prev, newPiece]);
     setScore((s) => s + 1);
+    impact();
+    setVisualBuzz(true);
+    setTimeout(() => setVisualBuzz(false), 300);
     setSpeed((sp) => Math.min(sp + 0.15, 6)); // Increase speed
   }, [isPlaying, isGameOver, currentX, score, pieces]);
 
@@ -164,7 +190,9 @@ export const PoutineStackGame: React.FC = () => {
               Score
             </span>
           </div>
-          <div className="text-5xl font-black italic tracking-tighter tabular-nums">
+          <div
+            className={`text-5xl font-black italic tracking-tighter tabular-nums transition-all duration-300 ${visualBuzz ? "text-yellow-400 scale-125 shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "text-white"}`}
+          >
             {score}
           </div>
         </div>
@@ -314,7 +342,7 @@ export const PoutineStackGame: React.FC = () => {
       </AnimatePresence>
 
       {/* Start Screen */}
-      {!isPlaying && !isGameOver && (
+      {!isPlaying && !isGameOver && !restriction && (
         <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-8">
           <motion.div
             animate={{ rotate: [0, 5, -5, 0] }}
@@ -326,14 +354,48 @@ export const PoutineStackGame: React.FC = () => {
           <h1 className="text-6xl font-black italic tracking-tighter mb-4 text-center">
             POUTINE STACK
           </h1>
+          <div className="bg-purple-600/20 border border-purple-500/50 px-4 py-1 rounded-full mb-6">
+            <span className="text-purple-400 font-bold text-xs tracking-[0.2em] uppercase">
+              Édition "Piège à Touristes" 🇨🇦
+            </span>
+          </div>
           <p className="text-zinc-500 font-bold mb-12 text-center max-w-xs">
             Stack le plus haut possible sans tout faire revollé par terre.
+            <br />
+            <span className="text-zinc-600 text-[10px] italic">
+              (Les vrais savent que c'est pas là qu'on mange la meilleure)
+            </span>
           </p>
           <button
             onClick={startNewGame}
             className="bg-gold-500 text-black px-12 py-5 rounded-[24px] font-black italic tracking-tighter text-2xl hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,191,0,0.4)]"
           >
             START GAME
+          </button>
+        </div>
+      )}
+
+      {/* Parental Restriction Screen */}
+      {restriction && (
+        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mb-8 border border-yellow-500/50">
+            <AlertCircle className="w-12 h-12 text-yellow-500" />
+          </div>
+          <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">
+            Accès Bloqué
+          </h2>
+          <p className="text-yellow-500 font-mono text-xl mb-12 p-4 border border-yellow-500/20 bg-yellow-500/5 rounded-xl">
+            {restriction}
+          </p>
+          <p className="text-zinc-500 max-w-xs mb-12">
+            Tes parents ont mis en place des limites de sécurité pour ton
+            bien-être. Reviens plus tard ou déplace-toi vers un endroit sûr!
+          </p>
+          <button
+            onClick={() => navigate("/arcade")}
+            className="bg-white text-black px-12 py-4 rounded-full font-bold uppercase tracking-widest text-sm"
+          >
+            Retour à l'Arcade
           </button>
         </div>
       )}

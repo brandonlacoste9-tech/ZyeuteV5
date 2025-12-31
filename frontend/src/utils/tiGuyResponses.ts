@@ -166,14 +166,30 @@ export function getTiGuyResponse(userMessage: string): ChatMessage {
  * Gets a welcome message from TI-Guy
  */
 export function getTiGuyWelcomeMessage(): ChatMessage {
-  const greetings = TI_GUY_RESPONSES.greeting;
-  const randomGreeting =
-    greetings[Math.floor(Math.random() * greetings.length)];
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed, so 11 is December, 0 is January
+  const date = now.getDate();
+
+  let text = "";
+
+  // New Year's Eve (Dec 31)
+  if (month === 11 && date === 31) {
+    text =
+      "Bonne veille du Nouvel An! 🎆 Prêt à défoncer l'année avec la ruche? On va avoir du fun en esti à minuit! 🥂🦫";
+  }
+  // New Year's Day (Jan 1)
+  else if (month === 0 && date === 1) {
+    text =
+      "BONNE ANNÉE 2026! 🎊⚜️ La ruche est officiellement ouverte! T'es une de nos premières abeilles, c'est malade! On part l'année en grand! 🥂🦫";
+  } else {
+    const greetings = TI_GUY_RESPONSES.greeting;
+    text = greetings[Math.floor(Math.random() * greetings.length)];
+  }
 
   return {
     id: `tiguy-welcome-${Date.now()}`,
     sender: "tiGuy",
-    text: randomGreeting,
+    text,
     timestamp: new Date(),
   };
 }

@@ -1,8 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe("Zyeuté Health Check (Indestructible)", () => {
   // Screenshot Bot Helper
-  async function takeScreenshot(page, name) {
+  async function takeScreenshot(page: Page, name: string) {
     await page.screenshot({
       path: `results/screenshots/${name}.png`,
       fullPage: true,

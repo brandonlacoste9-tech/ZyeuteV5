@@ -6,14 +6,14 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { getFeedPosts } from "@/services/api";
+import { getExplorePosts } from "@/services/api";
 import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { formatNumber } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
 import { toast } from "@/components/Toast";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
 import type { Post, User } from "@/types";
-import { logger } from "../lib/logger";
+import { logger } from "@/lib/logger";
 import { QuebecHashtags } from "@/components/trending/QuebecHashtags";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
@@ -90,16 +90,11 @@ export const Explore: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Use centralized API function - get all posts then filter client-side
-      // (API function doesn't support region/hashtag filters yet)
-      const allPosts = await getFeedPosts(0, 50);
+      // Use the dedicated explore endpoint for better performance/discovery
+      const explorePosts = await getExplorePosts(0, 50, selectedRegion);
 
-      // Apply client-side filters
-      let filtered = allPosts;
-
-      if (selectedRegion) {
-        filtered = filtered.filter((p) => p.region === selectedRegion);
-      }
+      // Apply client-side filters for hashtag and search (since backend might not support them yet)
+      let filtered = explorePosts;
 
       if (selectedHashtag) {
         const tagToSearch = selectedHashtag.startsWith("#")
@@ -115,17 +110,21 @@ export const Explore: React.FC = () => {
       }
 
       if (searchQuery) {
-        filtered = filtered.filter((p) =>
-          p.caption?.toLowerCase().includes(searchQuery.toLowerCase()),
+        filtered = filtered.filter(
+          (p) =>
+            p.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.user?.username?.toLowerCase().includes(searchQuery.toLowerCase()),
         );
       }
 
-      // Sort by fire_count (reactions_count)
+      // Sort by fire_count for "Trending" feel
       filtered.sort((a, b) => (b.fire_count || 0) - (a.fire_count || 0));
 
       setPosts(filtered);
     } catch (error) {
       exploreLogger.error("Error fetching posts:", error);
+      // Don't crash the whole page, just show empty state or toast
+      toast.error("Impossible de charger les posts. Vérifie ta connexion.");
     } finally {
       setIsLoading(false);
     }
