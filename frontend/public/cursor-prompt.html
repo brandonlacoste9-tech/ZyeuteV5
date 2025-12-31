@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cursor Agent Prompt</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background: #0f0f0f; color: #e0e0e0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { max-width: 800px; width: 100%; text-align: center; }
+        .btn { background: linear-gradient(135deg, #FFD700, #DAA520); border: none; padding: 15px 30px; font-size: 1.2rem; font-weight: bold; color: #1a1a1a; cursor: pointer; border-radius: 8px; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(218, 165, 32, 0.4); }
+        .btn:active { transform: translateY(1px); }
+        pre { background: #1a1a1a; padding: 20px; border-radius: 8px; text-align: left; overflow-x: auto; max-height: 400px; border: 1px solid #333; margin-bottom: 20px; white-space: pre-wrap; font-family: 'Consolas', 'Monaco', monospace; font-size: 0.9rem; color: #a0a0a0; }
+        h1 { color: #FFD700; margin-bottom: 2rem; }
+        .success-msg { color: #4ade80; margin-top: 10px; opacity: 0; transition: opacity 0.3s; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cursor Agent Prompt</h1>
+        <pre id="promptText"># Cursor Agent Prompt: Zyeuté UI Hardening & Polish
+
+**Role:** You are an expert React/Tailwind frontend engineer specializing in "Indestructible UIs" and Premium Design Systems.
+
+**Context:**
+We are building **Zyeuté**, a luxury Quebec-themed social media platform.
+- **Stack:** React, Vite, Tailwind CSS, Framer Motion, Shadcn UI.
+- **Current State:** The backend is unstable (500 errors are common).
+- **Goal:** Ensure strictly NO WHITE SCREENS. If data fails to load, show a beautiful "Empty State" or "Error State" in the app's signature "Quebec Gold/Black" aesthetic.
+
+**Your Mission:**
+Audit and fix the following pages to ensure they are fully functional and resilient:
+
+1.  **Feed (`Feed.tsx`)**: Ensure infinite scroll handles empty api responses gracefully.
+2.  **Arcade Hub (`ArcadeHub.tsx`)**: Verify the game list renders. If empty, show "Coming Soon".
+3.  **Profile (`Profile.tsx`)**: Handle "User Not Found" or "Network Error" with a nice card, not a crash.
+4.  **Settings**: ensure all tabs work.
+
+**Technical Guidelines:**
+1.  **Data Fetching**: Use the hardened `apiCall` in `services/api.ts`.
+    - It returns `{ data, error }`.
+    - **CRITICAL**: If `error` is present OR `data` is null, render `null` or an `<EmptyState />` component. Do NOT try to `.map()` over null data.
+2.  **Aesthetics**:
+    - Use gradients: `bg-gradient-to-b from-zinc-900 to-black`.
+    - Accents: Text in `#D4AF37` (Gold), Borders in `border-white/10`.
+    - Animations: Use `framer-motion` for smooth entry (`initial={{ opacity: 0 }} animate={{ opacity: 1 }}`).
+3.  **Components**:
+    - Use `Skeleton` for loading states.
+    - Use `ErrorBoundary` if you need to wrap risky components.
+
+**Immediate Task:**
+Go through the `src/pages` directory. For every page:
+1.  Check `useEffect` data fetching.
+2.  Add a `try/catch` or check the `error` return from `api.ts`.
+3.  If data is missing, render a user-friendly message (e.g., "Impossible de charger les données pour l'instant").
+
+**Constraint:**
+- Do not change `api.ts` (it is already hardened).
+- Focus on the **Page Components**.</pre>
+        
+        <button class="btn" onclick="copyPrompt()">📋 COPY PROMPT</button>
+        <div id="successMsg" class="success-msg">Copied to clipboard! Ready to paste into Cursor.</div>
+    </div>
+
+    <script>
+        function copyPrompt() {
+            const text = document.getElementById('promptText').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const msg = document.getElementById('successMsg');
+                msg.style.opacity = '1';
+                setTimeout(() => {
+                    msg.style.opacity = '0';
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
