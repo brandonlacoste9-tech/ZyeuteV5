@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = process.cwd();
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), metaImagesPlugin()],

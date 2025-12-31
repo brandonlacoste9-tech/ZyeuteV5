@@ -7,7 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { nanoid } from "nanoid";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = process.cwd();
 
 const viteLogger = createLogger();
 
@@ -38,12 +38,7 @@ export async function setupVite(server: Server, app: Express) {
     const url = req.originalUrl;
 
     try {
-      const clientTemplate = path.resolve(
-        __dirname,
-        "..",
-        "frontend",
-        "index.html",
-      );
+      const clientTemplate = path.resolve(__dirname, "frontend", "index.html");
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
