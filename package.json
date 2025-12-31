@@ -15,7 +15,6 @@
     "preflight": "npm run check && npm run lint && npm run build && npm run test",
     "worker": "tsx backend/startWorker.ts",
     "db:push": "drizzle-kit push",
-    "prepare": "husky",
     "test:unit": "vitest run src/__tests__/unit",
     "test:integration": "vitest run src/__tests__/integration",
     "test:all": "vitest run",
@@ -122,9 +121,6 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@replit/vite-plugin-cartographer": "^0.4.4",
-    "@replit/vite-plugin-dev-banner": "^0.1.1",
-    "@replit/vite-plugin-runtime-error-modal": "^0.0.4",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query-devtools": "^5.91.1",
     "@testing-library/jest-dom": "^6.9.1",

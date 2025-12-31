@@ -395,7 +395,7 @@ const BaseNotificationSchema = z
     id: z.string(),
     user_id: z.string(),
     type: NotificationTypeEnum,
-    actor_id: z.string(),
+    actor_id: z.string().default(""), // Allow empty string as fallback for null values
     post_id: z.string().nullable().optional(),
     comment_id: z.string().nullable().optional(),
     story_id: z.string().nullable().optional(),
@@ -418,15 +418,35 @@ const BaseNotificationSchema = z
 
 export const NotificationSchema = z.preprocess((val: any) => {
   if (!val || typeof val !== "object") return val;
+
+  // Map database notification types to schema types
+  const typeMapping: Record<
+    string,
+    "fire" | "comment" | "follow" | "gift" | "mention" | "story_view"
+  > = {
+    nouvelle_reaction: "fire",
+    fire: "fire",
+    comment: "comment",
+    follow: "follow",
+    gift: "gift",
+    mention: "mention",
+    story_view: "story_view",
+  };
+
+  const mappedType = typeMapping[val.type] || "fire"; // Default to "fire" for unknown types
+
+  // Handle actor_id - use from_user_id if actor_id is null
+  const actorId = val.actor_id || val.fromUserId || val.from_user_id;
+
   return {
     id: val.id,
     user_id: val.user_id || val.userId,
-    type: val.type,
-    actor_id: val.fromUserId || val.from_user_id || val.actor_id,
-    post_id: val.postId || val.post_id,
-    comment_id: val.commentId || val.comment_id,
-    story_id: val.storyId || val.story_id,
-    reference_id: val.referenceId || val.reference_id,
+    type: mappedType,
+    actor_id: actorId || "", // Provide empty string fallback if still null
+    post_id: val.postId || val.post_id || null,
+    comment_id: val.commentId || val.comment_id || null,
+    story_id: val.storyId || val.story_id || null,
+    reference_id: val.referenceId || val.reference_id || null,
     is_read:
       val.isRead !== undefined
         ? val.isRead
