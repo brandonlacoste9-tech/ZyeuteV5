@@ -13,8 +13,10 @@ const COLLECTION_ID = "default_collection";
 let v1beta: any = null;
 let client: any = null;
 
-// Dynamically import the package to avoid build errors if not installed
-(async () => {
+// Initialize Discovery Engine client
+async function initializeClient() {
+  if (client) return client;
+
   try {
     const discoveryEngine = await import("@google-cloud/discoveryengine");
     v1beta = discoveryEngine.v1beta;
@@ -26,7 +28,12 @@ let client: any = null;
       "[VertexBridge] @google-cloud/discoveryengine not available, using mock mode",
     );
   }
-})().catch(() => {
+
+  return client;
+}
+
+// Initialize on module load
+initializeClient().catch(() => {
   // Ignore initialization errors
 });
 

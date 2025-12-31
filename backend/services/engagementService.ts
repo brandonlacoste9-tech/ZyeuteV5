@@ -2,6 +2,7 @@ import { db } from "../storage.js";
 import { comments, users } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { getGeminiModel } from "../ai/google.js";
+import { getVertexGeminiModel } from "../ai/vertex-gemini.js";
 
 /**
  * Engagement Service - Ti-Guy's automated community interactions.
@@ -11,7 +12,10 @@ export async function postTiGuyFirstComment(
   postId: string,
   videoInfo: { summary: string; tags: string[] },
 ): Promise<void> {
-  const model = getGeminiModel("gemini-1.5-flash");
+  // Try Vertex AI first (uses credits), fallback to free API
+  const model =
+    (await getVertexGeminiModel("gemini-1.5-flash")) ||
+    getGeminiModel("gemini-1.5-flash");
   if (!model) return;
 
   try {

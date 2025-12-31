@@ -1,4 +1,5 @@
 import { getGeminiModel } from "../ai/google.js";
+import { getVertexGeminiModel } from "../ai/vertex-gemini.js";
 
 export type JoualStyle = "street" | "old" | "enhanced";
 
@@ -9,7 +10,10 @@ export async function joualizeText(
   text: string,
   style: JoualStyle,
 ): Promise<string> {
-  const model = getGeminiModel("gemini-1.5-flash");
+  // Try Vertex AI first (uses credits), fallback to free API
+  const model =
+    (await getVertexGeminiModel("gemini-1.5-flash")) ||
+    getGeminiModel("gemini-1.5-flash");
   if (!model) {
     throw new Error("Gemini model not initialized");
   }

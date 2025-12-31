@@ -42,6 +42,7 @@
     "@fal-ai/serverless-client": "^0.15.0",
     "@google-cloud/discoveryengine": "^2.5.2",
     "@google-cloud/storage": "^7.18.0",
+    "@google-cloud/vertexai": "^1.10.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
