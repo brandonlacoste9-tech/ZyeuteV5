@@ -2,7 +2,7 @@
 // Clean, mythic, swarm-native — built from scratch
 // Three Bees. Three instincts. One Hive.
 
-import { deepseek } from "../../server/ai/deepseek.js";
+import { deepseek } from "../../backend/ai/deepseek";
 import { fal } from "@fal-ai/client";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 

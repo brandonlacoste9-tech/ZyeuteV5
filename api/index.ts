@@ -1,6 +1,6 @@
-import 'express-async-errors';
+import "express-async-errors";
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "../server/routes.js";
+import { registerRoutes } from "../backend/routes";
 import { createServer } from "http";
 
 // Create Express app for Vercel serverless
@@ -21,7 +21,7 @@ app.use(
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
-  })
+  }),
 );
 
 app.use(express.urlencoded({ extended: false }));
@@ -30,10 +30,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS,PATCH");
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,DELETE,OPTIONS,PATCH",
+  );
   res.header(
     "Access-Control-Allow-Headers",
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
+    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
   );
 
   if (req.method === "OPTIONS") {
@@ -49,7 +52,9 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (req.path.startsWith("/api")) {
-      console.log(`${req.method} ${req.path} ${res.statusCode} in ${duration}ms`);
+      console.log(
+        `${req.method} ${req.path} ${res.statusCode} in ${duration}ms`,
+      );
     }
   });
   next();
