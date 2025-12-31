@@ -41,15 +41,10 @@
     "@fal-ai/client": "^1.7.2",
     "@fal-ai/serverless-client": "^0.15.0",
     "@google-cloud/discoveryengine": "^2.5.2",
-    "@google-cloud/speech": "^6.0.0",
+    "@google-cloud/speech": "^6.7.0",
     "@google-cloud/storage": "^7.18.0",
     "@google-cloud/vertexai": "^1.10.0",
-<<<<<<< HEAD
-    "@google-cloud/vision": "^4.0.0",
-=======
-    "@google-cloud/speech": "^6.7.0",
     "@google-cloud/vision": "^4.3.2",
->>>>>>> 1e18ea13f2d2481ca80066794743bcb03c71cfe2
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
