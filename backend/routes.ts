@@ -50,6 +50,18 @@ import { VertexBridge } from "./ai/vertex-bridge.js";
 import { RoyaleService } from "./services/royale-service.js";
 import { hiveTapService } from "./services/hive-tap-service.js";
 import { giftbitService } from "./services/giftbit-service.js";
+import {
+  generateWithTIGuy,
+  moderateContent,
+  transcribeAudio,
+  generateImage,
+  checkVertexAIHealth,
+  type ContentGenerationRequest,
+  type ModerationResult,
+  type TranscriptionResult,
+  type ImageGenerationRequest,
+  type ImageGenerationResponse,
+} from "./ai/vertex-service.js";
 
 // Configure FAL client
 fal.config({
@@ -995,41 +1007,285 @@ export async function registerRoutes(
     },
   );
 
-  // Ti-Guy AI Chat (V3-TI-GUY from swarm)
+  // Enhanced TI-GUY AI Chat (Vertex AI-powered dual-purpose assistant)
   app.post(
     "/api/ai/tiguy-chat",
     aiRateLimiter,
     requireAuth,
     async (req, res) => {
       try {
-        const { message, conversationHistory = [] } = req.body;
+        const { message, conversationHistory = [], mode = "auto" } = req.body;
 
         if (!message || typeof message !== "string") {
           return res.status(400).json({ error: "Message is required" });
         }
 
-        if (!process.env.DEEPSEEK_API_KEY) {
-          return res
-            .status(500)
-            .json({ error: "DeepSeek API key not configured" });
+        // Determine mode based on context or user preference
+        let aiMode: "content" | "customer_service" = "content";
+
+        if (mode === "customer_service") {
+          aiMode = "customer_service";
+        } else if (mode === "auto") {
+          // Auto-detect mode based on message content
+          const customerKeywords = [
+            "help",
+            "problem",
+            "issue",
+            "support",
+            "question",
+            "comment",
+            "report",
+            "aide",
+            "problème",
+            "question",
+          ];
+          const hasCustomerKeywords = customerKeywords.some((keyword) =>
+            message.toLowerCase().includes(keyword),
+          );
+          aiMode = hasCustomerKeywords ? "customer_service" : "content";
+        } else {
+          aiMode = mode as "content" | "customer_service";
         }
 
-        // Use V3-TI-GUY from the swarm architecture
-        const formattedHistory = conversationHistory
-          .slice(-10)
-          .map((msg: any) => ({
-            role: msg.sender === "user" ? "user" : "assistant",
-            content: msg.text,
-          }));
+        // Build context from conversation history
+        const context = conversationHistory
+          .slice(-5)
+          .map((msg: any) => `${msg.sender}: ${msg.text}`)
+          .join("\n");
 
-        const response = await v3TiGuyChat(message, formattedHistory);
+        const request: ContentGenerationRequest = {
+          mode: aiMode,
+          message,
+          context,
+          language: "auto",
+        };
 
-        res.json({ response });
+        const response = await generateWithTIGuy(request);
+
+        res.json({
+          response: response.content,
+          mode: response.mode,
+          confidence: response.confidence,
+          language: response.language,
+        });
       } catch (error: any) {
-        console.error("Ti-Guy AI error:", error);
+        console.error("Enhanced TI-GUY AI error:", error);
         res.status(500).json({
           error: error.message || "Ti-Guy est fatigué, réessaie plus tard!",
+          fallback: true,
         });
+      }
+    },
+  );
+
+  // Vertex AI Content Moderation
+  app.post("/api/ai/moderate", aiRateLimiter, requireAuth, async (req, res) => {
+    try {
+      const { content, type = "text" } = req.body;
+
+      if (!content) {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      const result: ModerationResult = await moderateContent(content, type);
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Content moderation error:", error);
+      res.status(500).json({
+        error: error.message || "Moderation service unavailable",
+        allowed: true, // Safe fallback
+        reasons: ["service_error"],
+        severity: "low",
+      });
+    }
+  });
+
+  // Vertex AI Image Generation
+  app.post(
+    "/api/ai/generate-image",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { prompt, aspectRatio = "1:1", style } = req.body;
+
+        if (!prompt || typeof prompt !== "string") {
+          return res.status(400).json({ error: "Prompt is required" });
+        }
+
+        const request: ImageGenerationRequest = {
+          prompt,
+          aspectRatio: aspectRatio as "1:1" | "16:9" | "9:16" | "4:3",
+          style,
+          language: "fr",
+        };
+
+        const result: ImageGenerationResponse = await generateImage(request);
+
+        res.json(result);
+      } catch (error: any) {
+        console.error("Image generation error:", error);
+        res.status(500).json({
+          error: error.message || "Image generation failed",
+        });
+      }
+    },
+  );
+
+  // French Audio Transcription
+  app.post(
+    "/api/ai/transcribe",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { audioData, language = "fr-CA" } = req.body;
+
+        if (!audioData) {
+          return res.status(400).json({ error: "Audio data is required" });
+        }
+
+        // Convert base64 to buffer
+        const audioBuffer = Buffer.from(audioData, "base64");
+
+        const result: TranscriptionResult = await transcribeAudio(
+          audioBuffer,
+          language as "fr-CA" | "fr-FR" | "en-US",
+        );
+
+        res.json(result);
+      } catch (error: any) {
+        console.error("Transcription error:", error);
+        res.status(500).json({
+          error: error.message || "Transcription failed",
+          transcript: "",
+          confidence: 0,
+        });
+      }
+    },
+  );
+
+  // Vertex AI Health Check
+  app.get("/api/ai/health", async (req, res) => {
+    try {
+      const health = await checkVertexAIHealth();
+
+      const overallHealth = health.vertexAI && health.speech && health.vision;
+
+      res.json({
+        status: overallHealth ? "healthy" : "degraded",
+        services: health,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Health check error:", error);
+      res.status(500).json({
+        status: "error",
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
+  // Support Ticket Management
+  app.post("/api/support/tickets", requireAuth, async (req, res) => {
+    try {
+      const { subject, description, category, priority = "normal" } = req.body;
+
+      if (!subject || !description) {
+        return res
+          .status(400)
+          .json({ error: "Subject and description are required" });
+      }
+
+      const ticket = await storage.createSupportTicket({
+        user_id: req.userId,
+        subject,
+        description,
+        category,
+        priority,
+        status: "open",
+      });
+
+      // Add initial message from user
+      await storage.addTicketMessage({
+        ticket_id: ticket.id,
+        sender_type: "user",
+        sender_id: req.userId,
+        message: description,
+      });
+
+      res.status(201).json({
+        ticket,
+        message:
+          "Votre demande de support a été créée. Ti-Guy va vous aider! 🦫",
+      });
+    } catch (error: any) {
+      console.error("Create support ticket error:", error);
+      res.status(500).json({ error: "Failed to create support ticket" });
+    }
+  });
+
+  app.get("/api/support/tickets", requireAuth, async (req, res) => {
+    try {
+      const tickets = await storage.getUserSupportTickets(req.userId!);
+      res.json({ tickets });
+    } catch (error: any) {
+      console.error("Get support tickets error:", error);
+      res.status(500).json({ error: "Failed to get support tickets" });
+    }
+  });
+
+  app.get("/api/support/tickets/:ticketId", requireAuth, async (req, res) => {
+    try {
+      const ticket = await storage.getSupportTicket(req.params.ticketId);
+
+      if (!ticket) {
+        return res.status(404).json({ error: "Ticket not found" });
+      }
+
+      // Check if user owns this ticket
+      if (ticket.user_id !== req.userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json({ ticket });
+    } catch (error: any) {
+      console.error("Get support ticket error:", error);
+      res.status(500).json({ error: "Failed to get support ticket" });
+    }
+  });
+
+  app.post(
+    "/api/support/tickets/:ticketId/messages",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { message } = req.body;
+        const ticketId = req.params.ticketId;
+
+        if (!message) {
+          return res.status(400).json({ error: "Message is required" });
+        }
+
+        // Verify ticket ownership
+        const ticket = await storage.getSupportTicket(ticketId);
+        if (!ticket || ticket.user_id !== req.userId) {
+          return res.status(403).json({ error: "Access denied" });
+        }
+
+        const ticketMessage = await storage.addTicketMessage({
+          ticket_id: ticketId,
+          sender_type: "user",
+          sender_id: req.userId,
+          message,
+        });
+
+        res.status(201).json({ message: ticketMessage });
+      } catch (error: any) {
+        console.error("Add ticket message error:", error);
+        res.status(500).json({ error: "Failed to add message" });
       }
     },
   );

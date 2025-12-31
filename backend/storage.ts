@@ -184,6 +184,17 @@ export interface IStorage {
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
+
+  // Support Tickets
+  createSupportTicket(ticket: any): Promise<any>;
+  getUserSupportTickets(userId: string): Promise<any[]>;
+  getSupportTicket(ticketId: string): Promise<any>;
+  addTicketMessage(message: any): Promise<any>;
+  updateTicketStatus(
+    ticketId: string,
+    status: string,
+    userId?: string,
+  ): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1082,6 +1093,56 @@ export class DatabaseStorage implements IStorage {
         ["ban", "warn", "shadowban", "block"].includes(l.action),
       ).length;
       return { violations };
+    });
+  }
+
+  // Support Tickets Implementation
+  async createSupportTicket(ticket: any): Promise<any> {
+    return traceDatabase("INSERT", "support_tickets", async () => {
+      // Note: This would need proper typing and schema definitions
+      // For now, return a placeholder
+      return {
+        id: "temp-" + Date.now(),
+        ...ticket,
+        status: "open",
+        created_at: new Date(),
+      };
+    });
+  }
+
+  async getUserSupportTickets(userId: string): Promise<any[]> {
+    return traceDatabase("SELECT", "support_tickets", async () => {
+      // Placeholder implementation
+      return [];
+    });
+  }
+
+  async getSupportTicket(ticketId: string): Promise<any> {
+    return traceDatabase("SELECT", "support_tickets", async () => {
+      // Placeholder implementation
+      return null;
+    });
+  }
+
+  async addTicketMessage(message: any): Promise<any> {
+    return traceDatabase("INSERT", "ticket_messages", async () => {
+      // Placeholder implementation
+      return {
+        id: "msg-" + Date.now(),
+        ...message,
+        created_at: new Date(),
+      };
+    });
+  }
+
+  async updateTicketStatus(
+    ticketId: string,
+    status: string,
+    userId?: string,
+  ): Promise<boolean> {
+    return traceDatabase("UPDATE", "support_tickets", async () => {
+      // Placeholder implementation
+      return true;
     });
   }
 }
