@@ -1,0 +1,15 @@
+export async function v3Mod(content: string): Promise<V3ModResult> {
+  const message = `Content to moderate:\n${content}`;
+  const result = (await callV3(V3_PROMPTS.MOD, message)) as Record<
+    string,
+    unknown
+  >;
+  return result as unknown as V3ModResult;
+}
+
+// V3-MEM: User preference snapshot
+export async function v3Mem(
+  interactionHistory: string[],
+): Promise<V3MemSnapshot> {
+  const message = JSON.stringify({
+    interaction_history: interactionHistory,
