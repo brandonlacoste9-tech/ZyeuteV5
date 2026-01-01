@@ -3,10 +3,12 @@
 # Railway build script - simplified approach
 echo "🚀 Starting Railway build process..."
 
-# Avoid deleting package-lock.json to preserve committed overrides
-echo "🧹 Cleaning node_modules..."
-rm -rf node_modules
-# Use npm ci if we want strict lockfile, or npm install to respect it
+# nuclear reset to fix npm/rollup dependency bug
+echo "🧹 Performing NUCLEAR reset of dependencies..."
+rm -rf node_modules package-lock.json
+npm cache clean --force
+
+echo "📦 Installing dependencies from scratch..."
 npm install
 
 # Verify native modules
