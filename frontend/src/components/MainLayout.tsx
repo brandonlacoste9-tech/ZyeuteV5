@@ -7,7 +7,6 @@ import React, { ReactNode } from "react";
 import { useBorderColor } from "@/contexts/BorderColorContext";
 import { GuestBanner } from "@/components/GuestBanner";
 import { BottomNav } from "@/components/BottomNav";
-import { HiveSelector } from "@/components/features/HiveSelector";
 
 interface MainLayoutProps {
   children: ReactNode;
