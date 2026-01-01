@@ -4,7 +4,7 @@
   "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx backend/index.ts",
-    "build": "vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --packages=external",
+    "build": "vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --packages=external --external:vite --external:./vite.js --external:./backend/vite.js --define:process.env.NODE_ENV=\\\"production\\\"",
     "build:vercel": "vite build",
     "start": "cross-env NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
