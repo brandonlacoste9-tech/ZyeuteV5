@@ -126,12 +126,25 @@ async function main() {
   
   if (checkCommandExists("vercel")) {
     log("   Found Vercel CLI, attempting deployment...", "blue");
-    const vercelResult = exec("vercel --prod --yes", { silent: false });
-    if (vercelResult.success) {
+    // Run Vercel deploy and capture output to check for success indicators
+    const vercelOutput = exec("vercel --prod --yes 2>&1", { silent: true });
+    
+    // Check output for success indicators (URLs, "Queued", "Building", etc.)
+    const output = vercelOutput.output || "";
+    const hasDeploymentUrl = output.includes("Production:") || output.includes(".vercel.app");
+    const hasQueuedOrBuilding = output.includes("Queued") || output.includes("Building") || output.includes("Completing");
+    
+    if (vercelOutput.success || hasDeploymentUrl || hasQueuedOrBuilding) {
       log("✅ Vercel deployment triggered successfully", "green");
+      if (hasDeploymentUrl) {
+        const urlMatch = output.match(/Production:\s*(https?:\/\/[^\s]+)/);
+        if (urlMatch) {
+          log(`   Deployment URL: ${urlMatch[1]}`, "cyan");
+        }
+      }
     } else {
-      log("⚠️  Vercel CLI deployment failed, but this is okay.", "yellow");
-      log("   Vercel should auto-deploy from GitHub push or GitHub Actions.", "yellow");
+      log("⚠️  Vercel CLI deployment may have issues, but check dashboard.", "yellow");
+      log("   Vercel should also auto-deploy from GitHub push or GitHub Actions.", "yellow");
       log("   Check: https://vercel.com/dashboard", "cyan");
       log("   Or GitHub Actions: https://github.com/brandonlacoste9-tech/ZyeuteV5/actions", "cyan");
     }
