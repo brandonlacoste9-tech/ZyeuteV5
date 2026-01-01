@@ -8,8 +8,11 @@ echo "🧹 Performing NUCLEAR reset of dependencies..."
 rm -rf node_modules package-lock.json
 npm cache clean --force
 
-echo "📦 Installing dependencies from scratch..."
-npm install
+echo "📦 Installing dependencies..."
+npm install --include=optional
+
+echo "🔧 Forcing platform-specific binaries..."
+npm install @rollup/rollup-linux-x64-gnu @esbuild/linux-x64 lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --force
 
 # Verify native modules
 echo "🔍 Verifying native modules..."
