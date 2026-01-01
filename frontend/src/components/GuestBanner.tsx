@@ -89,7 +89,7 @@ export const GuestBanner: React.FC = () => {
               className="btn-leather font-bold border-0 flex-1 sm:flex-initial"
               style={{ color: theme.accent }}
             >
-              <Link to="/signup">
+              <Link to="/signup" className="flex items-center">
                 <Sparkles className="w-4 h-4 mr-2" />
                 {t("guest.cta")}
               </Link>

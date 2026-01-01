@@ -59,6 +59,20 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "px-6 py-3 text-lg rounded-2xl",
     };
 
+    // When asChild is true, only pass through the single child (Slot expects exactly one child)
+    if (asChild) {
+      return (
+        <Comp
+          ref={ref}
+          className={cn(baseStyles, variants[variant], sizes[size], className)}
+          disabled={disabled || isLoading}
+          {...props}
+        >
+          {children}
+        </Comp>
+      );
+    }
+
     return (
       <Comp
         ref={ref}
