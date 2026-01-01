@@ -136,10 +136,26 @@ export function ColonyStatus() {
     }
   };
 
+  // Only show status when connected or in development mode
+  // Hide disconnected/error states to avoid user confusion
+  if (connectionStatus === "disconnected" || connectionStatus === "error") {
+    // Only log to console in development, don't show in UI
+    if (import.meta.env.DEV) {
+      return (
+        <div className={`flex items-center space-x-2 text-xs text-gray-500 opacity-50`}>
+          <span>{getStatusIcon()}</span>
+          <span className="hidden sm:inline">Offline</span>
+        </div>
+      );
+    }
+    // In production, hide completely
+    return null;
+  }
+
   return (
     <div className={`flex items-center space-x-2 text-sm ${getStatusColor()}`}>
       <span>{getStatusIcon()}</span>
-      <span>Colony OS: {connectionStatus}</span>
+      <span className="hidden sm:inline">Colony OS: {connectionStatus}</span>
       {isConnected && (
         <span className="text-xs text-green-400">(Hive Active)</span>
       )}
