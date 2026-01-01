@@ -11,6 +11,7 @@ import { GoldButton } from "@/components/GoldButton";
 import { Avatar } from "@/components/Avatar";
 import { Image } from "@/components/Image";
 import { Button } from "@/components/Button";
+import { WalletBalance } from "@/components/features/WalletBalance";
 import {
   getCurrentUser,
   getUserProfile,
@@ -252,7 +253,7 @@ export const Profile: React.FC = () => {
                 src={
                   user.avatar_url ||
                   "https://via.placeholder.com/150/FFBF00/000000?text=" +
-                    (user.username?.[0] || "U")
+                  (user.username?.[0] || "U")
                 }
                 alt={user.display_name || user.username}
                 objectFit="cover"
@@ -306,6 +307,16 @@ export const Profile: React.FC = () => {
             )}
           </h1>
           <p className="text-sm text-gold-500/70">@{user.username}</p>
+
+          {/* Wallet Balance Integration */}
+          {isOwnProfile && (
+            <div className="mt-6 mb-2">
+              <WalletBalance
+                balance={user.piasse_balance || 0}
+                karma={user.total_karma || 0}
+              />
+            </div>
+          )}
 
           {/* Stats Bar */}
           <div className="flex justify-between items-center bg-black/50 p-3 mt-4 rounded-lg border border-gold-500/20 shadow-md">
@@ -404,11 +415,10 @@ export const Profile: React.FC = () => {
                   setActiveTab("posts");
                   tap();
                 }}
-                className={`py-4 font-semibold transition-all relative ${
-                  activeTab === "posts"
-                    ? "text-gold-400"
-                    : "text-leather-300 hover:text-gold-200"
-                }`}
+                className={`py-4 font-semibold transition-all relative ${activeTab === "posts"
+                  ? "text-gold-400"
+                  : "text-leather-300 hover:text-gold-200"
+                  }`}
               >
                 <span className="relative z-10">Posts</span>
                 {activeTab === "posts" && (
@@ -420,11 +430,10 @@ export const Profile: React.FC = () => {
                   setActiveTab("fires");
                   tap();
                 }}
-                className={`py-4 font-semibold transition-all relative ${
-                  activeTab === "fires"
-                    ? "text-gold-400"
-                    : "text-leather-300 hover:text-gold-200"
-                }`}
+                className={`py-4 font-semibold transition-all relative ${activeTab === "fires"
+                  ? "text-gold-400"
+                  : "text-leather-300 hover:text-gold-200"
+                  }`}
               >
                 <span className="relative z-10">🔥 Fires</span>
                 {activeTab === "fires" && (
@@ -437,11 +446,10 @@ export const Profile: React.FC = () => {
                     setActiveTab("saved");
                     tap();
                   }}
-                  className={`py-4 font-semibold transition-all relative ${
-                    activeTab === "saved"
-                      ? "text-gold-400"
-                      : "text-leather-300 hover:text-gold-200"
-                  }`}
+                  className={`py-4 font-semibold transition-all relative ${activeTab === "saved"
+                    ? "text-gold-400"
+                    : "text-leather-300 hover:text-gold-200"
+                    }`}
                 >
                   <span className="relative z-10">Sauvegardés</span>
                   {activeTab === "saved" && (

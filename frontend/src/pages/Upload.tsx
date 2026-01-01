@@ -72,6 +72,18 @@ export const Upload: React.FC = () => {
     setShowCamera(false);
   };
 
+  // Create a blob from a data URI
+  const dataURIToBlob = (dataURI: string) => {
+    const byteString = atob(dataURI.split(",")[1]);
+    const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  };
+
   // Upload post
   const handleUpload = async () => {
     if (!file) {
@@ -88,7 +100,6 @@ export const Upload: React.FC = () => {
     toast.info("Upload en cours... 📤");
 
     try {
-      // Get current user using session-based auth
       const user = await getCurrentUser();
       if (!user) {
         toast.error("Tu dois être connecté!");
@@ -96,40 +107,94 @@ export const Upload: React.FC = () => {
         return;
       }
 
-      // Upload file to Supabase Storage (still using Supabase for file storage)
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${generateId()}.${fileExt}`;
-      const filePath = `posts/${user.id}/${fileName}`;
+      let mediaUrl = "";
+      let thumbnailUrl = "";
+      let muxUploadId = "";
 
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(filePath, file);
+      const isVideo = file.type.startsWith("video");
 
-      if (uploadError) throw uploadError;
+      if (isVideo) {
+        // --- VIDEO FLOW (MUX) ---
+        // 1. Generate client-side thumbnail
+        const { generateVideoThumbnail } = await import(
+          "../utils/videoThumbnail"
+        );
+        const thumbDataUrl = await generateVideoThumbnail(file);
+        const thumbBlob = dataURIToBlob(thumbDataUrl);
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("media").getPublicUrl(filePath);
+        // 2. Upload thumbnail to Supabase
+        const thumbName = `thumb_${generateId()}.jpg`;
+        const thumbPath = `posts/${user.id}/${thumbName}`;
+        await supabase.storage.from("media").upload(thumbPath, thumbBlob);
+        const {
+          data: { publicUrl: tUrl },
+        } = supabase.storage.from("media").getPublicUrl(thumbPath);
+        thumbnailUrl = tUrl;
+        mediaUrl = tUrl; // Use thumbnail as temporary mediaUrl until Mux is ready
 
-      // Extract hashtags
-      const hashtags = extractHashtags(caption);
+        // 3. Get Mux Upload URL
+        const { createMuxUpload } = await import("../services/api");
+        const muxUpload = await createMuxUpload();
+        if (!muxUpload) throw new Error("Failed to create Mux upload");
+        muxUploadId = muxUpload.uploadId;
 
-      // Create post using API
-      const mediaType = file.type.startsWith("video") ? "video" : "photo";
+        // 4. Start Mux Upload (Async)
+        const UpChunk = await import("@mux/upchunk");
+        const upload = UpChunk.createUpload({
+          endpoint: muxUpload.uploadUrl,
+          file: file,
+          chunkSize: 5120, // 5MB chunks
+        });
+
+        upload.on("error", (err: any) => {
+          uploadLogger.error("Mux Upload Error:", err.detail);
+          toast.error("Erreur durant l'upload vidéo");
+        });
+
+        upload.on("progress", (progress: any) => {
+          // We could show a progress bar here
+          console.log(`Upload progress: ${progress.detail}%`);
+        });
+
+        upload.on("success", () => {
+          uploadLogger.info("Mux Upload Success!");
+        });
+      } else {
+        // --- PHOTO FLOW (SUPABASE) ---
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${generateId()}.${fileExt}`;
+        const filePath = `posts/${user.id}/${fileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(filePath, file);
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("media").getPublicUrl(filePath);
+        mediaUrl = publicUrl;
+      }
+
+      // 5. Create Post Record
       const post = await createPost({
-        type: mediaType,
-        mediaUrl: publicUrl,
+        type: isVideo ? "video" : "photo",
+        mediaUrl,
+        thumbnailUrl,
+        muxUploadId,
         caption: caption.trim(),
-        hashtags,
+        hashtags: extractHashtags(caption),
         region: region || undefined,
         visualFilter: visualFilter === "none" ? undefined : visualFilter,
-        isEphemeral: isEphemeral, // Pass the burn flag
+        isEphemeral: isEphemeral,
       });
 
       if (!post) throw new Error("Failed to create post");
 
-      toast.success("Post publié! 🔥");
+      toast.success(
+        isVideo
+          ? "Vidéo en traitement! Ti-Guy s'en occupe... 🦫"
+          : "Post publié! 🔥",
+      );
       navigate("/");
     } catch (error) {
       uploadLogger.error("Upload error:", error);
@@ -227,19 +292,17 @@ export const Upload: React.FC = () => {
                   <button
                     key={filter.id}
                     onClick={() => setVisualFilter(filter.id)}
-                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                      visualFilter === filter.id
-                        ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
-                        : "border-leather-700 bg-black/40"
-                    }`}
+                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${visualFilter === filter.id
+                      ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
+                      : "border-leather-700 bg-black/40"
+                      }`}
                   >
                     <span className="text-2xl">{filter.emoji}</span>
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-tighter ${
-                        visualFilter === filter.id
-                          ? "text-gold-400"
-                          : "text-leather-400"
-                      }`}
+                      className={`text-[10px] font-bold uppercase tracking-tighter ${visualFilter === filter.id
+                        ? "text-gold-400"
+                        : "text-leather-400"
+                        }`}
                     >
                       {filter.name}
                     </span>
@@ -285,7 +348,7 @@ export const Upload: React.FC = () => {
                       ];
                       const randomCaption =
                         suggestions[
-                          Math.floor(Math.random() * suggestions.length)
+                        Math.floor(Math.random() * suggestions.length)
                         ];
                       setCaption((prev) =>
                         prev ? `${prev} ${randomCaption}` : randomCaption,

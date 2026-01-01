@@ -35,6 +35,8 @@ import debugRoutes from "./api/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
+import { muxRouter } from "./routes/mux.js";
+import { presenceRouter } from "./routes/presence.js";
 // Import tracing utilities
 import {
   traced,
@@ -159,6 +161,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api", healthRouter);
+  app.use("/api", muxRouter);
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);
@@ -558,8 +561,13 @@ export async function registerRoutes(
       const user = await storage.getUser(req.userId!);
       const hiveId = user?.hiveId || "quebec";
 
+      const body = { ...req.body };
+      if (body.caption && !body.content) {
+        body.content = body.caption;
+      }
+
       const parsed = insertPostSchema.safeParse({
-        ...req.body,
+        ...body,
         userId: req.userId,
         hiveId, // Assign post to user's hive
       });
@@ -611,7 +619,7 @@ export async function registerRoutes(
         isEphemeral,
         maxViews,
         expiresAt,
-      });
+      } as any);
 
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
@@ -2127,6 +2135,7 @@ export async function registerRoutes(
   // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
   app.use("/api/ai", aiRoutes);
   app.use("/api/moderation", requireAuth, moderationRoutes);
+  app.use("/api/presence", presenceRouter);
 
   // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes
   /*

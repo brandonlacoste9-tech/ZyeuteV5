@@ -13,6 +13,7 @@ import {
   customType,
   decimal,
   serial,
+  doublePrecision,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -128,10 +129,13 @@ export const users = pgTable("user_profiles", {
   isPremium: boolean("is_premium").default(false),
   plan: text("plan").default("free"),
   credits: integer("credits").default(0),
+  piasseBalance: doublePrecision("piasse_balance").default(0.0),
+  totalKarma: integer("total_karma").default(0),
   subscriptionTier: varchar("subscription_tier", { length: 20 }).default(
     "free",
   ),
   location: geography("location"),
+  city: text("city"),
   regionId: text("region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -170,6 +174,13 @@ export const posts = pgTable(
     processingStatus:
       processingStatusEnum("processing_status").default("pending"),
     mediaMetadata: jsonb("media_metadata").default({}), // Key moments, AI tags, etc.
+    muxAssetId: text("mux_asset_id"),
+    muxUploadId: text("mux_upload_id"),
+    promoUrl: text("promo_url"),
+    muxPlaybackId: text("mux_playback_id"),
+    thumbnailUrl: text("thumbnail_url"),
+    duration: integer("duration"),
+    aspectRatio: text("aspect_ratio"),
     visualFilter: text("visual_filter").default("none"),
     enhanceStartedAt: timestamp("enhance_started_at"),
     enhanceFinishedAt: timestamp("enhance_finished_at"),
@@ -180,6 +191,8 @@ export const posts = pgTable(
     commentCount: integer("comments_count").default(0),
     isHidden: boolean("est_masque").default(false),
     location: geography("location"),
+    city: text("city"),
+    region: text("region"),
     regionId: text("region_id"),
     embedding: vector("embedding", { dimensions: 768 }),
     lastEmbeddedAt: timestamp("last_embedded_at"),
@@ -187,6 +200,12 @@ export const posts = pgTable(
     transcribedAt: timestamp("transcribed_at"),
     aiDescription: text("ai_description"), // Ti-Guy's summary
     aiLabels: jsonb("ai_labels").default([]), // AI generated tags
+    contentFr: text("content_fr"),
+    contentEn: text("content_en"),
+    hashtags: text("hashtags").array().default(sql`'{}'::text[]`),
+    detectedThemes: text("detected_themes").array().default(sql`'{}'::text[]`),
+    detectedItems: text("detected_items").array().default(sql`'{}'::text[]`),
+    aiGenerated: boolean("ai_generated").default(false),
     viralScore: integer("viral_score").default(0), // Le Buzz Predictor
     safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
     isModerated: boolean("is_moderated").default(false),
@@ -563,33 +582,6 @@ export const GIFT_CATALOG = {
 
 export type GiftType = keyof typeof GIFT_CATALOG;
 
-// Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Post = typeof posts.$inferSelect;
-export type InsertPost = z.infer<typeof insertPostSchema>;
-
-export type Comment = typeof comments.$inferSelect;
-export type InsertComment = z.infer<typeof insertCommentSchema>;
-
-export type Follow = typeof follows.$inferSelect;
-export type InsertFollow = z.infer<typeof insertFollowSchema>;
-
-export type Story = typeof stories.$inferSelect;
-export type InsertStory = z.infer<typeof insertStorySchema>;
-
-export type Notification = typeof notifications.$inferSelect;
-export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-
-export type PostReaction = typeof postReactions.$inferSelect;
-export type CommentReaction = typeof commentReactions.$inferSelect;
-export type StoryView = typeof storyViews.$inferSelect;
-
-export type Gift = typeof gifts.$inferSelect;
-export type InsertGift = z.infer<typeof insertGiftSchema>;
-
-// Replit Auth upsert type
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 
 // Colony Tasks Table (AI Swarm)
@@ -723,8 +715,6 @@ export const beeSpawns = pgTable("bee_spawns", {
   isSafe: boolean("is_safe").default(true),
 });
 
-// Duplicate tables removed in favor of tournaments and royaleScores defined below
-
 // Waitlist (The Swarm Growth Engine)
 export const waitlist = pgTable("waitlist", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -849,6 +839,16 @@ export const royaleScores = pgTable(
   }),
 );
 
+export const piasseTransactions = pgTable("piasse_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  amount: doublePrecision("amount").notNull(),
+  type: text("type", { enum: ["deal_click", "post_reward", "tip"] }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const insertParentalControlSchema = createInsertSchema(
   parentalControls,
 ).omit({
@@ -856,3 +856,36 @@ export const insertParentalControlSchema = createInsertSchema(
   updatedAt: true,
 });
 export type InsertParentalControl = z.infer<typeof insertParentalControlSchema>;
+
+export type Post = typeof posts.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type PiasseTransaction = typeof piasseTransactions.$inferSelect;
+export type InsertPost = typeof posts.$inferInsert;
+export type InsertUser = typeof users.$inferInsert;
+export type InsertPiasseTransaction = typeof piasseTransactions.$inferInsert;
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Follow = typeof follows.$inferSelect;
+export type InsertFollow = z.infer<typeof insertFollowSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Story = typeof stories.$inferSelect;
+export type InsertStory = z.infer<typeof insertStorySchema>;
+export type Gift = typeof gifts.$inferSelect;
+export type InsertGift = z.infer<typeof insertGiftSchema>;
+export type PostReaction = typeof postReactions.$inferSelect;
+export type CommentReaction = typeof commentReactions.$inferSelect;
+export type StoryView = typeof storyViews.$inferSelect;
+export type VirtualCard = any; // Placeholder for now if virtualCards is missing
+export type HiveEvent = any;
+export type EventAttendee = any;
+export type UserAchievement = any;
+export type SystemAlert = any;
+export type ApiMetric = any;
+export type DeviceFingerprint = any;
+export type AuthSession = any;
+export type UserPreference = any;
+export type AuditLog = any;
+export type Message = any;
+export type Conversation = any;
+export type Participant = any;

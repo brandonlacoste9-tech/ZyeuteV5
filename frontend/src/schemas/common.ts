@@ -27,6 +27,10 @@ const BaseUserSchema = z
     isVerified: z.boolean().optional(), // Compat
     isPremium: z.boolean().optional(), // Added missing field
     coins: z.number().default(0),
+    piasse_balance: z.number().default(0.0),
+    piasseBalance: z.number().optional(), // Compat
+    total_karma: z.number().default(0),
+    totalKarma: z.number().optional(), // Compat
     fire_score: z.number().default(0),
     created_at: z.string(),
     updated_at: z.string().optional(),
@@ -77,8 +81,11 @@ export const UserSchema = z.preprocess((val: any) => {
     is_verified: val.isVerified || val.is_verified || false,
     isVerified: val.isVerified || val.is_verified || false,
     isPremium: val.isPremium || val.is_premium || false,
-
     coins: val.coins || 0,
+    piasse_balance: val.piasse_balance || val.piasseBalance || 0.0,
+    piasseBalance: val.piasse_balance || val.piasseBalance || 0.0,
+    total_karma: val.total_karma || val.totalKarma || 0,
+    totalKarma: val.total_karma || val.totalKarma || 0,
     fire_score: val.fireScore || val.fire_score || 0,
 
     created_at: val.createdAt || val.created_at || new Date().toISOString(),
@@ -197,6 +204,20 @@ export const GiftSchema = z
 export type Gift = z.infer<typeof GiftSchema>;
 
 // ==========================================
+// Piasse Transaction Schema
+// ==========================================
+
+export const PiasseTransactionSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  amount: z.number(),
+  type: z.enum(["deal_click", "post_reward", "tip"]),
+  created_at: z.string(),
+});
+
+export type PiasseTransaction = z.infer<typeof PiasseTransactionSchema>;
+
+// ==========================================
 // Story Schema
 // ==========================================
 
@@ -279,11 +300,22 @@ const PostBase = z.object({
   is_moderated: z.boolean().default(false),
   moderation_approved: z.boolean().default(true),
   is_hidden: z.boolean().default(false),
+  isHidden: z.boolean().optional(), // Compat
+  mux_asset_id: z.string().nullable().optional(),
+  muxAssetId: z.string().nullable().optional(), // Compat
+  mux_upload_id: z.string().nullable().optional(),
+  muxUploadId: z.string().nullable().optional(), // Compat
+  mux_playback_id: z.string().nullable().optional(),
+  muxPlaybackId: z.string().nullable().optional(), // Compat
   // AI Enrichment (Phase 9 Upgrade)
   ai_description: z.string().nullable().optional(),
   aiDescription: z.string().nullable().optional(), // Compat
   ai_labels: z.array(z.string()).nullable().optional(),
   aiLabels: z.array(z.string()).nullable().optional(), // Compat
+  promo_url: z.string().nullable().optional(),
+  promoUrl: z.string().nullable().optional(), // Compat
+  detected_items: z.array(z.string()).nullable().optional(),
+  detectedItems: z.array(z.string()).nullable().optional(), // Compat
 
   // Ephemeral Protocol
   is_ephemeral: z.boolean().default(false),
@@ -366,13 +398,25 @@ export const PostSchema = z.preprocess((val: any) => {
         : val.moderationApproved !== undefined
           ? val.moderationApproved
           : true,
-    is_hidden: val.est_masque || val.isHidden || val.is_hidden || false,
+    moderationApproved: val.moderation_approved || val.moderationApproved || true,
+    is_hidden: val.is_hidden || val.isHidden || false,
+    isHidden: val.is_hidden || val.isHidden || false,
+    mux_asset_id: val.mux_asset_id || val.muxAssetId,
+    muxAssetId: val.mux_asset_id || val.muxAssetId,
+    mux_upload_id: val.mux_upload_id || val.muxUploadId,
+    muxUploadId: val.mux_upload_id || val.muxUploadId,
+    mux_playback_id: val.mux_playback_id || val.muxPlaybackId,
+    muxPlaybackId: val.mux_playback_id || val.muxPlaybackId,
 
     // AI Enrichment
     ai_description: val.ai_description || val.aiDescription,
     aiDescription: val.ai_description || val.aiDescription,
     ai_labels: val.ai_labels || val.aiLabels || [],
     aiLabels: val.ai_labels || val.aiLabels || [],
+    promo_url: val.promo_url || val.promoUrl,
+    promoUrl: val.promo_url || val.promoUrl,
+    detected_items: val.detected_items || val.detectedItems || [],
+    detectedItems: val.detected_items || val.detectedItems || [],
 
     // Ephemeral Protocol
     is_ephemeral: val.is_ephemeral || val.isEphemeral || false,

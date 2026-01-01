@@ -40,15 +40,15 @@ export class RoyaleService {
 
       const [user] = await tx.select().from(users).where(eq(users.id, userId));
 
-      if (!user || (user.credits || 0) < tournament.entryFee) {
-        throw new Error("Insufficient funds (Piasses)");
+      if (!user || (user.piasseBalance || 0) < tournament.entryFee) {
+        throw new Error("Solde de Piasses insuffisant.");
       }
 
       // Deduct fee
       await tx
         .update(users)
         .set({
-          credits: (user.credits || 0) - tournament.entryFee,
+          piasseBalance: (user.piasseBalance || 0) - tournament.entryFee,
         })
         .where(eq(users.id, userId));
 
@@ -62,7 +62,7 @@ export class RoyaleService {
 
       return {
         success: true,
-        remainingCredits: (user.credits || 0) - tournament.entryFee,
+        remainingBalance: (user.piasseBalance || 0) - tournament.entryFee,
       };
     });
   }

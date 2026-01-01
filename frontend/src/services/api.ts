@@ -206,6 +206,7 @@ export async function createPost(postData: {
   visibility?: string;
   visualFilter?: string;
   isEphemeral?: boolean;
+  muxUploadId?: string;
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
@@ -218,6 +219,21 @@ export async function createPost(postData: {
 
   if (error || !data) return null;
   return mapBackendPost(data.post);
+}
+
+export async function createMuxUpload(): Promise<{
+  uploadUrl: string;
+  uploadId: string;
+} | null> {
+  const { data, error } = await apiCall<{ uploadUrl: string; uploadId: string }>(
+    "/mux/create-upload",
+    {
+      method: "POST",
+    },
+  );
+
+  if (error || !data) return null;
+  return data;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {

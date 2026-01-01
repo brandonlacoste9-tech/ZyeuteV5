@@ -53,6 +53,9 @@
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
+    "@mux/mux-node": "^12.8.1",
+    "@mux/mux-player-react": "^3.10.2",
+    "@mux/upchunk": "^3.5.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.67.2",
     "@opentelemetry/instrumentation-express": "^0.57.0",
@@ -125,11 +128,7 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.25.76",
-    "zod-validation-error": "^3.4.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.24.0",
-    "lightningcss-linux-x64-gnu": "^1.29.2",
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.1.14",
-    "@esbuild/linux-x64": "^0.27.2"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -184,6 +183,10 @@
     "esbuild": "^0.27.2"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8"
+    "@esbuild/linux-x64": "^0.27.2",
+    "@rollup/rollup-linux-x64-gnu": "^4.24.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.1.14",
+    "bufferutil": "^4.0.8",
+    "lightningcss-linux-x64-gnu": "^1.29.2"
   }
 }

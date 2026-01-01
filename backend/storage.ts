@@ -94,6 +94,8 @@ export interface IStorage {
   deletePost(id: string): Promise<boolean>;
   incrementPostViews(id: string): Promise<number>;
   markPostBurned(id: string, reason: string): Promise<void>;
+  updatePostByMuxAssetId(muxAssetId: string, updates: Partial<Post>): Promise<Post | undefined>;
+  updatePostByMuxUploadId(muxUploadId: string, updates: Partial<Post>): Promise<Post | undefined>;
 
   // Comments
   getPostComments(
@@ -524,6 +526,30 @@ export class DatabaseStorage implements IStorage {
         processingStatus: "failed", // Marker for burned content
       })
       .where(eq(posts.id, id));
+  }
+
+  async updatePostByMuxAssetId(
+    muxAssetId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined> {
+    const result = await db
+      .update(posts)
+      .set(updates)
+      .where(eq(posts.muxAssetId, muxAssetId))
+      .returning();
+    return result[0];
+  }
+
+  async updatePostByMuxUploadId(
+    muxUploadId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined> {
+    const result = await db
+      .update(posts)
+      .set(updates)
+      .where(eq(posts.muxUploadId, muxUploadId))
+      .returning();
+    return result[0];
   }
 
   // Comments

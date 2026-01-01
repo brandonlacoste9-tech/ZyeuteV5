@@ -84,6 +84,7 @@ const PoutineStackGame = lazy(
 
 const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
 const HiveTap = lazy(() => import("@/pages/HiveTap"));
+const SwarmMap = lazy(() => import("@/pages/SwarmMap"));
 
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
@@ -641,6 +642,14 @@ function App() {
                                                 element={
                                                   <ProtectedRoute>
                                                     <PoutineStackGame />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/map"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <SwarmMap />
                                                   </ProtectedRoute>
                                                 }
                                               />

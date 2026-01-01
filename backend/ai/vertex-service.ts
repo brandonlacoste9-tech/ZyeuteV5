@@ -132,6 +132,103 @@ export interface ImageGenerationResponse {
   };
 }
 
+export interface QuebecVideoMetadata {
+  caption_fr: string;
+  caption_en: string;
+  hashtags: string[];
+  detected_themes: string[];
+  detected_items: string[];
+  suggested_title_fr?: string;
+  suggested_title_en?: string;
+  promo_code?: string;
+  promo_url?: string;
+}
+
+/**
+ * AI "Captioning Bee" & "Promotion Bee" - Analyzes video thumbnail
+ */
+export async function analyzeVideoThumbnail(
+  imageUrl: string,
+): Promise<QuebecVideoMetadata> {
+  try {
+    if (!vertexAI) throw new Error("Vertex AI not initialized");
+
+    const model = vertexAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
+        temperature: 0.4,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const prompt = `You are the Captioning & Promotion Bee 🐝, an AI specialist for Zyeuté, Quebec's social network.
+Analyze this video thumbnail and generate engaging, culturally relevant metadata.
+
+TASK 1 (Captioning):
+- caption_fr: A fun, engaging caption in Quebec French (Joual).
+- caption_en: An accurate but engaging English translation.
+- hashtags: 5-7 relevant hashtags (e.g., #Zyeute, #Quebec).
+
+TASK 2 (Promotion Bee):
+- Detect any specific products, brands, or items in the video (e.g., "leather jacket", "poutine", "hockey stick").
+- If a product is detected, generate a creative 'promo_code' (e.g., BEE_LEATHER_10).
+- Generate a 'promo_url' based on the item: 'https://zyeute.com/shop/sniff?item=[item]&code=[PROMO_CODE]&ref=hound_bee'.
+
+Return a JSON object with:
+- caption_fr, caption_en, hashtags, detected_themes, detected_items, suggested_title_fr, suggested_title_en, promo_code, promo_url.
+
+Context: Zyeuté is "Branché sur le monde, enraciné ici."
+
+Image URL: ${imageUrl}`;
+
+    const result = await traceExternalAPI(
+      "vertex-ai",
+      "analyzeThumbnail",
+      "POST",
+      async (span) => {
+        span.setAttributes({
+          "ai.model": "gemini-1.5-flash",
+          "ai.task": "video_analysis",
+        });
+
+        // Use the Gemini 1.5 multi-modal capability
+        const parts: any[] = [{ text: prompt }];
+
+        if (imageUrl.startsWith("gs://")) {
+          parts.push({
+            fileData: {
+              mimeType: "image/jpeg",
+              fileUri: imageUrl,
+            },
+          });
+        } else {
+          // If public URL, we pass it in the prompt (Gemini can often resolve it if enabled)
+          // or we could fetch it and pass as inlineData.
+          // For now, we've already included it in the text prompt.
+        }
+
+        const response = await model.generateContent({
+          contents: [{ role: "user", parts }],
+        });
+        return response;
+      },
+    );
+
+    const response = await result.response;
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    return JSON.parse(text) as QuebecVideoMetadata;
+  } catch (error: any) {
+    logger.error(`[CaptioningBee] Error: ${error.message}`);
+    return {
+      caption_fr: "J'ai pas de mots pour ça! 🦫",
+      caption_en: "I'm speechless! 🦫",
+      hashtags: ["#Zyeute", "#Quebec"],
+      detected_themes: ["unknown"],
+      detected_items: [],
+    };
+  }
+}
+
 /**
  * TI-GUY Content Generation & Customer Service
  */

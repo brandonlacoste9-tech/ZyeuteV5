@@ -9,6 +9,8 @@ import DOMPurify from "dompurify";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
+import { MuxVideoPlayer } from "./MuxVideoPlayer";
+import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
 import { toast } from "../Toast";
@@ -155,14 +157,26 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
-          <VideoPlayer
-            src={post.media_url}
-            poster={post.thumbnail_url || post.media_url}
-            autoPlay={autoPlay}
-            muted={muted}
-            loop
-            priority={priority}
-          />
+          (post as any).muxPlaybackId || (post as any).mux_playback_id ? (
+            <MuxVideoPlayer
+              playbackId={
+                (post as any).muxPlaybackId || (post as any).mux_playback_id || ""
+              }
+              poster={post.thumbnail_url || post.media_url}
+              autoPlay={autoPlay}
+              muted={muted}
+              loop
+            />
+          ) : (
+            <VideoPlayer
+              src={post.media_url}
+              poster={post.thumbnail_url || post.media_url}
+              autoPlay={autoPlay}
+              muted={muted}
+              loop
+              priority={priority}
+            />
+          )
         ) : (
           <div className="relative w-full h-full group/media">
             <img
@@ -232,11 +246,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         >
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${
-              isLiked
-                ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
-                : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
-            }`}
+            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
+              ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
+              : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
+              }`}
           >
             <svg
               className="w-7 h-7"
@@ -359,6 +372,36 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               summary={post.ai_description}
               labels={post.ai_labels || []}
             />
+          </div>
+        )}
+
+        {/* Promotion Bee - Discount Block */}
+        {post.promo_url && (
+          <div className="mx-4 mb-3 p-3 bg-stone-900 border border-gold-500/30 rounded-xl flex items-center justify-between shadow-lg">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-gold-500 uppercase font-bold tracking-widest flex items-center gap-1">
+                <span>🐝</span> Bee Discount Found
+              </span>
+              <span className="text-white text-xs font-semibold">
+                Get{" "}
+                <span className="text-gold-400">
+                  {post.detected_items?.[0] || "this item"}
+                </span>{" "}
+                for less!
+              </span>
+            </div>
+            <a
+              href={post.promo_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                tap();
+              }}
+              className="bg-gold-500 text-black px-3 py-1.5 rounded-lg text-[10px] font-black hover:bg-white transition-all transform hover:scale-105 active:scale-95 shadow-gold-sm"
+            >
+              SNIFF DEAL
+            </a>
           </div>
         )}
 

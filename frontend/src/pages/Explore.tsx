@@ -138,10 +138,22 @@ export const Explore: React.FC = () => {
     <div className="min-h-screen bg-black leather-overlay pb-20">
       {/* Premium Header */}
       <div className="sticky top-0 z-30 nav-leather border-b-2 border-leather-700/50">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <h1 className="text-2xl font-black text-gold-500 embossed tracking-tight">
             Découvrir
           </h1>
+          <Link
+            to="/map"
+            onClick={tap}
+            className="flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-gold-500/40 rounded-full hover:bg-gold-500/10 transition-all group"
+          >
+            <span className="text-lg">📡</span>
+            <span className="text-xs font-bold text-gold-400 group-hover:text-gold-200 uppercase tracking-widest">Vision Ruche</span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
+            </span>
+          </Link>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
       </div>
@@ -200,9 +212,8 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: #${newTag}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    isSelected ? "btn-gold" : "btn-leather"
-                  }`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected ? "btn-gold" : "btn-leather"
+                    }`}
                 >
                   {tag}
                 </button>
@@ -226,9 +237,8 @@ export const Explore: React.FC = () => {
                   toast.info("Filtre régional retiré");
                 }
               }}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                selectedRegion === "" ? "btn-gold" : "btn-leather"
-              }`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${selectedRegion === "" ? "btn-gold" : "btn-leather"
+                }`}
             >
               Toutes
             </button>
@@ -246,9 +256,8 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: ${region.name}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    isSelected ? "btn-gold" : "btn-leather"
-                  }`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected ? "btn-gold" : "btn-leather"
+                    }`}
                 >
                   {region.emoji} {region.name}
                 </button>
