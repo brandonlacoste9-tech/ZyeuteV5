@@ -51,10 +51,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         {/* Scrollable Content Area */}
         <div className="relative z-10 flex-1 overflow-y-auto scrollbar-hide pb-16">
-          {/* Global Hive Selector - Top Right Overlay */}
-          <div className="absolute top-4 right-4 z-50">
-            <HiveSelector />
-          </div>
           {children}
         </div>
 

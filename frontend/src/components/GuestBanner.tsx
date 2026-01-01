@@ -6,6 +6,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useGuestMode } from "../hooks/useGuestMode";
+import { useAuth } from "../contexts/AuthContext";
 import { X, Sparkles, Clock } from "lucide-react";
 import { useTranslation } from "../i18n";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,18 @@ import { AppConfig } from "../config/factory";
 export const GuestBanner: React.FC = () => {
   const { t } = useTranslation();
   const { isGuest, viewsCount, remainingTime } = useGuestMode();
+  const { user } = useAuth(); // Check if user is authenticated
   const [isDismissed, setIsDismissed] = React.useState(false);
 
   // Dynamic theme colors
   const theme = AppConfig.theme;
 
-  // Don't show if not a guest, dismissed, or haven't viewed enough pages (3)
-  if (!isGuest || isDismissed || viewsCount < 3) return null;
+  // Don't show if:
+  // - User is authenticated (has a user account)
+  // - Not a guest
+  // - Dismissed
+  // - Haven't viewed enough pages (3)
+  if (user || !isGuest || isDismissed || viewsCount < 3) return null;
 
   const hoursRemaining = Math.floor(remainingTime / (1000 * 60 * 60));
   const minutesRemaining = Math.floor(
