@@ -58,16 +58,26 @@ async function main() {
   log("\n🚀 Zyeuté Deployment Script\n", "cyan");
   log("=" .repeat(50), "cyan");
 
-  // Step 1: Check git status
+  // Step 1: Check git status (ignore submodule changes)
   log("\n📦 Step 1: Checking git status...", "bright");
   const gitStatus = exec("git status --porcelain", { silent: true });
   const gitBranch = exec("git rev-parse --abbrev-ref HEAD", { silent: true });
   const currentBranch = gitBranch.output?.trim() || "unknown";
 
-  if (gitStatus.output?.trim()) {
+  // Filter out submodule-only changes (lines starting with space or M followed by space/submodule name)
+  const statusLines = gitStatus.output?.trim().split("\n").filter(line => {
+    const trimmed = line.trim();
+    // Ignore submodule changes (lines like " M ZyeuteV5")
+    if (trimmed.match(/^[ M]+\s+[A-Z]/)) return false;
+    // Keep actual file changes
+    return trimmed.length > 0;
+  }) || [];
+
+  if (statusLines.length > 0) {
     log("⚠️  You have uncommitted changes!", "yellow");
     log("   Please commit and push your changes first.", "yellow");
     log(`   Current branch: ${currentBranch}`, "yellow");
+    log(`   Changes: ${statusLines.join(", ")}`, "yellow");
     process.exit(1);
   }
 
