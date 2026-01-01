@@ -1,0 +1,24 @@
+
+ΓÜ£∩╕Å [ZYEUT├ë SENTINEL] Starting Audit for 5 vectors...
+  ≡ƒöì Scanning: Security & Auth: Lockdown and Guest Entry
+  Γ¥î FAIL: Security & Auth: Lockdown and Guest Entry (29089ms)
+     ΓÜá∩╕Å ERROR: Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  ≡ƒöì Scanning: Social Core: Feed Population & Hive Integrity
+  Γ¥î FAIL: Social Core: Feed Population & Hive Integrity (19324ms)
+     ΓÜá∩╕Å ERROR: Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  ≡ƒöì Scanning: Gamification: Achievements & Tiers
+  Γ¥î FAIL: Gamification: Achievements & Tiers (16668ms)
+     ΓÜá∩╕Å ERROR: Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  ≡ƒöì Scanning: Arcade: Poutine Royale Lobby Readiness
+  Γ£à PASS: Arcade: Poutine Royale Lobby Readiness (3170ms)
+  ≡ƒöì Scanning: AI Interaction: Ti-Guy Persona Check
+  Γ¥î FAIL: AI Interaction: Ti-Guy Persona Check (2465ms)
+     ΓÜá∩╕Å ERROR: Error: locator.count: Unexpected token "=" while parsing css selector "img[alt*="Ti-Guy"], .tiguy-assistant, text=Ti-Guy". Did you mean to CSS.escape it?
+
+≡ƒÅü [SENTINEL] Audit Complete. Status: FAILED
+≡ƒÉ║ ALERT: Security or Stability breaches detected. Consult the trace logs.
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m

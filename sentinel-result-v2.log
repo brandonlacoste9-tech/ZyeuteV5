@@ -1,0 +1,23 @@
+
+ΓÜ£∩╕Å [ZYEUT├ë SENTINEL] Starting Audit for 5 vectors...
+  ≡ƒöì Scanning: Security & Auth: Lockdown and Guest Entry
+  Γ¥î FAIL: Security & Auth: Lockdown and Guest Entry (5035ms)
+     ΓÜá∩╕Å ERROR: Error: page.evaluate: SecurityError: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+  ≡ƒöì Scanning: Social Core: Feed Population & Hive Integrity
+  Γ¥î FAIL: Social Core: Feed Population & Hive Integrity (23516ms)
+     ΓÜá∩╕Å ERROR: Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+  ≡ƒöì Scanning: Gamification: Achievements & Tiers
+  Γ¥î FAIL: Gamification: Achievements & Tiers (41082ms)
+     ΓÜá∩╕Å ERROR: TimeoutError: page.waitForURL: Timeout 30000ms exceeded.
+  ≡ƒöì Scanning: Arcade: Poutine Royale Lobby Readiness
+  Γ£à PASS: Arcade: Poutine Royale Lobby Readiness (2595ms)
+  ≡ƒöì Scanning: AI Interaction: Ti-Guy Persona Check
+  Γ£à PASS: AI Interaction: Ti-Guy Persona Check (2414ms)
+
+≡ƒÅü [SENTINEL] Audit Complete. Status: FAILED
+≡ƒÉ║ ALERT: Security or Stability breaches detected. Consult the trace logs.
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
