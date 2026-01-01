@@ -16,9 +16,10 @@ const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
+// Load environment variables from .env file
 config({ path: join(__dirname, "../.env") });
 
+// DATABASE_URL can come from .env file OR from environment variable (takes precedence)
 const DATABASE_URL = process.env.DATABASE_URL || process.env.DIRECT_DATABASE_URL;
 
 if (!DATABASE_URL) {
