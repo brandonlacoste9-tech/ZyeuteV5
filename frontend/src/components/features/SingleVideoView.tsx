@@ -123,6 +123,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           original_url: post.original_url,
           processing_status: post.processing_status,
         });
+      } else {
+        // Log valid video source for debugging
+        console.debug("[SingleVideoView] Video source selected:", {
+          postId: post.id,
+          source: videoSrc.substring(0, 50) + "...",
+          type: post.processing_status === "ready" && post.enhanced_url ? "enhanced" : "original",
+        });
       }
     }
 

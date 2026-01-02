@@ -61,6 +61,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check for debug mode
   useEffect(() => {
@@ -278,6 +279,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleCanPlay = () => {
+    // Clear the loading timeout since video loaded successfully
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
     setIsLoading(false);
     setHasError(false);
   };
@@ -294,6 +300,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsLoading(true);
     setDuration(0);
     setCurrentTime(0);
+
+    // Clear any existing timeout
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+
+    // Set a timeout to prevent infinite loading
+    // If video doesn't load within 15 seconds, show error
+    loadingTimeoutRef.current = setTimeout(() => {
+      videoPlayerLogger.warn(`Video loading timeout for ${src.substring(0, 50)}...`);
+      setHasError(true);
+      setIsLoading(false);
+    }, 15000);
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
   }, [src]);
 
   // Sync autoPlay prop updates (critical for feed scrolling)
