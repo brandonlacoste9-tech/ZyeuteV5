@@ -1,9 +1,8 @@
-
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
 export interface DeepSeekMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -19,18 +18,20 @@ export interface DeepSeekConfig {
  */
 export class NeurosphereClient {
   private config: DeepSeekConfig;
-  private endpoint = 'https://api.deepseek.com/v1/chat/completions';
+  private endpoint = "https://api.deepseek.com/v1/chat/completions";
 
   constructor() {
     const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️ [Neurosphere] Warning: DEEPSEEK_API_KEY is not set. The Hive Mind will be limited.');
+      console.warn(
+        "⚠️ [Neurosphere] Warning: DEEPSEEK_API_KEY is not set. The Hive Mind will be limited.",
+      );
     }
-    
+
     this.config = {
-      apiKey: apiKey || '',
-      model: 'deepseek-chat',
-      temperature: 0.7
+      apiKey: apiKey || "",
+      model: "deepseek-chat",
+      temperature: 0.7,
     };
   }
 
@@ -42,15 +43,18 @@ export class NeurosphereClient {
 
     try {
       // In a real biological system, context is injected into short-term memory
-      const augmentedMessages = context 
-        ? [{ role: 'system' as const, content: `Context: ${context}` }, ...messages]
+      const augmentedMessages = context
+        ? [
+            { role: "system" as const, content: `Context: ${context}` },
+            ...messages,
+          ]
         : messages;
 
       const response = await fetch(this.endpoint, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.apiKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.config.apiKey}`,
         },
         body: JSON.stringify({
           model: this.config.model,
@@ -62,13 +66,15 @@ export class NeurosphereClient {
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`Neurosphere Synapse Failure: ${response.status} - ${error}`);
+        throw new Error(
+          `Neurosphere Synapse Failure: ${response.status} - ${error}`,
+        );
       }
 
-      const data = await response.json();
-      return data.choices[0]?.message?.content || '';
+      const data: any = await response.json();
+      return data.choices[0]?.message?.content || "";
     } catch (error) {
-      console.error('🔴 [Neurosphere] Cognitive Error:', error);
+      console.error("🔴 [Neurosphere] Cognitive Error:", error);
       return "I am unable to process this thought right now.";
     }
   }

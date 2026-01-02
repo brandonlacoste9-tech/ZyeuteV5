@@ -158,22 +158,92 @@ export async function getExplorePosts(
   limit: number = 20,
   hiveId?: string,
 ): Promise<Post[]> {
-  const query = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
-  if (hiveId) query.append("hive", hiveId);
+  try {
+    const from = page * limit;
+    const to = from + limit - 1;
 
-  const { data, error } = await apiCall<{ posts: Post[] }>(
-    `/explore?${query.toString()}`,
-  );
-  if (error || !data) return [];
-  return (data.posts || [])
-    .map(mapBackendPost)
-    .filter(
-      (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!post.media_url,
+    // Fetch publications
+    let publicationsQuery = supabase
+      .from("publications")
+      .select(`*, user:user_profiles!inner(*)`)
+      .eq("visibility", "public")
+      .is("burned_at", null)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (hiveId) {
+      publicationsQuery = publicationsQuery.eq("hive_id", hiveId);
+    }
+
+    const { data: publications, error: pubError } = await publicationsQuery;
+
+    // Fetch videos
+    const { data: videos, error: vidError } = await supabase
+      .from("videos")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (pubError && vidError) {
+      apiLogger.error("Error fetching posts:", { pubError, vidError });
+      return [];
+    }
+
+    // Map publications
+    const publicationPosts: Post[] = (publications || []).map((pub: any) => ({
+      id: pub.id,
+      user_id: pub.user_id,
+      media_url: pub.image_url || pub.media_url,
+      thumbnail_url: pub.thumbnail_url,
+      caption: pub.content,
+      fire_count: pub.reactions_count || 0,
+      comment_count: pub.comments_count || 0,
+      gift_count: pub.gift_count || 0,
+      user: pub.user ? mapBackendUser(pub.user) : undefined,
+      created_at: pub.created_at,
+      type: "photo" as const,
+      region: pub.region_id,
+      city: pub.city,
+      is_ephemeral: pub.is_ephemeral || false,
+      view_count: pub.view_count || 0,
+      max_views: pub.max_views || 1,
+      expires_at: pub.expires_at,
+      burned_at: pub.burned_at,
+    }));
+
+    // Map videos with Mux playback
+    const videoPosts: Post[] = (videos || []).map((vid: any) => ({
+      id: vid.id,
+      user_id: vid.user_id,
+      media_url: `https://stream.mux.com/${vid.mux_playback_id}.m3u8`,
+      thumbnail_url: `https://image.mux.com/${vid.mux_playback_id}/thumbnail.jpg`,
+      caption: vid.description,
+      fire_count: vid.likes_count || 0,
+      comment_count: 0,
+      gift_count: 0,
+      user: {
+        id: vid.user_id,
+        username: vid.user_handle || "anonymous",
+        display_name: vid.user_handle || "Anonymous",
+      } as User,
+      created_at: vid.created_at,
+      type: "video" as const,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    }));
+
+    // Combine and sort
+    const allPosts = [...publicationPosts, ...videoPosts].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
+
+    return allPosts.slice(0, limit);
+  } catch (error) {
+    apiLogger.error("Error in getExplorePosts:", error);
+    return [];
+  }
 }
 
 export async function getPostById(postId: string): Promise<Post | null> {
@@ -218,6 +288,20 @@ export async function createPost(postData: {
 
   if (error || !data) return null;
   return mapBackendPost(data.post);
+}
+
+export async function getJobStatus(jobId: string): Promise<{
+  id: string;
+  state: string;
+  progress: number;
+  finishedOn?: number;
+  failedReason?: string;
+  processedOn?: number;
+  attemptsMade: number;
+} | null> {
+  const { data, error } = await apiCall(`/jobs/${jobId}/status`);
+  if (error || !data) return null;
+  return data;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {

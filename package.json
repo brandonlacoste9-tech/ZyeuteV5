@@ -96,10 +96,13 @@
     "express-async-errors": "^3.1.1",
     "express-rate-limit": "^8.2.1",
     "fluent-ffmpeg": "^2.1.3",
-    "framer-motion": "^12.23.24",
+    "framer-motion": "^11.15.0",
     "ioredis": "^5.3.2",
+    "lightningcss": "^1.30.2",
     "lucide-react": "^0.545.0",
     "memoizee": "^0.4.17",
+    "motion-dom": "^12.23.23",
+    "motion-utils": "^12.23.6",
     "next-themes": "^0.4.6",
     "openid-client": "^6.8.1",
     "pg": "^8.16.3",
@@ -112,7 +115,7 @@
     "react-router-dom": "^7.10.1",
     "react-virtualized-auto-sizer": "^1.0.26",
     "react-window": "^2.2.3",
-    "recharts": "^3.6.0",
+    "recharts": "^2.15.0",
     "resend": "^4.0.0",
     "sharp": "^0.34.5",
     "socket.io-client": "^4.8.2",
@@ -125,11 +128,7 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.0",
     "zod": "^3.25.76",
-    "zod-validation-error": "^3.4.0",
-    "@rollup/rollup-linux-x64-gnu": "^4.24.0",
-    "lightningcss-linux-x64-gnu": "^1.29.2",
-    "@tailwindcss/oxide-linux-x64-gnu": "^4.1.14",
-    "@esbuild/linux-x64": "^0.27.2"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
@@ -184,6 +183,10 @@
     "esbuild": "^0.27.2"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8"
+    "@esbuild/linux-x64": "^0.27.2",
+    "@rollup/rollup-linux-x64-gnu": "^4.24.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "^4.1.14",
+    "bufferutil": "^4.0.8",
+    "lightningcss-linux-x64-gnu": "^1.29.2"
   }
 }

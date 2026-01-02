@@ -27,8 +27,35 @@ export const getVideoQueue = (): Queue => {
     console.warn("⚠️ REDIS_HOST not defined. Video queue disabled.");
     // Return a mock object so the app doesn't crash if Redis is missing
     return {
-      add: async () =>
-        console.log("Mock Video Queue: Job added (Redis missing)"),
+      add: async (name: string, data: any) => {
+        console.log("Mock Video Queue: Job added (Redis missing)", name);
+        // Return a mock job object
+        return {
+          id: "mock-" + Date.now(),
+          name,
+          data,
+          getState: async () => "completed", // Auto-complete
+          progress: 100,
+          finishedOn: Date.now(),
+          processedOn: Date.now(),
+          attemptsMade: 1,
+          failedReason: null,
+          isCompleted: async () => true,
+        };
+      },
+      getJob: async (jobId: string) => {
+        // Return a completed mock job
+        return {
+          id: jobId,
+          getState: async () => "completed",
+          progress: 100,
+          finishedOn: Date.now(),
+          processedOn: Date.now(),
+          attemptsMade: 1,
+          failedReason: null,
+          data: { mocked: true },
+        };
+      },
       close: async () => console.log("Mock Video Queue: Close called"),
     } as unknown as Queue;
   }

@@ -306,6 +306,8 @@ const VideoPost = PostBase.extend({
     .enum(["ready", "pending", "processing", "completed", "failed"])
     .optional(),
   visual_filter: z.string().optional(),
+  job_id: z.string().optional(),
+  jobId: z.string().optional(), // Compat
 });
 
 // Discriminated Union
@@ -357,6 +359,8 @@ export const PostSchema = z.preprocess((val: any) => {
     // Ensure processing status defaults if video
     processing_status:
       val.processing_status || (type === "video" ? "ready" : undefined),
+    job_id: val.job_id || val.jobId,
+    jobId: val.job_id || val.jobId,
 
     // Moderation
     is_moderated: val.is_moderated || val.isModerated || false,

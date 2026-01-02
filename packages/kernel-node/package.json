@@ -9,14 +9,19 @@
     "build": "tsc"
   },
   "dependencies": {
+    "@google-cloud/aiplatform": "^6.0.0",
     "@supabase/supabase-js": "^2.89.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
-    "postgres": "^3.4.7"
+    "pg": "^8.16.3",
+    "postgres": "^3.4.7",
+    "replicate": "^1.4.0",
+    "zod": "^4.3.4"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/node": "^20.19.27",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"

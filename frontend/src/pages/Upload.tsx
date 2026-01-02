@@ -21,18 +21,77 @@ import {
   IoColorFilterOutline,
   IoClose,
   IoFlame,
+  IoCheckmarkCircle,
+  IoWarning,
 } from "react-icons/io5";
+import { getJobStatus } from "../services/api";
 
 const uploadLogger = logger.withContext("Upload");
 
 const VISUAL_FILTERS = [
-  { id: "none", name: "Original", emoji: "✨" },
-  { id: "quebecois", name: "Québécois", emoji: "⚜️" },
-  { id: "vintage", name: "Vieux-MTL", emoji: "🎞️" },
-  { id: "noir", name: "Nordic Noir", emoji: "🌑" },
-  { id: "warm", name: "Chaleureux", emoji: "🔥" },
-  { id: "cool", name: "Hivernal", emoji: "❄️" },
-  { id: "bright", name: "Éclatant", emoji: "☀️" },
+  {
+    id: "none",
+    name: "Original",
+    emoji: "✨",
+    description: "Aucune modification",
+    preview: "Original",
+  },
+  {
+    id: "prestige",
+    name: "Prestige",
+    emoji: "🎬",
+    description: "Cinématique hollywoodien",
+    preview: "Cinematic look with enhanced colors and contrast",
+  },
+  {
+    id: "nordic",
+    name: "Nordic",
+    emoji: "🏔️",
+    description: "Tons froids nordiques",
+    preview: "Cool blue tones with crisp clarity",
+  },
+  {
+    id: "quebecois",
+    name: "Québécois",
+    emoji: "⚜️",
+    description: "Ambiance québécoise",
+    preview: "Warm Quebec atmosphere",
+  },
+  {
+    id: "vintage",
+    name: "Vieux-MTL",
+    emoji: "🎞️",
+    description: "Style vintage Montréal",
+    preview: "Retro Montreal aesthetic",
+  },
+  {
+    id: "noir",
+    name: "Nordic Noir",
+    emoji: "🌑",
+    description: "Noir nordique intense",
+    preview: "Dark moody atmosphere",
+  },
+  {
+    id: "warm",
+    name: "Chaleureux",
+    emoji: "🔥",
+    description: "Tons chauds accueillants",
+    preview: "Warm inviting colors",
+  },
+  {
+    id: "cool",
+    name: "Hivernal",
+    emoji: "❄️",
+    description: "Atmosphère hivernale",
+    preview: "Winter atmosphere",
+  },
+  {
+    id: "bright",
+    name: "Éclatant",
+    emoji: "☀️",
+    description: "Luminosité maximale",
+    preview: "Maximum brightness and vibrancy",
+  },
 ];
 
 export const Upload: React.FC = () => {
@@ -46,8 +105,46 @@ export const Upload: React.FC = () => {
   const [isEphemeral, setIsEphemeral] = React.useState(false); // View-Once / Burn Mode
   const [isUploading, setIsUploading] = React.useState(false);
   const [showCamera, setShowCamera] = React.useState(false);
+  const [processingJobId, setProcessingJobId] = React.useState<string | null>(
+    null,
+  );
+  const [processingStatus, setProcessingStatus] = React.useState<string | null>(
+    null,
+  );
+  const [processingProgress, setProcessingProgress] = React.useState(0);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Poll for video processing status
+  React.useEffect(() => {
+    if (!processingJobId) return;
+
+    const pollJobStatus = async () => {
+      try {
+        const status = await getJobStatus(processingJobId);
+        if (status) {
+          setProcessingStatus(status.state);
+          setProcessingProgress(status.progress);
+
+          if (status.state === "completed") {
+            toast.success("Vidéo améliorée avec succès! ✨");
+            navigate("/");
+          } else if (status.state === "failed") {
+            toast.error("Erreur lors de l'amélioration de la vidéo");
+            setProcessingJobId(null);
+          }
+        }
+      } catch (error) {
+        uploadLogger.error("Job status polling error:", error);
+      }
+    };
+
+    // Poll immediately, then every 2 seconds
+    pollJobStatus();
+    const interval = setInterval(pollJobStatus, 2000);
+
+    return () => clearInterval(interval);
+  }, [processingJobId, navigate]);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,8 +226,19 @@ export const Upload: React.FC = () => {
 
       if (!post) throw new Error("Failed to create post");
 
-      toast.success("Post publié! 🔥");
-      navigate("/");
+      // Handle video processing
+      if (mediaType === "video") {
+        if (post.jobId) {
+          setProcessingJobId(post.jobId);
+          toast.info("Vidéo en cours d'amélioration... ✨");
+        } else {
+          toast.success("Vidéo publiée! 🔥");
+          navigate("/");
+        }
+      } else {
+        toast.success("Photo publiée! 🔥");
+        navigate("/");
+      }
     } catch (error) {
       uploadLogger.error("Upload error:", error);
       toast.error("Erreur lors de l'upload");
@@ -222,12 +330,37 @@ export const Upload: React.FC = () => {
                 <span>Ambiance & Filtres</span>
               </div>
 
+              {/* Filter Preview */}
+              {visualFilter !== "none" && (
+                <div className="bg-leather-900/50 rounded-xl p-4 border border-gold-500/20">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">
+                      {VISUAL_FILTERS.find((f) => f.id === visualFilter)?.emoji}
+                    </span>
+                    <div>
+                      <h4 className="text-gold-400 font-bold text-sm">
+                        {
+                          VISUAL_FILTERS.find((f) => f.id === visualFilter)
+                            ?.name
+                        }
+                      </h4>
+                      <p className="text-leather-300 text-xs">
+                        {
+                          VISUAL_FILTERS.find((f) => f.id === visualFilter)
+                            ?.description
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 overflow-x-auto pb-2 gold-scrollbar">
                 {VISUAL_FILTERS.map((filter) => (
                   <button
                     key={filter.id}
                     onClick={() => setVisualFilter(filter.id)}
-                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all min-w-[80px] ${
                       visualFilter === filter.id
                         ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
                         : "border-leather-700 bg-black/40"
@@ -235,7 +368,7 @@ export const Upload: React.FC = () => {
                   >
                     <span className="text-2xl">{filter.emoji}</span>
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-tighter ${
+                      className={`text-[10px] font-bold uppercase tracking-tighter text-center leading-tight ${
                         visualFilter === filter.id
                           ? "text-gold-400"
                           : "text-leather-400"
@@ -246,6 +379,16 @@ export const Upload: React.FC = () => {
                   </button>
                 ))}
               </div>
+
+              {/* Before/After Comparison Hint */}
+              {file?.type.startsWith("video") && visualFilter !== "none" && (
+                <div className="bg-leather-900/30 rounded-lg p-3 border border-leather-700/50">
+                  <p className="text-leather-300 text-xs text-center">
+                    ✨ Le filtre sera appliqué automatiquement lors du
+                    traitement de votre vidéo
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Caption & Location Card */}
@@ -376,20 +519,70 @@ export const Upload: React.FC = () => {
               </div>
             </div>
 
+            {/* Processing Status */}
+            {processingJobId && (
+              <div className="leather-card rounded-2xl p-6 stitched">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center">
+                    {processingStatus === "completed" ? (
+                      <IoCheckmarkCircle className="text-2xl text-green-500" />
+                    ) : processingStatus === "failed" ? (
+                      <IoWarning className="text-2xl text-red-500" />
+                    ) : (
+                      <div className="w-6 h-6 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-gold-400 font-bold text-lg">
+                      {processingStatus === "completed"
+                        ? "Vidéo améliorée!"
+                        : processingStatus === "failed"
+                          ? "Erreur d'amélioration"
+                          : "Amélioration en cours..."}
+                    </h3>
+                    <p className="text-leather-300 text-sm">
+                      {processingStatus === "completed"
+                        ? "Votre vidéo est maintenant prête à être partagée!"
+                        : processingStatus === "failed"
+                          ? "Une erreur est survenue lors du traitement."
+                          : `Progression: ${processingProgress}%`}
+                    </p>
+                  </div>
+                </div>
+                {processingStatus !== "completed" &&
+                  processingStatus !== "failed" && (
+                    <div className="mt-4 bg-leather-900/50 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-gold-500 to-gold-400 rounded-full transition-all duration-500"
+                        style={{ width: `${processingProgress}%` }}
+                      />
+                    </div>
+                  )}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-4">
               <button
                 onClick={() => {
                   setFile(null);
                   setPreview(null);
+                  setProcessingJobId(null);
+                  setProcessingStatus(null);
+                  setProcessingProgress(0);
                 }}
                 className="flex-1 py-4 text-leather-400 font-bold hover:text-white transition-colors"
+                disabled={
+                  !!processingJobId &&
+                  processingStatus !== "completed" &&
+                  processingStatus !== "failed"
+                }
               >
                 Annuler
               </button>
               <button
                 onClick={handleUpload}
-                disabled={isUploading || !file}
+                disabled={isUploading || !file || !!processingJobId}
                 className="flex-[2] btn-gold py-4 rounded-2xl font-black text-lg shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 group"
               >
                 {isUploading ? (

@@ -177,6 +177,12 @@ export async function registerRoutes(
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
 
+  // ============ ANTIGRAVITY INTEROP (CURSOR BRIDGE) ============
+  const { default: antigravityRoutes } =
+    await import("./routes/antigravity.js");
+  // Publicly accessible for local testing/Cursor agent
+  app.use("/api/antigravity", antigravityRoutes);
+
   // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
   // enhanceRoutes moved to end of file
 
@@ -603,22 +609,27 @@ export async function registerRoutes(
         ? new Date(Date.now() + 24 * 60 * 60 * 1000)
         : undefined; // 24 hours
 
+      // Queue video for processing by Colony OS workers (only for videos)
+      let jobId: string | undefined;
+      if (parsed.data.type === "video") {
+        const videoQueue = getVideoQueue();
+        const job = await videoQueue.add("processVideo", {
+          videoUrl: parsed.data.mediaUrl,
+          userId: req.userId,
+          visualFilter: req.body.visualFilter || "prestige",
+        });
+        jobId = job.id?.toString();
+      }
+
       const post = await storage.createPost({
         ...parsed.data,
+        jobId,
         isModerated: true,
         moderationApproved: modResult.status === "approved",
         isHidden: modResult.status !== "approved",
         isEphemeral,
         maxViews,
         expiresAt,
-      });
-
-      // Queue video for processing by Colony OS workers
-      const videoQueue = getVideoQueue();
-      await videoQueue.add("processVideo", {
-        videoUrl: post.mediaUrl,
-        userId: req.userId,
-        visual_filter: req.body.visual_filter || "prestige",
       });
 
       res.status(201).json({
@@ -631,6 +642,36 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Create post error:", error);
       res.status(500).json({ error: "Failed to create post" });
+    }
+  });
+
+  // Job status endpoint for video processing
+  app.get("/api/jobs/:id/status", requireAuth, async (req, res) => {
+    try {
+      const jobId = req.params.id;
+      const videoQueue = getVideoQueue();
+
+      const job = await videoQueue.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      const state = await job.getState();
+      const progress = job.progress || 0;
+
+      res.json({
+        id: job.id,
+        state,
+        progress,
+        data: job.data,
+        finishedOn: job.finishedOn,
+        failedReason: job.failedReason,
+        processedOn: job.processedOn,
+        attemptsMade: job.attemptsMade,
+      });
+    } catch (error) {
+      console.error("Job status error:", error);
+      res.status(500).json({ error: "Failed to get job status" });
     }
   });
 

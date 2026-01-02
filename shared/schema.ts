@@ -169,6 +169,7 @@ export const posts = pgTable(
     enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version
     processingStatus:
       processingStatusEnum("processing_status").default("pending"),
+    jobId: text("job_id"), // BullMQ job ID for video processing
     mediaMetadata: jsonb("media_metadata").default({}), // Key moments, AI tags, etc.
     visualFilter: text("visual_filter").default("none"),
     enhanceStartedAt: timestamp("enhance_started_at"),
@@ -599,7 +600,7 @@ export const colonyTasks = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     command: text("command").notNull(),
     origin: text("origin").default("Ti-Guy Swarm"),
-    status: text("status").notNull().default("pending"), // pending, processing, completed, failed, async_waiting
+    status: text("status").notNull().default("pending"), // pending, processing, completed, failed, async_waiting, rejected, sovereignty_violation
     priority: text("priority").default("normal"),
     metadata: jsonb("metadata"),
     result: jsonb("result"),
@@ -609,6 +610,13 @@ export const colonyTasks = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     lastHeartbeat: timestamp("last_heartbeat", { withTimezone: true }),
     falRequestId: text("fal_request_id"),
+    // QA Firewall Audit Fields
+    requiresAudit: boolean("requires_audit").default(false),
+    auditedAt: timestamp("audited_at", { withTimezone: true }),
+    auditResult: jsonb("audit_result"),
+    auditConfidence: decimal("audit_confidence", { precision: 3, scale: 2 }),
+    auditViolations: text("audit_violations").array(),
+    auditError: text("audit_error"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -619,10 +627,41 @@ export const colonyTasks = pgTable(
       table.status,
       table.lastHeartbeat,
     ),
+    auditIdx: index("idx_colony_tasks_audit").on(
+      table.requiresAudit,
+      table.auditedAt,
+    ),
   }),
 );
 
 export type ColonyTask = typeof colonyTasks.$inferSelect;
+
+// Audit Log Table (QA Firewall)
+export const auditLogs = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    taskId: uuid("task_id").references(() => colonyTasks.id, {
+      onDelete: "cascade",
+    }),
+    agentId: text("agent_id").notNull(),
+    auditResult: jsonb("audit_result").notNull(),
+    timestamp: timestamp("timestamp", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    authorization: text("authorization").default("unique-spirit-482300-s4"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    taskIdIdx: index("audit_log_task_id_idx").on(table.taskId),
+    timestampIdx: index("audit_log_timestamp_idx").on(table.timestamp),
+    agentIdIdx: index("audit_log_agent_id_idx").on(table.agentId),
+  }),
+);
+
+export type AuditLog = typeof auditLogs.$inferSelect;
 
 // Agent Memories - Core of "The Elephant" (Long-term Memory)
 export const agentMemories = pgTable(
