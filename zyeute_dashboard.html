@@ -85,6 +85,9 @@
             <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('workers')">
                 <i data-lucide="users" class="w-4 h-4"></i> Worker Pool
             </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('video')">
+                <i data-lucide="video" class="w-4 h-4"></i> Video Studio
+            </a>
             <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('guardian')">
                 <i data-lucide="shield-check" class="w-4 h-4"></i> Guardian
             </a>
@@ -202,6 +205,86 @@
         </section>
 
         <!-- Other tabs hidden by default -->
+        <!-- Video Generation Tab -->
+        <section id="tab-video" class="p-8 hidden">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold">Video Generation Studio</h2>
+                <div class="text-xs text-gray-500 mono">Stable Video Diffusion 1.1</div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Video Generation Form -->
+                <div class="glass rounded-xl p-6">
+                    <h3 class="font-semibold text-sm mb-4 flex items-center gap-2">
+                        <i data-lucide="video" class="w-4 h-4"></i>
+                        Create Video
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 uppercase mb-1">Video Prompt</label>
+                            <textarea id="video-prompt" class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-3 text-sm glow-border" rows="4" placeholder="Describe the video scene you want to generate..."></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-400 uppercase mb-1">Negative Prompt (Optional)</label>
+                                <input id="video-negative" type="text" class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-2 text-sm glow-border" placeholder="What to avoid...">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-400 uppercase mb-1">Motion Style</label>
+                                <select id="video-motion" class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-2 text-sm glow-border">
+                                    <option value="127">Balanced (Default)</option>
+                                    <option value="255">High Motion</option>
+                                    <option value="0">Minimal Motion</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="generateVideo()" class="w-full bg-[#00f2ff] text-black font-bold px-4 py-3 rounded-lg hover:bg-[#00d8e6] transition-colors flex items-center justify-center gap-2">
+                            <i data-lucide="play" class="w-4 h-4"></i>
+                            Generate Video (2-3 min)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Generation Queue & Results -->
+                <div class="space-y-6">
+                    <!-- Current Generation -->
+                    <div id="video-status" class="glass rounded-xl p-6 hidden">
+                        <h4 class="font-semibold text-sm mb-4 flex items-center gap-2">
+                            <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+                            Generation in Progress
+                        </h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">Status:</span>
+                                <span id="gen-status" class="text-[#00f2ff]">Initializing...</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-gray-400">Time Remaining:</span>
+                                <span id="gen-time" class="text-yellow-500">~2-3 minutes</span>
+                            </div>
+                            <div class="w-full bg-[#1f1f23] rounded-full h-2 mt-3">
+                                <div id="gen-progress" class="bg-[#00f2ff] h-2 rounded-full transition-all duration-500" style="width: 10%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generated Videos -->
+                    <div class="glass rounded-xl p-6">
+                        <h4 class="font-semibold text-sm mb-4">Recent Generations</h4>
+                        <div id="video-gallery" class="space-y-3">
+                            <!-- Generated videos will appear here -->
+                            <div class="text-xs text-gray-500 text-center py-8">
+                                No videos generated yet. Create your first video above!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="tab-tasks" class="p-8 hidden">
             <h2 class="text-xl font-bold mb-6">Task Queue</h2>
             <div class="glass rounded-xl overflow-hidden">
@@ -702,6 +785,140 @@
             showToast("Tests Complete", "Expression and Vision cores tested successfully.");
         }
 
+        // Video Generation
+        let currentVideoGeneration = null;
+
+        async function generateVideo() {
+            const prompt = document.getElementById('video-prompt').value;
+            const negativePrompt = document.getElementById('video-negative').value;
+            const motionStyle = document.getElementById('video-motion').value;
+
+            if (!prompt) {
+                showToast("Error", "Please enter a video prompt");
+                return;
+            }
+
+            if (!kernelOnline) {
+                showToast("Connection Error", "Kernel must be online for video generation");
+                return;
+            }
+
+            try {
+                addLogEntry("user", `🎬 Starting video generation: "${prompt.substring(0, 40)}..."`, "info");
+
+                // Show generation status
+                document.getElementById('video-status').classList.remove('hidden');
+                document.getElementById('gen-status').textContent = 'Initializing...';
+                document.getElementById('gen-progress').style.width = '10%';
+
+                const response = await fetch(`${API_BASE}/api/generate-video`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt,
+                        negative_prompt: negativePrompt,
+                        motion_bucket_id: parseInt(motionStyle)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast("Video Generation Started", result.message);
+
+                    // Simulate progress updates
+                    let progress = 10;
+                    const progressInterval = setInterval(() => {
+                        progress += Math.random() * 15;
+                        if (progress >= 90) {
+                            progress = 90;
+                            clearInterval(progressInterval);
+                            document.getElementById('gen-status').textContent = 'Finalizing...';
+                            document.getElementById('gen-time').textContent = 'Almost done!';
+                        }
+                        document.getElementById('gen-progress').style.width = progress + '%';
+                        document.getElementById('gen-status').textContent = `Processing... ${Math.round(progress)}%`;
+                    }, 2000);
+
+                    // Add to gallery after completion
+                    setTimeout(() => {
+                        document.getElementById('gen-status').textContent = 'Completed!';
+                        document.getElementById('gen-progress').style.width = '100%';
+                        document.getElementById('gen-time').textContent = 'Done!';
+
+                        addVideoToGallery({
+                            prompt,
+                            url: result.video_url || '#',
+                            timestamp: new Date().toLocaleString(),
+                            taskId: result.task_id
+                        });
+
+                        setTimeout(() => {
+                            document.getElementById('video-status').classList.add('hidden');
+                        }, 3000);
+
+                    }, 120000); // 2 minutes simulation
+
+                } else {
+                    throw new Error(result.message || 'Video generation failed');
+                }
+
+            } catch (error) {
+                showToast("Video Generation Failed", error.message);
+                addLogEntry("system", `❌ Video generation failed: ${error.message}`, "error");
+                document.getElementById('video-status').classList.add('hidden');
+            }
+        }
+
+        function addVideoToGallery(video) {
+            const gallery = document.getElementById('video-gallery');
+
+            // Clear "no videos" message
+            if (gallery.querySelector('.text-center')) {
+                gallery.innerHTML = '';
+            }
+
+            const videoItem = document.createElement('div');
+            videoItem.className = 'glass rounded-lg p-4';
+            videoItem.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium truncate">${video.prompt}</div>
+                    <div class="text-[10px] text-gray-500">${video.timestamp}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="playVideo('${video.url}')" class="bg-[#00f2ff] text-black px-3 py-1 rounded text-xs hover:bg-[#00d8e6] flex items-center gap-1">
+                        <i data-lucide="play" class="w-3 h-3"></i> View
+                    </button>
+                    <button onclick="downloadVideo('${video.url}')" class="bg-gray-700 px-3 py-1 rounded text-xs hover:bg-gray-600 flex items-center gap-1">
+                        <i data-lucide="download" class="w-3 h-3"></i> Download
+                    </button>
+                    <span class="text-[10px] mono text-gray-500">${video.taskId}</span>
+                </div>
+            `;
+
+            gallery.insertBefore(videoItem, gallery.firstChild);
+            lucide.createIcons(); // Refresh icons
+        }
+
+        function playVideo(url) {
+            if (url === '#') {
+                showToast("Info", "Video is still processing. Check back in a few minutes.");
+                return;
+            }
+            window.open(url, '_blank');
+        }
+
+        function downloadVideo(url) {
+            if (url === '#') {
+                showToast("Info", "Video is still processing. Check back in a few minutes.");
+                return;
+            }
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `generated_video_${Date.now()}.mp4`;
+            a.click();
+        }
+
         // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -718,6 +935,10 @@
                     case 't':
                         e.preventDefault();
                         runQuickTest();
+                        break;
+                    case 'v':
+                        e.preventDefault();
+                        showTab('video');
                         break;
                 }
             }

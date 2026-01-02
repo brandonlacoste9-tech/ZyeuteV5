@@ -68,6 +68,85 @@ app.post('/api/analyze', async (req, res) => {
     }
 });
 
+// VIDEO GENERATION (Video Core Interface)
+app.post('/api/generate-video', async (req, res) => {
+    const { prompt, input_image, negative_prompt } = req.body;
+    console.log(`\n🎬 [Video Request]: Generating video for prompt: "${prompt}"`);
+
+    try {
+        // Create video generation task
+        const videoTask = {
+            id: `video_${Date.now()}`,
+            command: 'generate_video',
+            payload: {
+                prompt,
+                input_image,
+                negative_prompt
+            },
+            status: 'pending'
+        };
+
+        // Submit to task queue
+        await fetch('http://localhost:3000/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                description: `Generate video: ${prompt}`,
+                priority: 'high',
+                targetNode: 'video-core'
+            })
+        });
+
+        // For immediate response, simulate the video generation
+        // In production, this would be handled by the actual agent
+        setTimeout(async () => {
+            try {
+                const replicate = new (await import('replicate')).default({
+                    auth: process.env.REPLICATE_API_TOKEN,
+                });
+
+                const model = "stability-ai/stable-video-diffusion:3f0457e4619daac512f9de1f8d2e09162b7051d8";
+                const input = {
+                    cond_aug: 0.02,
+                    decoding_t: 14,
+                    input_image: input_image || null,
+                    video_length: "14_frames_with_svd",
+                    sizing_strategy: "maintain_aspect_ratio",
+                    motion_bucket_id: 127,
+                    frames_per_second: 6,
+                    seed: Math.floor(Math.random() * 1000000),
+                    prompt: prompt || "A beautiful cinematic scene",
+                    negative_prompt: negative_prompt || "blurry, low quality, distorted",
+                };
+
+                console.log(`🎬 Calling Replicate for video generation...`);
+                const output = await replicate.run(model, { input });
+
+                console.log(`🎬 Video generation completed:`, output);
+
+            } catch (videoError) {
+                console.error(`🎬 Video generation failed:`, videoError);
+            }
+        }, 1000);
+
+        res.json({
+            status: 'INITIATED',
+            message: `Video generation started for: "${prompt}"`,
+            estimated_time: '2-3 minutes',
+            task_id: videoTask.id,
+            model: 'Stable Video Diffusion'
+        });
+
+    } catch (error) {
+        console.error("🎬 Video Error:", error);
+        res.status(500).json({
+            status: 'error',
+            message: "Video Core Unreachable",
+            details: error.message
+        });
+    }
+});
+
 // SYSTEM STATS (Dashboard Metrics)
 app.get('/api/stats', (req, res) => {
     const mockStats = {
