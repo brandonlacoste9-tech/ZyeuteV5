@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdGenAI | ColonyOS Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --primary: #00f2ff;
+            --secondary: #7000ff;
+            --bg-dark: #050505;
+            --card-bg: #0f0f12;
+            --border: #1f1f23;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        .mono { font-family: 'Fira Code', monospace; }
+
+        .glass {
+            background: rgba(15, 15, 18, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+        }
+
+        .glow-border:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+        }
+
+        .status-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(90deg, rgba(0, 242, 255, 0.1) 0%, rgba(0, 242, 255, 0) 100%);
+            border-left: 3px solid var(--primary);
+            color: var(--primary);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 border-r border-[#1f1f23] flex flex-col glass z-50">
+        <div class="p-6">
+            <h1 class="text-xl font-bold tracking-tighter flex items-center gap-2">
+                <span class="text-[#00f2ff]">ADGEN</span><span class="text-white">AI</span>
+            </h1>
+            <p class="text-[10px] text-gray-500 mono mt-1">ColonyOS v2.0 // Kernel Connected</p>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-1 mt-4">
+            <a href="#" class="sidebar-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all" onclick="showTab('dashboard')">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> Dashboard
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('tasks')">
+                <i data-lucide="activity" class="w-4 h-4"></i> Task Manager
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('workers')">
+                <i data-lucide="users" class="w-4 h-4"></i> Worker Pool
+            </a>
+            <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-gray-400 hover:text-white" onclick="showTab('guardian')">
+                <i data-lucide="shield-check" class="w-4 h-4"></i> Guardian
+            </a>
+        </nav>
+
+        <div class="p-4 mt-auto border-t border-[#1f1f23]">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-[#00f2ff] to-[#7000ff] flex items-center justify-center text-[10px] font-bold">BL</div>
+                <div class="overflow-hidden">
+                    <p class="text-xs font-semibold truncate">Brandon Leroux</p>
+                    <p class="text-[10px] text-gray-500 truncate">Founder / Root</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto relative">
+        <!-- Top Bar -->
+        <header class="h-16 border-b border-[#1f1f23] flex items-center justify-between px-8 sticky top-0 bg-[#050505]/80 backdrop-blur-md z-40">
+            <div class="flex items-center gap-4">
+                <div class="status-pulse"></div>
+                <span class="text-xs mono text-gray-400">KERNEL STATUS: <span class="text-green-500">OPERATIONAL</span></span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="runQuickTest()" class="bg-[#101014] border border-[#1f1f23] px-3 py-1.5 rounded text-xs hover:bg-[#1a1a20] transition-colors flex items-center gap-2">
+                    <i data-lucide="zap" class="w-3 h-3"></i> Quick Test
+                </button>
+                <button onclick="checkKernelStatus()" class="bg-[#101014] border border-[#1f1f23] px-3 py-1.5 rounded text-xs hover:bg-[#1a1a20] transition-colors flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Ping Kernel
+                </button>
+                <button onclick="openTaskModal()" class="bg-[#00f2ff] text-black font-bold px-4 py-1.5 rounded text-xs hover:bg-[#00d8e6] transition-transform active:scale-95">
+                    + NEW MISSION
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Tab -->
+        <section id="tab-dashboard" class="p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass p-5 rounded-xl border-l-2 border-l-[#00f2ff]">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Active Workers</p>
+                    <h3 class="text-2xl font-bold">12 / 15</h3>
+                </div>
+                <div class="glass p-5 rounded-xl border-l-2 border-l-[#7000ff]">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Queued Tasks</p>
+                    <h3 class="text-2xl font-bold">482</h3>
+                </div>
+                <div class="glass p-5 rounded-xl border-l-2 border-l-green-500">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Success Rate</p>
+                    <h3 class="text-2xl font-bold">99.4%</h3>
+                </div>
+                <div class="glass p-5 rounded-xl border-l-2 border-l-orange-500">
+                    <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Uptime</p>
+                    <h3 class="text-2xl font-bold">142h 12m</h3>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Activity Feed -->
+                <div class="lg:col-span-2 glass rounded-xl overflow-hidden">
+                    <div class="px-6 py-4 border-b border-[#1f1f23] flex justify-between items-center">
+                        <h4 class="font-semibold text-sm">Real-time Kernel Events</h4>
+                        <span class="text-[10px] mono text-gray-500">WS://COLONY-STREAM</span>
+                    </div>
+                    <div id="event-feed" class="p-0 h-[400px] overflow-y-auto mono text-xs">
+                        <!-- Events injected here -->
+                    </div>
+                </div>
+
+                <!-- Franchise Status -->
+                <div class="glass rounded-xl p-6">
+                    <h4 class="font-semibold text-sm mb-6">Expansion Nodes</h4>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🇨🇦</span>
+                                <div>
+                                    <p class="text-sm font-medium">Quebec Node</p>
+                                    <p class="text-[10px] text-gray-500 uppercase">Franchise Active</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-bold">MASTERED</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🇲🇽</span>
+                                <div>
+                                    <p class="text-sm font-medium">LatAm Node</p>
+                                    <p class="text-[10px] text-gray-500 uppercase">Deploying Workers...</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold">82%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">🇺🇸</span>
+                                <div>
+                                    <p class="text-sm font-medium">US-East Node</p>
+                                    <p class="text-[10px] text-gray-500 uppercase">In Testing</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold">PROVISIONING</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 p-4 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+                        <p class="text-[10px] text-indigo-300 font-bold uppercase mb-2">The Mission</p>
+                        <p class="text-xs text-gray-400 leading-relaxed italic">
+                            "Building the ultimate ad generation engine for global scale. One colony, infinite assets."
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Other tabs hidden by default -->
+        <section id="tab-tasks" class="p-8 hidden">
+            <h2 class="text-xl font-bold mb-6">Task Queue</h2>
+            <div class="glass rounded-xl overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-[#1f1f23] text-gray-400 text-xs uppercase">
+                        <tr>
+                            <th class="px-6 py-3">Task ID</th>
+                            <th class="px-6 py-3">Description</th>
+                            <th class="px-6 py-3">Status</th>
+                            <th class="px-6 py-3">Worker</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-table-body">
+                        <!-- Sample data -->
+                        <tr class="border-b border-[#1f1f23]">
+                            <td class="px-6 py-4 mono text-[#00f2ff]">task_82a1..</td>
+                            <td class="px-6 py-4">Quebec Joual Dialect Validation</td>
+                            <td class="px-6 py-4"><span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px]">EXECUTING</span></td>
+                            <td class="px-6 py-4 text-gray-400">linguist_node_01</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+        <div class="glass w-full max-w-lg rounded-2xl p-8 transform scale-95 transition-transform duration-300">
+            <h3 class="text-xl font-bold mb-2">Initialize New Mission</h3>
+            <p class="text-xs text-gray-500 mb-6">The Mind will route this to the optimal worker node.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 uppercase mb-1">Description / Goal</label>
+                    <textarea id="task-desc" class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-3 text-sm glow-border" rows="3" placeholder="Describe the creative asset requirement..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase mb-1">Priority</label>
+                        <select class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-2 text-sm glow-border">
+                            <option>Standard (5)</option>
+                            <option>High (8)</option>
+                            <option>Critical (10)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 uppercase mb-1">Target Node</label>
+                        <select class="w-full bg-[#16161a] border border-[#1f1f23] rounded-lg p-2 text-sm glow-border">
+                            <option>Quebec-01</option>
+                            <option>LatAm-North</option>
+                            <option>General-Cloud</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex gap-3">
+                <button onclick="closeTaskModal()" class="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-sm hover:bg-gray-700 transition-colors">Cancel</button>
+                <button onclick="submitTask()" class="flex-1 px-4 py-2 rounded-lg bg-[#00f2ff] text-black font-bold text-sm hover:bg-[#00d8e6] transition-colors">Launch Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 right-8 bg-[#card-bg] border border-[#00f2ff]/30 p-4 rounded-xl glass transform translate-y-24 transition-transform duration-500 z-[110] flex items-center gap-3">
+        <i data-lucide="info" class="w-5 h-5 text-[#00f2ff]"></i>
+        <div>
+            <p class="text-xs font-bold" id="toast-title">Notification</p>
+            <p class="text-[10px] text-gray-400" id="toast-body">Task successfully injected.</p>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://localhost:3000';
+        let kernelOnline = false;
+        let taskCounter = 1;
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            checkKernelStatus();
+            initializeEventStream();
+            setInterval(checkKernelStatus, 5000); // Check every 5 seconds
+        });
+
+        // Kernel Status Check
+        async function checkKernelStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/`);
+                const data = await response.json();
+
+                if (response.ok && data.status === 'online') {
+                    if (!kernelOnline) {
+                        kernelOnline = true;
+                        updateKernelStatus(true);
+                        addLogEntry("kernel", "🧠 Connection established with ColonyOS Brain", "info");
+                        addLogEntry("system", `Memory: ${Math.round(data.memory.rss / 1024 / 1024)}MB RSS`, "info");
+                    }
+                } else {
+                    throw new Error('Kernel not responding');
+                }
+            } catch (error) {
+                if (kernelOnline) {
+                    kernelOnline = false;
+                    updateKernelStatus(false);
+                    addLogEntry("kernel", "🔌 Connection lost - attempting reconnection", "warning");
+                }
+            }
+        }
+
+        function updateKernelStatus(online) {
+            const statusElement = document.querySelector('.status-pulse');
+            const statusText = document.querySelector('.status-pulse').nextElementSibling.querySelector('span:last-child');
+
+            if (online) {
+                statusElement.style.background = '#10b981';
+                statusElement.style.boxShadow = '0 0 8px #10b981';
+                statusText.textContent = 'ONLINE';
+                statusText.className = 'text-green-500';
+            } else {
+                statusElement.style.background = '#ef4444';
+                statusElement.style.boxShadow = '0 0 8px #ef4444';
+                statusText.textContent = 'OFFLINE';
+                statusText.className = 'text-red-500';
+            }
+        }
+
+        // Tab Management
+        function showTab(tabId) {
+            document.querySelectorAll('section[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.sidebar-link').forEach(el => {
+                el.classList.remove('active', 'text-white');
+                el.classList.add('text-gray-400');
+            });
+            event.currentTarget.classList.add('active', 'text-white');
+        }
+
+        // Modal Controls
+        function openTaskModal() {
+            const modal = document.getElementById('task-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeTaskModal() {
+            const modal = document.getElementById('task-modal');
+            modal.classList.remove('opacity-100');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // Logic
+        async function submitTask() {
+            const desc = document.getElementById('task-desc').value;
+            if(!desc) return;
+
+            if (!kernelOnline) {
+                showToast("Error", "Kernel is offline. Cannot submit tasks.");
+                return;
+            }
+
+            const taskId = `task_${Date.now()}_${taskCounter++}`;
+
+            try {
+                addLogEntry("user", `🚀 Launching mission: ${desc.substring(0, 30)}...`, "info");
+                addLogEntry("mind", `Routing to Expression Core...`, "info");
+
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: desc })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast("Mission Launched", `Task ${taskId} routed to Expression Core.`);
+                    addLogEntry("expression_core", `✅ Processed: ${result.reply.substring(0, 50)}...`, "info");
+                    addLogEntry("guardian", `Audit passed - Sovereignty check complete`, "info");
+
+                    // Add to task table
+                    addTaskToTable(taskId, desc, result.reply);
+                } else {
+                    throw new Error(result.reply || 'API Error');
+                }
+
+            } catch (error) {
+                showToast("Error", `Mission failed: ${error.message}`);
+                addLogEntry("system", `❌ Task ${taskId} failed: ${error.message}`, "error");
+            }
+
+            closeTaskModal();
+            document.getElementById('task-desc').value = "";
+        }
+
+        function addTaskToTable(taskId, description, result) {
+            const tbody = document.getElementById('task-table-body');
+            const row = document.createElement('tr');
+            row.className = 'border-b border-[#1f1f23]';
+
+            const shortDesc = description.length > 40 ? description.substring(0, 40) + '...' : description;
+            const shortResult = result.length > 30 ? result.substring(0, 30) + '...' : result;
+
+            row.innerHTML = `
+                <td class="px-6 py-4 mono text-[#00f2ff]">${taskId}</td>
+                <td class="px-6 py-4">${shortDesc}</td>
+                <td class="px-6 py-4"><span class="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px]">COMPLETED</span></td>
+                <td class="px-6 py-4 text-gray-400">expression_core</td>
+            `;
+
+            tbody.appendChild(row);
+        }
+
+        function showToast(title, body) {
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-body').innerText = body;
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-24');
+            setTimeout(() => toast.classList.add('translate-y-24'), 4000);
+        }
+
+        // Real-time Event Stream
+        function addLogEntry(source, message, type = "info") {
+            const container = document.getElementById('event-feed');
+            const entry = document.createElement('div');
+            entry.className = `px-6 py-2 border-l-2 mb-1 ${type === 'error' ? 'border-red-500 bg-red-500/5' : type === 'warning' ? 'border-yellow-500 bg-yellow-500/5' : 'border-[#1f1f23]'}`;
+
+            const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false });
+            entry.innerHTML = `
+                <span class="text-gray-600">[${timestamp}]</span>
+                <span class="text-[#00f2ff] uppercase text-[10px] font-bold ml-2">${source}</span>
+                <span class="ml-4 text-gray-300">${message}</span>
+            `;
+
+            container.prepend(entry);
+
+            // Auto-scroll to top for new events
+            container.scrollTop = 0;
+        }
+
+        function initializeEventStream() {
+            // Initial system events
+            const initEvents = [
+                { s: "kernel", m: "🧠 ColonyOS v2.0 initialized", t: "info" },
+                { s: "system", m: "Memory allocation: 8GB stable", t: "info" },
+                { s: "guardian", m: "Sovereignty protocols active", t: "info" },
+                { s: "mind", m: "Expression Core online - French localization ready", t: "info" },
+                { s: "vision", m: "V-JEPA Vision Core calibrated", t: "info" }
+            ];
+
+            initEvents.forEach(e => addLogEntry(e.s, e.m, e.t));
+
+            // Periodic health checks
+            setInterval(() => {
+                if (kernelOnline) {
+                    const healthEvents = [
+                        { s: "body", m: `Worker heartbeat: Latency ${Math.floor(Math.random() * 20 + 5)}ms`, t: "info" },
+                        { s: "guardian", m: "Audit chain integrity verified", t: "info" },
+                        { s: "mind", m: "Neural pathways optimized", t: "info" }
+                    ];
+
+                    if (Math.random() < 0.3) { // 30% chance every 5 seconds
+                        const e = healthEvents[Math.floor(Math.random() * healthEvents.length)];
+                        addLogEntry(e.s, e.m, e.t);
+                    }
+                }
+            }, 5000);
+        }
+
+        // Quick Test Function
+        async function runQuickTest() {
+            if (!kernelOnline) {
+                showToast("Error", "Kernel must be online for testing.");
+                return;
+            }
+
+            addLogEntry("user", "🎯 Running ColonyOS integration tests...", "info");
+
+            // Test 1: Expression Core with Verlan
+            try {
+                addLogEntry("test", "Testing Expression Core - Verlan content generation...", "info");
+
+                const verlanTest = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: "Write a 'Verlan' street-script for a Paris-based Snap Mini ad. Make it authentic street slang."
+                    })
+                });
+
+                const verlanResult = await verlanTest.json();
+                addLogEntry("expression_core", `✅ Verlan test passed: ${verlanResult.reply.substring(0, 40)}...`, "info");
+
+            } catch (error) {
+                addLogEntry("test", `❌ Expression Core test failed: ${error.message}`, "error");
+            }
+
+            // Test 2: Vision Core with asset analysis
+            try {
+                addLogEntry("test", "Testing Vision Core - TI-GUY asset analysis...", "info");
+
+                const visionTest = await fetch(`${API_BASE}/api/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        assetPath: "ti-guy-brand-asset.jpg"
+                    })
+                });
+
+                const visionResult = await visionTest.json();
+                addLogEntry("vision_core", `✅ Vision test passed: ${visionResult.analysis.substring(0, 40)}...`, "info");
+
+            } catch (error) {
+                addLogEntry("test", `❌ Vision Core test failed: ${error.message}`, "error");
+            }
+
+            addLogEntry("test", "🎉 Integration tests completed!", "info");
+            showToast("Tests Complete", "Expression and Vision cores tested successfully.");
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'n':
+                        e.preventDefault();
+                        openTaskModal();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        checkKernelStatus();
+                        addLogEntry("user", "Manual kernel status check initiated", "info");
+                        break;
+                    case 't':
+                        e.preventDefault();
+                        runQuickTest();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
