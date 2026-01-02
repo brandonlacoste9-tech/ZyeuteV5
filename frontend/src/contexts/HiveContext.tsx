@@ -7,16 +7,16 @@ import React, {
 } from "react";
 import { useTranslation as useI18n } from "../i18n";
 
-// Define the available Hives
-export type HiveId = "quebec" | "mexico" | "south";
+// Define the available Hives - Only Quebec is active
+export type HiveId = "quebec";
 
 interface HiveConfig {
   id: HiveId;
   name: string;
   flag: string; // Emoji
   locale: string;
-  culture: "joual" | "chilango" | "rioplatense";
-  currency: "CAD" | "MXN" | "USD";
+  culture: "joual";
+  currency: "CAD";
 }
 
 export const HIVES: Record<HiveId, HiveConfig> = {
@@ -27,22 +27,6 @@ export const HIVES: Record<HiveId, HiveConfig> = {
     locale: "fr-CA",
     culture: "joual",
     currency: "CAD",
-  },
-  mexico: {
-    id: "mexico",
-    name: "México",
-    flag: "🇲🇽",
-    locale: "es-MX",
-    culture: "chilango",
-    currency: "MXN",
-  },
-  south: {
-    id: "south",
-    name: "Sur",
-    flag: "🌎",
-    locale: "es-SUR",
-    culture: "rioplatense",
-    currency: "USD",
   },
 };
 
