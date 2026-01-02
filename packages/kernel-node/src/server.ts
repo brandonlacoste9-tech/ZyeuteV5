@@ -68,6 +68,126 @@ app.post('/api/analyze', async (req, res) => {
     }
 });
 
+// SYSTEM STATS (Dashboard Metrics)
+app.get('/api/stats', (req, res) => {
+    const mockStats = {
+        activeWorkers: Math.floor(Math.random() * 5) + 10,
+        queuedTasks: Math.floor(Math.random() * 200) + 300,
+        successRate: 99.4,
+        uptime: Math.floor(Math.random() * 24) + 120, // hours
+        memory: process.memoryUsage(),
+        timestamp: new Date().toISOString()
+    };
+
+    res.json(mockStats);
+});
+
+// TASKS (Task Manager Data)
+app.get('/api/tasks', (req, res) => {
+    const mockTasks = [
+        {
+            id: `task_${Date.now()}_001`,
+            description: 'Quebec Joual Dialect Validation',
+            status: 'executing',
+            worker: 'linguist_node_01',
+            priority: 'high',
+            created: new Date().toISOString()
+        },
+        {
+            id: `task_${Date.now()}_002`,
+            description: 'Brand Asset Consistency Check',
+            status: 'completed',
+            worker: 'vision_core_02',
+            priority: 'medium',
+            created: new Date(Date.now() - 300000).toISOString()
+        },
+        {
+            id: `task_${Date.now()}_003`,
+            description: 'Paris Verlan Content Generation',
+            status: 'queued',
+            worker: 'pending_assignment',
+            priority: 'standard',
+            created: new Date(Date.now() - 60000).toISOString()
+        }
+    ];
+
+    res.json(mockTasks);
+});
+
+// WORKERS (Worker Pool Data)
+app.get('/api/workers', (req, res) => {
+    const mockWorkers = [
+        {
+            id: 'linguist_node_01',
+            name: 'Quebec Expression Core',
+            status: 'active',
+            node: 'Quebec-01',
+            tasksProcessed: 1247,
+            uptime: '142h 12m',
+            specialization: 'French Localization'
+        },
+        {
+            id: 'vision_core_02',
+            name: 'AdGen Vision Analyzer',
+            status: 'active',
+            node: 'Global-Cloud',
+            tasksProcessed: 892,
+            uptime: '98h 45m',
+            specialization: 'Brand Compliance'
+        },
+        {
+            id: 'moderation_node_03',
+            name: 'Content Guardian',
+            status: 'standby',
+            node: 'Quebec-01',
+            tasksProcessed: 2156,
+            uptime: '203h 18m',
+            specialization: 'Safety & Sovereignty'
+        }
+    ];
+
+    res.json(mockWorkers);
+});
+
+// FRANCHISE STATUS (Expansion Nodes)
+app.get('/api/franchise', (req, res) => {
+    const franchiseStatus = {
+        quebec: { status: 'mastered', progress: 100, activeWorkers: 8 },
+        latam: { status: 'deploying', progress: 82, activeWorkers: 3 },
+        useast: { status: 'provisioning', progress: 0, activeWorkers: 0 },
+        timestamp: new Date().toISOString()
+    };
+
+    res.json(franchiseStatus);
+});
+
+// CREATE TASK (Task Injection)
+app.post('/api/tasks', (req, res) => {
+    const { description, priority, targetNode } = req.body;
+
+    if (!description) {
+        return res.status(400).json({ error: 'Description is required' });
+    }
+
+    const newTask = {
+        id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        description,
+        status: 'queued',
+        worker: 'pending_assignment',
+        priority: priority || 'standard',
+        targetNode: targetNode || 'auto',
+        created: new Date().toISOString()
+    };
+
+    console.log(`🎯 [New Task Created]: ${newTask.id} - ${description}`);
+
+    res.json({
+        success: true,
+        task: newTask,
+        message: `Task routed to ${targetNode || 'optimal'} node`
+    });
+});
+
 // 3. STARTUP SEQUENCE
 console.log("---------------------------------------------------");
 console.log("🧠 INITIALIZING COLONY BRAIN...");

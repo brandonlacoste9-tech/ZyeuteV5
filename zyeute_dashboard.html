@@ -127,19 +127,19 @@
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="glass p-5 rounded-xl border-l-2 border-l-[#00f2ff]">
                     <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Active Workers</p>
-                    <h3 class="text-2xl font-bold">12 / 15</h3>
+                    <h3 class="text-2xl font-bold" data-metric="activeWorkers">Loading...</h3>
                 </div>
                 <div class="glass p-5 rounded-xl border-l-2 border-l-[#7000ff]">
                     <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Queued Tasks</p>
-                    <h3 class="text-2xl font-bold">482</h3>
+                    <h3 class="text-2xl font-bold" data-metric="queuedTasks">Loading...</h3>
                 </div>
                 <div class="glass p-5 rounded-xl border-l-2 border-l-green-500">
                     <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Success Rate</p>
-                    <h3 class="text-2xl font-bold">99.4%</h3>
+                    <h3 class="text-2xl font-bold" data-metric="successRate">Loading...</h3>
                 </div>
                 <div class="glass p-5 rounded-xl border-l-2 border-l-orange-500">
                     <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Uptime</p>
-                    <h3 class="text-2xl font-bold">142h 12m</h3>
+                    <h3 class="text-2xl font-bold" data-metric="uptime">Loading...</h3>
                 </div>
             </div>
 
@@ -159,7 +159,7 @@
                 <div class="glass rounded-xl p-6">
                     <h4 class="font-semibold text-sm mb-6">Expansion Nodes</h4>
                     <div class="space-y-6">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between" data-franchise="quebec">
                             <div class="flex items-center gap-3">
                                 <span class="text-xl">🇨🇦</span>
                                 <div>
@@ -167,9 +167,9 @@
                                     <p class="text-[10px] text-gray-500 uppercase">Franchise Active</p>
                                 </div>
                             </div>
-                            <span class="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-bold">MASTERED</span>
+                            <span class="franchise-status px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px] font-bold">MASTERED</span>
                         </div>
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between" data-franchise="latam">
                             <div class="flex items-center gap-3">
                                 <span class="text-xl">🇲🇽</span>
                                 <div>
@@ -177,9 +177,9 @@
                                     <p class="text-[10px] text-gray-500 uppercase">Deploying Workers...</p>
                                 </div>
                             </div>
-                            <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold">82%</span>
+                            <span class="franchise-progress px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold">82%</span>
                         </div>
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between" data-franchise="useast">
                             <div class="flex items-center gap-3">
                                 <span class="text-xl">🇺🇸</span>
                                 <div>
@@ -187,7 +187,7 @@
                                     <p class="text-[10px] text-gray-500 uppercase">In Testing</p>
                                 </div>
                             </div>
-                            <span class="px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold">PROVISIONING</span>
+                            <span class="franchise-status px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold">PROVISIONING</span>
                         </div>
                     </div>
 
@@ -280,14 +280,158 @@
         const API_BASE = 'http://localhost:3000';
         let kernelOnline = false;
         let taskCounter = 1;
+        let statsPolling = null;
+        let tasksPolling = null;
+        let workersPolling = null;
 
         // Initialization
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             checkKernelStatus();
             initializeEventStream();
+            startDataPolling();
             setInterval(checkKernelStatus, 5000); // Check every 5 seconds
         });
+
+        // Data Polling System
+        function startDataPolling() {
+            // Poll system stats every 5 seconds
+            statsPolling = setInterval(fetchSystemStats, 5000);
+
+            // Poll tasks and workers every 10 seconds
+            tasksPolling = setInterval(fetchTasks, 10000);
+            workersPolling = setInterval(fetchWorkers, 10000);
+            setInterval(fetchFranchiseStatus, 15000); // Poll franchise every 15 seconds
+
+            // Initial load
+            fetchSystemStats();
+            fetchTasks();
+            fetchWorkers();
+            fetchFranchiseStatus();
+
+            // Initialize WebSocket connection
+            initializeWebSocket();
+        }
+
+        // WebSocket for Real-time Events
+        let websocket = null;
+
+        function initializeWebSocket() {
+            try {
+                // Note: WebSocket would need backend implementation
+                // For now, we'll use polling with enhanced event simulation
+                addLogEntry("system", "WebSocket connection initialized (simulated)", "info");
+            } catch (error) {
+                addLogEntry("system", "WebSocket connection failed, using polling", "warning");
+            }
+        }
+
+        async function fetchFranchiseStatus() {
+            if (!kernelOnline) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/franchise`);
+                const franchise = await response.json();
+
+                // Update franchise status
+                updateFranchiseNode('quebec', franchise.quebec);
+                updateFranchiseNode('latam', franchise.latam);
+                updateFranchiseNode('useast', franchise.useast);
+
+            } catch (error) {
+                addLogEntry("system", "Failed to fetch franchise status", "warning");
+            }
+        }
+
+        function updateFranchiseNode(nodeId, data) {
+            const statusElement = document.querySelector(`[data-franchise="${nodeId}"] .franchise-status`);
+            const progressElement = document.querySelector(`[data-franchise="${nodeId}"] .franchise-progress`);
+
+            if (statusElement) {
+                const statusText = data.status.toUpperCase();
+                const statusClass = {
+                    'MASTERED': 'bg-green-500/10 text-green-500',
+                    'DEPLOYING': 'bg-blue-500/10 text-blue-500',
+                    'PROVISIONING': 'bg-yellow-500/10 text-yellow-500'
+                }[statusText] || 'bg-gray-500/10 text-gray-500';
+
+                statusElement.textContent = statusText;
+                statusElement.className = `px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}`;
+            }
+
+            if (progressElement && data.progress !== undefined) {
+                progressElement.textContent = `${data.progress}%`;
+            }
+        }
+
+        async function fetchSystemStats() {
+            if (!kernelOnline) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/stats`);
+                const stats = await response.json();
+
+                // Update metrics cards
+                document.querySelector('[data-metric="activeWorkers"]').textContent = stats.activeWorkers;
+                document.querySelector('[data-metric="queuedTasks"]').textContent = stats.queuedTasks;
+                document.querySelector('[data-metric="successRate"]').textContent = `${stats.successRate}%`;
+                document.querySelector('[data-metric="uptime"]').textContent = `${stats.uptime}h ${Math.floor(Math.random() * 60)}m`;
+
+                addLogEntry("system", `📊 Stats updated: ${stats.activeWorkers} workers, ${stats.queuedTasks} queued`, "info");
+            } catch (error) {
+                addLogEntry("system", "Failed to fetch system stats", "warning");
+            }
+        }
+
+        async function fetchTasks() {
+            if (!kernelOnline) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks`);
+                const tasks = await response.json();
+
+                const tbody = document.getElementById('task-table-body');
+                tbody.innerHTML = ''; // Clear existing
+
+                tasks.forEach(task => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-[#1f1f23]';
+
+                    const statusClass = {
+                        'executing': 'bg-blue-500/10 text-blue-500',
+                        'completed': 'bg-green-500/10 text-green-500',
+                        'queued': 'bg-yellow-500/10 text-yellow-500',
+                        'failed': 'bg-red-500/10 text-red-500'
+                    }[task.status] || 'bg-gray-500/10 text-gray-500';
+
+                    row.innerHTML = `
+                        <td class="px-6 py-4 mono text-[#00f2ff]">${task.id.slice(-8)}</td>
+                        <td class="px-6 py-4">${task.description}</td>
+                        <td class="px-6 py-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}">${task.status.toUpperCase()}</span></td>
+                        <td class="px-6 py-4 text-gray-400">${task.worker}</td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                addLogEntry("system", "Failed to fetch tasks", "warning");
+            }
+        }
+
+        async function fetchWorkers() {
+            if (!kernelOnline) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/workers`);
+                const workers = await response.json();
+
+                // Update worker count in sidebar or display
+                const workerCount = workers.filter(w => w.status === 'active').length;
+                addLogEntry("system", `👥 Worker pool: ${workerCount} active workers`, "info");
+            } catch (error) {
+                addLogEntry("system", "Failed to fetch workers", "warning");
+            }
+        }
 
         // Kernel Status Check
         async function checkKernelStatus() {
@@ -365,63 +509,90 @@
         // Logic
         async function submitTask() {
             const desc = document.getElementById('task-desc').value;
+            const priority = document.querySelector('select').value;
+            const targetNode = document.querySelectorAll('select')[1].value;
+
             if(!desc) return;
 
             if (!kernelOnline) {
-                showToast("Error", "Kernel is offline. Cannot submit tasks.");
+                showToast("Connection Error", "Kernel is offline. Cannot submit tasks.");
                 return;
             }
 
-            const taskId = `task_${Date.now()}_${taskCounter++}`;
-
             try {
                 addLogEntry("user", `🚀 Launching mission: ${desc.substring(0, 30)}...`, "info");
-                addLogEntry("mind", `Routing to Expression Core...`, "info");
+                addLogEntry("mind", `Routing to ${targetNode} node...`, "info");
 
-                const response = await fetch(`${API_BASE}/api/chat`, {
+                // Create task via API
+                const taskResponse = await fetch(`${API_BASE}/api/tasks`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: desc })
+                    body: JSON.stringify({ description: desc, priority, targetNode })
                 });
 
-                const result = await response.json();
+                const taskResult = await taskResponse.json();
 
-                if (response.ok) {
-                    showToast("Mission Launched", `Task ${taskId} routed to Expression Core.`);
-                    addLogEntry("expression_core", `✅ Processed: ${result.reply.substring(0, 50)}...`, "info");
-                    addLogEntry("guardian", `Audit passed - Sovereignty check complete`, "info");
+                if (taskResponse.ok) {
+                    // Process task through Expression Core
+                    const chatResponse = await fetch(`${API_BASE}/api/chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: desc })
+                    });
 
-                    // Add to task table
-                    addTaskToTable(taskId, desc, result.reply);
+                    const chatResult = await chatResponse.json();
+
+                    if (chatResponse.ok) {
+                        showToast("Mission Launched", `${taskResult.message}`);
+                        addLogEntry("expression_core", `✅ Processed: ${chatResult.reply.substring(0, 50)}...`, "info");
+                        addLogEntry("guardian", `Audit passed - Sovereignty check complete`, "info");
+
+                        // Add to task table immediately
+                        addTaskToTable(taskResult.task.id, desc, chatResult.reply, 'completed');
+                    } else {
+                        throw new Error(chatResult.reply || 'Expression Core Error');
+                    }
                 } else {
-                    throw new Error(result.reply || 'API Error');
+                    throw new Error(taskResult.error || 'Task Creation Failed');
                 }
 
             } catch (error) {
-                showToast("Error", `Mission failed: ${error.message}`);
-                addLogEntry("system", `❌ Task ${taskId} failed: ${error.message}`, "error");
+                showToast("Mission Failed", `Error: ${error.message}`);
+                addLogEntry("system", `❌ Mission failed: ${error.message}`, "error");
             }
 
             closeTaskModal();
             document.getElementById('task-desc').value = "";
         }
 
-        function addTaskToTable(taskId, description, result) {
+        function addTaskToTable(taskId, description, result, status = 'completed') {
             const tbody = document.getElementById('task-table-body');
             const row = document.createElement('tr');
             row.className = 'border-b border-[#1f1f23]';
 
             const shortDesc = description.length > 40 ? description.substring(0, 40) + '...' : description;
-            const shortResult = result.length > 30 ? result.substring(0, 30) + '...' : result;
+
+            const statusClass = {
+                'completed': 'bg-green-500/10 text-green-500',
+                'executing': 'bg-blue-500/10 text-blue-500',
+                'queued': 'bg-yellow-500/10 text-yellow-500',
+                'failed': 'bg-red-500/10 text-red-500'
+            }[status] || 'bg-gray-500/10 text-gray-500';
 
             row.innerHTML = `
-                <td class="px-6 py-4 mono text-[#00f2ff]">${taskId}</td>
+                <td class="px-6 py-4 mono text-[#00f2ff]">${taskId.slice(-8)}</td>
                 <td class="px-6 py-4">${shortDesc}</td>
-                <td class="px-6 py-4"><span class="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[10px]">COMPLETED</span></td>
+                <td class="px-6 py-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}">${status.toUpperCase()}</span></td>
                 <td class="px-6 py-4 text-gray-400">expression_core</td>
             `;
 
-            tbody.appendChild(row);
+            // Add to top of table
+            tbody.insertBefore(row, tbody.firstChild);
+
+            // Remove oldest entries if too many
+            while (tbody.children.length > 10) {
+                tbody.removeChild(tbody.lastChild);
+            }
         }
 
         function showToast(title, body) {
