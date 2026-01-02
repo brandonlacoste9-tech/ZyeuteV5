@@ -7,7 +7,7 @@
 
 import express from 'express';
 import cors from 'cors';
-import { checkAntigravityStatus } from './lib/ai/gemini.js';
+import { checkAntigravityStatus, geminiCortex } from './lib/ai/gemini.js';
 
 const app = express();
 const PORT = 3000;
@@ -63,7 +63,7 @@ app.post('/api/analyze', async (req, res) => {
             status: 'success',
             analysis: mockAnalysis
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("🔥 Vision Error:", error);
         res.status(500).json({ status: 'error', message: "Vision Core Unreachable" });
     }
@@ -138,7 +138,7 @@ app.post('/api/generate-video', async (req, res) => {
             model: 'Stable Video Diffusion'
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("🎬 Video Error:", error);
         res.status(500).json({
             status: 'error',
@@ -252,10 +252,10 @@ app.get('/api/antigravity/status', async (req, res) => {
                 ? `Antigravity Core online with ${status.capabilities.length} capabilities`
                 : 'Antigravity Core offline - configure GEMINI_API_KEY or Google Cloud credentials'
         });
-    } catch (error) {
+    } catch (error: any) {
         res.status(500).json({
             online: false,
-            error: error.message,
+            error: error?.message || 'Unknown error',
             message: 'Antigravity status check failed'
         });
     }
@@ -284,10 +284,10 @@ app.post('/api/antigravity/chat', async (req, res) => {
             mode: mode || 'standard',
             timestamp: new Date().toISOString()
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('🔴 Antigravity chat error:', error);
         res.status(500).json({
-            error: error.message,
+            error: error?.message || 'Unknown error',
             message: 'Antigravity reasoning failed'
         });
     }
@@ -309,7 +309,7 @@ app.post('/api/antigravity/code', async (req, res) => {
             language: language || 'auto-detected',
             timestamp: new Date().toISOString()
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('🔴 Antigravity code error:', error);
         res.status(500).json({
             error: error.message,
@@ -334,7 +334,7 @@ app.post('/api/antigravity/create', async (req, res) => {
             style: style || 'creative',
             timestamp: new Date().toISOString()
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error('🔴 Antigravity creation error:', error);
         res.status(500).json({
             error: error.message,

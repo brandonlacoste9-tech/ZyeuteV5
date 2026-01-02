@@ -7,7 +7,7 @@ dotenv.config();
  * Supports Gemini Ultra, advanced reasoning, and experimental features
  */
 export class GeminiClient {
-  private apiKey: string;
+  private apiKey: string = '';
   private vertexProject?: string;
   private vertexLocation?: string;
   private model: string = "gemini-1.5-pro"; // Default to powerful model
@@ -58,14 +58,10 @@ export class GeminiClient {
             mimeType: mimeType,
             data: imageBuffer.toString("base64")
           }
-        });
+        } as any);
       } else if (videoUrl) {
-        parts.push({
-          fileData: {
-            mimeType: "video/mp4",
-            fileUri: videoUrl
-          }
-        });
+        // Video analysis not implemented yet
+        parts.push({ text: `Video analysis requested for: ${videoUrl}` } as any);
       }
 
       const payload = {
@@ -199,7 +195,7 @@ export class GeminiClient {
       throw new Error(`Antigravity API Error: ${response.status} - ${errText}`);
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
 
     // Handle different response formats
     if (this.vertexProject) {
@@ -237,12 +233,6 @@ export class GeminiClient {
   }
 }
 
-// Export enhanced client
-export const geminiCortex = new GeminiClient();
-
-// Export class for advanced usage
-export { GeminiClient };
-
 // Antigravity status checker
 export async function checkAntigravityStatus() {
   const capabilities = await geminiCortex.getCapabilities();
@@ -254,3 +244,6 @@ export async function checkAntigravityStatus() {
     powerLevel: capabilities.vertexEnabled ? 'ANTIGRAVITY_MAX' : 'STANDARD_GEMINI'
   };
 }
+
+// Export enhanced client
+export const geminiCortex = new GeminiClient();
