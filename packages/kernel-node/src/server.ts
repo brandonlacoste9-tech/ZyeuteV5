@@ -7,6 +7,7 @@
 
 import express from 'express';
 import cors from 'cors';
+import { checkAntigravityStatus } from './lib/ai/gemini.js';
 
 const app = express();
 const PORT = 3000;
@@ -238,6 +239,108 @@ app.get('/api/franchise', (req, res) => {
     };
 
     res.json(franchiseStatus);
+});
+
+// ANTIGRAVITY STATUS (Google AI Capabilities)
+app.get('/api/antigravity/status', async (req, res) => {
+    try {
+        const status = await checkAntigravityStatus();
+        res.json({
+            ...status,
+            timestamp: new Date().toISOString(),
+            message: status.online
+                ? `Antigravity Core online with ${status.capabilities.length} capabilities`
+                : 'Antigravity Core offline - configure GEMINI_API_KEY or Google Cloud credentials'
+        });
+    } catch (error) {
+        res.status(500).json({
+            online: false,
+            error: error.message,
+            message: 'Antigravity status check failed'
+        });
+    }
+});
+
+// ADVANCED AI CHAT (Antigravity Reasoning)
+app.post('/api/antigravity/chat', async (req, res) => {
+    const { prompt, mode, temperature } = req.body;
+
+    if (!prompt) {
+        return res.status(400).json({ error: 'Prompt is required' });
+    }
+
+    try {
+        const options = {
+            reasoning: mode === 'reasoning',
+            code: mode === 'code',
+            creative: mode === 'creative',
+            temperature: temperature || undefined
+        };
+
+        const response = await geminiCortex.chat(prompt, options);
+
+        res.json({
+            response,
+            mode: mode || 'standard',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('🔴 Antigravity chat error:', error);
+        res.status(500).json({
+            error: error.message,
+            message: 'Antigravity reasoning failed'
+        });
+    }
+});
+
+// CODE GENERATION (Antigravity Development)
+app.post('/api/antigravity/code', async (req, res) => {
+    const { prompt, language } = req.body;
+
+    if (!prompt) {
+        return res.status(400).json({ error: 'Code prompt is required' });
+    }
+
+    try {
+        const code = await geminiCortex.generateCode(prompt, language);
+
+        res.json({
+            code,
+            language: language || 'auto-detected',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('🔴 Antigravity code error:', error);
+        res.status(500).json({
+            error: error.message,
+            message: 'Code generation failed'
+        });
+    }
+});
+
+// CREATIVE CONTENT (Antigravity Creation)
+app.post('/api/antigravity/create', async (req, res) => {
+    const { prompt, style } = req.body;
+
+    if (!prompt) {
+        return res.status(400).json({ error: 'Content prompt is required' });
+    }
+
+    try {
+        const content = await geminiCortex.createContent(prompt, style);
+
+        res.json({
+            content,
+            style: style || 'creative',
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('🔴 Antigravity creation error:', error);
+        res.status(500).json({
+            error: error.message,
+            message: 'Content creation failed'
+        });
+    }
 });
 
 // CREATE TASK (Task Injection)
