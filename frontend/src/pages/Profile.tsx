@@ -27,6 +27,7 @@ import type { User, Post } from "@/types";
 import { logger } from "@/lib/logger";
 import { QuebecEmptyState } from "@/components/ui/QuebecEmptyState";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const profileLogger = logger.withContext("Profile");
 
@@ -47,6 +48,7 @@ export const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { tap, impact } = useHaptics();
+  const { user: authUser, isLoading: authLoading, isGuest } = useAuth();
 
   const [user, setUser] = React.useState<User | null>(null);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
@@ -60,76 +62,66 @@ export const Profile: React.FC = () => {
 
   const isOwnProfile = username === "me" || user?.id === currentUser?.id;
 
-  // Fetch current user
+  // Wait for auth to complete before doing anything
   React.useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const user = await getCurrentUser();
-      if (user) setCurrentUser(user);
-    };
+    if (authLoading) return;
 
-    fetchCurrentUser();
-  }, []);
+    // If accessing /profile/me and not authenticated/guest, we shouldn't be here
+    // But this should already be handled by ProtectedRoute
+    if (username === "me" && authUser) {
+      setCurrentUser(authUser);
+    }
+  }, [authUser, authLoading, username]);
 
   // Fetch profile user
   React.useEffect(() => {
     const fetchUser = async () => {
+      // Wait for auth to complete
+      if (authLoading) return;
+
       setIsLoading(true);
       setError(null);
       try {
         // Handle Guest Mode for /profile/me
         if (username === "me") {
-          // If accessing /me but context says guest, show guest stub user
-          // We can't use useAuth hook inside useEffect easily without refactoring,
-          // but we can check the localStorage key as a fallback or assume
-          // getCurrentUser returning null MIGHT mean guest if we are protected routed here.
+          if (isGuest) {
+            // Show guest user profile
+            setUser({
+              id: "guest",
+              username: "visiteur",
+              display_name: "Visiteur",
+              avatar_url: null,
+              bio: "Compte invité. Créez un compte pour profiter de tout! 🚀",
+              coins: 0,
+              fire_score: 0,
+              is_verified: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              followers_count: 0,
+              following_count: 0,
+              posts_count: 0,
+              is_following: false,
+            } as User);
+            setCurrentUser(null);
+            return;
+          }
 
-          // Better approach: use the same user-check logic
-          const profileUser = await getCurrentUser();
-          profileLogger.debug(
-            "[Profile] getCurrentUser result:",
-            profileUser ? "found" : "null",
-          );
-
-          if (profileUser) {
-            setUser(profileUser);
-            setCurrentUser(profileUser);
+          // Use authenticated user from context
+          if (authUser) {
+            setUser(authUser);
+            setCurrentUser(authUser);
             setError(null);
           } else {
-            // Check for guest mode flag directly as fallback since we are inside logic
-            const isGuest =
-              localStorage.getItem("zyeute_guest_mode") === "true";
-
-            if (isGuest) {
-              setUser({
-                id: "guest",
-                username: "visiteur",
-                display_name: "Visiteur",
-                avatar_url: null,
-                bio: "Compte invité. Créez un compte pour profiter de tout! 🚀",
-                coins: 0,
-                fire_score: 0,
-                is_verified: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                followers_count: 0,
-                following_count: 0,
-                posts_count: 0,
-                is_following: false,
-              } as User);
-              setCurrentUser(null); // No real current user
-              return;
-            }
-
-            // Not logged in and not guest
+            // This should not happen due to ProtectedRoute, but as a safeguard
+            profileLogger.warn(
+              "[Profile] /me accessed but no auth user available",
+            );
             navigate("/login");
             return;
           }
         } else {
           // Regular profile lookup by username
-          const profileUser = await getUserProfile(
-            username || "",
-            currentUser?.id,
-          );
+          const profileUser = await getUserProfile(username || "", authUser?.id);
           if (profileUser) {
             setUser(profileUser);
             setError(null);
@@ -151,9 +143,9 @@ export const Profile: React.FC = () => {
 
     if (!username) return;
 
-    // Fetch immediately - don't wait for anything
+    // Fetch immediately once auth is loaded
     fetchUser();
-  }, [username, navigate, currentUser?.id]);
+  }, [username, navigate, authUser, authLoading, isGuest]);
 
   // Fetch user posts
   React.useEffect(() => {
@@ -213,7 +205,7 @@ export const Profile: React.FC = () => {
     return posts.reduce((sum, post) => sum + post.fire_count, 0);
   }, [posts]);
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return <ProfileSkeleton />;
   }
 

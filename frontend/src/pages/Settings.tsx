@@ -35,11 +35,17 @@ export const Settings: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const { borderColor, setBorderColor, defaultGold } = useBorderColor();
   const { tap, success, selection, impact } = useHaptics();
-  const { isGuest, logout: authLogout } = useAuth();
+  const { isGuest, logout: authLogout, user: authUser, isLoading: authLoading } = useAuth();
 
   // Fetch current user
   React.useEffect(() => {
     const fetchUser = async () => {
+      // Wait for auth to complete
+      if (authLoading) {
+        setIsLoading(true);
+        return;
+      }
+
       setIsLoading(true);
       try {
         // If Guest, setup dummy user without API call
@@ -62,9 +68,19 @@ export const Settings: React.FC = () => {
           return;
         }
 
+        // Use auth context user if available
+        if (authUser) {
+          setUser(authUser);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fallback to API call
         const currentUser = await getCurrentUser();
 
         if (!currentUser) {
+          // This shouldn't happen due to ProtectedRoute, but as safeguard
+          settingsLogger.warn("[Settings] No user found despite being in protected route");
           navigate("/login");
           return;
         }
@@ -72,13 +88,14 @@ export const Settings: React.FC = () => {
         setUser(currentUser);
       } catch (error) {
         settingsLogger.error("Error fetching user:", error);
+        // Don't redirect on error - user might have temporary network issue
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUser();
-  }, [navigate, isGuest]);
+  }, [navigate, isGuest, authUser, authLoading]);
 
   // Sign out
   const handleSignOut = async () => {
@@ -510,7 +527,7 @@ export const Settings: React.FC = () => {
     }
   };
 
-  if (isLoading || !user) {
+  if (isLoading || authLoading || !user) {
     return (
       <div className="min-h-screen bg-black leather-overlay flex items-center justify-center">
         <div className="text-gold-400 animate-pulse-gold">Chargement...</div>

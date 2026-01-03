@@ -101,10 +101,37 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     // Deep Enhance: Select best video source
     const isVideo = post.type === "video";
-    const videoSrc =
-      isVideo && post.processing_status === "ready" && post.enhanced_url
-        ? post.enhanced_url
-        : post.media_url || (isVideo ? post.original_url : "") || "";
+    let videoSrc = "";
+    
+    if (isVideo) {
+      // Priority order: enhanced_url > media_url > original_url
+      if (post.processing_status === "ready" && post.enhanced_url) {
+        videoSrc = post.enhanced_url;
+      } else if (post.media_url) {
+        videoSrc = post.media_url;
+      } else if (post.original_url) {
+        videoSrc = post.original_url;
+      }
+      
+      // Debug log if video source is empty
+      if (!videoSrc) {
+        console.error("[SingleVideoView] No valid video source found for post:", {
+          postId: post.id,
+          type: post.type,
+          enhanced_url: post.enhanced_url,
+          media_url: post.media_url,
+          original_url: post.original_url,
+          processing_status: post.processing_status,
+        });
+      } else {
+        // Log valid video source for debugging
+        console.debug("[SingleVideoView] Video source selected:", {
+          postId: post.id,
+          source: videoSrc.substring(0, 50) + "...",
+          type: post.processing_status === "ready" && post.enhanced_url ? "enhanced" : "original",
+        });
+      }
+    }
 
     // Deep Enhance: Visual Filters
     const filterStyle =
