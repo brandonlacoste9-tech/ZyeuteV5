@@ -55,12 +55,6 @@ export function log(message: string, source = "express") {
     hour12: true,
   });
 
-  // Include trace context in logs for correlation (disabled)
-  // const traceContext = getTraceContext();
-  // const traceInfo = traceContext.traceId
-  //   ? ` [trace:${traceContext.traceId.substring(0, 8)}]`
-  //   : "";
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 

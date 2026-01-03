@@ -16,7 +16,9 @@ import { traceExternalAPI, addSpanAttributes } from "../tracer.js";
 
 // Configuration
 const project =
-  process.env.GOOGLE_CLOUD_PROJECT_ID || "unique-spirit-482300-s4";
+  process.env.GOOGLE_CLOUD_PROJECT ||
+  process.env.GOOGLE_CLOUD_PROJECT_ID ||
+  "unique-spirit-482300-s4";
 const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 
 // Initialize Vertex AI with proper authentication
@@ -144,7 +146,7 @@ export async function generateWithTIGuy(
     if (!vertexAI) throw new Error("Vertex AI not initialized");
 
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       generationConfig: {
         temperature: mode === "customer_service" ? 0.3 : 0.7,
         topP: 0.8,
@@ -178,7 +180,7 @@ export async function generateWithTIGuy(
       "POST",
       async (span) => {
         span.setAttributes({
-          "ai.model": "gemini-1.5-flash",
+          "ai.model": "gemini-2.0-flash",
           "ai.mode": mode,
           "ai.language": language,
         });
@@ -230,7 +232,7 @@ export async function moderateContent(
     if (!vertexAI) throw new Error("Vertex AI not initialized");
 
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
     });
 
     const prompt = TI_GUY_PROMPTS.moderation.replace("{content}", content);
@@ -276,7 +278,8 @@ export async function transcribeAudio(
     };
 
     const config = {
-      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
+      encoding:
+        protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
       sampleRateHertz: 16000,
       languageCode: language,
       enableWordTimeOffsets: true,
@@ -398,6 +401,120 @@ function detectLanguage(text: string): "fr" | "en" {
 }
 
 /**
+ * Image Analysis using Gemini 1.5 Flash (The "Eye")
+ */
+export interface ImageAnalysisResult {
+  caption: string;
+  tags: string[];
+  detected_objects: string[];
+  vibe_category: "party" | "chill" | "nature" | "food" | "urban" | "art";
+  confidence: number;
+}
+
+export async function analyzeImageWithGemini(
+  base64Data: string,
+  mimeType: string = "image/jpeg",
+): Promise<ImageAnalysisResult> {
+  try {
+    if (!vertexAI) throw new Error("Vertex AI not initialized");
+
+    const model = vertexAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        temperature: 0.4, // Lower temperature for more accurate detection but still creative caption
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const prompt = `
+      You are Ti-Guy, the AI vision system for Zyeuté (Quebec social app).
+      
+      TASK:
+      Analyze this image and return a JSON object.
+      
+      PERSONA:
+      - You are a local Montrealer/Quebecois beaver.
+      - Use "Joual" (Quebec slang) in the caption.
+      - Be funny, authentic, and culturally relevant.
+      - If you see poutine, rate it.
+      - If you see a landmark (Mont-Royal, Chateau Frontenac, Orange Julep), name drop it.
+      
+      OUTPUT SCHEMA (strict JSON):
+      {
+        "caption": "String (The Joual description, max 15 words)",
+        "tags": ["String", "String", "String"] (Max 5 relevant tags),
+        "detected_objects": ["String", "String"],
+        "vibe_category": "party" | "chill" | "nature" | "food" | "urban" | "art"
+      }
+      
+      EXAMPLES:
+      - Food: "Ayoye, grosse poutine chez Banquise? Miam!"
+      - Snow: "Il fait frette en titi, sortez les tuques!"
+      - Party: "Ça brasse en ville ce soir, grosse veillée!"
+    `;
+
+    // Strip header if present (e.g. "data:image/jpeg;base64,")
+    const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, "");
+
+    const imagePart = {
+      inlineData: {
+        data: cleanBase64,
+        mimeType: mimeType,
+      },
+    };
+
+    const result = await traceExternalAPI(
+      "vertex-ai-vision",
+      "generateContent",
+      "POST",
+      async (span) => {
+        span.setAttributes({
+          "ai.task": "vision_analysis",
+        });
+        return await model.generateContent({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }, imagePart],
+            },
+          ],
+        });
+      },
+    );
+
+    const response = await result.response;
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+    // Parse the JSON response
+    try {
+      const data = JSON.parse(text);
+      return {
+        caption: data.caption || "Wow, belle photo!",
+        tags: data.tags || [],
+        detected_objects: data.detected_objects || [],
+        vibe_category: data.vibe_category || "chill",
+        confidence: 0.9,
+      };
+    } catch (e) {
+      logger.error("[VertexService] Failed to parse Gemini JSON response", {
+        text,
+      });
+      return {
+        caption: "C'est beau ça! (Erreur d'analyse)",
+        tags: ["zyeute"],
+        detected_objects: [],
+        vibe_category: "chill",
+        confidence: 0.1,
+      };
+    }
+  } catch (error: any) {
+    logger.error(`[VertexService] Vision analysis failed: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Health check for Vertex AI services
  */
 export async function checkVertexAIHealth(): Promise<{
@@ -412,10 +529,7 @@ export async function checkVertexAIHealth(): Promise<{
 
   try {
     if (vertexAI) {
-      const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      // We don't actually call it to save tokens/avoid failures if no creds,
-      // just verify if the client exists or do a very light check if possible.
-      // For a real check, we'd do a tiny generation if creds exist.
+      // Just check if client is initialized
       vertexAIHealthy = true;
     }
   } catch {

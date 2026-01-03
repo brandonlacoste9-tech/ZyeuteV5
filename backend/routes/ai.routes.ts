@@ -4,11 +4,42 @@ import { getSwarmBridge } from "../ai/swarm-bridge";
 
 const router = Router();
 
+// Dynamic import to avoid circular dependency issues during startup
+// import { analyzeImageWithGemini } from "../ai/vertex-service.js";
+
 // Middleware to ensure authentication (assuming req.user or req.userId is populated by parent)
 const requireAuth = (req: any, res: any, next: any) => {
-  if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
+  // requireAuth middleware handles initial verification
+  const userId = req.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   next();
 };
+
+// 0. AI Cameraman (Gemini Vision)
+// Direct analysis for immediate feedback before upload
+router.post("/analyze-image", requireAuth, async (req: any, res) => {
+  try {
+    const { imageBase64, mimeType } = req.body;
+
+    // validation
+    if (!imageBase64) {
+      return res.status(400).json({ error: "imageBase64 is required" });
+    }
+
+    // Dynamic import here
+    const { analyzeImageWithGemini } = await import("../ai/vertex-service.js");
+
+    // Limit payload size check passed to express config, but good to be aware
+    const result = await analyzeImageWithGemini(imageBase64, mimeType);
+    res.json(result);
+  } catch (error: any) {
+    console.error("AI Cameraman Error:", error);
+    res.status(500).json({ error: error.message || "Failed to analyze image" });
+  }
+});
 
 // 1. Analyze Media
 router.post("/analyze-media", requireAuth, async (req: any, res) => {
