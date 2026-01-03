@@ -70,15 +70,29 @@ export async function generateVideo(
         duration,
       };
     } else {
-      // Text-to-video (placeholder for now - Kling requires image input)
-      console.warn(
-        "[Video Engine] Text-to-video not yet implemented, returning placeholder",
+      // Text-to-video implementation
+      const result = await fal.subscribe(
+        "fal-ai/kling-video/v1.0/text-to-video",
+        {
+          input: {
+            prompt,
+            duration: String(duration) as "5" | "10",
+            aspect_ratio: "9:16", // Default to vertical for mobile feed
+          },
+          logs: true,
+        },
       );
+
+      const video = (result.data as any)?.video;
+      if (!video?.url) {
+        throw new Error("No video generated");
+      }
+
       return {
-        url: "https://placehold.co/1920x1080/1a1a1a/gold?text=Text+to+Video+Coming+Soon",
-        cost: 0,
-        model: "placeholder",
-        duration: 0,
+        url: video.url,
+        cost: 0.5,
+        model: "kling-t2v",
+        duration,
       };
     }
   } catch (error: any) {

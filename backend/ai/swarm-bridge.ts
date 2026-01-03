@@ -395,9 +395,64 @@ class ColonySwarmBridge {
   /**
    * Search the Knowledge Base (Delegates to VertexBridge)
    */
+  /**
+   * Search the Knowledge Base (Now powered by Pinecone Vector Search)
+   */
   async searchSwarmMemory(query: string) {
-    // This allows the SwarmBridge to be the "Unified Brain" interface
-    return VertexBridge.searchMemory(query);
+    try {
+      // 1. Generate Embedding for the query (using the model specified in the index)
+      // Since we are using an "integrated inference" index, we might just pass text if using the specific client,
+      // but for standard Pinecone, we usually need to embed first.
+      // However, the user initialized the Pinecone index with 'multilingual-e5-large' via MCP.
+
+      // For now, we will use a mock embedding or simple keyword matching because
+      // we don't have the Pinecone Inference API client set up in this file yet.
+      // BUT, since the User *explicitly* asked for Pinecone, we must try to use it.
+
+      const { Pinecone } = await import("@pinecone-database/pinecone");
+      const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY || "" });
+      const index = pc.index("zyeute-sovereign");
+
+      // We need an embedding to query. Since we don't have an embedder running,
+      // we'll assume the client is doing "text-to-vector" or we use a dummy vector for testing connection.
+      // A real implementation would call OpenAI/Cohere/Vertex to get the vector for `query`.
+
+      // Generate Real Embedding via Pinecone Inference
+      const embeddingResult = await pc.inference.embed(
+        "multilingual-e5-large",
+        [query],
+        { inputType: "query" },
+      );
+
+      // Correctly access data from the response object
+      const vector = (embeddingResult.data?.[0] as any)?.values;
+
+      if (!vector) {
+        logger.warn("[SwarmBridge] Failed to generate embedding components");
+        return VertexBridge.searchMemory(query);
+      }
+
+      const queryResponse = await index.query({
+        vector,
+        topK: 5,
+        includeMetadata: true,
+      });
+
+      return queryResponse.matches.map((match) => ({
+        id: match.id,
+        score: match.score,
+        metadata: match.metadata,
+      }));
+
+      return queryResponse.matches.map((match) => ({
+        id: match.id,
+        score: match.score,
+        metadata: match.metadata,
+      }));
+    } catch (e: any) {
+      logger.error("[SwarmBridge] Pinecone Search failed:", e);
+      return VertexBridge.searchMemory(query); // Fallback
+    }
   }
 
   private trackCost(amount: number) {

@@ -10,9 +10,17 @@ import {
   Platform,
   Image,
   SafeAreaView,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Send, Menu, X, Zap } from "lucide-react-native";
+import {
+  Send,
+  Menu,
+  X,
+  Zap,
+  MessageSquare,
+  History,
+} from "lucide-react-native";
 import { Colors } from "../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { chatWithTiGuy } from "../services/api";
@@ -35,7 +43,20 @@ export const TiGuyChat = () => {
     },
   ]);
   const [inputText, setInputText] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const menuAnim = useRef(new Animated.Value(0)).current;
+
+  const toggleMenu = () => {
+    const toValue = showHistory ? 0 : 1;
+    Animated.spring(menuAnim, {
+      toValue,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+    setShowHistory(!showHistory);
+  };
 
   const sendMessage = async () => {
     if (inputText.trim() === "") return;
@@ -50,7 +71,6 @@ export const TiGuyChat = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
 
-    // Call live Ti-Guy backend
     try {
       const response = await chatWithTiGuy(inputText);
       const tiguyMsg: Message = {
@@ -75,12 +95,15 @@ export const TiGuyChat = () => {
         ]}
       >
         {!isUser && (
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=100",
-            }}
-            style={styles.avatar}
-          />
+          <View style={styles.avatarContainer}>
+            <Image
+              source={{
+                uri: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=100",
+              }}
+              style={styles.avatar}
+            />
+            <View style={styles.avatarStitching} />
+          </View>
         )}
         <View
           style={[
@@ -88,10 +111,13 @@ export const TiGuyChat = () => {
             isUser ? styles.userBubble : styles.tiguyBubble,
           ]}
         >
+          {/* Internal stitching for bubbles */}
+          <View style={styles.bubbleStitching} />
+
           <Text style={[styles.messageText, isUser && styles.userMessageText]}>
             {item.text}
           </Text>
-          <Text style={styles.timestamp}>
+          <Text style={[styles.timestamp, isUser && styles.userTimestamp]}>
             {item.timestamp.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -103,79 +129,108 @@ export const TiGuyChat = () => {
   };
 
   return (
-    <LinearGradient
-      colors={[Colors.leatherDark, Colors.background]}
-      style={styles.container}
-    >
-      {/* Stitching Line - Top */}
-      <View style={styles.stitchingContainer}>
-        <View style={styles.stitching} />
-      </View>
-
-      <SafeAreaView style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity>
-            <Menu size={24} color={Colors.primary} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>TI-GUY</Text>
-            <View style={styles.statusContainer}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>EN LIGNE</Text>
-            </View>
-          </View>
-          <TouchableOpacity>
-            <X size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-      />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[Colors.tanLeather, Colors.tanAccent]}
+        style={styles.background}
       >
-        {/* Input Bar with Leather Aesthetic */}
-        <View
-          style={[
-            styles.inputContainer,
-            { paddingBottom: Math.max(insets.bottom, 20) },
-          ]}
-        >
-          {/* Internal Stitching for Input Bar */}
-          <View style={styles.inputStitching} />
+        {/* Main Leather Stitching */}
+        <View style={styles.globalStitching} />
 
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Jase avec moi..."
-              placeholderTextColor={Colors.textMuted}
-              multiline
-            />
-            <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
-              <LinearGradient
-                colors={["#FFD700", "#DAA520"]}
-                style={styles.sendButtonGradient}
-              >
-                <Send size={20} color="#000" />
-              </LinearGradient>
+        <SafeAreaView style={styles.header}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={toggleMenu}>
+              <History size={24} color={Colors.tanStitching} />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>TI-GUY</Text>
+              <View style={styles.statusContainer}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>AU POSTE</Text>
+              </View>
+            </View>
+            <TouchableOpacity>
+              <MessageSquare size={24} color={Colors.tanStitching} />
             </TouchableOpacity>
           </View>
+        </SafeAreaView>
 
-          <Text style={styles.footerBranding}>⚜️ ZYEUTÉ SWARM 🦫</Text>
-        </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+        {/* Tiny Menu / History Mock */}
+        {showHistory && (
+          <Animated.View
+            style={[
+              styles.historyMenu,
+              {
+                opacity: menuAnim,
+                transform: [
+                  {
+                    translateY: menuAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-20, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Text style={styles.historyTitle}>DERNIERS ÉCHANGES</Text>
+            <TouchableOpacity style={styles.historyItem}>
+              <Text style={styles.historyItemText}>
+                • Discussion sur la poutine...
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.historyItem}>
+              <Text style={styles.historyItemText}>
+                • Le secret du castor...
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messageList}
+          onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+          showsVerticalScrollIndicator={false}
+        />
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+        >
+          <View
+            style={[
+              styles.inputContainer,
+              { paddingBottom: Math.max(insets.bottom, 20) },
+            ]}
+          >
+            <View style={styles.inputStitching} />
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={styles.input}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Dis-moi de quoi, mon chum..."
+                placeholderTextColor="rgba(62, 39, 35, 0.4)"
+                multiline
+              />
+              <TouchableOpacity onPress={sendMessage} style={styles.sendButton}>
+                <LinearGradient
+                  colors={[Colors.tanStitching, Colors.tanText]}
+                  style={styles.sendButtonGradient}
+                >
+                  <Send size={18} color={Colors.tanLeather} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.footerBranding}>⚜️ MANUFACTURE ZYEUTÉ 🦫</Text>
+          </View>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 };
 
@@ -183,43 +238,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  stitchingContainer: {
-    position: "absolute",
-    top: 50,
-    left: 10,
-    right: 10,
-    bottom: 10,
-    pointerEvents: "none",
-    zIndex: 1,
-  },
-  stitching: {
+  background: {
     flex: 1,
+  },
+  globalStitching: {
+    position: "absolute",
+    top: 60,
+    left: 15,
+    right: 15,
+    bottom: 15,
     borderWidth: 2,
-    borderColor: Colors.stitching,
+    borderColor: "rgba(139, 94, 60, 0.2)",
     borderStyle: "dashed",
-    borderRadius: 30,
-    opacity: 0.5,
+    borderRadius: 40,
+    pointerEvents: "none",
   },
   header: {
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(236, 217, 197, 0.8)",
     borderBottomWidth: 1,
-    borderBottomColor: Colors.stitching,
+    borderBottomColor: Colors.tanStitching,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 25,
+    paddingVertical: 12,
   },
   headerTitleContainer: {
     alignItems: "center",
   },
   headerTitle: {
-    color: Colors.primary,
-    fontSize: 20,
+    color: Colors.tanText,
+    fontSize: 22,
     fontWeight: "900",
-    letterSpacing: 2,
+    letterSpacing: 3,
   },
   statusContainer: {
     flexDirection: "row",
@@ -227,25 +280,55 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: Colors.success,
-    marginRight: 4,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.1)",
   },
   statusText: {
-    color: Colors.textMuted,
+    color: Colors.tanStitching,
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  historyMenu: {
+    backgroundColor: "rgba(215, 181, 141, 0.95)",
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 15,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: Colors.tanStitching,
+    zIndex: 100,
+  },
+  historyTitle: {
+    color: Colors.tanText,
+    fontSize: 10,
+    fontWeight: "900",
+    marginBottom: 10,
+    opacity: 0.7,
+  },
+  historyItem: {
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "rgba(139, 94, 60, 0.2)",
+  },
+  historyItemText: {
+    color: Colors.tanText,
+    fontSize: 13,
+    fontWeight: "600",
   },
   messageList: {
-    padding: 20,
-    paddingTop: 40,
+    padding: 25,
+    paddingTop: 30,
   },
   messageWrapper: {
     flexDirection: "row",
-    marginBottom: 20,
-    maxWidth: "85%",
+    marginBottom: 24,
+    maxWidth: "88%",
   },
   userMessageWrapper: {
     alignSelf: "flex-end",
@@ -254,55 +337,88 @@ const styles = StyleSheet.create({
   tiguyMessageWrapper: {
     alignSelf: "flex-start",
   },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 10,
+  },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.tanStitching,
+  },
+  avatarStitching: {
+    position: "absolute",
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: "rgba(139, 94, 60, 0.3)",
+    borderStyle: "dashed",
+    borderRadius: 25,
   },
   messageBubble: {
-    padding: 12,
+    padding: 15,
+    borderRadius: 25,
+    position: "relative",
+    shadowColor: Colors.tanStitching,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  bubbleStitching: {
+    position: "absolute",
+    top: 4,
+    left: 4,
+    right: 4,
+    bottom: 4,
+    borderWidth: 1,
+    borderColor: "rgba(139, 94, 60, 0.15)",
+    borderStyle: "dashed",
     borderRadius: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    pointerEvents: "none",
   },
   userBubble: {
-    backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
+    backgroundColor: Colors.tanStitching,
+    borderBottomRightRadius: 5,
   },
   tiguyBubble: {
-    backgroundColor: Colors.card,
-    borderBottomLeftRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    borderBottomLeftRadius: 5,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.05)",
+    borderColor: "rgba(139, 94, 60, 0.1)",
   },
   messageText: {
-    color: Colors.text,
-    fontSize: 15,
-    lineHeight: 20,
+    color: Colors.tanText,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "500",
   },
   userMessageText: {
-    color: "#000",
+    color: Colors.tanLeather,
     fontWeight: "600",
   },
   timestamp: {
     fontSize: 10,
-    color: "rgba(0,0,0,0.5)",
+    color: Colors.tanStitching,
     alignSelf: "flex-end",
-    marginTop: 4,
+    marginTop: 6,
+    fontWeight: "700",
+    opacity: 0.6,
+  },
+  userTimestamp: {
+    color: Colors.tanLeather,
+    opacity: 0.8,
   },
   inputContainer: {
-    backgroundColor: Colors.leatherDark,
+    backgroundColor: "rgba(236, 217, 197, 0.95)",
     paddingHorizontal: 20,
     paddingTop: 15,
     borderTopWidth: 2,
-    borderTopColor: Colors.primary,
-    position: "relative",
+    borderTopColor: Colors.tanStitching,
   },
   inputStitching: {
     position: "absolute",
@@ -311,46 +427,51 @@ const styles = StyleSheet.create({
     right: 5,
     bottom: 5,
     borderWidth: 1,
-    borderColor: Colors.stitching,
+    borderColor: "rgba(139, 94, 60, 0.2)",
     borderStyle: "dashed",
-    borderRadius: 15,
+    borderRadius: 20,
     pointerEvents: "none",
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "rgba(255,191,0,0.2)",
-    paddingLeft: 15,
-    paddingRight: 5,
-    paddingVertical: 5,
+    backgroundColor: "rgba(139, 94, 60, 0.05)",
+    borderRadius: 30,
+    borderWidth: 1.5,
+    borderColor: "rgba(139, 94, 60, 0.2)",
+    paddingLeft: 20,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
   input: {
     flex: 1,
-    color: Colors.text,
-    fontSize: 15,
+    color: Colors.tanText,
+    fontSize: 16,
     maxHeight: 100,
     paddingVertical: 8,
+    fontWeight: "600",
   },
   sendButton: {
-    marginLeft: 10,
+    marginLeft: 12,
   },
   sendButtonGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   footerBranding: {
     textAlign: "center",
-    color: Colors.textMuted,
-    fontSize: 10,
+    color: Colors.tanStitching,
+    fontSize: 11,
     fontWeight: "900",
-    marginTop: 10,
+    marginTop: 12,
     letterSpacing: 2,
-    opacity: 0.5,
+    opacity: 0.6,
   },
 });

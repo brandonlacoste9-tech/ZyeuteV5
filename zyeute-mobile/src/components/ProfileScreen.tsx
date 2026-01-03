@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -22,15 +23,20 @@ import {
   Users,
   ShieldCheck,
   Trophy,
+  Bell,
+  Info,
+  LogOut,
+  Wallet,
 } from "lucide-react-native";
 import { Colors } from "../theme/colors";
-import { getCurrentUser } from "../services/api";
-import { User } from "../types";
+import { getCurrentUser, getUserPosts } from "../services/api";
+import { User, Post } from "../types";
 
 const { width } = Dimensions.get("window");
 
 export const ProfileScreen = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"posts" | "vault">("posts");
 
@@ -40,19 +46,25 @@ export const ProfileScreen = () => {
 
   const loadProfile = async () => {
     const userData = await getCurrentUser();
-    // For demo purposes, if no user is logged in, show a prestige mock
-    setUser(
-      userData || {
-        id: "demo",
-        username: "Souverain_Alpha",
-        displayName: "Brandon Lacoste",
-        avatarUrl:
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
-        karmaCredits: 12500,
-        cashCredits: 4500,
-        bio: "Bâtisseur du Swarm. 🦫\nSouveraineté Digitale ou rien. ⚜️",
-      },
-    );
+    const currentUser = userData || {
+      id: "demo",
+      username: "Souverain_Alpha",
+      displayName: "Brandon Lacoste",
+      avatarUrl:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
+      karmaCredits: 12500,
+      cashCredits: 4500,
+      bio: "Bâtisseur du Swarm. 🦫\nSouveraineté Digitale ou rien. ⚜️",
+    };
+
+    setUser(currentUser);
+
+    // Fetch posts for the user
+    if (currentUser.username) {
+      const userPosts = await getUserPosts(currentUser.username);
+      setPosts(userPosts);
+    }
+
     setLoading(false);
   };
 
@@ -73,10 +85,26 @@ export const ProfileScreen = () => {
       >
         <SafeAreaView>
           <View style={styles.topActions}>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() =>
+                Alert.alert(
+                  "Souveraineté",
+                  "Cryptage de bout en bout activé sur votre Ruche.",
+                )
+              }
+            >
               <ShieldCheck size={24} color={Colors.primary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() =>
+                Alert.alert(
+                  "Paramètres",
+                  "Accès aux protocoles système de Zyeuté.",
+                )
+              }
+            >
               <Settings size={24} color={Colors.text} />
             </TouchableOpacity>
           </View>
@@ -192,30 +220,144 @@ export const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Empty State / Grid Placeholder */}
-        <View style={styles.gridPlaceholder}>
-          <View style={styles.emptyStitching} />
-          <Text style={styles.emptyText}>
-            Bientôt : Vos publications précieuses apparaîtront ici.
-          </Text>
-          <TouchableOpacity style={styles.ctaButton}>
-            <Text style={styles.ctaButtonText}>PUBLIER DANS LE SWARM</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Posts Grid or Vault Content */}
+        {activeTab === "posts" && (
+          <View style={styles.gridContainer}>
+            {posts.length > 0 ? (
+              <View style={styles.postsGrid}>
+                {posts.map((post) => (
+                  <TouchableOpacity key={post.id} style={styles.gridItem}>
+                    <Image
+                      source={{
+                        uri: post.thumbnailUrl || post.mediaUrl,
+                      }}
+                      style={styles.gridImage}
+                    />
+                    {post.type === "video" && (
+                      <View style={styles.videoBadge}>
+                        <Flame size={12} color={Colors.primary} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.gridPlaceholder}>
+                <View style={styles.emptyStitching} />
+                <Text style={styles.emptyText}>
+                  Bientôt : Vos publications précieuses apparaîtront ici.
+                </Text>
+                <TouchableOpacity style={styles.ctaButton}>
+                  <Text style={styles.ctaButtonText}>
+                    PUBLIER DANS LE SWARM
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
+        {activeTab === "vault" && (
+          <View style={styles.gridPlaceholder}>
+            <View style={styles.emptyStitching} />
+            <Text style={styles.emptyText}>
+              Votre voûte personnelle est actuellement vide.
+            </Text>
+            <TouchableOpacity style={styles.ctaButton}>
+              <Text style={styles.ctaButtonText}>EXPLORER LE SWARM</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* System Settings Links */}
         <View style={styles.settingsSection}>
-          <TouchableOpacity style={styles.settingsItem}>
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert(
+                "Mon Hive",
+                "Gestion de la visibilité et du Swarm local.",
+              )
+            }
+          >
             <View style={styles.settingsLeft}>
-              <Users size={20} color={Colors.textMuted} />
-              <Text style={styles.settingsText}>Gérer mon Hive</Text>
+              <Users size={20} color={Colors.primary} />
+              <Text style={styles.settingsText}>Gérer ma Visibilité</Text>
             </View>
             <ChevronRight size={20} color={Colors.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsItem}>
+
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert(
+                "Sécurité",
+                "Protocole de souveraineté et chiffrement activé.",
+              )
+            }
+          >
             <View style={styles.settingsLeft}>
-              <ShieldCheck size={20} color={Colors.textMuted} />
-              <Text style={styles.settingsText}>Sécurité & Souveraineté</Text>
+              <ShieldCheck size={20} color={Colors.primary} />
+              <Text style={styles.settingsText}>Souveraineté Digitale</Text>
+            </View>
+            <ChevronRight size={20} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert("Portefeuille", "Accès à votre voûte sécurisée.")
+            }
+          >
+            <View style={styles.settingsLeft}>
+              <Wallet size={20} color={Colors.primary} />
+              <Text style={styles.settingsText}>Voûte & Portefeuille</Text>
+            </View>
+            <ChevronRight size={20} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert("Notifications", "Ajustement des alertes du Swarm.")
+            }
+          >
+            <View style={styles.settingsLeft}>
+              <Bell size={20} color={Colors.primary} />
+              <Text style={styles.settingsText}>Alertes du Swarm</Text>
+            </View>
+            <ChevronRight size={20} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <View style={styles.settingsDivider} />
+
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert("Zyeuté", "Version 5.0.1 - Prestige Edition")
+            }
+          >
+            <View style={styles.settingsLeft}>
+              <Info size={20} color={Colors.textMuted} />
+              <Text style={styles.settingsText}>À Propos de Zyeuté</Text>
+            </View>
+            <ChevronRight size={20} color={Colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={() =>
+              Alert.alert(
+                "Déconnexion",
+                "Êtes-vous sûr de vouloir quitter le Swarm?",
+              )
+            }
+          >
+            <View style={styles.settingsLeft}>
+              <LogOut size={20} color={Colors.error} />
+              <Text style={[styles.settingsText, { color: Colors.error }]}>
+                Quitter la Session
+              </Text>
             </View>
             <ChevronRight size={20} color={Colors.textMuted} />
           </TouchableOpacity>
@@ -470,5 +612,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     marginLeft: 15,
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginVertical: 10,
+    marginHorizontal: 20,
+  },
+  gridContainer: {
+    minHeight: 200,
+  },
+  postsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -2,
+  },
+  gridItem: {
+    width: width / 3 - 14,
+    height: (width / 3 - 14) * 1.5,
+    margin: 2,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+  },
+  gridImage: {
+    width: "100%",
+    height: "100%",
+  },
+  videoBadge: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 4,
+    borderRadius: 8,
   },
 });

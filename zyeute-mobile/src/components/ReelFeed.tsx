@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import { Colors } from "../theme/colors";
 import { getSovereignFeed } from "../services/api";
@@ -63,6 +64,9 @@ const FeedItem: React.FC<FeedItemProps> = ({ item, isVisible }) => {
           resizeMode={ResizeMode.COVER}
           isLooping
           shouldPlay={isVisible}
+          usePoster={true}
+          posterSource={{ uri: item.thumbnailUrl }}
+          posterStyle={{ resizeMode: "cover" }}
           onPlaybackStatusUpdate={(status) => setStatus(() => status)}
         />
       ) : (
@@ -145,13 +149,46 @@ export const ReelFeed = () => {
     itemVisiblePercentThreshold: 50,
   }).current;
 
+  // Prestige Skeleton Loader
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={{ color: Colors.text, marginTop: 10 }}>
-          Chargement du Swarm...
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[Colors.background, Colors.leatherDark]}
+          style={styles.loaderContainer}
+        >
+          <Image
+            source={{
+              uri: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDdtY2lvM2o4d2k4eXo4eXo4eXo4eXo4eXo4eXo4eXo4eXo4eXo/l3q2K5jinAlChoCLS/giphy.gif",
+            }} // Optional: Use a real local prestigious gif/image if available
+            style={{ width: 100, height: 100, opacity: 0.5 }}
+          />
+          <ActivityIndicator
+            size="large"
+            color={Colors.primary}
+            style={{ marginTop: 20 }}
+          />
+          <Text style={styles.loadingText}>INITIALISATION DU SWARM...</Text>
+          <Text style={styles.loadingSubText}>
+            Synchronisation avec le Hive Québec
+          </Text>
+        </LinearGradient>
+      </View>
+    );
+  }
+
+  // Error State
+  if (!posts || posts.length === 0) {
+    return (
+      <View style={styles.errorContainer}>
+        <Zap size={64} color={Colors.textMuted} />
+        <Text style={styles.errorTitle}>LE HIVE EST SILENCIEUX</Text>
+        <Text style={styles.errorText}>
+          Impossible de capter le signal du Swarm.
         </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadFeed}>
+          <Text style={styles.retryText}>RÉESSAYER</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -172,6 +209,12 @@ export const ReelFeed = () => {
         snapToInterval={height}
         snapToAlignment="start"
         decelerationRate="fast"
+        // Optimizations for Pre-fetching
+        windowSize={4} // Render 4 screens worth of content (current + 3) to pre-buffer
+        initialNumToRender={2} // Render first 2 immediately
+        maxToRenderPerBatch={2}
+        removeClippedSubviews={true} // Unmount off-screen views to save memory (keep windowSize small)
+        updateCellsBatchingPeriod={100}
       />
     </View>
   );
@@ -182,11 +225,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  loader: {
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: Colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
+    marginTop: 20,
+    letterSpacing: 2,
+  },
+  loadingSubText: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    marginTop: 5,
+  },
+  errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: Colors.background,
+  },
+  errorTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 20,
+    letterSpacing: 2,
+  },
+  errorText: {
+    color: Colors.textMuted,
+    fontSize: 14,
+    marginTop: 10,
+    marginBottom: 30,
+  },
+  retryButton: {
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 25,
+  },
+  retryText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   videoContainer: {
     width: width,

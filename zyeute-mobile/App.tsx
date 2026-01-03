@@ -6,7 +6,19 @@ import { Colors } from "./src/theme/colors";
 import { ReelFeed } from "./src/components/ReelFeed";
 import { TiGuyChat } from "./src/components/TiGuyChat";
 import { ProfileScreen } from "./src/components/ProfileScreen";
-import { Home, MessageSquare, User, Search } from "lucide-react-native";
+import { SearchScreen } from "./src/components/SearchScreen";
+import { RitualsScreen } from "./src/components/RitualsScreen";
+import { MessagesScreen } from "./src/components/MessagesScreen";
+import { StudioScreen } from "./src/components/StudioScreen";
+import {
+  Home,
+  MessageSquare,
+  User,
+  Search,
+  PlayCircle,
+  Library,
+  Sparkles,
+} from "lucide-react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const Tab = createBottomTabNavigator();
@@ -16,6 +28,7 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <Tab.Navigator
+          id="main_tabs"
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
@@ -39,34 +52,57 @@ export default function App() {
             name="Feed"
             component={ReelFeed}
             options={{
-              tabBarIcon: ({ color }) => <Home size={24} color={color} />,
-              tabBarLabel: "DÉCOUVRIR",
+              tabBarIcon: ({ color }) => <Home size={22} color={color} />,
+              tabBarLabel: "SWARM",
             }}
           />
           <Tab.Screen
             name="Search"
-            component={View} // Placeholder
+            component={SearchScreen}
             options={{
-              tabBarIcon: ({ color }) => <Search size={24} color={color} />,
-              tabBarLabel: "RECHERCHE",
+              tabBarIcon: ({ color }) => <Search size={22} color={color} />,
+              tabBarLabel: "EXPLORER",
             }}
           />
           <Tab.Screen
-            name="Chat"
-            component={TiGuyChat}
+            name="Studio"
+            component={StudioScreen}
             options={{
               tabBarIcon: ({ color }) => (
-                <MessageSquare size={24} color={color} />
+                <View style={styles.studioTab}>
+                  <Sparkles
+                    size={24}
+                    color={color === Colors.primary ? "#000" : color}
+                  />
+                </View>
               ),
-              tabBarLabel: "TI-GUY",
+              tabBarLabel: "STUDIO",
+            }}
+          />
+          <Tab.Screen
+            name="Rituals"
+            component={RitualsScreen}
+            options={{
+              tabBarIcon: ({ color }) => <PlayCircle size={22} color={color} />,
+              tabBarLabel: "RITUELS",
+            }}
+          />
+          <Tab.Screen
+            name="Messages"
+            component={MessagesScreen}
+            options={{
+              tabBarIcon: ({ color }) => (
+                <MessageSquare size={22} color={color} />
+              ),
+              tabBarLabel: "DIRECTS",
             }}
           />
           <Tab.Screen
             name="Profile"
             component={ProfileScreen}
             options={{
-              tabBarIcon: ({ color }) => <User size={24} color={color} />,
-              tabBarLabel: "MON HIVE",
+              tabBarIcon: ({ color }) => <User size={22} color={color} />,
+              tabBarLabel: "RUCHE",
             }}
           />
         </Tab.Navigator>
@@ -80,5 +116,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  studioTab: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: -5,
   },
 });

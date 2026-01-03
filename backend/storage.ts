@@ -33,6 +33,8 @@ import {
   parentalControls,
   type ParentalControl,
   type InsertParentalControl,
+  transactions,
+  type Transaction,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -1099,8 +1101,17 @@ export class DatabaseStorage implements IStorage {
             .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
             .where(eq(users.id, receiverId));
 
-          // 4. Log Tap Event (Optional: Record in transactions table)
-          // For now, atomic update is enough.
+          // 4. Record Transaction
+          await tx.insert(transactions).values({
+            senderId,
+            receiverId,
+            amount,
+            creditType: "cash",
+            type: "gift",
+            status: "completed",
+            metadata: { method: "transfer" },
+          });
+
           return true;
         });
       } catch (error) {
@@ -1116,10 +1127,21 @@ export class DatabaseStorage implements IStorage {
     _reason: string,
   ): Promise<void> {
     await traceDatabase("UPDATE", "refund_piasses", async () => {
-      await db
-        .update(users)
-        .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
-        .where(eq(users.id, userId));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(users)
+          .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
+          .where(eq(users.id, userId));
+
+        await tx.insert(transactions).values({
+          receiverId: userId,
+          amount,
+          creditType: "cash",
+          type: "payout",
+          status: "completed",
+          metadata: { reason: _reason },
+        });
+      });
     });
   }
 
@@ -1129,21 +1151,46 @@ export class DatabaseStorage implements IStorage {
     _reason: string,
   ): Promise<void> {
     await traceDatabase("UPDATE", "award_karma", async () => {
-      await db
-        .update(users)
-        .set({ karmaCredits: sql`${users.karmaCredits} + ${amount}` })
-        .where(eq(users.id, userId));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(users)
+          .set({ karmaCredits: sql`${users.karmaCredits} + ${amount}` })
+          .where(eq(users.id, userId));
+
+        await tx.insert(transactions).values({
+          receiverId: userId,
+          amount,
+          creditType: "karma",
+          type: "reward",
+          status: "completed",
+          metadata: { reason: _reason },
+        });
+      });
     });
   }
 
   async creditPiasses(userId: string, amount: number): Promise<boolean> {
     return traceDatabase("UPDATE", "credit_piasses", async () => {
-      const result = await db
-        .update(users)
-        .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
-        .where(eq(users.id, userId))
-        .returning();
-      return !!result[0];
+      const result = await db.transaction(async (tx) => {
+        const updateResult = await tx
+          .update(users)
+          .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
+          .where(eq(users.id, userId))
+          .returning();
+
+        if (updateResult[0]) {
+          await tx.insert(transactions).values({
+            receiverId: userId,
+            amount,
+            creditType: "cash",
+            type: "reward",
+            status: "completed",
+            metadata: { source: "system_credit" },
+          });
+        }
+        return !!updateResult[0];
+      });
+      return result;
     });
   }
 
@@ -1151,11 +1198,20 @@ export class DatabaseStorage implements IStorage {
     userId: string,
     limit: number = 20,
     offset: number = 0,
-  ): Promise<any[]> {
+  ): Promise<Transaction[]> {
     return traceDatabase("SELECT", "user_transactions", async () => {
-      // TODO: Implement transactions table in schema.ts
-      // For now, return empty as we are doing atomic updates without logging
-      return [];
+      return await db
+        .select()
+        .from(transactions)
+        .where(
+          or(
+            eq(transactions.senderId, userId),
+            eq(transactions.receiverId, userId),
+          ),
+        )
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit)
+        .offset(offset);
     });
   }
 

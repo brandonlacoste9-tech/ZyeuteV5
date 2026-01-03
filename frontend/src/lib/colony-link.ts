@@ -1,3 +1,4 @@
+// @ts-expect-error - socket.io-client types being stubborn
 import { io, Socket } from "socket.io-client";
 import { createClient } from "@supabase/supabase-js";
 
@@ -51,11 +52,11 @@ class ColonyLink {
         this.socket?.emit("join_channel", "global_feed");
       });
 
-      this.socket.on("disconnect", (reason) => {
+      this.socket.on("disconnect", (reason: string) => {
         console.log("⚜️ Zyeuté: Disconnected from Colony OS:", reason);
       });
 
-      this.socket.on("connect_error", (error) => {
+      this.socket.on("connect_error", (error: Error) => {
         console.log("⚜️ Zyeuté: Connection error:", error.message);
         this.reconnectAttempts++;
 

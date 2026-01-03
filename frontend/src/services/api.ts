@@ -299,7 +299,15 @@ export async function getJobStatus(jobId: string): Promise<{
   processedOn?: number;
   attemptsMade: number;
 } | null> {
-  const { data, error } = await apiCall(`/jobs/${jobId}/status`);
+  const { data, error } = await apiCall<{
+    id: string;
+    state: string;
+    progress: number;
+    finishedOn?: number;
+    failedReason?: string;
+    processedOn?: number;
+    attemptsMade: number;
+  }>(`/jobs/${jobId}/status`);
   if (error || !data) return null;
   return data;
 }
@@ -520,6 +528,26 @@ export async function generateImage(
   return result.success ? result.data : null;
 }
 
+export async function analyzeImage(base64Image: string): Promise<{
+  caption: string;
+  hashtags: string[];
+  vibe: string;
+  vibe_vector?: number[];
+} | null> {
+  const { data, error } = await apiCall<{
+    caption: string;
+    hashtags: string[];
+    vibe: string;
+    vibe_vector?: number[];
+  }>("/ai/analyze-image", {
+    method: "POST",
+    body: JSON.stringify({ image: base64Image }),
+  });
+
+  if (error || !data) return null;
+  return data;
+}
+
 // ============ PARENTAL CONTROLS FUNCTIONS ============
 
 export async function linkChild(childUsername: string): Promise<User | null> {
@@ -638,6 +666,7 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     max_views: p.max_views || p.maxViews || 1,
     expires_at: p.expires_at || p.expiresAt,
     burned_at: p.burned_at || p.burnedAt,
+    jobId: p.jobId || p.job_id,
   } as Post;
 }
 

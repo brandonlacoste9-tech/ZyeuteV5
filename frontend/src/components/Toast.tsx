@@ -17,13 +17,16 @@ interface ToastProps {
   onClose: (id: string) => void;
 }
 
+import { useTranslation } from "@/i18n";
+
 const Toast: React.FC<ToastProps> = ({
   id,
   type,
   message,
-  duration = 3000,
+  duration = 4000,
   onClose,
 }) => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = React.useState(false);
   const [isExiting, setIsExiting] = React.useState(false);
 
@@ -31,62 +34,181 @@ const Toast: React.FC<ToastProps> = ({
     setIsExiting(true);
     setTimeout(() => {
       onClose(id);
-    }, 300);
+    }, 400);
   }, [id, onClose]);
 
   React.useEffect(() => {
-    // Trigger enter animation
-    setTimeout(() => setIsVisible(true), 10);
-
-    // Auto dismiss
-    const timer = setTimeout(() => {
-      handleClose();
-    }, duration);
-
+    setTimeout(() => setIsVisible(true), 50);
+    const timer = setTimeout(handleClose, duration);
     return () => clearTimeout(timer);
   }, [duration, handleClose]);
 
-  const icons = {
-    success: "✓",
-    error: "✕",
-    info: "ℹ",
-    warning: "⚠",
+  const config = {
+    success: {
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      ),
+      color: "#FFD700", // Gold for success
+      glow: "rgba(255, 215, 0, 0.4)",
+      label: t("toast.success") || "Succès ✨",
+    },
+    error: {
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      ),
+      color: "#FF4444",
+      glow: "rgba(255, 68, 68, 0.4)",
+      label: t("toast.error") || "Erreur 🛑",
+    },
+    info: {
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+      color: "#44AAFF",
+      glow: "rgba(68, 170,  255, 0.4)",
+      label: t("toast.info") || "Info ℹ️",
+    },
+    warning: {
+      icon: (
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+      ),
+      color: "#FFAA44",
+      glow: "rgba(255, 170, 68, 0.4)",
+      label: t("toast.warning") || "Alerte ⚠️",
+    },
   };
 
-  const colors = {
-    success: "from-green-500 to-emerald-600",
-    error: "from-red-500 to-rose-600",
-    info: "from-blue-500 to-indigo-600",
-    warning: "from-yellow-500 to-orange-600",
-  };
+  const active = config[type];
 
   return (
     <div
       className={`
-        mb-4 flex items-center gap-3 px-4 py-3 rounded-xl
-        bg-gradient-to-r ${colors[type]}
-        text-white shadow-lg backdrop-blur-sm
-        transform transition-all duration-300 ease-out
-        ${isVisible && !isExiting ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}
-        hover:scale-105 cursor-pointer
+        mb-4 flex flex-col min-w-[320px] max-w-sm
+        bg-leather-900/95 backdrop-blur-xl border border-gold-500/20
+        rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]
+        transform transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1)
+        ${isVisible && !isExiting ? "translate-x-0 opacity-100 scale-100" : "translate-x-12 opacity-0 scale-90"}
+        overflow-hidden cursor-pointer group active:scale-95
       `}
       onClick={handleClose}
-      role="alert"
+      style={{
+        boxShadow:
+          isVisible && !isExiting
+            ? `0 10px 40px -10px ${active.glow}, 0 0 20px rgba(0,0,0,0.8)`
+            : "none",
+      }}
     >
-      <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-white/20 rounded-full font-bold">
-        {icons[type]}
+      {/* Premium Stitched Background Effect */}
+      <div className="absolute inset-0.5 rounded-[14px] border border-dashed border-gold-500/10 pointer-events-none"></div>
+
+      <div className="relative p-4 flex items-start gap-4">
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg border border-white/10"
+          style={{
+            backgroundColor: `${active.color}22`,
+            color: active.color,
+            boxShadow: `inset 0 0 10px ${active.color}33`,
+          }}
+        >
+          {active.icon}
+        </div>
+
+        <div className="flex-1 pt-0.5">
+          <h4
+            className="text-[10px] font-black uppercase tracking-[0.2em] mb-1"
+            style={{ color: active.color }}
+          >
+            {active.label}
+          </h4>
+          <p className="text-white font-medium text-sm leading-tight pr-4">
+            {message}
+          </p>
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose();
+          }}
+          className="flex-shrink-0 w-6 h-6 flex items-center justify-center text-leather-500 hover:text-white transition-colors"
+          aria-label="Close"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
-      <p className="flex-1 text-sm font-medium">{message}</p>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          handleClose();
-        }}
-        className="flex-shrink-0 w-5 h-5 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
-        aria-label="Close"
-      >
-        ×
-      </button>
+
+      {/* Progress Bar / Lifetime indicator */}
+      <div className="h-0.5 w-full bg-white/5 overflow-hidden">
+        <div
+          className="h-full transition-all linear"
+          style={{
+            backgroundColor: active.color,
+            width: isVisible ? "0%" : "100%",
+            transitionDuration: `${duration}ms`,
+            boxShadow: `0 0 8px ${active.color}`,
+          }}
+        />
+      </div>
     </div>
   );
 };

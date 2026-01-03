@@ -35,6 +35,7 @@ import debugRoutes from "./api/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
+import { economyRoutes } from "./routes/economy.js";
 // Import tracing utilities
 import {
   traced,
@@ -165,6 +166,9 @@ export async function registerRoutes(
 
   // [NEW] Admin Observability Dashboard
   app.use("/api/admin", requireAuth, adminRoutes);
+
+  // [NEW] Economy Routes
+  app.use("/api/economy", economyRoutes);
 
   // Apply general rate limiting to all other API routes
 

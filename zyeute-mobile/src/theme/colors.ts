@@ -13,4 +13,9 @@ export const Colors = {
   goldGlow: "rgba(255, 191, 0, 0.4)",
   whiteSemi: "rgba(255, 255, 255, 0.6)",
   blackSemi: "rgba(0, 0, 0, 0.7)",
+  // Tan Leather Theme
+  tanLeather: "#ECD9C5", // Light Tan Leather
+  tanStitching: "#8B5E3C", // Rich brown for stitching
+  tanText: "#3E2723", // Deep brown for readability
+  tanAccent: "#D7B58D", // Mid-tan
 };

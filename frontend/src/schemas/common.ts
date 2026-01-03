@@ -291,6 +291,8 @@ const PostBase = z.object({
   max_views: z.number().default(1),
   expires_at: z.string().nullable().optional(),
   burned_at: z.string().nullable().optional(),
+  job_id: z.string().nullable().optional(),
+  jobId: z.string().nullable().optional(),
 });
 
 const PhotoPost = PostBase.extend({

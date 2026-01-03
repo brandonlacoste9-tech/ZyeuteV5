@@ -19,6 +19,7 @@ import type { User } from "@/types";
 import { logger } from "../lib/logger";
 
 const settingsLogger = logger.withContext("Settings");
+import { useTranslation } from "@/i18n";
 
 interface SettingItem {
   icon: React.ReactNode;
@@ -30,6 +31,7 @@ interface SettingItem {
 
 export const Settings: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -83,15 +85,19 @@ export const Settings: React.FC = () => {
   // Sign out
   const handleSignOut = async () => {
     const message = isGuest
-      ? "Quitter le mode invité?"
-      : "Es-tu sûr de vouloir te déconnecter?";
+      ? t("settings.logout_guest") || "Quitter le mode invité?"
+      : t("settings.logout_confirm") || "Es-tu sûr de vouloir te déconnecter?";
 
     const confirmed = window.confirm(message);
     if (!confirmed) return;
 
-    toast.info(isGuest ? "Fermeture..." : "Déconnexion...");
+    toast.info(
+      isGuest
+        ? t("settings.closing") || "Fermeture..."
+        : t("settings.logging_out") || "Déconnexion...",
+    );
     await authLogout();
-    toast.success("À la prochaine! 👋");
+    toast.success(t("settings.see_you") || "À la prochaine! 👋");
     setTimeout(() => navigate("/login"), 500);
   };
 
@@ -128,7 +134,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Tags et mentions",
+      label: t("settings.tags_mentions"),
       path: "/settings/tags",
     },
     {
@@ -147,7 +153,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Commentaires",
+      label: t("settings.comments_label"),
       path: "/settings/comments",
     },
     {
@@ -166,7 +172,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Partage et remixes",
+      label: t("settings.sharing_remixes"),
       path: "/settings/sharing",
     },
     {
@@ -185,7 +191,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Comptes restreints",
+      label: t("settings.restricted_accounts"),
       path: "/settings/restricted",
     },
   ];
@@ -207,7 +213,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Favoris",
+      label: t("settings.favorites_label"),
       path: "/settings/favorites",
     },
     {
@@ -232,7 +238,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Comptes masqués",
+      label: t("settings.muted_accounts"),
       path: "/settings/muted",
     },
     {
@@ -251,7 +257,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Préférences de contenu",
+      label: t("settings.content_preferences"),
       path: "/settings/content",
     },
   ];
@@ -273,7 +279,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Photos et vidéos",
+      label: t("settings.photos_videos"),
       path: "/settings/media",
     },
     {
@@ -292,7 +298,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Audio et musique",
+      label: t("settings.audio_music"),
       path: "/settings/audio",
     },
     {
@@ -311,7 +317,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Stockage et données",
+      label: t("settings.storage_data"),
       path: "/settings/storage",
     },
     {
@@ -336,7 +342,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Paramètres de l'app",
+      label: t("settings.app_settings"),
       path: "/settings/app",
     },
   ];
@@ -344,7 +350,7 @@ export const Settings: React.FC = () => {
   const quebecSettings: SettingItem[] = [
     {
       icon: <span className="text-2xl">⚜️</span>,
-      label: "Région du Québec",
+      label: t("settings.quebec_region"),
       path: "/settings/region",
       badge: user?.region
         ? QUEBEC_REGIONS.find((r) => r.id === user.region)?.emoji
@@ -352,13 +358,13 @@ export const Settings: React.FC = () => {
     },
     {
       icon: <span className="text-2xl">🇨🇦</span>,
-      label: "Langue",
+      label: t("settings.language_label"),
       path: "/settings/language",
-      badge: "FR",
+      badge: t("settings.lang_badge") || "FR",
     },
     {
       icon: <span className="text-2xl">🦫</span>,
-      label: "Ti-Guy Assistant",
+      label: t("settings.tiguy_assistant"),
       path: "/settings/voice",
     },
   ];
@@ -380,9 +386,9 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "QG Parental",
+      label: t("settings.parental_hq"),
       path: "/parental",
-      badge: "NOUVEAU",
+      badge: t("settings.new_badge") || "NOUVEAU",
     },
     {
       icon: (
@@ -400,7 +406,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Modifier le profil",
+      label: t("settings.edit_profile"),
       path: "/settings/profile",
     },
     {
@@ -419,7 +425,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Confidentialité et sécurité",
+      label: t("settings.privacy_security"),
       path: "/settings/privacy",
     },
     {
@@ -438,7 +444,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Notifications",
+      label: t("settings.notifications_label"),
       path: "/settings/notifications",
     },
     {
@@ -457,7 +463,7 @@ export const Settings: React.FC = () => {
           />
         </svg>
       ),
-      label: "Abonnement Premium",
+      label: t("settings.premium_subscription"),
       path: "/premium",
       badge: user?.isPremium ? "⭐" : undefined,
     },
@@ -498,6 +504,7 @@ export const Settings: React.FC = () => {
       "/settings/privacy",
       "/settings/notifications",
       "/premium",
+      "/parental", // Added this
     ];
 
     if (item.path && existingRoutes.includes(item.path)) {
@@ -513,7 +520,7 @@ export const Settings: React.FC = () => {
   if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-black leather-overlay flex items-center justify-center">
-        <div className="text-gold-400 animate-pulse-gold">Chargement...</div>
+        <div className="text-gold-500 animate-pulse-gold">Chargement...</div>
       </div>
     );
   }
@@ -521,14 +528,14 @@ export const Settings: React.FC = () => {
   return (
     <div className="min-h-screen bg-black leather-overlay pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-black/95 backdrop-blur-sm border-b border-gold-500/20">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
+      <div className="sticky top-0 z-30 bg-black/95 backdrop-blur-md border-b border-gold-500/30">
+        <div className="max-w-2xl mx-auto px-4 py-6 flex items-center gap-4">
           <button
             onClick={() => {
               tap();
               navigate(-1);
             }}
-            className="text-gold-500 hover:text-gold-400 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-leather-900 border border-gold-500/20 text-gold-500 hover:bg-gold-500 hover:text-black transition-all"
           >
             <svg
               className="w-6 h-6"
@@ -539,156 +546,189 @@ export const Settings: React.FC = () => {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={2.5}
                 d="M15 19l-7-7 7-7"
               />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gold-500 embossed flex-1">
-            Paramètres et activité
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-gold-300 via-gold-500 to-gold-300 bg-clip-text text-transparent embossed flex-1">
+            {t("settings.title")}
           </h1>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-4">
+      <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="leather-card rounded-xl px-4 py-3 flex items-center gap-3 border-gold-500/20">
-            <svg
-              className="w-5 h-5 text-gold-500/70"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        <div className="mb-8">
+          <div className="leather-card rounded-2xl p-0.5 border-gold-500/10 shadow-xl overflow-hidden stitched-subtle">
+            <div className="bg-leather-950/80 px-4 py-4 flex items-center gap-3">
+              <svg
+                className="w-6 h-6 text-gold-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  t("settings.search_placeholder") || "Rechercher..."
+                }
+                className="flex-1 bg-transparent border-none outline-none text-white text-lg placeholder-leather-500 focus:placeholder-gold-500/40"
               />
-            </svg>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher paramètres"
-              className="flex-1 bg-transparent border-none outline-none text-white placeholder-leather-400 focus:placeholder-gold-500/50"
-            />
+            </div>
           </div>
         </div>
 
         {/* Your Activity Section */}
-        <div className="mb-6">
-          {filterSettings(yourActivitySettings).map((item, index) => (
-            <button
-              key={index}
-              onClick={() => handleSettingClick(item)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-leather-800/40 transition-all rounded-xl group border-b border-leather-800/30 last:border-b-0 text-left"
-            >
-              <div className="text-leather-300 group-hover:text-gold-500 transition-colors">
-                {item.icon}
-              </div>
-              <span className="flex-1 text-white font-medium group-hover:text-gold-400 transition-colors">
-                {item.label}
-              </span>
-              <svg
-                className="w-5 h-5 text-leather-500 group-hover:text-gold-500 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          ))}
+        <div className="mb-8">
+          <h3 className="text-gold-500/60 text-sm font-bold uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+            <span className="w-8 h-px bg-gold-500/30"></span>
+            {t("settings.activity") || "Ton activité"}
+            <span className="flex-1 h-px bg-gold-500/30"></span>
+          </h3>
+          <div className="leather-card rounded-3xl border border-gold-500/10 shadow-2xl overflow-hidden stitched">
+            <div className="bg-leather-900/60 divide-y divide-gold-500/5">
+              {filterSettings(yourActivitySettings).map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSettingClick(item)}
+                  className="w-full flex items-center gap-4 p-5 hover:bg-gold-500/5 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-leather-800 flex items-center justify-center text-leather-400 group-hover:text-gold-500 group-hover:bg-leather-700 transition-all border border-leather-700 group-hover:border-gold-500/30">
+                    {item.icon}
+                  </div>
+                  <span className="flex-1 text-white font-semibold text-lg group-hover:text-gold-400 transition-colors">
+                    {item.label}
+                  </span>
+                  <div className="text-leather-600 group-hover:text-gold-500 transform group-hover:translate-x-1 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* What You See Section */}
-        <div className="mb-6">
-          <h2 className="text-leather-400 text-xs font-bold uppercase tracking-wider mb-3 px-4">
-            Ce que tu vois
-          </h2>
-          {filterSettings(whatYouSeeSettings).map((item, index) => (
-            <button
-              key={index}
-              onClick={() => handleSettingClick(item)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-leather-800/30 transition-colors rounded-xl group text-left"
-            >
-              <div className="text-leather-300 group-hover:text-gold-500 transition-colors">
-                {item.icon}
-              </div>
-              <span className="flex-1 text-white font-medium">
-                {item.label}
-              </span>
-              <svg
-                className="w-5 h-5 text-leather-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          ))}
+        <div className="mb-8">
+          <h3 className="text-gold-500/60 text-sm font-bold uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+            <span className="w-8 h-px bg-gold-500/30"></span>
+            {t("settings.what_you_see") || "Ce que tu vois"}
+            <span className="flex-1 h-px bg-gold-500/30"></span>
+          </h3>
+          <div className="leather-card rounded-3xl border border-gold-500/10 shadow-2xl overflow-hidden stitched">
+            <div className="bg-leather-900/60 divide-y divide-gold-500/5">
+              {filterSettings(whatYouSeeSettings).map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSettingClick(item)}
+                  className="w-full flex items-center gap-4 p-5 hover:bg-gold-500/5 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-leather-800 flex items-center justify-center text-leather-400 group-hover:text-gold-500 group-hover:bg-leather-700 transition-all border border-leather-700 group-hover:border-gold-500/30">
+                    {item.icon}
+                  </div>
+                  <span className="flex-1 text-white font-semibold text-lg group-hover:text-gold-400 transition-colors">
+                    {item.label}
+                  </span>
+                  <div className="text-leather-600 group-hover:text-gold-500 transform group-hover:translate-x-1 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Your App and Media Section */}
-        <div className="mb-6">
-          <h2 className="text-leather-400 text-xs font-bold uppercase tracking-wider mb-3 px-4">
-            Ton app et médias
-          </h2>
-          {filterSettings(appAndMediaSettings).map((item, index) => (
-            <button
-              key={index}
-              onClick={() => handleSettingClick(item)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-leather-800/30 transition-colors rounded-xl group text-left"
-            >
-              <div className="text-leather-300 group-hover:text-gold-500 transition-colors">
-                {item.icon}
-              </div>
-              <span className="flex-1 text-white font-medium">
-                {item.label}
-              </span>
-              <svg
-                className="w-5 h-5 text-leather-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          ))}
+        <div className="mb-8">
+          <h3 className="text-gold-500/60 text-sm font-bold uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+            <span className="w-8 h-px bg-gold-500/30"></span>
+            {t("settings.app_and_media") || "Ton app et médias"}
+            <span className="flex-1 h-px bg-gold-500/30"></span>
+          </h3>
+          <div className="leather-card rounded-3xl border border-gold-500/10 shadow-2xl overflow-hidden stitched">
+            <div className="bg-leather-900/60 divide-y divide-gold-500/5">
+              {filterSettings(appAndMediaSettings).map((item, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleSettingClick(item)}
+                  className="w-full flex items-center gap-4 p-5 hover:bg-gold-500/5 transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-leather-800 flex items-center justify-center text-leather-400 group-hover:text-gold-500 group-hover:bg-leather-700 transition-all border border-leather-700 group-hover:border-gold-500/30">
+                    {item.icon}
+                  </div>
+                  <span className="flex-1 text-white font-semibold text-lg group-hover:text-gold-400 transition-colors">
+                    {item.label}
+                  </span>
+                  <div className="text-leather-600 group-hover:text-gold-500 transform group-hover:translate-x-1 transition-all">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Personalization Section */}
-        <div className="mb-6">
-          <h2 className="text-gold-500/70 text-xs font-bold uppercase tracking-wider mb-3 px-4">
-            Personnalisation
-          </h2>
+        <div className="mb-8">
+          <h3 className="text-gold-500/60 text-sm font-bold uppercase tracking-[0.2em] mb-4 px-2 flex items-center gap-2">
+            <span className="w-8 h-px bg-gold-500/30"></span>
+            {t("settings.personalization")}
+            <span className="flex-1 h-px bg-gold-500/30"></span>
+          </h3>
 
-          <div className="leather-card rounded-xl overflow-hidden stitched">
+          <div className="leather-card-elevated rounded-3xl overflow-hidden stitched shadow-2xl">
             {/* Header */}
-            <div className="p-4 border-b border-leather-700/30">
-              <div className="flex items-center gap-4 mb-2">
-                <div className="text-gold-500">
+            <div className="p-6 bg-leather-900/40 border-b border-gold-500/10">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gold-500/10 flex items-center justify-center text-gold-500 shadow-inner">
                   <svg
-                    className="w-6 h-6"
+                    className="w-8 h-8"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -696,272 +736,155 @@ export const Settings: React.FC = () => {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
                     />
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-white font-semibold">
-                    Éclairage d&apos;accent de l&apos;app
+                  <p className="text-xl font-bold text-white">
+                    Éclairage d&apos;accent
                   </p>
-                  <p className="text-sm text-leather-400 mt-0.5">
-                    Couleur de bordure personnalisable autour de l&apos;app
+                  <p className="text-leather-400 text-sm">
+                    Modifie la lueur des bords de ton application
                   </p>
                 </div>
               </div>
 
               {/* Current Color Preview */}
-              <div className="flex items-center gap-3 mt-4">
+              <div className="flex items-center gap-6 mt-6 p-4 bg-black/40 rounded-2xl border border-gold-500/5">
                 <div
-                  className="w-16 h-16 rounded-xl border-2 border-gold-500/30 shadow-lg"
-                  style={{ backgroundColor: borderColor }}
-                />
+                  className="w-20 h-20 rounded-2xl border-4 border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)] relative overflow-hidden group"
+                  style={{
+                    backgroundColor: borderColor,
+                    boxShadow: `0 0 30px ${borderColor}44`,
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
+                </div>
                 <div className="flex-1">
-                  <p className="text-white text-sm font-medium mb-1">
-                    Couleur actuelle
+                  <p className="text-gold-500 text-xs font-bold uppercase tracking-widest mb-1">
+                    Couleur Active
                   </p>
-                  <p className="text-gold-500/80 font-mono text-xs">
+                  <p className="text-white text-2xl font-mono font-bold tracking-tight">
                     {borderColor.toUpperCase()}
                   </p>
+                  <button
+                    onClick={resetToGold}
+                    className="mt-2 text-gold-500/70 hover:text-gold-400 text-xs font-bold underline transition-colors"
+                  >
+                    Réinitialiser à l&apos;or mythique
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* Preset Colors */}
-            <div className="p-4 border-b border-leather-700/30">
-              <p className="text-white text-sm font-medium mb-3">
-                Couleurs prédéfinies
+            <div className="p-6 bg-leather-950/40">
+              <p className="text-leather-400 text-xs font-bold uppercase tracking-widest mb-4">
+                Palettes Prédéfinies
               </p>
-              <div className="grid grid-cols-6 gap-3">
+              <div className="grid grid-cols-4 gap-4">
                 {[
-                  { name: "Or", color: "#FFBF00" },
-                  { name: "Rouge", color: "#FF4444" },
-                  { name: "Bleu", color: "#4444FF" },
-                  { name: "Vert", color: "#44FF44" },
-                  { name: "Violet", color: "#B744FF" },
-                  { name: "Cyan", color: "#00D4FF" },
-                  { name: "Rose", color: "#FF0080" },
-                  { name: "Orange", color: "#FF8800" },
-                  { name: "Blanc", color: "#FFFFFF" },
-                  { name: "Jaune", color: "#FFFF00" },
-                  { name: "Turquoise", color: "#00FF88" },
-                  { name: "Magenta", color: "#FF00FF" },
+                  { name: "Or Mythique", color: "#FFBF00" },
+                  { name: "Rouge Nordique", color: "#FF4444" },
+                  { name: "Bleu St-Laurent", color: "#4444FF" },
+                  { name: "Vert Forêt", color: "#44FF44" },
+                  { name: "Aurore Violette", color: "#B744FF" },
+                  { name: "Cyan Glacé", color: "#00D4FF" },
+                  { name: "Rose Sucré", color: "#FF0080" },
+                  { name: "Orange Solaire", color: "#FF8800" },
                 ].map((preset) => (
                   <button
                     key={preset.color}
                     onClick={() => {
                       tap();
                       setBorderColor(preset.color);
-                      toast.success(`Couleur changée: ${preset.name}! ✨`);
+                      success();
+                      toast.success(`Style ${preset.name} appliqué! ✨`);
                     }}
-                    className={`relative aspect-square rounded-lg border-2 transition-all hover:scale-110 ${
+                    className={`relative group aspect-square rounded-2xl border-2 transition-all hover:scale-105 active:scale-95 flex items-center justify-center overflow-hidden ${
                       borderColor.toUpperCase() === preset.color.toUpperCase()
-                        ? "border-gold-500 ring-2 ring-gold-500/50"
-                        : "border-leather-700 hover:border-gold-500/50"
+                        ? "border-gold-500 ring-4 ring-gold-500/20"
+                        : "border-white/5 hover:border-gold-500/40"
                     }`}
-                    style={{ backgroundColor: preset.color }}
+                    style={{
+                      backgroundColor: preset.color,
+                      boxShadow:
+                        borderColor.toUpperCase() === preset.color.toUpperCase()
+                          ? `0 0 15px ${preset.color}66`
+                          : "none",
+                    }}
                     title={preset.name}
                   >
+                    <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     {borderColor.toUpperCase() ===
                       preset.color.toUpperCase() && (
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/20 backdrop-blur-sm rounded-full p-2">
                         <svg
-                          className="w-6 h-6 text-white drop-shadow-lg"
-                          fill="currentColor"
+                          className="w-6 h-6 text-white"
+                          fill="none"
+                          stroke="currentColor"
                           viewBox="0 0 24 24"
                         >
-                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
                         </svg>
                       </div>
                     )}
                   </button>
                 ))}
               </div>
-            </div>
 
-            {/* Custom Color Picker */}
-            <div className="p-4 border-b border-leather-700/30">
-              <p className="text-white text-sm font-medium mb-3">
-                Couleur personnalisée
-              </p>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={borderColor}
-                  onChange={handleColorChange}
-                  className="w-20 h-20 rounded-xl border-2 border-gold-500/50 cursor-pointer bg-transparent hover:border-gold-500 transition-colors"
-                  style={{
-                    WebkitAppearance: "none",
-                    appearance: "none",
-                    cursor: "pointer",
-                  }}
-                  title="Choisir une couleur personnalisée"
-                />
-                <div className="flex-1">
+              {/* Advanced Custom Picker */}
+              <div className="mt-8 flex items-center gap-4 p-4 bg-black/30 rounded-2xl border border-white/5">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gold-500/30 group cursor-pointer active:scale-90 transition-transform">
                   <input
-                    type="text"
-                    value={borderColor.toUpperCase()}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (/^#[0-9A-F]{6}$/i.test(value)) {
-                        setBorderColor(value);
-                        toast.success("Couleur mise à jour! ✨");
-                      }
-                    }}
-                    placeholder="#FFBF00"
-                    className="w-full bg-leather-800/50 border border-leather-700 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:border-gold-500"
+                    type="color"
+                    value={borderColor}
+                    onChange={handleColorChange}
+                    className="absolute inset-0 w-full h-full scale-150 cursor-pointer bg-transparent"
                   />
-                  <p className="text-leather-400 text-xs mt-1">
-                    Entrer un code hexadécimal (ex: #FFBF00)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Reset to Default Gold Option */}
-            <button
-              onClick={resetToGold}
-              className="w-full flex items-center justify-between p-4 hover:bg-gold-500/10 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="text-gold-500">
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
                 </div>
                 <div>
-                  <p className="text-white font-medium group-hover:text-gold-400 transition-colors">
-                    Réinitialiser à l&apos;or par défaut
+                  <p className="text-white text-sm font-medium">
+                    Couleur personnalisée
                   </p>
-                  <p className="text-sm text-leather-400">
-                    Retourner à la couleur d&apos;origine
+                  <p className="text-gold-500/50 text-xs font-mono uppercase">
+                    {borderColor}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-lg border border-gold-500/50"
-                  style={{ backgroundColor: defaultGold }}
-                />
-                <span className="text-sm text-gold-500/80 font-mono">
-                  {defaultGold}
-                </span>
-              </div>
-            </button>
+            </div>
           </div>
-        </div>
 
-        {/* Quebec Heritage Section */}
-        <div className="mb-6">
-          <h2 className="text-gold-500 text-xs font-bold uppercase tracking-wider mb-3 px-4 flex items-center gap-2">
-            <span>🇨🇦</span>
-            <span>Québec</span>
-          </h2>
-          <div className="leather-card rounded-2xl overflow-hidden stitched">
-            {filterSettings(quebecSettings).map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleSettingClick(item)}
-                className="w-full flex items-center gap-4 p-4 hover:bg-leather-700/30 transition-colors group border-b border-leather-700/30 last:border-b-0 text-left"
-              >
-                <div className="text-2xl group-hover:scale-110 transition-transform">
-                  {item.icon}
-                </div>
-                <span className="flex-1 text-white font-medium">
-                  {item.label}
-                </span>
-                {item.badge && (
-                  <span className="badge-premium">{item.badge}</span>
-                )}
-                <svg
-                  className="w-5 h-5 text-leather-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Account Settings Section */}
-        <div className="mb-6">
-          <h2 className="text-leather-400 text-xs font-bold uppercase tracking-wider mb-3 px-4">
-            Ton compte
-          </h2>
-          {filterSettings(filteredAccountSettings).map((item, index) => (
+          {/* Sign Out Button */}
+          <div className="listItem-premium rounded-2xl p-4 mb-10 border border-red-500/20 shadow-lg mt-8">
             <button
-              key={index}
-              onClick={() => handleSettingClick(item)}
-              className="w-full flex items-center gap-4 p-4 hover:bg-leather-800/30 transition-colors rounded-xl group text-left"
+              onClick={() => {
+                impact();
+                handleSignOut();
+              }}
+              className="w-full text-center py-2 text-red-400 font-bold hover:text-red-300 transition-colors uppercase tracking-widest text-sm"
             >
-              <div className="text-leather-300 group-hover:text-gold-500 transition-colors">
-                {item.icon}
-              </div>
-              <span className="flex-1 text-white font-medium">
-                {item.label}
-              </span>
-              {item.badge && (
-                <span className="text-gold-500 text-sm">{item.badge}</span>
-              )}
-              <svg
-                className="w-5 h-5 text-leather-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              {isGuest ? "Quitter le mode invité" : "Se déconnecter"}
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* Sign Out Button */}
-        <div className="leather-card rounded-2xl p-4 mb-6 stitched">
-          <button
-            onClick={() => {
-              impact();
-              handleSignOut();
-            }}
-            className="w-full text-center py-3 text-red-400 font-bold hover:text-red-300 transition-colors"
-          >
-            {isGuest ? "Quitter le mode invité" : "Se déconnecter"}
-          </button>
-        </div>
-
-        {/* App Info */}
-        <div className="text-center text-leather-400 text-sm space-y-1">
-          <p className="flex items-center justify-center gap-2">
-            <span className="text-gold-500">⚜️</span>
-            <span>Zyeuté v1.0.0</span>
-          </p>
-          <p>Fait avec fierté québécoise 🇨🇦</p>
-          <p className="text-xs text-leather-500">
-            Fait au Québec avec fierté 🦫⚜️
-          </p>
+          {/* App Info */}
+          <div className="text-center text-leather-400 text-sm space-y-2 pb-10">
+            <p className="flex items-center justify-center gap-2">
+              <span className="text-gold-500">⚜️</span>
+              <span className="font-bold tracking-widest">ZYEU-TÉ v1.0.42</span>
+            </p>
+            <p className="text-xs italic opacity-60">
+              Fait au Québec avec fierté 🦫⚜️
+            </p>
+          </div>
         </div>
       </div>
     </div>

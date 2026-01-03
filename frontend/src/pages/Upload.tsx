@@ -112,6 +112,12 @@ export const Upload: React.FC = () => {
     null,
   );
   const [processingProgress, setProcessingProgress] = React.useState(0);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [aiData, setAiData] = React.useState<{
+    caption: string;
+    hashtags: string[];
+    vibe: string;
+  } | null>(null);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -167,6 +173,34 @@ export const Upload: React.FC = () => {
     };
     reader.readAsDataURL(capturedFile);
     setShowCamera(false);
+  };
+
+  const handleAIAnalysis = async () => {
+    if (!preview || file?.type.startsWith("video")) return;
+
+    setIsAnalyzing(true);
+    try {
+      // Small delay for UI feel
+      await new Promise((r) => setTimeout(r, 800));
+
+      const { analyzeImage } = await import("../services/api");
+      const result = await analyzeImage(preview);
+
+      if (result) {
+        setAiData({
+          caption: result.caption,
+          hashtags: result.hashtags,
+          vibe: result.vibe,
+        });
+        setCaption(result.caption);
+        toast.success("Ti-Guy a fini son analyse! 🦫✨");
+      }
+    } catch (error) {
+      uploadLogger.error("AI Analysis failed:", error);
+      toast.error("Ti-Guy est un peu mêlé, réessaie plus tard!");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   // Upload post
@@ -306,6 +340,23 @@ export const Upload: React.FC = () => {
                 />
               )}
 
+              {/* Shimmer Overlay for AI analysis */}
+              {isAnalyzing && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm overflow-hidden">
+                  <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-r from-transparent via-gold-500/30 to-transparent -translate-x-full animate-shimmer" />
+                  <div className="relative z-20 flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 rounded-full bg-gold-500/20 border-2 border-gold-500 flex items-center justify-center animate-pulse">
+                      <span className="text-4xl">🦫</span>
+                    </div>
+                    <div className="bg-black/80 px-4 py-2 rounded-full border border-gold-500/50 shadow-2xl">
+                      <span className="text-gold-400 font-bold tracking-widest text-sm animate-pulse">
+                        Ti-Guy analyse...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   setFile(null);
@@ -419,24 +470,11 @@ export const Upload: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    onClick={() => {
-                      const suggestions = [
-                        "Une belle journée au Québec! ⚜️🇨🇦",
-                        "Tiguidou! C'est malade en esti! 🔥",
-                        "Fier d'être Québécois! 🍁",
-                        "Y fait beau au Québec aujourd'hui! ☀️",
-                      ];
-                      const randomCaption =
-                        suggestions[
-                          Math.floor(Math.random() * suggestions.length)
-                        ];
-                      setCaption((prev) =>
-                        prev ? `${prev} ${randomCaption}` : randomCaption,
-                      );
-                    }}
-                    className="btn-leather py-2 rounded-lg text-xs font-bold"
+                    onClick={handleAIAnalysis}
+                    disabled={isAnalyzing || file?.type.startsWith("video")}
+                    className="btn-gold py-2 rounded-lg text-xs font-bold shadow-[0_4px_10px_rgba(255,191,0,0.3)] disabled:opacity-50"
                   >
-                    ✨ Légende Magique
+                    {isAnalyzing ? "..." : "🦫 Ti-Guy Magique"}
                   </button>
                   <button
                     onClick={() => {
@@ -450,6 +488,14 @@ export const Upload: React.FC = () => {
                     🏷️ Tags Québec
                   </button>
                 </div>
+                {aiData?.vibe && (
+                  <div className="mt-3 bg-gold-500/10 border border-gold-500/20 rounded-lg p-2 flex items-center gap-2">
+                    <span className="text-sm">🎭</span>
+                    <span className="text-[10px] text-gold-400 font-bold uppercase tracking-widest">
+                      Vibe: {aiData.vibe}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

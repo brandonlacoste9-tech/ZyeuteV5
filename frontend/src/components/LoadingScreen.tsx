@@ -11,10 +11,15 @@ interface LoadingScreenProps {
   className?: string;
 }
 
+import { useTranslation } from "@/i18n";
+
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({
-  message = "Chargement...",
+  message,
   className,
 }) => {
+  const { t } = useTranslation();
+  const displayMessage = message || t("loading.default") || "Chargement...";
+
   return (
     <div
       className={cn(
@@ -51,7 +56,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
       {/* Loading message and spinner */}
       <div className="relative z-10 mt-8 flex flex-col items-center gap-4">
         <p className="text-white/80 text-lg font-medium animate-pulse">
-          {message}
+          {displayMessage}
         </p>
 
         {/* Loading spinner */}
@@ -64,7 +69,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
       {/* Bottom tagline */}
       <div className="absolute bottom-8 text-center">
         <p className="text-white/40 text-sm">
-          Fait au Québec, pour le Québec 🇨🇦⚜️
+          {t("loading.tagline") || "Fait au Québec, pour le Québec 🇨🇦⚜️"}
         </p>
       </div>
     </div>
