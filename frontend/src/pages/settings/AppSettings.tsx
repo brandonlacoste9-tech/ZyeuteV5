@@ -13,10 +13,16 @@ export const AppSettings: React.FC = () => {
   const { preferences, setPreference } = useSettingsPreferences();
   const { tap } = useHaptics();
 
+  // Debug: log preferences on mount and changes
+  React.useEffect(() => {
+    console.log("AppSettings preferences:", preferences);
+  }, [preferences]);
+
   const handleToggle = (
     path: "app.haptics" | "app.analytics" | "app.betaFeatures",
     value: boolean,
   ) => {
+    console.log("Settings toggle:", path, value, preferences);
     tap();
     setPreference(path, value);
     toast.success("Paramètre mis à jour! ✨");
@@ -37,12 +43,14 @@ export const AppSettings: React.FC = () => {
               </p>
             </div>
             <button
+              type="button"
               onClick={() =>
                 handleToggle("app.haptics", !preferences.app.haptics)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${
+              className={`relative w-14 h-8 rounded-full transition-colors cursor-pointer ${
                 preferences.app.haptics ? "bg-gold-500" : "bg-leather-700"
               }`}
+              aria-label={`Toggle haptics ${preferences.app.haptics ? "off" : "on"}`}
             >
               <div
                 className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
@@ -64,12 +72,14 @@ export const AppSettings: React.FC = () => {
               </p>
             </div>
             <button
+              type="button"
               onClick={() =>
                 handleToggle("app.analytics", !preferences.app.analytics)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${
+              className={`relative w-14 h-8 rounded-full transition-colors cursor-pointer ${
                 preferences.app.analytics ? "bg-gold-500" : "bg-leather-700"
               }`}
+              aria-label={`Toggle analytics ${preferences.app.analytics ? "off" : "on"}`}
             >
               <div
                 className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
@@ -92,12 +102,14 @@ export const AppSettings: React.FC = () => {
               </p>
             </div>
             <button
+              type="button"
               onClick={() =>
                 handleToggle("app.betaFeatures", !preferences.app.betaFeatures)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${
+              className={`relative w-14 h-8 rounded-full transition-colors cursor-pointer ${
                 preferences.app.betaFeatures ? "bg-gold-500" : "bg-leather-700"
               }`}
+              aria-label={`Toggle beta features ${preferences.app.betaFeatures ? "off" : "on"}`}
             >
               <div
                 className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${

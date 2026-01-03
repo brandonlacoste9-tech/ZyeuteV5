@@ -18,6 +18,16 @@ export const getSovereignFeed = async (): Promise<Post[]> => {
   }
 };
 
+export const getCurrentUser = async (): Promise<User | null> => {
+  try {
+    const response = await api.get("/api/auth/me");
+    return response.data.user;
+  } catch (error) {
+    console.error("Failed to fetch current user:", error);
+    return null;
+  }
+};
+
 export const chatWithTiGuy = async (message: string, history: any[] = []) => {
   try {
     const response = await api.post("/api/tiguy/chat", {
@@ -37,16 +47,18 @@ export const chatWithTiGuy = async (message: string, history: any[] = []) => {
 const mapPost = (raw: any): Post => {
   return {
     id: raw.id,
-    mediaUrl: raw.media_url,
-    thumbnailUrl: raw.thumbnail_url,
+    mediaUrl: raw.mediaUrl || raw.media_url,
+    thumbnailUrl: raw.thumbnailUrl || raw.thumbnail_url,
     caption: raw.caption,
-    type: raw.type || (raw.media_url?.endsWith(".mp4") ? "video" : "photo"),
-    fireCount: raw.reactions_count || 0,
-    commentCount: raw.comment_count || 0,
+    type:
+      raw.type ||
+      ((raw.mediaUrl || raw.media_url)?.endsWith(".mp4") ? "video" : "photo"),
+    fireCount: raw.fireCount ?? raw.reactions_count ?? 0,
+    commentCount: raw.commentCount ?? raw.comment_count ?? 0,
     user: {
-      id: raw.user_id,
+      id: raw.userId || raw.user_id,
       username: raw.user?.username || "zyeute_user",
-      displayName: raw.user?.display_name,
+      displayName: raw.user?.displayName || raw.user?.display_name,
     },
     tiGuyInsight: raw.ai_description,
     aiPerception: raw.ai_perception,

@@ -26,7 +26,7 @@ interface TiGuyInsightsProps {
 
 const TiGuyInsights: React.FC<TiGuyInsightsProps> = ({ insights }) => {
   return (
-    <BlurView intensity={30} tint="dark" style={styles.insightContainer}>
+    <BlurView intensity={70} tint="dark" style={styles.insightContainer}>
       <View style={styles.insightHeader}>
         <Zap size={16} color={Colors.primary} fill={Colors.primary} />
         <Text style={styles.insightTitle}>TI-GUY PERCEPTION</Text>
@@ -277,8 +277,11 @@ const styles = StyleSheet.create({
   },
   insightText: {
     color: Colors.text,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     fontStyle: "italic",
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });

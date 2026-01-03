@@ -553,7 +553,23 @@ export class DatabaseStorage implements IStorage {
 
   async createComment(comment: InsertComment): Promise<Comment> {
     const result = await db.insert(comments).values(comment).returning();
-    return result[0];
+    const newComment = result[0];
+
+    // Award 5 Karma to the post author
+    try {
+      const post = await db
+        .select()
+        .from(posts)
+        .where(eq(posts.id, comment.postId))
+        .limit(1);
+      if (post[0]?.userId) {
+        await this.awardKarma(post[0].userId, 5, "New Comment");
+      }
+    } catch (e) {
+      console.error("Comment karma award failed:", e);
+    }
+
+    return newComment;
   }
 
   async deleteComment(id: string): Promise<boolean> {
@@ -587,22 +603,29 @@ export class DatabaseStorage implements IStorage {
         .delete(postReactions)
         .where(eq(postReactions.id, existing[0].id));
 
-      const post = await db
-        .select()
-        .from(posts)
+      const result = await db
+        .update(posts)
+        .set({ fireCount: sql`${posts.fireCount} - 1` })
         .where(eq(posts.id, postId))
-        .limit(1);
-      return { added: false, newCount: post[0]?.fireCount || 0 };
+        .returning();
+
+      return { added: false, newCount: result[0]?.fireCount || 0 };
     } else {
       // Add reaction
       await db.insert(postReactions).values({ postId, userId });
 
-      const post = await db
-        .select()
-        .from(posts)
+      const result = await db
+        .update(posts)
+        .set({ fireCount: sql`${posts.fireCount} + 1` })
         .where(eq(posts.id, postId))
-        .limit(1);
-      return { added: true, newCount: post[0]?.fireCount || 0 };
+        .returning();
+
+      // Award Fire Score (Karma) to the author
+      if (result[0]?.userId) {
+        await this.awardKarma(result[0].userId, 10, "Post Liked");
+      }
+
+      return { added: true, newCount: result[0]?.fireCount || 0 };
     }
   }
 

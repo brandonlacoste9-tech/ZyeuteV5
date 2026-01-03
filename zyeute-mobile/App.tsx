@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Colors } from "./src/theme/colors";
 import { ReelFeed } from "./src/components/ReelFeed";
 import { TiGuyChat } from "./src/components/TiGuyChat";
+import { ProfileScreen } from "./src/components/ProfileScreen";
 import { Home, MessageSquare, User, Search } from "lucide-react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -62,7 +63,7 @@ export default function App() {
           />
           <Tab.Screen
             name="Profile"
-            component={View} // Placeholder
+            component={ProfileScreen}
             options={{
               tabBarIcon: ({ color }) => <User size={24} color={color} />,
               tabBarLabel: "MON HIVE",

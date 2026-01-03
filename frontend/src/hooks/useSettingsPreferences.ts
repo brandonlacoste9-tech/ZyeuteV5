@@ -278,6 +278,7 @@ export function useSettingsPreferences() {
   }, [preferences]);
 
   const setPreference = useCallback((path: PreferencePath, value: unknown) => {
+    console.log("Setting preference:", path, value);
     setPreferences((prev) => setValueAtPath(prev, path, value));
   }, []);
 

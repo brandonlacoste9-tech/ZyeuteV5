@@ -4,6 +4,10 @@ export interface User {
   displayName?: string;
   avatarUrl?: string;
   bio?: string;
+  karmaCredits?: number;
+  cashCredits?: number;
+  totalGiftsSent?: number;
+  totalGiftsReceived?: number;
 }
 
 export interface Post {

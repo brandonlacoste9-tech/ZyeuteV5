@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Send, Menu, X, Zap } from "lucide-react-native";
 import { Colors } from "../theme/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { chatWithTiGuy } from "../services/api";
 
 interface Message {
   id: string;
@@ -36,7 +37,7 @@ export const TiGuyChat = () => {
   const [inputText, setInputText] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (inputText.trim() === "") return;
 
     const userMsg: Message = {
@@ -49,16 +50,19 @@ export const TiGuyChat = () => {
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
 
-    // Simulate Ti-Guy response
-    setTimeout(() => {
+    // Call live Ti-Guy backend
+    try {
+      const response = await chatWithTiGuy(inputText);
       const tiguyMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "C'est du prestige, ça! On continue à bâtir le Swarm. 🔥",
+        id: Date.now().toString(),
+        text: response.response || response.text || "C'est du prestige!",
         sender: "tiguy",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, tiguyMsg]);
-    }, 1000);
+    } catch (error) {
+      console.error("Chat error:", error);
+    }
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
