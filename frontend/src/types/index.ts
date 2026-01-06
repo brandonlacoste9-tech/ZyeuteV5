@@ -96,3 +96,18 @@ export type ButtonSize = "sm" | "md" | "lg";
 export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 export type ToastType = "success" | "error" | "info" | "warning";
+
+export interface Media {
+  id: string;
+  userId: string;
+  type: "IMAGE" | "VIDEO";
+  muxAssetId?: string | null;
+  supabaseUrl?: string | null;
+  thumbnailUrl: string;
+  caption?: string | null;
+  enhancedUrl?: string | null;
+  enhanceStatus: "PENDING" | "PROCESSING" | "DONE" | "FAILED";
+  enhancedAt?: string | null;
+  createdAt: string;
+  user?: User;
+}

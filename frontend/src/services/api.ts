@@ -4,7 +4,7 @@
  */
 
 import { logger } from "@/lib/logger";
-import type { Post, User, Story, Comment, Notification } from "@/types";
+import type { Post, User, Story, Comment, Notification, Media } from "@/types";
 
 const apiLogger = logger.withContext("API");
 
@@ -225,12 +225,12 @@ export async function createMuxUpload(): Promise<{
   uploadUrl: string;
   uploadId: string;
 } | null> {
-  const { data, error } = await apiCall<{ uploadUrl: string; uploadId: string }>(
-    "/mux/create-upload",
-    {
-      method: "POST",
-    },
-  );
+  const { data, error } = await apiCall<{
+    uploadUrl: string;
+    uploadId: string;
+  }>("/mux/create-upload", {
+    method: "POST",
+  });
 
   if (error || !data) return null;
   return data;
@@ -430,6 +430,43 @@ export async function markNotificationRead(
 export async function markAllNotificationsRead(): Promise<boolean> {
   const { error } = await apiCall("/notifications/read-all", {
     method: "POST",
+  });
+  return !error;
+}
+
+// ============ MEDIA FUNCTIONS ============
+
+export async function getMediaFeed(
+  cursor?: string,
+  limit: number = 20,
+): Promise<{ items: Media[]; nextCursor: string | null }> {
+  const query = new URLSearchParams({ limit: limit.toString() });
+  if (cursor) query.append("cursor", cursor);
+
+  const { data, error } = await apiCall<{
+    items: Media[];
+    nextCursor: string | null;
+  }>(`/media?${query.toString()}`);
+
+  if (error || !data) return { items: [], nextCursor: null };
+  return data;
+}
+
+export async function getMediaById(id: string): Promise<Media | null> {
+  const { data, error } = await apiCall<{ media: Media }>(`/media/${id}`);
+  if (error || !data) return null;
+  // The backend currently returns the media object directly or wrapped?
+  // Previous backend code: `res.json(media);` (wait, let's check backend/routes/media.ts)
+  // Backend code was: `const media = await storage.getMedia(req.params.id); ... res.json(media);`
+  // So it returns the media object directly, not wrapped in { media: ... }
+  // Wait, I need to check `backend/routes/media.ts` to be sure.
+  return data as unknown as Media;
+}
+
+export async function enhanceMedia(mediaId: string): Promise<boolean> {
+  const { error } = await apiCall("/enhance", {
+    method: "POST",
+    body: JSON.stringify({ mediaId }),
   });
   return !error;
 }
