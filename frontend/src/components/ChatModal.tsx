@@ -212,8 +212,8 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         isVisible ? "translate-y-0" : "translate-y-full",
       )}
       style={{
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
-        backdropFilter: "blur(8px)",
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backdropFilter: "blur(4px)",
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -227,8 +227,8 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             border: 2px solid #FFD700 !important;
           }
           .chat-leather-bg {
-            background: linear-gradient(180deg, #1a1512 0%, #0d0a08 100%);
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            background-color: #E8D7C1;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
           }
           .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -240,9 +240,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         `}</style>
       <div
         className={cn(
-          "w-full max-w-md h-[90vh] chat-leather-bg rounded-t-[2.5rem] transition-all duration-500",
-          "flex flex-col overflow-hidden",
-          "border-t-4 border-gold-500 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]",
+          "w-full max-w-md h-[80vh] chat-leather-bg rounded-t-[2.5rem] rounded-b-[1.5rem] mb-24 md:mb-6 mx-2 transition-all duration-500",
+          "flex flex-col overflow-hidden relative",
+          "border-2 border-[#8B6914] shadow-[0_10px_40px_rgba(0,0,0,0.3)]",
           "transition-transform duration-300 ease-out",
           isVisible ? "translate-y-0" : "translate-y-full",
           tiguMode && "chat-tiguy-mode",
@@ -250,9 +250,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-neutral-900/95 backdrop-blur-md border-b border-gold-500/30 p-5 flex items-center justify-between shadow-lg relative z-10">
+        <div className="bg-[#D4C4A8]/90 backdrop-blur-md border-b border-[#8B6914]/30 p-4 flex items-center justify-between shadow-sm relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-gold-600 shadow-[0_0_15px_rgba(212,175,55,0.3)] relative">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#8B6914] shadow-md relative">
               <img
                 src="/ti-guy-logo.jpg?v=2"
                 alt="Ti-Guy"
@@ -260,44 +260,44 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               />
             </div>
             <div>
-              <h3 className="text-gold-400 font-bold text-xl tracking-tight">
+              <h3 className="text-[#4A3728] font-bold text-lg tracking-tight">
                 Ti-Guy
               </h3>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                <p className="text-zinc-400 text-xs font-medium uppercase tracking-wider">
+                <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                <p className="text-[#5D4037] text-xs font-medium uppercase tracking-wider">
                   En ligne
                 </p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               className={cn(
-                "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter transition-all border shadow-lg",
+                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all border shadow-sm",
                 tiguMode
-                  ? "bg-red-600 border-yellow-400 text-white shadow-[0_0_15px_rgba(255,215,0,0.4)] scale-105"
-                  : "bg-neutral-800 border-neutral-700 text-neutral-400",
+                  ? "bg-red-600 border-yellow-400 text-white shadow-md scale-105"
+                  : "bg-[#C1A88A] border-[#8B6914]/30 text-[#4A3728] hover:bg-[#B09A7D]",
               )}
               onClick={() => {
                 tap();
                 setTiguMode(!tiguMode);
               }}
             >
-              {tiguMode ? "🔱 Ti-Guy Mode" : "Standard"}
+              {tiguMode ? "🔱 Mode" : "Standard"}
             </button>
             <button
               onClick={handleClose}
-              className="p-2.5 bg-neutral-800/80 hover:bg-neutral-700/80 rounded-full transition-colors border border-white/5"
+              className="p-2 bg-[#C1A88A]/50 hover:bg-[#C1A88A] rounded-full transition-colors border border-[#8B6914]/10 text-[#4A3728]"
               aria-label="Fermer"
             >
-              <IoCloseOutline className="w-6 h-6 text-white/70" />
+              <IoCloseOutline className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 gold-scrollbar no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -307,7 +307,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               )}
             >
               {message.sender === "tiGuy" && (
-                <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-gold-800/50 shadow-md">
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#8B6914]/30 shadow-sm">
                   <img
                     src="/ti-guy-logo.jpg?v=2"
                     alt="Ti-Guy"
@@ -318,32 +318,32 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
 
               <div
                 className={cn(
-                  "max-w-[80%] rounded-3xl p-4 text-sm leading-relaxed shadow-xl border",
+                  "max-w-[80%] rounded-2xl p-3.5 text-sm leading-relaxed shadow-sm border",
                   message.sender === "user"
-                    ? "bg-gradient-to-br from-gold-400 via-gold-500 to-amber-600 text-black font-semibold border-gold-300/30"
-                    : "bg-neutral-800/90 text-zinc-100 border-white/5 backdrop-blur-sm",
+                    ? "bg-[#D2B48C] text-[#2C1810] font-medium border-[#8B6914]/20"
+                    : "bg-[#FAF0E6] text-[#4A3728] border-[#8B6914]/10",
                 )}
                 style={{
                   borderRadius:
                     message.sender === "user"
-                      ? "24px 24px 4px 24px"
-                      : "24px 24px 24px 4px",
+                      ? "20px 20px 4px 20px"
+                      : "20px 20px 20px 4px",
                 }}
               >
                 <p className="whitespace-pre-wrap break-words">
                   {message.text}
                 </p>
                 {message.image && (
-                  <div className="mt-3 rounded-2xl overflow-hidden border border-black/10 shadow-md">
+                  <div className="mt-3 rounded-xl overflow-hidden border border-[#8B6914]/20 shadow-sm">
                     <img
                       src={message.image}
                       alt="Chat attachment"
-                      className="w-full max-h-60 object-cover"
+                      className="w-full max-h-52 object-cover"
                     />
                   </div>
                 )}
-                <div className="flex items-center justify-end gap-1 mt-2 opacity-60">
-                  <span className="text-[10px] font-medium uppercase tracking-widest">
+                <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#4A3728]">
                     {formatTime(message.timestamp)}
                   </span>
                 </div>
@@ -353,25 +353,25 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
 
           {isTyping && (
             <div className="flex gap-3 items-center animate-pulse">
-              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 border border-gold-800/30">
+              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#8B6914]/30">
                 <img
                   src="/ti-guy-logo.jpg?v=2"
                   alt="Ti-Guy"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="bg-neutral-800/60 p-4 rounded-3xl rounded-bl-sm border border-white/5">
+              <div className="bg-[#FAF0E6]/80 p-3 rounded-2xl rounded-bl-sm border border-[#8B6914]/10">
                 <div className="flex gap-1.5">
                   <span
-                    className="w-1.5 h-1.5 bg-gold-400/80 rounded-full animate-bounce"
+                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
                     style={{ animationDelay: "0ms" }}
                   />
                   <span
-                    className="w-1.5 h-1.5 bg-gold-400/80 rounded-full animate-bounce"
+                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
                     style={{ animationDelay: "150ms" }}
                   />
                   <span
-                    className="w-1.5 h-1.5 bg-gold-400/80 rounded-full animate-bounce"
+                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
                     style={{ animationDelay: "300ms" }}
                   />
                 </div>
@@ -383,9 +383,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         </div>
 
         {/* Quick Actions Scrollable */}
-        <div className="px-5 py-3 flex gap-2.5 overflow-x-auto no-scrollbar border-t border-white/5 bg-black/20">
+        <div className="px-5 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-[#8B6914]/10 bg-[#D4C4A8]/20">
           <button
-            className="bg-leather-800/80 hover:bg-leather-700 text-gold-400 text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-gold-500/20 whitespace-nowrap transition-all active:scale-95 shadow-lg"
+            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
             onClick={async () => {
               tap();
               try {
@@ -402,7 +402,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             🎭 Joke
           </button>
           <button
-            className="bg-leather-800/80 hover:bg-leather-700 text-gold-400 text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-gold-500/20 whitespace-nowrap transition-all active:scale-95 shadow-lg"
+            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
             onClick={() => {
               const text = "raconte-moi une histoire";
               handleSendMessage(text);
@@ -411,7 +411,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             📜 Histoire
           </button>
           <button
-            className="bg-leather-800/80 hover:bg-leather-700 text-gold-400 text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full border border-gold-500/20 whitespace-nowrap transition-all active:scale-95 shadow-lg"
+            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
             onClick={() => {
               const text = "parle-moi du Québec";
               handleSendMessage(text);
@@ -423,38 +423,38 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
 
         {/* Input Area */}
         <div
-          className="p-5 border-t border-gold-500/30 bg-neutral-900/90 backdrop-blur-xl relative z-10"
+          className="p-4 border-t border-[#8B6914]/20 bg-[#D4C4A8]/90 backdrop-blur-xl relative z-10"
           style={{
             paddingBottom:
-              "calc(max(1.25rem, env(safe-area-inset-bottom)) + 0.5rem)",
+              "calc(max(1rem, env(safe-area-inset-bottom)) + 0.5rem)",
           }}
         >
           {imagePreview && (
-            <div className="mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="relative inline-block group">
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="w-20 h-20 object-cover rounded-2xl border-2 border-gold-500 shadow-[0_0_15px_rgba(255,215,0,0.3)]"
+                  className="w-16 h-16 object-cover rounded-xl border-2 border-[#8B6914] shadow-sm"
                 />
                 <button
                   onClick={() => {
                     setImagePreview(null);
                     setSelectedImage(null);
                   }}
-                  className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-500 transition-all hover:scale-110 active:scale-90"
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-500 transition-all hover:scale-110 active:scale-90"
                 >
-                  <IoCloseOutline size={18} />
+                  <IoCloseOutline size={14} />
                 </button>
               </div>
             </div>
           )}
           <form
             onSubmit={handleSendMessage}
-            className="flex items-center gap-3"
+            className="flex items-center gap-2"
           >
             {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <div className="relative">
                 <button
                   type="button"
@@ -463,16 +463,16 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                     setShowToolsMenu(!showToolsMenu);
                   }}
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center rounded-full bg-leather-800 text-gold-500/80 hover:text-gold-400 border transition-all shadow-md group",
+                    "w-9 h-9 flex items-center justify-center rounded-full bg-[#C1A88A] text-[#4A3728] hover:bg-[#B09A7D] border transition-all shadow-sm group",
                     showToolsMenu
-                      ? "border-gold-500 bg-leather-700 shadow-gold-500/20"
-                      : "border-gold-500/20",
+                      ? "border-[#8B6914] bg-[#B09A7D]"
+                      : "border-[#8B6914]/20",
                   )}
                   aria-label="Extensions"
                 >
                   <IoAppsOutline
                     className={cn(
-                      "w-5 h-5 transition-transform",
+                      "w-4 h-4 transition-transform",
                       showToolsMenu ? "rotate-45" : "group-hover:rotate-12",
                     )}
                   />
@@ -480,28 +480,28 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
 
                 {/* Tools Dropup Menu */}
                 {showToolsMenu && (
-                  <div className="absolute bottom-14 left-0 w-48 leather-card rounded-2xl p-2 stitched border-gold-500/40 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
-                    <div className="text-[10px] font-bold text-gold-500/60 uppercase tracking-widest px-3 py-1 mb-1">
+                  <div className="absolute bottom-12 left-0 w-44 bg-[#E8D7C1] rounded-xl p-2 border border-[#8B6914]/30 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
+                    <div className="text-[9px] font-bold text-[#8B6914] uppercase tracking-widest px-2 py-1 mb-1">
                       Le Joualizer ⚜️
                     </div>
                     <button
                       type="button"
                       onClick={() => handleJoualize("street")}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gold-500/10 text-zinc-100 text-sm flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
                     >
                       <span>🔥</span> Urban Street
                     </button>
                     <button
                       type="button"
                       onClick={() => handleJoualize("old")}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gold-500/10 text-zinc-100 text-sm flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
                     >
                       <span>🏡</span> Pure Laine
                     </button>
                     <button
                       type="button"
                       onClick={() => handleJoualize("enhanced")}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gold-500/10 text-zinc-100 text-sm flex items-center gap-2 transition-colors"
+                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
                     >
                       <span>🚀</span> Viral Boost
                     </button>
@@ -514,10 +514,10 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                   tap();
                   fileInputRef.current?.click();
                 }}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-leather-800 text-gold-500/80 hover:text-gold-400 border border-gold-500/20 active:scale-90 transition-all shadow-md group"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#C1A88A] text-[#4A3728] hover:bg-[#B09A7D] border border-[#8B6914]/20 active:scale-90 transition-all shadow-sm group"
                 aria-label="Téléverser"
               >
-                <IoImageOutline className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <IoImageOutline className="w-4 h-4 group-hover:scale-110 transition-transform" />
               </button>
               <input
                 type="file"
@@ -535,30 +535,30 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Jase avec moi..."
-                className="w-full bg-black/60 border-2 border-leather-700 rounded-3xl py-4 pl-5 pr-14 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-gold-500/60 transition-all shadow-inner"
+                className="w-full bg-[#FAF0E6] border-2 border-[#8B6914]/30 rounded-full py-2.5 pl-4 pr-10 text-sm text-[#4A3728] placeholder-[#8B6914]/50 focus:outline-none focus:border-[#8B6914] transition-all shadow-inner"
                 disabled={isTyping}
               />
               <button
                 type="submit"
                 disabled={!inputText.trim() || isTyping}
                 className={cn(
-                  "absolute right-1.5 top-1.5 bottom-1.5 aspect-square rounded-full",
-                  "bg-gradient-to-br from-gold-400 to-amber-600",
-                  "text-black transition-all active:scale-90",
+                  "absolute right-1 top-1 bottom-1 aspect-square rounded-full",
+                  "bg-[#8B6914] text-[#E8D7C1]",
+                  "hover:bg-[#6D4C0A] transition-all active:scale-90",
                   "disabled:opacity-40 disabled:grayscale",
-                  "flex items-center justify-center shadow-lg group",
+                  "flex items-center justify-center shadow-md group",
                 )}
                 aria-label="Envoyer"
               >
-                <IoSend className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+                <IoSend className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </form>
 
-          <p className="mt-4 text-center text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-            <span className="w-8 h-px bg-zinc-800"></span>
+          <p className="mt-3 text-center text-[9px] font-bold text-[#8B6914]/70 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+            <span className="w-6 h-px bg-[#8B6914]/30"></span>
             ⚜️ Zyeuté AI 🦫
-            <span className="w-8 h-px bg-zinc-800"></span>
+            <span className="w-6 h-px bg-[#8B6914]/30"></span>
           </p>
         </div>
       </div>
