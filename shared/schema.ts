@@ -46,6 +46,7 @@ export const vector = customType<{
 
 // Enums
 export const visibilityEnum = pgEnum("visibility", ["public", "amis", "prive"]);
+export const mediaTypeEnum = pgEnum("media_type", ["IMAGE", "VIDEO"]);
 export const regionEnum = pgEnum("region", [
   "montreal",
   "quebec",
@@ -113,6 +114,42 @@ export const processingStatusEnum = pgEnum("processing_status", [
   "completed",
   "failed",
 ]);
+
+// Media Table (Foundation for Unified Feed)
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: mediaTypeEnum("type").notNull(),
+    muxAssetId: text("mux_asset_id"), // For videos
+    supabaseUrl: text("supabase_url"), // For images or legacy videos
+    thumbnailUrl: text("thumbnail_url").notNull(),
+    caption: text("caption"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("media_user_id_idx").on(table.userId),
+    createdAtIdx: index("media_created_at_idx").on(table.createdAt),
+  }),
+);
+
+export const mediaRelations = relations(media, ({ one }) => ({
+  user: one(users, {
+    fields: [media.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Media = typeof media.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {

@@ -621,6 +621,18 @@ export async function registerRoutes(
         expiresAt,
       } as any);
 
+      // [NEW] Sync Images to Media Feed (Videos handled by Mux Webhook)
+      if (post.mediaUrl && !post.muxUploadId && !post.muxAssetId) {
+        // If it's an image (no mux ID), add to Media table immediately
+        await storage.createMedia({
+          userId: req.userId!,
+          type: "IMAGE",
+          thumbnailUrl: post.thumbnailUrl || post.mediaUrl,
+          supabaseUrl: post.mediaUrl,
+          caption: post.caption,
+        });
+      }
+
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
       await videoQueue.add("processVideo", {

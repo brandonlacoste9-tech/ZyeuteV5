@@ -85,7 +85,7 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             runModeratorBee(thumbnailUrl)
           ]);
 
-          await storage.updatePostByMuxAssetId(assetId, {
+          const updatedPost = await storage.updatePostByMuxAssetId(assetId, {
             muxPlaybackId: playbackId,
             thumbnailUrl,
             processingStatus: "completed",
@@ -107,6 +107,17 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             isHidden: !modResult.approved,
             moderatedAt: new Date(),
           });
+
+          // [NEW] Sync to Media Feed
+          if (updatedPost) {
+            await storage.createMedia({
+              userId: updatedPost.userId,
+              type: "VIDEO",
+              muxAssetId: assetId,
+              thumbnailUrl: thumbnailUrl,
+              caption: updatedPost.caption,
+            });
+          }
         }
         break;
       }

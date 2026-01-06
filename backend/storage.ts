@@ -30,6 +30,9 @@ import {
   type UpsertUser,
   colonyTasks,
   type ColonyTask,
+  media,
+  type Media,
+  type InsertMedia,
   parentalControls,
   type ParentalControl,
   type InsertParentalControl,
@@ -155,6 +158,14 @@ export interface IStorage {
     metadata?: any;
     workerId?: string;
   }): Promise<ColonyTask>;
+
+  // Media
+  createMedia(media: InsertMedia): Promise<Media>;
+  getMedia(id: string): Promise<Media | undefined>;
+  getMediaFeed(
+    cursor?: string,
+    limit?: number,
+  ): Promise<{ items: Media[]; nextCursor: string | null }>;
 
   // Moderation Logs
   createModerationLog(log: {
@@ -922,6 +933,58 @@ export class DatabaseStorage implements IStorage {
         })
         .returning();
       return result[0];
+    });
+  }
+
+  // Media
+  async createMedia(insertMedia: InsertMedia): Promise<Media> {
+    return traceDatabase("INSERT", "media", async (span) => {
+      const result = await db.insert(media).values(insertMedia).returning();
+      return result[0];
+    });
+  }
+
+  async getMedia(id: string): Promise<Media | undefined> {
+    return traceDatabase("SELECT", "media", async (span) => {
+      span.setAttributes({ "db.media_id": id });
+      const result = await db
+        .select()
+        .from(media)
+        .where(eq(media.id, id))
+        .limit(1);
+      return result[0];
+    });
+  }
+
+  async getMediaFeed(
+    cursor?: string,
+    limit: number = 20,
+  ): Promise<{ items: Media[]; nextCursor: string | null }> {
+    return traceDatabase("SELECT", "media_feed", async (span) => {
+      // If cursor (createdAt) is provided, filter by it
+      // Ensure cursor is a valid ISO string or handle accordingly.
+      // Assuming cursor is the 'createdAt' timestamp of the last item.
+      const whereClause = cursor ? sql`${media.createdAt} < ${cursor}` : undefined;
+
+      const result = await db
+        .select()
+        .from(media)
+        .where(whereClause)
+        .orderBy(desc(media.createdAt))
+        .limit(limit + 1); // Fetch one extra to determine next cursor
+
+      let nextCursor: string | null = null;
+      if (result.length > limit) {
+        const nextItem = result.pop(); // Remove the extra item
+        if (nextItem) {
+          nextCursor = nextItem.createdAt.toISOString();
+        }
+      }
+
+      return {
+        items: result,
+        nextCursor,
+      };
     });
   }
 
