@@ -31,7 +31,7 @@ import enhanceRoutes from "./routes/enhance.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
-import debugRoutes from "./api/debug.js";
+import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
