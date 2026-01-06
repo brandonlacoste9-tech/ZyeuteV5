@@ -3,7 +3,7 @@
  * Central registry of all bees
  */
 
-import type { BeeDefinition, BeeCapability, BeeCore } from "./types";
+import type { BeeDefinition, BeeCapability, BeeCore } from "../../shared/types/ai";
 
 export const BEE_REGISTRY: Record<string, BeeDefinition> = {
   // ======== Ti-Guy Chat (Worker) ========
