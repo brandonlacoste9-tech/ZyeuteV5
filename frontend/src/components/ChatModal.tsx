@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   IoCloseOutline,
   IoSend,
@@ -53,6 +54,7 @@ const MOCK_HISTORY: ConversationSummary[] = [
 ];
 
 export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
+  const navigate = useNavigate();
   const { tap, impact } = useHaptics();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
@@ -404,6 +406,19 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                           </div>
                         </button>
                       ))}
+                    </div>
+                    <div className="bg-[#C1A88A]/30 border-t border-[#8B6914]/20 p-2 text-center">
+                      <button
+                        onClick={() => {
+                          tap();
+                          setShowHistory(false);
+                          handleClose();
+                          navigate("/messages");
+                        }}
+                        className="text-[10px] font-bold text-[#8B6914] hover:text-[#5D4037] uppercase tracking-widest transition-colors w-full py-1"
+                      >
+                        Voir tout les messages
+                      </button>
                     </div>
                   </div>
                 </div>

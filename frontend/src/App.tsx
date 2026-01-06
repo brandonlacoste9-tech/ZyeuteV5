@@ -48,6 +48,7 @@ const Player = lazy(() => import("@/pages/Player"));
 const Notifications = lazy(() => import("@/pages/Notifications"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const Analytics = lazy(() => import("@/pages/Analytics"));
+const Messages = lazy(() => import("@/pages/Messages"));
 const StoryCreator = lazy(() => import("@/components/features/StoryCreator"));
 const Achievements = lazy(() => import("@/pages/Achievements"));
 const CreatorRevenue = lazy(() => import("@/pages/CreatorRevenue"));
@@ -329,6 +330,14 @@ function App() {
                                                 element={
                                                   <ProtectedRoute>
                                                     <Notifications />
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/messages"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <Messages />
                                                   </ProtectedRoute>
                                                 }
                                               />
