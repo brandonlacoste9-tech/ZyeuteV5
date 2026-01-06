@@ -33,3 +33,17 @@ npx drizzle-kit push
   - enhanceStatus (enhance_status)
   - enhancedAt (timestamp)
   - createdAt (timestamp)
+
+- Added `threads` table:
+  - id (UUID)
+  - userId (UUID)
+  - title (text)
+  - createdAt (timestamp)
+  - updatedAt (timestamp)
+
+- Added `messages` table:
+  - id (UUID)
+  - threadId (UUID)
+  - sender (text)
+  - content (text)
+  - createdAt (timestamp)

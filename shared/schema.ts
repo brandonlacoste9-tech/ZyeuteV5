@@ -160,6 +160,73 @@ export const insertMediaSchema = createInsertSchema(media).omit({
 export type Media = typeof media.$inferSelect;
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
 
+// Threads Table
+export const threads = pgTable(
+  "threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("threads_user_id_idx").on(table.userId),
+    updatedAtIdx: index("threads_updated_at_idx").on(table.updatedAt),
+  }),
+);
+
+// Messages Table
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => threads.id, { onDelete: "cascade" }),
+    sender: text("sender").notNull(), // 'user' | 'ti-guy'
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    threadIdIdx: index("messages_thread_id_idx").on(table.threadId),
+    createdAtIdx: index("messages_created_at_idx").on(table.createdAt),
+  }),
+);
+
+export const threadsRelations = relations(threads, ({ one, many }) => ({
+  user: one(users, {
+    fields: [threads.userId],
+    references: [users.id],
+  }),
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  thread: one(threads, {
+    fields: [messages.threadId],
+    references: [threads.id],
+  }),
+}));
+
+export type Thread = typeof threads.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type InsertThread = typeof threads.$inferInsert;
+export type InsertMessage = typeof messages.$inferInsert;
+
+export const insertThreadSchema = createInsertSchema(threads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
   id: uuid("id").primaryKey(), // FK to auth.users.id
