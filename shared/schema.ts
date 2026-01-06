@@ -475,12 +475,49 @@ export const notifications = pgTable(
   }),
 );
 
+// Threads Table (DM & Ti-Guy)
+export const threads = pgTable(
+  "threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("threads_user_id_idx").on(table.userId),
+    updatedAtIdx: index("threads_updated_at_idx").on(table.updatedAt),
+  }),
+);
+
+// Messages Table
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => threads.id, { onDelete: "cascade" }),
+    sender: varchar("sender", { length: 20 }).notNull(), // 'user' | 'ti-guy'
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    threadIdIdx: index("messages_thread_id_idx").on(table.threadId),
+    createdAtIdx: index("messages_created_at_idx").on(table.createdAt),
+  }),
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),
   followers: many(follows, { relationName: "following" }),
   following: many(follows, { relationName: "follower" }),
   stories: many(stories),
+  threads: many(threads),
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
@@ -502,6 +539,17 @@ export const commentsRelations = relations(comments, ({ one, many }) => ({
     references: [users.id],
   }),
   reactions: many(commentReactions),
+}));
+
+export const threadsRelations = relations(threads, ({ many }) => ({
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  thread: one(threads, {
+    fields: [messages.threadId],
+    references: [threads.id],
+  }),
 }));
 
 // Zod Schemas
@@ -546,6 +594,17 @@ export const insertStorySchema = createInsertSchema(stories).omit({
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertThreadSchema = createInsertSchema(threads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   createdAt: true,
 });
@@ -886,6 +945,9 @@ export type DeviceFingerprint = any;
 export type AuthSession = any;
 export type UserPreference = any;
 export type AuditLog = any;
-export type Message = any;
+export type Thread = typeof threads.$inferSelect;
+export type InsertThread = z.infer<typeof insertThreadSchema>;
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Conversation = any;
 export type Participant = any;

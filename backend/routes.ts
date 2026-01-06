@@ -28,6 +28,8 @@ import emailAutomation from "./email-automation.js";
 // Import Studio API routes
 import studioRoutes from "./routes/studio.js";
 import enhanceRoutes from "./routes/enhance.js";
+import threadsRoutes from "./routes/threads.js";
+import messagesRoutes from "./routes/messages.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
@@ -179,6 +181,10 @@ export async function registerRoutes(
 
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
+
+  // ============ THREADS & MESSAGES ROUTES (DM) ============
+  app.use("/api/threads", requireAuth, threadsRoutes);
+  app.use("/api/messages", requireAuth, messagesRoutes);
 
   // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
   // enhanceRoutes moved to end of file

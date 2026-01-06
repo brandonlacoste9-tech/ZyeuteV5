@@ -12,6 +12,8 @@ import {
   notifications,
   gifts,
   moderationLogs,
+  threads,
+  messages,
   type User,
   type InsertUser,
   type Post,
@@ -33,8 +35,12 @@ import {
   parentalControls,
   type ParentalControl,
   type InsertParentalControl,
+  type Thread,
+  type InsertThread,
+  type Message,
+  type InsertMessage,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 
 const { Pool } = pg;
@@ -55,10 +61,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
-  // getUserByReplitId removed - legacy
   getUserHive(userId: string): Promise<string>;
   createUser(user: InsertUser & { id: string }): Promise<User>;
-  // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
 
   // Posts
@@ -147,6 +151,13 @@ export interface IStorage {
     limit?: number,
   ): Promise<(Gift & { sender: User; post: Post })[]>;
 
+  // Threads & Messages
+  getThreads(userId: string): Promise<(Thread & { lastMessage?: Message })[]>;
+  createThread(thread: InsertThread): Promise<Thread>;
+  getMessages(threadId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  updateThreadTimestamp(threadId: string): Promise<void>;
+
   // Colony Tasks (AI Hive)
   createColonyTask(task: {
     command: string;
@@ -200,6 +211,7 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // ... (previous methods) ...
   // Users
   async getUser(id: string): Promise<User | undefined> {
     return traceDatabase("SELECT", "users", async (span) => {
@@ -899,6 +911,79 @@ export class DatabaseStorage implements IStorage {
       sender: r.sender,
       post: r.post,
     }));
+  }
+
+  // Threads & Messages Implementation
+  async getThreads(userId: string): Promise<(Thread & { lastMessage?: Message })[]> {
+    return traceDatabase("SELECT", "threads", async (span) => {
+      span.setAttributes({ "db.user_id": userId });
+      const userThreads = await db
+        .select()
+        .from(threads)
+        .where(eq(threads.userId, userId))
+        .orderBy(desc(threads.updatedAt));
+
+      const result: (Thread & { lastMessage?: Message })[] = [];
+
+      for (const thread of userThreads) {
+        // Fetch last message for each thread
+        const lastMsg = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.threadId, thread.id))
+          .orderBy(desc(messages.createdAt))
+          .limit(1);
+        
+        result.push({
+          ...thread,
+          lastMessage: lastMsg[0]
+        });
+      }
+
+      return result;
+    });
+  }
+
+  async createThread(thread: InsertThread): Promise<Thread> {
+    return traceDatabase("INSERT", "threads", async () => {
+      const result = await db.insert(threads).values(thread).returning();
+      return result[0];
+    });
+  }
+
+  async getMessages(threadId: string): Promise<Message[]> {
+    return traceDatabase("SELECT", "messages", async (span) => {
+      span.setAttributes({ "db.thread_id": threadId });
+      return db
+        .select()
+        .from(messages)
+        .where(eq(messages.threadId, threadId))
+        .orderBy(asc(messages.createdAt));
+    });
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    return traceDatabase("INSERT", "messages", async () => {
+      // Transaction to ensure message creation and thread update happen together
+      return await db.transaction(async (tx) => {
+        const result = await tx.insert(messages).values(message).returning();
+        
+        // Update thread timestamp
+        await tx
+          .update(threads)
+          .set({ updatedAt: new Date() })
+          .where(eq(threads.id, message.threadId));
+          
+        return result[0];
+      });
+    });
+  }
+
+  async updateThreadTimestamp(threadId: string): Promise<void> {
+    await db
+      .update(threads)
+      .set({ updatedAt: new Date() })
+      .where(eq(threads.id, threadId));
   }
 
   // Colony Tasks
