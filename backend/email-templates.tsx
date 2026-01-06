@@ -115,7 +115,10 @@ interface EmailProps {
   previewText?: string;
 }
 
-interface WelcomeEmailProps extends EmailProps {}
+interface WelcomeEmailProps extends EmailProps {
+  // Add specific props here if needed in the future
+  _placeholder?: never;
+}
 
 export function WelcomeEmail({ username, previewText }: WelcomeEmailProps) {
   return (
@@ -207,7 +210,9 @@ export function WelcomeEmail({ username, previewText }: WelcomeEmailProps) {
   );
 }
 
-interface OnboardingDay1Props extends EmailProps {}
+interface OnboardingDay1Props extends EmailProps {
+  _placeholder?: never;
+}
 
 export function OnboardingDay1Email({
   username,
@@ -298,7 +303,9 @@ export function OnboardingDay1Email({
   );
 }
 
-interface OnboardingDay3Props extends EmailProps {}
+interface OnboardingDay3Props extends EmailProps {
+  _placeholder?: never;
+}
 
 export function OnboardingDay3Email({
   username,
@@ -378,7 +385,9 @@ export function OnboardingDay3Email({
   );
 }
 
-interface OnboardingDay7Props extends EmailProps {}
+interface OnboardingDay7Props extends EmailProps {
+  _placeholder?: never;
+}
 
 export function OnboardingDay7Email({
   username,

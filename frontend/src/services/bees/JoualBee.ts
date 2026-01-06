@@ -369,7 +369,7 @@ export async function handleJoualBee(
   const { text, task, region, intensity = "moderate" } = input;
 
   switch (task) {
-    case "detect":
+    case "detect": {
       const detection = detectJoual(text);
       return {
         success: true,
@@ -377,8 +377,9 @@ export async function handleJoualBee(
         confidence: detection.matched ? 0.9 : 0.7,
         metadata: { joualDetected: detection.matched },
       };
+    }
 
-    case "translate":
+    case "translate": {
       const translated = joualify(text);
       return {
         success: true,
@@ -386,16 +387,18 @@ export async function handleJoualBee(
         confidence: 0.85,
         metadata: { region: detectRegion(text) },
       };
+    }
 
-    case "generate":
+    case "generate": {
       const response = generateJoualResponse("approval", intensity);
       return {
         success: true,
         result: response,
         confidence: 0.8,
       };
+    }
 
-    case "hashtags":
+    case "hashtags": {
       const hashtags = generateHashtags(text, region);
       return {
         success: true,
@@ -406,8 +409,9 @@ export async function handleJoualBee(
           region: region || detectRegion(text),
         },
       };
+    }
 
-    case "moderate":
+    case "moderate": {
       const joualCheck = detectJoual(text);
       // In Quebec context, sacres are culturally acceptable but flagged for awareness
       return {
@@ -419,6 +423,7 @@ export async function handleJoualBee(
         confidence: 0.95,
         metadata: { joualDetected: joualCheck.matched },
       };
+    }
 
     default:
       return {
