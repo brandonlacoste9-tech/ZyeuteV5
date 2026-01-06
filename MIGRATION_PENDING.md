@@ -1,6 +1,8 @@
 # Database Migration Pending
 
 The schema has been updated to include the `media` table and `media_type` enum.
+Also extended `media` table with enhancement fields.
+
 However, the migration could not be applied automatically in the current environment.
 
 Please run the following command to push the changes to the database:
@@ -16,7 +18,9 @@ npx drizzle-kit push
 ```
 
 ## Changes
+
 - Added `media_type` enum (IMAGE, VIDEO)
+- Added `enhance_status` enum (PENDING, PROCESSING, DONE, FAILED)
 - Added `media` table:
   - id (UUID)
   - userId (UUID)
@@ -25,4 +29,7 @@ npx drizzle-kit push
   - supabaseUrl (text)
   - thumbnailUrl (text)
   - caption (text)
+  - enhancedUrl (text)
+  - enhanceStatus (enhance_status)
+  - enhancedAt (timestamp)
   - createdAt (timestamp)

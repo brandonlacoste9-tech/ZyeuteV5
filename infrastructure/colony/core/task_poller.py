@@ -2,6 +2,13 @@
 Task Poller - The Hive Mind 🐝
 Central task routing and state machine for Colony OS.
 
+TODO: The 'upscale_video' task is now handled by the Node.js worker via BullMQ.
+This poller is only responsible for:
+- Security checks
+- Health checks
+- Text generation (DeepSeek)
+- Legacy Python-based tasks
+
 Hardened version with:
 - Heartbeat updates for stuck task detection
 - Automatic stuck task recovery

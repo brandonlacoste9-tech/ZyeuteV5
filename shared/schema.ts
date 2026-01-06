@@ -47,6 +47,12 @@ export const vector = customType<{
 // Enums
 export const visibilityEnum = pgEnum("visibility", ["public", "amis", "prive"]);
 export const mediaTypeEnum = pgEnum("media_type", ["IMAGE", "VIDEO"]);
+export const enhanceStatusEnum = pgEnum("enhance_status", [
+  "PENDING",
+  "PROCESSING",
+  "DONE",
+  "FAILED",
+]);
 export const regionEnum = pgEnum("region", [
   "montreal",
   "quebec",
@@ -128,6 +134,9 @@ export const media = pgTable(
     supabaseUrl: text("supabase_url"), // For images or legacy videos
     thumbnailUrl: text("thumbnail_url").notNull(),
     caption: text("caption"),
+    enhancedUrl: text("enhanced_url"),
+    enhanceStatus: enhanceStatusEnum("enhance_status").default("PENDING"),
+    enhancedAt: timestamp("enhanced_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -239,9 +248,15 @@ export const posts = pgTable(
     aiLabels: jsonb("ai_labels").default([]), // AI generated tags
     contentFr: text("content_fr"),
     contentEn: text("content_en"),
-    hashtags: text("hashtags").array().default(sql`'{}'::text[]`),
-    detectedThemes: text("detected_themes").array().default(sql`'{}'::text[]`),
-    detectedItems: text("detected_items").array().default(sql`'{}'::text[]`),
+    hashtags: text("hashtags")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedThemes: text("detected_themes")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedItems: text("detected_items")
+      .array()
+      .default(sql`'{}'::text[]`),
     aiGenerated: boolean("ai_generated").default(false),
     viralScore: integer("viral_score").default(0), // Le Buzz Predictor
     safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
