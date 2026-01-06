@@ -30,8 +30,10 @@ export class HiveTapService {
   private readonly MAX_DISTANCE_METERS = 15;
 
   constructor() {
-    this.secretKey =
-      process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "zyeute_default_secret_key";
+    if (!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("Missing VITE_SUPABASE_SERVICE_ROLE_KEY");
+    }
+    this.secretKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   }
 
   /**

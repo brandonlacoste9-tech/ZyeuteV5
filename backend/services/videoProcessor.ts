@@ -107,7 +107,7 @@ async function applyFilter(
     return;
   }
 
-  let videoFilters: string[] = [];
+  const videoFilters: string[] = [];
 
   switch (filterName) {
     case "vintage": // Sepia + Vignette

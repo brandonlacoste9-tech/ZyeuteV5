@@ -79,7 +79,7 @@ export async function sendMetricsToColony(): Promise<void> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.COLONY_API_KEY || "dev-key"}`,
+        Authorization: `Bearer ${process.env.COLONY_API_KEY}`,
       },
       body: JSON.stringify({
         ...metrics,
