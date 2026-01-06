@@ -20,7 +20,7 @@ const project =
 const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 
 // Initialize Vertex AI with proper authentication
-let vertexAIConfig: any = { project, location };
+const vertexAIConfig: any = { project, location };
 
 if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
   try {
@@ -373,7 +373,8 @@ export async function transcribeAudio(
     };
 
     const config = {
-      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
+      encoding:
+        protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
       sampleRateHertz: 16000,
       languageCode: language,
       enableWordTimeOffsets: true,

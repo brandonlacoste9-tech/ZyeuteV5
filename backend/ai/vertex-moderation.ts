@@ -10,7 +10,7 @@ const project =
 const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 
 // Initialize Vertex AI with Auth support for Railway/Production
-let vertexAIConfig: any = { project, location };
+const vertexAIConfig: any = { project, location };
 
 if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
   try {

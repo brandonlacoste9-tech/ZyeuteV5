@@ -117,7 +117,7 @@ export const PoutineStackGame: React.FC = () => {
 
     const move = () => {
       setCurrentX((prev) => {
-        let next = prev + speed * direction;
+        const next = prev + speed * direction;
         if (next >= 100 - getPieceWidth(score)) {
           setDirection(-1);
           return 100 - getPieceWidth(score);

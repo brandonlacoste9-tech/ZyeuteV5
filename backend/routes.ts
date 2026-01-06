@@ -327,7 +327,7 @@ export async function registerRoutes(
       // Initial version: Use a fixed embedding for testing or search-based
       // In a real scenario, we'd fetch the user's "interest profile" embedding
       // or embed the search query if one exists.
-      let embedding = req.query.embedding
+      const embedding = req.query.embedding
         ? JSON.parse(req.query.embedding as string)
         : null;
 
