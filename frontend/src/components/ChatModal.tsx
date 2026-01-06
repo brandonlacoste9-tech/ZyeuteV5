@@ -1,15 +1,11 @@
-/**
- * ChatModal - Premium Full-Screen Chat Interface
- * Features TI-Guy's authentic Quebec French slang personality
- * Smooth slide animations and gold/leather theme
- */
-
 import React, { useState, useEffect, useRef } from "react";
 import {
   IoCloseOutline,
   IoSend,
   IoAppsOutline,
   IoImageOutline,
+  IoTimeOutline,
+  IoChevronDownOutline,
 } from "react-icons/io5";
 import { useHaptics } from "@/hooks/useHaptics";
 import {
@@ -17,13 +13,44 @@ import {
   getTiGuyWelcomeMessage,
 } from "@/utils/tiGuyResponses";
 import { tiguyService } from "@/services/tiguyService";
-import type { ChatMessage } from "@/types/chat";
+import type { ChatMessage, ConversationSummary } from "@/types/chat";
 import { toast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
 
 interface ChatModalProps {
   onClose: () => void;
 }
+
+const MOCK_HISTORY: ConversationSummary[] = [
+  {
+    id: "1",
+    type: "tiguy",
+    title: "Recette de poutine authentique",
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 15), // 15 mins ago
+    pinned: true,
+  },
+  {
+    id: "2",
+    type: "dm",
+    title: "Jean-Guy Tremblay",
+    participants: ["Jean-Guy Tremblay"],
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
+  },
+  {
+    id: "3",
+    type: "tiguy",
+    title: "Les meilleurs spots à Montréal",
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
+  },
+  {
+    id: "4",
+    type: "dm",
+    title: "Équipe Zyeuté",
+    participants: ["Sophie", "Marc"],
+    lastMessageAt: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
+    archived: true,
+  },
+];
 
 export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const { tap, impact } = useHaptics();
@@ -34,12 +61,14 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const [tiguMode, setTiguMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isJoualizing, setIsJoualizing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
 
   // Slide-in animation on mount
   useEffect(() => {
@@ -60,6 +89,26 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Close history when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        historyRef.current &&
+        !historyRef.current.contains(event.target as Node)
+      ) {
+        setShowHistory(false);
+      }
+    };
+
+    if (showHistory) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showHistory]);
 
   // Handle sending a message
   const handleSendMessage = async (e?: React.FormEvent | string) => {
@@ -204,6 +253,23 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
     }).format(date);
   };
 
+  const formatHistoryTime = (date: Date): string => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
+      return formatTime(date);
+    } else if (days === 1) {
+      return "Hier";
+    } else {
+      return date.toLocaleDateString("fr-CA", {
+        month: "short",
+        day: "numeric",
+      });
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -271,7 +337,79 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
+             {/* History Dropdown Trigger */}
+            <div ref={historyRef} className="relative">
+              <button
+                onClick={() => {
+                  tap();
+                  setShowHistory(!showHistory);
+                }}
+                className={cn(
+                  "p-2 rounded-full transition-colors border border-[#8B6914]/10 text-[#4A3728]",
+                  showHistory ? "bg-[#B09A7D] text-[#2C1810]" : "bg-[#C1A88A]/50 hover:bg-[#C1A88A]"
+                )}
+                aria-label="Historique"
+              >
+                <IoTimeOutline className="w-5 h-5" />
+              </button>
+
+              {/* History Dropdown Panel */}
+              {showHistory && (
+                <div
+                  className={cn(
+                    "absolute top-full right-0 mt-2 w-64 rounded-md overflow-hidden z-50",
+                    "bg-[#D4C4A8] border border-[#8B6914] shadow-[0_4px_20px_rgba(0,0,0,0.2)]",
+                    "animate-in fade-in slide-in-from-top-2 duration-200"
+                  )}
+                >
+                  <div className="py-1">
+                    <div className="px-3 py-2 text-[10px] font-bold text-[#8B6914] uppercase tracking-widest border-b border-[#8B6914]/20 bg-[#C1A88A]/30">
+                      Récemment
+                    </div>
+                    <div className="max-h-64 overflow-y-auto no-scrollbar">
+                      {MOCK_HISTORY.map((item) => (
+                        <button
+                          key={item.id}
+                          className={cn(
+                            "w-full text-left px-3 py-2.5 flex items-start gap-3 hover:bg-[#8B6914]/10 transition-colors border-b border-[#8B6914]/10 last:border-0",
+                             item.archived && "opacity-60 grayscale-[0.5]"
+                          )}
+                          onClick={() => {
+                            tap();
+                            toast.info(`Chargement de: ${item.title}`);
+                            setShowHistory(false);
+                          }}
+                        >
+                          <div className="text-lg flex-shrink-0 mt-0.5">
+                            {item.pinned ? "📌" : item.type === "tiguy" ? "🤖" : "👤"}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-baseline gap-2">
+                              <span className={cn(
+                                "text-sm font-semibold truncate",
+                                item.archived ? "text-[#5D4037]" : "text-[#4A3728]"
+                              )}>
+                                {item.title}
+                              </span>
+                              <span className="text-[9px] text-[#8B6914] flex-shrink-0 whitespace-nowrap">
+                                {formatHistoryTime(item.lastMessageAt)}
+                              </span>
+                            </div>
+                            {item.type === "dm" && item.participants && (
+                              <p className="text-[10px] text-[#5D4037] truncate">
+                                {item.participants.join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               className={cn(
                 "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all border shadow-sm",

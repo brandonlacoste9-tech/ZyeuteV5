@@ -11,3 +11,15 @@ export interface ChatMessage {
   timestamp: Date;
   image?: string;
 }
+
+export type ConversationType = "tiguy" | "dm";
+
+export interface ConversationSummary {
+  id: string;
+  type: ConversationType;
+  title: string;
+  participants?: string[]; // For DMs
+  lastMessageAt: Date;
+  pinned?: boolean;
+  archived?: boolean;
+}
