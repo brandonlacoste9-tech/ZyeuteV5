@@ -6,6 +6,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
+import mediaRouter from "./routes/media.js";
 import { createServer } from "http";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
 
@@ -93,6 +94,7 @@ app.use((req, res, next) => {
 (async () => {
   try {
     app.use("/api/tiguy", tiGuyRouter);
+    app.use("/api/media", mediaRouter);
     await registerRoutes(httpServer, app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

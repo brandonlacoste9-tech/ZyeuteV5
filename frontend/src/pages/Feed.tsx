@@ -11,7 +11,7 @@ import { GiftModal } from "@/components/features/GiftModal";
 import { GiftOverlay } from "@/components/features/GiftOverlay";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { getCurrentUser, getStories } from "@/services/api";
-import { ContinuousFeed } from "@/components/features/ContinuousFeed";
+import { MediaFeed } from "@/components/media/MediaFeed";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { AvatarSkeleton } from "@/components/ui/Skeleton";
 
@@ -210,12 +210,12 @@ export const Feed: React.FC = () => {
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-500/20" />
       </div>
 
-      {/* Main Content - Continuous Video Feed */}
-      <div className="flex-1 w-full bg-black relative">
+      {/* Main Content - Media Feed */}
+      <div className="flex-1 w-full bg-black relative overflow-y-auto no-scrollbar scroll-smooth">
         <ErrorBoundary
           fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
         >
-          <ContinuousFeed />
+          <MediaFeed />
         </ErrorBoundary>
       </div>
 

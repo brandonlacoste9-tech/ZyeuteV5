@@ -28,6 +28,8 @@ import emailAutomation from "./email-automation.js";
 // Import Studio API routes
 import studioRoutes from "./routes/studio.js";
 import enhanceRoutes from "./routes/enhance.js";
+import threadsRouter from "./routes/threads.js";
+import messagesRouter from "./routes/messages.js";
 // [NEW] Import the JWT verifier
 import { verifyAuthToken } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
@@ -620,6 +622,18 @@ export async function registerRoutes(
         maxViews,
         expiresAt,
       } as any);
+
+      // [NEW] Sync Images to Media Feed (Videos handled by Mux Webhook)
+      if (post.mediaUrl && !post.muxUploadId && !post.muxAssetId) {
+        // If it's an image (no mux ID), add to Media table immediately
+        await storage.createMedia({
+          userId: req.userId!,
+          type: "IMAGE",
+          thumbnailUrl: post.thumbnailUrl || post.mediaUrl,
+          supabaseUrl: post.mediaUrl,
+          caption: post.caption,
+        });
+      }
 
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
@@ -2155,6 +2169,10 @@ export async function registerRoutes(
   }
   // ============ DEEP ENHANCE ROUTES (Moved here) ============
   app.use("/api", requireAuth, enhanceRoutes);
+
+  // [NEW] Threads and Messages
+  app.use("/api/threads", requireAuth, threadsRouter);
+  app.use("/api/messages", requireAuth, messagesRouter);
 
   console.log("✅ Colony OS metrics bridge initialized");
 

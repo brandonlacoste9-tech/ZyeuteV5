@@ -46,6 +46,13 @@ export const vector = customType<{
 
 // Enums
 export const visibilityEnum = pgEnum("visibility", ["public", "amis", "prive"]);
+export const mediaTypeEnum = pgEnum("media_type", ["IMAGE", "VIDEO"]);
+export const enhanceStatusEnum = pgEnum("enhance_status", [
+  "PENDING",
+  "PROCESSING",
+  "DONE",
+  "FAILED",
+]);
 export const regionEnum = pgEnum("region", [
   "montreal",
   "quebec",
@@ -113,6 +120,112 @@ export const processingStatusEnum = pgEnum("processing_status", [
   "completed",
   "failed",
 ]);
+
+// Media Table (Foundation for Unified Feed)
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: mediaTypeEnum("type").notNull(),
+    muxAssetId: text("mux_asset_id"), // For videos
+    supabaseUrl: text("supabase_url"), // For images or legacy videos
+    thumbnailUrl: text("thumbnail_url").notNull(),
+    caption: text("caption"),
+    enhancedUrl: text("enhanced_url"),
+    enhanceStatus: enhanceStatusEnum("enhance_status").default("PENDING"),
+    enhancedAt: timestamp("enhanced_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("media_user_id_idx").on(table.userId),
+    createdAtIdx: index("media_created_at_idx").on(table.createdAt),
+  }),
+);
+
+export const mediaRelations = relations(media, ({ one }) => ({
+  user: one(users, {
+    fields: [media.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertMediaSchema = createInsertSchema(media).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Media = typeof media.$inferSelect;
+export type InsertMedia = z.infer<typeof insertMediaSchema>;
+
+// Threads Table
+export const threads = pgTable(
+  "threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("threads_user_id_idx").on(table.userId),
+    updatedAtIdx: index("threads_updated_at_idx").on(table.updatedAt),
+  }),
+);
+
+// Messages Table
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => threads.id, { onDelete: "cascade" }),
+    sender: text("sender").notNull(), // 'user' | 'ti-guy'
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    threadIdIdx: index("messages_thread_id_idx").on(table.threadId),
+    createdAtIdx: index("messages_created_at_idx").on(table.createdAt),
+  }),
+);
+
+export const threadsRelations = relations(threads, ({ one, many }) => ({
+  user: one(users, {
+    fields: [threads.userId],
+    references: [users.id],
+  }),
+  messages: many(messages),
+}));
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  thread: one(threads, {
+    fields: [messages.threadId],
+    references: [threads.id],
+  }),
+}));
+
+export type Thread = typeof threads.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+export type InsertThread = typeof threads.$inferInsert;
+export type InsertMessage = typeof messages.$inferInsert;
+
+export const insertThreadSchema = createInsertSchema(threads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
 
 // Users Table - mapped to user_profiles (FK to auth.users.id)
 export const users = pgTable("user_profiles", {
@@ -202,9 +315,15 @@ export const posts = pgTable(
     aiLabels: jsonb("ai_labels").default([]), // AI generated tags
     contentFr: text("content_fr"),
     contentEn: text("content_en"),
-    hashtags: text("hashtags").array().default(sql`'{}'::text[]`),
-    detectedThemes: text("detected_themes").array().default(sql`'{}'::text[]`),
-    detectedItems: text("detected_items").array().default(sql`'{}'::text[]`),
+    hashtags: text("hashtags")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedThemes: text("detected_themes")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedItems: text("detected_items")
+      .array()
+      .default(sql`'{}'::text[]`),
     aiGenerated: boolean("ai_generated").default(false),
     viralScore: integer("viral_score").default(0), // Le Buzz Predictor
     safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details

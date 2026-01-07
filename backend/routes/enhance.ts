@@ -1,15 +1,22 @@
 import { Router, Request, Response } from "express";
 import { db } from "../storage.js";
-import { posts, colonyTasks } from "../../shared/schema.js";
-import { eq } from "drizzle-orm";
+import { posts, colonyTasks, media } from "../../shared/schema.js";
+import { eq, or } from "drizzle-orm";
+import { getVideoQueue } from "../queue.js";
+import { z } from "zod";
 
 const router = Router();
+
+const enhanceSchema = z.object({
+  filter: z.string().optional(),
+});
 
 export const enhancePostHandler = async (req: Request, res: Response) => {
   try {
     const postId = req.params.id;
-    // Optional: visual_filter from body
-    const { filter } = req.body;
+    // Validate body
+    const body = enhanceSchema.parse(req.body);
+    const filter = body.filter || "none";
 
     // Update Post status to 'pending'
     const [updatedPost] = await db
@@ -17,7 +24,7 @@ export const enhancePostHandler = async (req: Request, res: Response) => {
       .set({
         processingStatus: "pending",
         enhanceStartedAt: new Date(),
-        visualFilter: filter || "none",
+        visualFilter: filter,
       })
       .where(eq(posts.id, postId))
       .returning();
@@ -31,7 +38,50 @@ export const enhancePostHandler = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Post has no video URL" });
     }
 
-    // Enqueue task for Colony Worker
+    // Find the media record
+    let mediaRecord = await db.query.media.findFirst({
+      where: or(
+        updatedPost.muxAssetId
+          ? eq(media.muxAssetId, updatedPost.muxAssetId)
+          : undefined,
+        updatedPost.mediaUrl
+          ? eq(media.supabaseUrl, updatedPost.mediaUrl)
+          : undefined,
+      ),
+    });
+
+    // Fallback: If no media record exists, create one (Robustness)
+    if (!mediaRecord && updatedPost.userId) {
+      console.log("Creating missing Media record for post enhancement...");
+      [mediaRecord] = await db
+        .insert(media)
+        .values({
+          userId: updatedPost.userId,
+          type: "VIDEO",
+          thumbnailUrl: updatedPost.thumbnailUrl || updatedPost.mediaUrl || "", // Placeholder
+          muxAssetId: updatedPost.muxAssetId,
+          supabaseUrl: updatedPost.mediaUrl,
+          caption: updatedPost.caption,
+        })
+        .returning();
+    }
+
+    if (!mediaRecord) {
+      return res.status(500).json({ error: "Could not resolve Media record" });
+    }
+
+    // Enqueue job to BullMQ
+    const videoQueue = getVideoQueue();
+    await videoQueue.add("upscale_video", {
+      mediaId: mediaRecord.id,
+      muxAssetId: mediaRecord.muxAssetId,
+      supabaseUrl: mediaRecord.supabaseUrl,
+      userId: updatedPost.userId,
+      filter: filter, // Pass filter to worker
+    });
+
+    // Remove legacy Postgres task insert
+    /*
     const [task] = await db
       .insert(colonyTasks)
       .values({
@@ -46,16 +96,22 @@ export const enhancePostHandler = async (req: Request, res: Response) => {
         },
       })
       .returning();
+    */
 
     res.json({
-      status: "success",
-      message: "Enhancement job started",
+      status: "queued",
+      message: "Enhancement job queued",
       data: {
         post: updatedPost,
-        taskId: task.id,
+        mediaId: mediaRecord.id,
       },
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ error: "Validation error", details: error.errors });
+    }
     console.error("Enhance API Error:", error);
     res.status(500).json({ error: "Failed to queue enhancement" });
   }

@@ -30,9 +30,18 @@ import {
   type UpsertUser,
   colonyTasks,
   type ColonyTask,
+  media,
+  type Media,
+  type InsertMedia,
   parentalControls,
   type ParentalControl,
   type InsertParentalControl,
+  threads,
+  messages,
+  type Thread,
+  type Message,
+  type InsertThread,
+  type InsertMessage,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -94,8 +103,14 @@ export interface IStorage {
   deletePost(id: string): Promise<boolean>;
   incrementPostViews(id: string): Promise<number>;
   markPostBurned(id: string, reason: string): Promise<void>;
-  updatePostByMuxAssetId(muxAssetId: string, updates: Partial<Post>): Promise<Post | undefined>;
-  updatePostByMuxUploadId(muxUploadId: string, updates: Partial<Post>): Promise<Post | undefined>;
+  updatePostByMuxAssetId(
+    muxAssetId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined>;
+  updatePostByMuxUploadId(
+    muxUploadId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined>;
 
   // Comments
   getPostComments(
@@ -156,6 +171,14 @@ export interface IStorage {
     workerId?: string;
   }): Promise<ColonyTask>;
 
+  // Media
+  createMedia(media: InsertMedia): Promise<Media>;
+  getMedia(id: string): Promise<Media | undefined>;
+  getMediaFeed(
+    cursor?: string,
+    limit?: number,
+  ): Promise<{ items: Media[]; nextCursor: string | null }>;
+
   // Moderation Logs
   createModerationLog(log: {
     userId: string;
@@ -197,6 +220,16 @@ export interface IStorage {
     status: string,
     userId?: string,
   ): Promise<boolean>;
+
+  // Threads & Messages
+  getThreads(userId: string): Promise<Thread[]>;
+  createThread(thread: InsertThread): Promise<Thread>;
+  getThreadMessages(threadId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  updateThread(
+    id: string,
+    updates: Partial<Thread>,
+  ): Promise<Thread | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -925,6 +958,60 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  // Media
+  async createMedia(insertMedia: InsertMedia): Promise<Media> {
+    return traceDatabase("INSERT", "media", async (span) => {
+      const result = await db.insert(media).values(insertMedia).returning();
+      return result[0];
+    });
+  }
+
+  async getMedia(id: string): Promise<Media | undefined> {
+    return traceDatabase("SELECT", "media", async (span) => {
+      span.setAttributes({ "db.media_id": id });
+      const result = await db
+        .select()
+        .from(media)
+        .where(eq(media.id, id))
+        .limit(1);
+      return result[0];
+    });
+  }
+
+  async getMediaFeed(
+    cursor?: string,
+    limit: number = 20,
+  ): Promise<{ items: Media[]; nextCursor: string | null }> {
+    return traceDatabase("SELECT", "media_feed", async (span) => {
+      // If cursor (createdAt) is provided, filter by it
+      // Ensure cursor is a valid ISO string or handle accordingly.
+      // Assuming cursor is the 'createdAt' timestamp of the last item.
+      const whereClause = cursor
+        ? sql`${media.createdAt} < ${cursor}`
+        : undefined;
+
+      const result = await db
+        .select()
+        .from(media)
+        .where(whereClause)
+        .orderBy(desc(media.createdAt))
+        .limit(limit + 1); // Fetch one extra to determine next cursor
+
+      let nextCursor: string | null = null;
+      if (result.length > limit) {
+        const nextItem = result.pop(); // Remove the extra item
+        if (nextItem) {
+          nextCursor = nextItem.createdAt.toISOString();
+        }
+      }
+
+      return {
+        items: result,
+        nextCursor,
+      };
+    });
+  }
+
   // Moderation Logs
   async createModerationLog(log: {
     userId: string;
@@ -1169,6 +1256,60 @@ export class DatabaseStorage implements IStorage {
     return traceDatabase("UPDATE", "support_tickets", async () => {
       // Placeholder implementation
       return true;
+    });
+  }
+
+  // Threads & Messages
+  async getThreads(userId: string): Promise<Thread[]> {
+    return traceDatabase("SELECT", "threads", async (span) => {
+      span.setAttributes({ "db.user_id": userId });
+      return db
+        .select()
+        .from(threads)
+        .where(eq(threads.userId, userId))
+        .orderBy(desc(threads.updatedAt));
+    });
+  }
+
+  async createThread(insertThread: InsertThread): Promise<Thread> {
+    return traceDatabase("INSERT", "threads", async (span) => {
+      const result = await db.insert(threads).values(insertThread).returning();
+      return result[0];
+    });
+  }
+
+  async getThreadMessages(threadId: string): Promise<Message[]> {
+    return traceDatabase("SELECT", "messages", async (span) => {
+      span.setAttributes({ "db.thread_id": threadId });
+      return db
+        .select()
+        .from(messages)
+        .where(eq(messages.threadId, threadId))
+        .orderBy(sql`${messages.createdAt} ASC`);
+    });
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    return traceDatabase("INSERT", "messages", async (span) => {
+      const result = await db
+        .insert(messages)
+        .values(insertMessage)
+        .returning();
+      return result[0];
+    });
+  }
+
+  async updateThread(
+    id: string,
+    updates: Partial<Thread>,
+  ): Promise<Thread | undefined> {
+    return traceDatabase("UPDATE", "threads", async (span) => {
+      const result = await db
+        .update(threads)
+        .set(updates)
+        .where(eq(threads.id, id))
+        .returning();
+      return result[0];
     });
   }
 }

@@ -1,3 +1,4 @@
+// @deprecated - Use backend/worker.ts instead
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import path from "path";
