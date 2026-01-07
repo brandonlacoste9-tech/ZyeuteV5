@@ -1,0 +1,64 @@
+# CI job: import zyeute into monorepo using git subtree
+name: import-zyeute
+
+on:
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout monorepo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+
+      - name: Add source remote and fetch
+        env:
+          SOURCE_REPO: https://github.com/brandonlacoste9-tech/ZyeuteV5.git
+        run: |
+          git remote add zyeute-src "$SOURCE_REPO"
+          git fetch zyeute-src --tags --prune
+
+      - name: Create import branch
+        run: |
+          BRANCH="import/zyeute-$(date +%s)"
+          git checkout -b "$BRANCH"
+
+      - name: Import subtree into zyeute/
+        run: |
+          # Replace 'main' with the source default branch if different
+          git subtree add --prefix=zyeute zyeute-src main || \
+          (git subtree pull --prefix=zyeute zyeute-src main)
+
+      - name: Install dependencies and run tests
+        run: |
+          cd zyeute || exit 0
+          if [ -f package.json ]; then
+            npm ci --no-audit --no-fund
+            npm test || true
+          fi
+          cd ..
+
+      - name: Commit any changes
+        run: |
+          git add zyeute
+          git commit -m "chore: import zyeute via CI" || echo "no changes to commit"
+
+      - name: Push branch and open PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin HEAD
+          # create PR using gh if available
+          if command -v gh >/dev/null 2>&1; then
+            gh auth login --with-token <<< "$GITHUB_TOKEN"
+            gh pr create --title "Import zyeute" --body "Automated import of zyeute into monorepo" --base main
+          else
+            echo "gh not installed; branch pushed. Create PR manually."
+          fi
