@@ -7,10 +7,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: ["./frontend/src/test/setup.ts"],
+    setupFiles: ["./zyeute/frontend/src/test/setup.ts"],
     include: [
-      "frontend/src/**/*.{test,spec}.{ts,tsx}",
-      "backend/**/*.{test,spec}.{ts,tsx}",
+      "zyeute/frontend/src/**/*.{test,spec}.{ts,tsx}",
+      "zyeute/backend/**/*.{test,spec}.{ts,tsx}",
     ],
     exclude: [
       "node_modules",
@@ -18,29 +18,38 @@ export default defineConfig({
       "build",
       ".replit",
       "tests/**",
-      "frontend/src/test/e2e/**",
+      "zyeute/frontend/src/test/e2e/**",
     ],
+    testTimeout: 10000, // 10 seconds for component tests
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
-        "frontend/src/test/",
+        "zyeute/frontend/src/test/",
         "**/*.d.ts",
         "**/*.config.*",
         "**/mockData/",
         "dist/",
         "build/",
+        "**/*.test.{ts,tsx}",
+        "**/*.spec.{ts,tsx}",
       ],
+      thresholds: {
+        lines: 60,
+        functions: 60,
+        branches: 50,
+        statements: 60,
+      },
     },
     css: true,
     clearMocks: true,
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./frontend/src"),
-      "@shared": path.resolve(__dirname, "./shared"),
-      "@assets": path.resolve(__dirname, "./attached_assets"),
+      "@": path.resolve(__dirname, "./zyeute/frontend/src"),
+      "@shared": path.resolve(__dirname, "./zyeute/shared"),
+      "@assets": path.resolve(__dirname, "./zyeute/attached_assets"),
     },
   },
 });

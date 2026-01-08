@@ -5,6 +5,7 @@
 
 import { io, Socket } from "socket.io-client";
 import { EventEmitter } from "events";
+import crypto from "crypto";
 
 class SynapseBridge extends EventEmitter {
   private socket: Socket | null = null;
@@ -78,6 +79,12 @@ class SynapseBridge extends EventEmitter {
       console.log("⚜️ [Synapse] Intelligence received from Colony OS");
       this.emit("intelligence", data);
     });
+
+    // Handle automation task requests
+    this.socket.on("automation:task:execute", (task) => {
+      console.log("⚜️ [Synapse] Automation task requested:", task.id);
+      this.emit("automation:task:execute", task);
+    });
   }
 
   async publishEvent(event: string, data: any): Promise<void> {
@@ -147,6 +154,20 @@ class SynapseBridge extends EventEmitter {
     if (this.socket?.connected) return "connected";
     if (this.reconnectAttempts >= this.maxReconnectAttempts) return "failed";
     return "disconnected";
+  }
+
+  /**
+   * Emit automation task completion
+   */
+  async emitAutomationTaskComplete(result: any): Promise<void> {
+    await this.publishEvent("automation:task:complete", result);
+  }
+
+  /**
+   * Emit observability metrics
+   */
+  async emitObservabilityMetrics(metrics: any): Promise<void> {
+    await this.publishEvent("observability:metrics", metrics);
   }
 }
 

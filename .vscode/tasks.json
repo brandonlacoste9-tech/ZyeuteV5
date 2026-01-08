@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Validate Colony OS Backend",
+      "type": "shell",
+      "command": "npx tsx scripts/run-final-validation.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/zyeute"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+      "runOptions": {
+        "runOn": "default"
+      }
+    },
+    {
+      "label": "Watch & Validate Bridge Files",
+      "type": "shell",
+      "command": "npx tsx scripts/watch-and-validate.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/zyeute"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^✅|❌",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^👀",
+          "endsPattern": "^✅|❌"
+        }
+      }
+    },
+    {
+      "label": "Check Supabase Connection",
+      "type": "shell",
+      "command": "npx tsx scripts/check-supabase-connection.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/zyeute"
+      },
+      "problemMatcher": [],
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

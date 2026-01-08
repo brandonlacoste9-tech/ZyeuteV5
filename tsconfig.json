@@ -1,5 +1,5 @@
 {
-  "include": ["frontend/src/**/*", "shared/**/*", "backend/**/*"],
+  "include": ["zyeute/frontend/src/**/*", "zyeute/shared/**/*", "zyeute/backend/**/*"],
   "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
@@ -18,8 +18,8 @@
     "downlevelIteration": true,
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./frontend/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@/*": ["./zyeute/frontend/src/*"],
+      "@shared/*": ["./zyeute/shared/*"]
     }
   }
 }

@@ -2,7 +2,7 @@ You are an expert in TypeScript, Node.js, Vite, React.js, React Router, TanStack
 
 Code Style and Structure
 - Write concise, maintainable, and technically accurate TypeScript code.
-- Use functional programming patterns; **avoid classes**.
+- Use functional programming patterns; **avoid classes** (except for event emitters and error classes).
 - Favor iteration and modularization to adhere to DRY principles.
 - Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
 - Organize files systematically: exported components, helpers, static content, and types.
@@ -16,6 +16,7 @@ TypeScript Usage
 - Use TypeScript for all code; prefer **interfaces** over types for extendability.
 - Avoid enums; use `const` objects (maps) or literal unions for better type safety.
 - Use **React Functional Components** with TypeScript interfaces.
+- **Never use `any` types** in Synapse Bridge, API routes, or database queries. Use `unknown` and type guards if needed.
 
 Syntax and Formatting
 - Use the `function` keyword for pure functions.
@@ -35,3 +36,105 @@ Performance Optimization
 Key Conventions
 - Optimize Web Vitals (LCP, CLS, FID).
 - Ensure strictly **NO WHITE SCREENS**: Always handle loading and error states gracefully with UI feedback.
+
+---
+
+## Backend Architecture Patterns
+
+### Error Handling
+- **Never use generic `Error`** in backend code. Always use custom error classes with specific error codes.
+- Create typed error classes following this pattern:
+  ```typescript
+  export class AppError extends Error {
+    constructor(
+      public code: string,
+      message: string,
+      public statusCode: number = 500,
+      public cause?: Error
+    ) {
+      super(message);
+      this.name = this.constructor.name;
+    }
+  }
+  ```
+- Use specific error codes (e.g., `ERR_BEE_REGISTRY_FAIL`, `ERR_SYNAPSE_CONNECTION_LOST`, `ERR_AUTOMATION_TIMEOUT`).
+- Always include error context and stack traces in development mode.
+- For external service failures, wrap with `AppError` and preserve original error in `cause`.
+
+### Async Patterns & Concurrency
+- **Prioritize `Promise.allSettled()`** for parallel bridge calls, external API requests, or multi-service operations.
+  - One service failure should not block or hang the entire operation.
+  - Always check `status: 'fulfilled' | 'rejected'` and handle both cases.
+- Use `Promise.all()` only when all operations are critical and one failure should abort the rest.
+- For database operations, always use `db.transaction()` wrapper for multi-table updates to ensure ACID compliance.
+- Never block the event loop: use non-blocking I/O for all shell commands, file operations, and subprocess spawns.
+
+### Synapse Bridge & Inter-Service Communication
+- **Maintain strict Protobuf-like typing** in the Synapse Bridge gateway.
+- **No `any` types allowed** in gateway, event handlers, or message serialization.
+- Use discriminated unions for event payloads: `type Event = PostCreated | AICallCompleted | BeeStatusChanged`.
+- Always implement reconnection logic with exponential backoff (max 5 attempts, delays: 1s, 2s, 4s, 8s, 16s).
+- Include correlation IDs in all inter-service messages for tracing.
+- Emit typed events: `this.emit('connected', { hive: string, timestamp: Date })`.
+
+### MLOps Router & AI Service Integration
+- **Always implement a 500ms timeout** for Vertex AI calls before falling back to DeepSeek or circuit breaker.
+- Use `AbortController` for request cancellation and timeout handling.
+- Circuit breaker pattern: track failures, open circuit after 5 failures in 60s, half-open after 10s cooldown.
+- Log AI usage metadata: `{ model: string, tokens: number, latency: number, cost: number }` for observability.
+- Never expose API keys or tokens in logs, errors, or client responses.
+
+### Windows-Use & Python Bridge Communication
+- **Use non-blocking I/O** for all shell commands and subprocess operations to prevent event-loop lag.
+- Spawn Python processes with `{ detached: true, stdio: 'pipe' }` and handle stdout/stderr streams asynchronously.
+- Always implement health check polling before executing tasks (max 10 attempts, 500ms interval).
+- Use HTTP/1.1 keep-alive for FastAPI bridge connections; reuse connection pool.
+- Parse Python responses with JSON schema validation before using in TypeScript.
+- Handle Python process crashes gracefully: emit `error` event, restart service, and retry queued tasks.
+
+### Database Patterns (Drizzle ORM + Supabase)
+- **Always use `db.transaction()`** for multi-table operations:
+  ```typescript
+  await db.transaction(async (tx) => {
+    await tx.insert(posts).values(postData);
+    await tx.insert(reactions).values(reactionData);
+    await tx.update(users).set({ postCount: sql`post_count + 1` });
+  });
+  ```
+- Use prepared statements via Drizzle for repeated queries (performance).
+- Never concatenate user input into SQL; always use parameterized queries.
+- Index frequently queried columns: `user_id`, `created_at`, `status`, composite indexes for `(bee_id, status)`.
+- Enable RLS (Row Level Security) on all Supabase tables; use service role key only for backend operations.
+
+### Observability & Monitoring
+- Log structured data: `logger.info('Task completed', { taskId, duration, beeId })`.
+- Emit metrics events for Colony OS dashboard: `this.emit('metrics', { type: 'task_executed', value: 1 })`.
+- Include correlation IDs in all logs for request tracing across services.
+- Never log PII (personally identifiable information) without redaction.
+- Use performance markers: `const start = Date.now(); ... logger.debug('Operation took', Date.now() - start, 'ms')`.
+
+### Colony OS Specific Patterns
+- **Bee Registry**: Use const objects for bee definitions, never enums.
+- **Hive Manager**: Use `Promise.allSettled()` when querying multiple hives to prevent cascade failures.
+- **Learning System**: Batch knowledge updates; use database transactions for consistency.
+- **Feature Store**: Cache feature definitions; invalidate cache on schema changes.
+- **Governance Engine**: Evaluate policies synchronously before executing actions; log policy violations.
+
+### Testing Patterns
+- Use integration tests for bridge communication (real subprocess spawn, mocked HTTP endpoints).
+- Test error recovery: simulate Python crashes, network failures, timeout scenarios.
+- Test circuit breaker state transitions: CLOSED → OPEN → HALF_OPEN → CLOSED.
+- Use `--test-timeout=10000` for E2E tests that involve external services.
+
+---
+
+## Workflow Instructions by Component
+
+| Component | Specific Instruction |
+| --- | --- |
+| **Synapse Bridge** | Maintain strict Protobuf-like typing; no `any` types allowed in the gateway. Use discriminated unions for events. |
+| **MLOps Router** | Always implement a 500ms timeout for Vertex AI calls before falling back. Track usage metadata for observability. |
+| **Windows-Use Bridge** | Use non-blocking I/O for all shell commands to prevent event-loop lag. Health check before task execution. |
+| **Database Queries** | Wrap multi-table updates in `db.transaction()` for ACID compliance. Always use parameterized queries. |
+| **Error Handling** | Use `AppError` with specific codes. Include `cause` for wrapped errors. Log correlation IDs. |
+| **Async Operations** | Prefer `Promise.allSettled()` for parallel calls. Never block the event loop. |

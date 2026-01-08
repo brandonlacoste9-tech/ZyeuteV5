@@ -10,13 +10,20 @@ const __dirname = process.cwd();
 export default defineConfig({
   plugins: [react(), tailwindcss(), metaImagesPlugin()],
   optimizeDeps: {
-    include: ["react-window", "react-virtualized-auto-sizer"],
+    include: [
+      "react-window",
+      "react-virtualized-auto-sizer",
+      "react-hook-form",
+    ],
+    esbuildOptions: {
+      resolveExtensions: [".js", ".jsx", ".ts", ".tsx", ".mjs"],
+    },
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "frontend", "src"),
-      "@shared": path.resolve(__dirname, "shared"),
-      "@assets": path.resolve(__dirname, "attached_assets"),
+      "@": path.resolve(__dirname, "zyeute", "frontend", "src"),
+      "@shared": path.resolve(__dirname, "zyeute", "shared"),
+      "@assets": path.resolve(__dirname, "zyeute", "attached_assets"),
     },
   },
   css: {
@@ -24,7 +31,7 @@ export default defineConfig({
       plugins: [],
     },
   },
-  root: path.resolve(__dirname, "frontend"),
+  root: path.resolve(__dirname, "zyeute", "frontend"),
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
@@ -35,7 +42,13 @@ export default defineConfig({
     // Minification options (esbuild is faster and default in Vite)
     minify: "esbuild",
     commonjsOptions: {
-      include: [/react-window/, /react-virtualized-auto-sizer/, /node_modules/],
+      include: [
+        /react-window/,
+        /react-virtualized-auto-sizer/,
+        /react-hook-form/,
+        /node_modules/,
+      ],
+      transformMixedEsModules: true,
     },
     // Rollup options for advanced bundling
     rollupOptions: {
@@ -93,7 +106,7 @@ export default defineConfig({
     // Proxy API requests to the backend
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:12002",
         changeOrigin: true,
         secure: false,
       },

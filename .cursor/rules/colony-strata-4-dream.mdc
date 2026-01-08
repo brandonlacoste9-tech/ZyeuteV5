@@ -1,0 +1,48 @@
+---
+description: "Strata 4: Dream (Intelligence/3D) - AI-powered features and 3D visualization"
+globs: ["colony-os-magnum-opus/components/Neurosphere.tsx", "colony-os-magnum-opus/components/Codex.tsx", "colony-os-magnum-opus/cortex/**/*.ts", "colony-os-magnum-opus/lib/genesis*.ts"]
+---
+
+# Strata 4: Dream (Intelligence/3D)
+
+**Purpose**: AI-powered features, 3D visualization, cognitive state monitoring
+
+## Components
+
+### Neurosphere (3D Visualization)
+- **File**: `components/Neurosphere.tsx`
+- **Technology**: Canvas 2D (custom implementation, not Three.js)
+- **Nodes**: 50 nodes with Fibonacci sphere distribution
+- **Performance**: Target 60 FPS
+- **States**: "Active Processing", "Idle", "Deep Thought"
+
+### Codex (Immutable Ledger)
+- **File**: `components/Codex.tsx`
+- **Features**: AI-powered dream expansion, genesis records
+- **Types**: `genesis`, `dream`, `evolution`, `revelation`
+- **AI**: Uses `expandDream()` from `lib/gemini.ts`
+
+### Cortex (Mutation Testing)
+- **Files**: `cortex/dreamer.ts`, `cortex/observer.ts`
+- **Purpose**: Baseline → Mutation → Revert cycles
+- **Output**: Screenshots, metrics, genesis drafts
+
+## AI Integration
+
+- **Provider**: Gemini 2.5 Flash (via `lib/gemini.ts`)
+- **Functions**: `expandDream()`, `estimateTask()`, `polishTask()`
+- **Model**: `gemini-2.0-flash-exp`
+- **Isolation**: Direct Gemini API (not Zyeute's AI router)
+
+## Performance Targets
+
+- **3D Rendering**: 60 FPS
+- **AI Response Time**: < 2 seconds
+- **State Updates**: Real-time via Socket.IO
+
+## Code Patterns
+
+1. **3D Visualization**: Use Canvas 2D, not Three.js
+2. **AI Calls**: Always use `lib/gemini.ts` functions
+3. **Genesis Records**: Immutable, timestamped, typed
+4. **Mutation Testing**: Baseline → Apply → Capture → Revert

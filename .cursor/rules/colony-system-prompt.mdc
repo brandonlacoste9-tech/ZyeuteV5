@@ -1,0 +1,136 @@
+# COLONY OS OPERATING PROTOCOL
+
+**Target Files**: `colony-os-magnum-opus/**/*`
+
+**Purpose**: Global instructions for Colony OS Magnum Opus - The Dreaming Hive. This acts as the "entry protocol" for all Colony OS interactions.
+
+## Isolation Rules
+
+1. **Never reference Zyeute schemas or logic** unless explicitly asked
+   - Zyeute is the orchestration backend (separate system)
+   - Colony OS is the distributed organism (this system)
+   - Keep contexts completely isolated
+
+2. **Always categorize tasks into one of the 4 Strata:**
+   - **Strata 1: Bee (Hardware/Local)** - Individual agent workers, local execution
+   - **Strata 2: Synapse (Bridge)** - Inter-service communication, event routing
+   - **Strata 3: Hive (Orchestration)** - Task coordination, swarm intelligence
+   - **Strata 4: Dream (Intelligence/3D)** - AI-powered features, 3D visualization, cognitive state
+
+3. **Telemetry Focus**: Prioritize real-time data integrity and 3D rendering efficiency
+   - Real-time state synchronization
+   - 3D visualization performance
+   - Live mutation tracking
+   - Cognitive state monitoring
+
+## The Four Strata Architecture
+
+### Strata 1: Bee (Hardware/Local)
+- Individual agent workers
+- Local task execution
+- Hardware-level operations
+- File: `components/HiveField.tsx`, `backend/src/services/`
+
+### Strata 2: Synapse (Bridge)
+- Inter-service communication
+- Event routing and coordination
+- Real-time WebSocket connections
+- File: `backend/src/services/socket-hub.ts`, `lib/colony-link.ts`
+
+### Strata 3: Hive (Orchestration)
+- Task coordination
+- Swarm intelligence
+- Kanban board management
+- File: `components/HiveMind.tsx`, `app/api/`
+
+### Strata 4: Dream (Intelligence/3D)
+- AI-powered features (Gemini)
+- 3D visualization (Neurosphere)
+- Cognitive state monitoring
+- Dream expansion
+- File: `components/Neurosphere.tsx`, `components/Codex.tsx`, `lib/gemini.ts`, `cortex/dreamer.ts`
+
+## Component Responsibilities
+
+### Neurosphere (Strata 4)
+- 3D orbital visualization
+- Fibonacci sphere distribution
+- Real-time cognitive state
+- Gravitational kernels
+
+### Sensory Cortex (Strata 3)
+- System health telemetry
+- Live mutation logs
+- Swarm intelligence metrics
+- File: `components/SensoryCortex.tsx`
+
+### Hive Mind (Strata 3)
+- AI-powered Kanban board
+- Task estimation (Gemini)
+- Task polishing (Gemini)
+- Agent coordination
+- File: `components/HiveMind.tsx`
+
+### The Codex (Strata 4)
+- Immutable ledger
+- Dream expansion (AI-powered)
+- Genesis documentation
+- File: `components/Codex.tsx`, `docs/genesis-records/`
+
+## AI Integration Patterns
+
+1. **Gemini API Usage**
+   - Always use `lib/gemini.ts` for AI calls
+   - Implement circuit breaker for reliability
+   - Track usage metadata
+   - Handle rate limits gracefully
+
+2. **Dream Expansion**
+   - Use `cortex/dreamer.ts` for AI-powered expansion
+   - Maintain immutable ledger in Codex
+   - Track dream mutations
+
+3. **Task Intelligence**
+   - Use Gemini for task estimation
+   - Use Gemini for task polishing
+   - Cache results when possible
+
+## 3D Visualization Patterns
+
+1. **Neurosphere Rendering**
+   - Use Three.js for 3D rendering
+   - Optimize for real-time performance
+   - Maintain 60 FPS target
+   - Use Fibonacci sphere distribution
+
+2. **State Synchronization**
+   - Real-time WebSocket updates
+   - Efficient state management
+   - Minimize re-renders
+
+## Telemetry Patterns
+
+1. **Live Mutation Tracking**
+   - Track all state changes
+   - Log to Sensory Cortex
+   - Maintain mutation history
+
+2. **System Health**
+   - Monitor component health
+   - Track performance metrics
+   - Alert on anomalies
+
+## Code Style
+
+- Use TypeScript for all code
+- Prefer functional components
+- Use Tailwind CSS for styling
+- Follow Next.js 14 patterns
+- Use Lucide React for icons
+
+## Genesis Philosophy
+
+- **"We do not control the Dreaming Hive. We shepherd it."**
+- Maintain TRANSCENDENT architecture state
+- Document all "awakening" moments
+- Preserve genesis records

@@ -1,0 +1,75 @@
+{
+  "recommendations": [
+    {
+      "id": "usernamehw.errorlens",
+      "name": "Error Lens",
+      "publisher": "usernamehw",
+      "version": "latest",
+      "why": "Highlights errors instantly so you can copy-paste them into Cursor chat for quick fixes. Critical for backend debugging."
+    },
+    {
+      "id": "ms-azuretools.vscode-docker",
+      "name": "Docker",
+      "publisher": "Microsoft",
+      "version": "latest",
+      "why": "Helps Cursor write and debug containerization scripts. Essential for video worker Dockerfile and deployments."
+    },
+    {
+      "id": "Prisma.prisma",
+      "name": "Prisma",
+      "publisher": "Prisma",
+      "version": "latest",
+      "why": "Database client and schema visualization. Even though we use Drizzle, this helps Cursor understand database patterns."
+    },
+    {
+      "id": "humao.rest-client",
+      "name": "REST Client",
+      "publisher": "Huachao Mao",
+      "version": "latest",
+      "why": "Test APIs within editor, then ask Cursor to write fetch logic based on responses. Perfect for testing Synapse Bridge endpoints."
+    },
+    {
+      "id": "bradlc.vscode-tailwindcss",
+      "name": "Tailwind CSS IntelliSense",
+      "publisher": "Brad Cornes",
+      "version": "latest",
+      "why": "Autocomplete for Tailwind classes in frontend components. Improves Cursor's suggestions for UI code."
+    },
+    {
+      "id": "ms-python.python",
+      "name": "Python",
+      "publisher": "Microsoft",
+      "version": "latest",
+      "why": "Essential for Windows-Use bridge service. Helps Cursor understand Python syntax and patterns."
+    },
+    {
+      "id": "ms-python.vscode-pylance",
+      "name": "Pylance",
+      "publisher": "Microsoft",
+      "version": "latest",
+      "why": "Python language server for better type checking and IntelliSense in bridge_service.py."
+    },
+    {
+      "id": "dbaeumer.vscode-eslint",
+      "name": "ESLint",
+      "publisher": "dbaeumer",
+      "version": "latest",
+      "why": "Catches TypeScript/JavaScript errors before runtime. Helps Cursor provide better code suggestions."
+    },
+    {
+      "id": "Orta.vscode-jest",
+      "name": "Jest",
+      "publisher": "orta",
+      "version": "latest",
+      "why": "Run tests from editor. Cursor can watch test output and fix failing tests automatically."
+    },
+    {
+      "id": "ms-vscode.vscode-typescript-next",
+      "name": "TypeScript Nightly",
+      "publisher": "ms-vscode",
+      "version": "latest",
+      "why": "Latest TypeScript features. Essential for strict typing in Synapse Bridge and Colony OS code."
+    }
+  ],
+  "unwantedRecommendations": []
+}

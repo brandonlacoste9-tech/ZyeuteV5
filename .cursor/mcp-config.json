@@ -1,0 +1,41 @@
+{
+  "mcpServers": {
+    "supabase-postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "env": {
+        "PGHOST": "${SUPABASE_HOST}",
+        "PGPORT": "5432",
+        "PGDATABASE": "postgres",
+        "PGUSER": "${SUPABASE_USER}",
+        "PGPASSWORD": "${SUPABASE_PASSWORD}",
+        "PGSSLMODE": "require"
+      },
+      "description": "Direct access to Supabase PostgreSQL database. Enables live schema queries, EXPLAIN ANALYZE, and query optimization."
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "Access to GitHub repository. Can read PRs, issues, and project documentation."
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "--allowed-directories",
+        "${PROJECT_ROOT}"
+      ],
+      "description": "Enhanced file system access for reading logs, configs, and project files."
+    }
+  }
+}

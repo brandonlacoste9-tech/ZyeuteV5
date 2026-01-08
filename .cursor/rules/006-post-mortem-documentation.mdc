@@ -1,0 +1,196 @@
+# Post-Mortem Documentation Rules
+
+**Target Files**: `zyeute/backend/**/*.ts`, `Windows-Use/**/*.py`, `zyeute/backend/colony/**/*.ts`, `zyeute/backend/services/**/*.ts`
+
+**Purpose**: Enforce automatic documentation of bug fixes and root cause analysis for continuous learning and system improvement.
+
+## Post-Mortem Requirements
+
+1. **Always document root cause when fixing bugs**
+   ```typescript
+   // BUG FIX: [Date] - Root Cause Documentation
+   // Issue: Bridge handshake timeout after 30s
+   // Root Cause: Python agent.invoke() taking 30+ seconds without timeout
+   // Hypothesis: Agent processing blocked by long-running LLM call
+   // Evidence: Logs showed agent.invoke() completed after 30.3s
+   // Fix: Added asyncio.wait_for() with 25s timeout to agent.invoke()
+   // Prevention: All agent calls must have timeout handling
+   // Related: See 005-bridge-debugging.mdc for debugging patterns
+   
+   result = await asyncio.wait_for(
+       agent.invoke(task.action),
+       timeout=25.0  # Fixed: Added timeout
+   );
+   ```
+
+2. **Create post-mortem entry for critical bugs**
+   ```typescript
+   // When fixing a bug, always create or update:
+   // POST_MORTEM.md or bug-specific file
+   
+   /**
+    * Post-Mortem: Bridge Handshake Timeout
+    * Date: 2024-01-15
+    * Severity: High
+    * 
+    * SYMPTOMS:
+    * - Bridge handshake timing out after 30 seconds
+    * - Automation tasks failing to execute
+    * - Error: "Timeout waiting for response"
+    * 
+    * ROOT CAUSE:
+    * - Python agent.invoke() method had no timeout
+    * - Long-running LLM calls blocked execution
+    * - TypeScript bridge client waited indefinitely
+    * 
+    * HYPOTHESIS:
+    * - Agent processing blocked by slow LLM response
+    * - No timeout mechanism in agent.invoke()
+    * - Bridge client didn't handle Python process hanging
+    * 
+    * EVIDENCE:
+    * - Logs showed agent.invoke() taking 30.3 seconds
+    * - Python process CPU usage spiked during LLM call
+    * - No error logged until TypeScript timeout triggered
+    * 
+    * FIX:
+    * - Added asyncio.wait_for() with 25s timeout to agent.invoke()
+    * - Added timeout parameter to bridge client requests
+    * - Added timeout logging to debug future issues
+    * 
+    * PREVENTION:
+    * - All agent calls must have timeout handling
+    * - Bridge client must use AbortController for cancellation
+    * - Health checks must verify agent responsiveness
+    * 
+    * RELATED PATTERNS:
+    * - See 001-bridge-protocol.mdc for timeout patterns
+    * - See 005-bridge-debugging.mdc for debugging workflow
+    * 
+    * LESSONS LEARNED:
+    * - Always implement timeouts for external service calls
+    * - Health checks should verify actual responsiveness
+    * - Logs should include timing information
+    */
+   ```
+
+3. **Track bug patterns for learning**
+   ```typescript
+   // When fixing a bug, update:
+   // BUG_PATTERNS.md or similar tracking document
+   
+   // Bug Pattern: Bridge Timeout
+   // Frequency: 3 occurrences
+   // Common Causes:
+   //   1. Missing timeout on agent.invoke() (2 cases)
+   //   2. Network latency exceeding timeout (1 case)
+   // Prevention: Always add timeout + buffer (25s for 30s limit)
+   ```
+
+4. **Document debugging workflow used**
+   ```typescript
+   // Always document which debugging approach worked:
+   // - Debug Mode hypothesis generation
+   // - MCP log analysis
+   // - Cross-language audit
+   // - Performance analysis
+   // 
+   // Example:
+   // Debugging Approach: Debug Mode + MCP Filesystem
+   // Steps:
+   //   1. Used Debug Mode to generate hypotheses
+   //   2. Added instrumentation to both TypeScript and Python
+   //   3. Used MCP Filesystem to read actual logs
+   //   4. Analyzed timing logs to identify root cause
+   //   5. Applied targeted fix (2-line change)
+   ```
+
+5. **Link fixes to related rules**
+   ```typescript
+   // Always reference which modular rules apply:
+   // 
+   // Related Rules:
+   // - 001-bridge-protocol.mdc: Timeout handling
+   // - 005-bridge-debugging.mdc: Debugging workflow
+   // - 002-mlops-safety.mdc: Circuit breaker patterns
+   ```
+
+6. **Create prevention strategies**
+   ```typescript
+   // After fixing a bug, create prevention strategies:
+   // 
+   // Prevention Strategies:
+   // 1. Add timeout check to pre-commit hook
+   // 2. Add health check validation to bridge protocol
+   // 3. Update 001-bridge-protocol.mdc with timeout requirement
+   // 4. Add unit test for timeout handling
+   ```
+
+7. **Update relevant documentation**
+   ```typescript
+   // After fixing a bug, update:
+   // - Relevant .mdc rule file
+   // - POST_MORTEM.md
+   // - BUG_PATTERNS.md
+   // - SESSION_SUMMARY.md
+   // - AUTONOMOUS_ARCHITECTURE_MASTER.md (if pattern is new)
+   ```
+
+## Post-Mortem Template
+
+When fixing a bug, use this template:
+
+```markdown
+## Post-Mortem: [Bug Name]
+
+**Date**: [YYYY-MM-DD]  
+**Severity**: Low | Medium | High | Critical  
+**Status**: Fixed | Mitigated | Investigation
+
+### SYMPTOMS
+- [List observable symptoms]
+
+### ROOT CAUSE
+- [Primary cause identified]
+
+### HYPOTHESIS
+- [Initial hypothesis]
+- [Validation method]
+
+### EVIDENCE
+- [Logs, metrics, data that proved hypothesis]
+
+### FIX
+- [Specific fix applied]
+- [Files changed]
+- [Lines of code changed]
+
+### PREVENTION
+- [How to prevent recurrence]
+- [Rule updates needed]
+- [Test coverage added]
+
+### RELATED PATTERNS
+- [Link to related bugs]
+- [Link to relevant rules]
+
+### LESSONS LEARNED
+- [Key insights]
+- [Process improvements]
+```
+
+## Bug Documentation Location
+
+Store post-mortems in:
+- `zyeute/docs/post-mortems/[YYYY-MM-DD]-[bug-name].md` - Individual bugs
+- `zyeute/docs/BUG_PATTERNS.md` - Pattern tracking
+- `zyeute/docs/POST_MORTEM.md` - Recent bugs summary
+
+## Automatic Documentation
+
+When fixing a bug, the agent must:
+1. Create post-mortem entry
+2. Update pattern tracking
+3. Reference related rules
+4. Suggest prevention strategies
+5. Update relevant documentation

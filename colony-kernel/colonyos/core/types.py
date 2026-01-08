@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -247,6 +248,15 @@ class Task:
     def can_retry(self) -> bool:
         return self.retry_count < self.max_retries
 
+    @property
+    def elapsed_seconds(self) -> Optional[float]:
+        """Calculate elapsed time in seconds."""
+        if self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds()
+        if self.started_at and self.status in {TaskStatus.EXECUTING}:
+            return (datetime.now(timezone.utc) - self.started_at).total_seconds()
+        return None
+
     def to_wire_format(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -361,6 +371,36 @@ class ColonyConfig:
     guardian: Dict[str, Any] = field(
         default_factory=lambda: {"consensus_threshold": 0.66, "drift_threshold": 0.3}
     )
+    colony_env: str = "dev"
+    colony_secret_token: Optional[str] = None
+
+    @classmethod
+    def from_env(cls) -> "ColonyConfig":
+        """Create configuration from environment variables."""
+        max_tasks = int(os.getenv("MAX_CONCURRENT_TASKS", "4"))
+        heartbeat_timeout = int(os.getenv("WORKER_HEARTBEAT_INTERVAL", "120"))
+        
+        # Guardian config from env
+        consensus_threshold = float(os.getenv("GUARDIAN_CONSENSUS_THRESHOLD", "0.66"))
+        drift_threshold = float(os.getenv("GUARDIAN_DRIFT_THRESHOLD", "0.3"))
+        
+        return cls(
+            system_id=os.getenv("COLONY_SYSTEM_ID", str(uuid4())),
+            log_level=os.getenv("COLONY_LOG_LEVEL", "INFO"),
+            max_concurrent_tasks=max_tasks,
+            worker_heartbeat_timeout=heartbeat_timeout,
+            memory_backend=os.getenv("COLONY_MEMORY_BACKEND", "sqlite"),
+            memory_connection_string=os.getenv("COLONY_MEMORY_CONNECTION_STRING", ":memory:"),
+            event_bus_type=os.getenv("COLONY_EVENT_BUS_TYPE", "inmemory"),
+            message_queue_url=os.getenv("COLONY_MESSAGE_QUEUE_URL"),
+            vector_db_backend=os.getenv("COLONY_VECTOR_DB_BACKEND"),
+            colony_env=os.getenv("COLONY_ENV", "dev"),
+            colony_secret_token=os.getenv("COLONY_SECRET_TOKEN"),
+            guardian={
+                "consensus_threshold": consensus_threshold,
+                "drift_threshold": drift_threshold,
+            },
+        )
 
 
 async def gather_with_concurrency(limit: int, tasks: Any) -> List[Any]:

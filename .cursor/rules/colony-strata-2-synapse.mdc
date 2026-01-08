@@ -1,0 +1,59 @@
+---
+description: "Strata 2: Synapse (Bridge) - Inter-service communication and event routing"
+globs: ["colony-os-magnum-opus/backend/**/*.ts", "colony-os-magnum-opus/lib/colony-link.ts"]
+---
+
+# Strata 2: Synapse (Bridge)
+
+**Purpose**: Inter-service communication, event routing, real-time coordination
+
+## Components
+
+### Socket Hub (Backend)
+- **File**: `backend/src/services/socket-hub.ts`
+- **Technology**: Socket.IO Server
+- **Events**:
+  - `colony:connected` - Welcome message
+  - `entity:update` - Entity state changes
+  - `entity:updated` - Broadcast to all clients
+  - `notification:send` - Send notification
+  - `notification:received` - Receive notification
+
+### Colony Link (Frontend)
+- **File**: `lib/colony-link.ts`
+- **Technology**: Socket.IO Client
+- **Connection**: `NEXT_PUBLIC_COLONY_API_URL` (default: `http://localhost:10000`)
+- **Authentication**: Supabase session tokens
+- **Guest Mode**: No socket connection if no session
+
+### Backend Server
+- **File**: `backend/src/index.ts`
+- **Framework**: Express + Socket.IO
+- **Port**: `PORT` env var (default: 3001)
+- **CORS**: Configurable via `ALLOWED_ORIGINS`
+
+## Protocol
+
+### Event Namespace
+- **Colony Events**: `colony:*` (e.g., `colony:connected`)
+- **Entity Events**: `entity:*` (e.g., `entity:update`)
+- **Notification Events**: `notification:*` (e.g., `notification:send`)
+
+### Authentication
+- **Method**: Supabase session tokens
+- **Guest Mode**: No socket connection (graceful degradation)
+- **Channel**: `global_feed` (auto-join on connect)
+
+## Integration Points
+
+### Future: Zyeute Synapse Bridge
+- **Protocol**: Event-driven via `colony.*` namespace
+- **Isolation**: Separate event namespace (no conflicts)
+- **Status**: Planned integration
+
+## Code Patterns
+
+1. **Connection**: Always check for session before connecting
+2. **Error Handling**: Graceful degradation if connection fails
+3. **Broadcasting**: Use `socket.broadcast.emit()` for multi-client updates
+4. **Logging**: Optional Supabase logging via `ENABLE_DB_LOGGING`

@@ -1,0 +1,47 @@
+# Bridge Protocol Rules
+
+**Target Files**: `zyeute/backend/services/windows-automation-bridge.ts`, `Windows-Use/bridge_service.py`, `zyeute/backend/services/automation-service.ts`
+
+**Purpose**: Enforce strict validation and error handling for Python ↔ TypeScript bridge communication.
+
+## Rules
+
+1. **Always enforce Zod validation on incoming bridge data from Python**
+   - Never trust Python responses without schema validation
+   - Use `z.object()` to validate `AutomationResult` responses
+   - Reject invalid responses with `AutomationBridgeError`
+
+2. **Never use `any` types in bridge interfaces**
+   - Define strict TypeScript interfaces for all bridge messages
+   - Use discriminated unions for task types: `type AutomationTask = TestTask | DebugTask | AutomationTaskType`
+
+3. **Always implement timeout handling**
+   - Default timeout: 30 seconds
+   - Use `AbortController` for request cancellation
+   - Throw `AutomationTimeoutError` on timeout
+
+4. **Use non-blocking I/O for Python subprocess**
+   - Spawn with `{ detached: true, stdio: 'pipe' }`
+   - Handle stdout/stderr streams asynchronously
+   - Never block event loop waiting for Python
+
+5. **Implement health check polling before task execution**
+   - Max 10 attempts with 500ms intervals
+   - Fail fast if health checks fail
+   - Emit `ready` event when service becomes available
+
+6. **Always parse Python JSON responses with error handling**
+   ```typescript
+   try {
+     const result = JSON.parse(response) as AutomationResult;
+     validateAutomationResult(result); // Zod validation
+     return result;
+   } catch (error) {
+     throw new AutomationBridgeError('Invalid JSON response', error);
+   }
+   ```
+
+7. **Handle Python process crashes gracefully**
+   - Emit `error` event on crash
+   - Restart service automatically
+   - Retry queued tasks after restart

@@ -2,6 +2,7 @@
 
 from typing import Dict, List, Optional
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from colonyos.core.types import Worker, WorkerStatus
 
 
@@ -45,6 +46,11 @@ class WorkerPool:
     def update_status(self, worker_id: str, status: WorkerStatus) -> None:
         if worker_id in self._workers:
             self._workers[worker_id].status = status
+
+    def update_heartbeat(self, worker_id: str) -> None:
+        """Update worker heartbeat timestamp."""
+        if worker_id in self._workers:
+            self._workers[worker_id].last_heartbeat = datetime.now(timezone.utc)
 
     def get_metrics(self, worker_id: str) -> Optional[WorkerMetrics]:
         return self._metrics.get(worker_id)

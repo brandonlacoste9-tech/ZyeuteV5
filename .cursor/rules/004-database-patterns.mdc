@@ -1,0 +1,62 @@
+# Database Patterns Rules
+
+**Target Files**: `zyeute/backend/storage.ts`, `zyeute/shared/schema.ts`, `zyeute/backend/colony/*.ts`
+
+**Purpose**: Ensure ACID compliance, type safety, and performance in database operations.
+
+## Rules
+
+1. **Always use `db.transaction()` for multi-table operations**
+   ```typescript
+   await db.transaction(async (tx) => {
+     await tx.insert(posts).values(postData);
+     await tx.insert(reactions).values(reactionData);
+     await tx.update(users).set({ postCount: sql`post_count + 1` });
+   });
+   ```
+
+2. **Never concatenate user input into SQL**
+   - Always use parameterized queries
+   - Use Drizzle's `.values()` for inserts
+   - Use `.set()` with parameterized values for updates
+
+3. **Use prepared statements for repeated queries**
+   ```typescript
+   const getUserById = db.select().from(users).where(eq(users.id, placeholder('id')));
+   // Prepared statement for performance
+   ```
+
+4. **Index frequently queried columns**
+   - `user_id`, `created_at`, `status`
+   - Composite indexes: `(bee_id, status)`
+   - Check `schema.ts` for existing indexes
+
+5. **Enable RLS (Row Level Security) on all tables**
+   - Use service role key only for backend operations
+   - Never bypass RLS without explicit reason
+   - Document any RLS bypass in comments
+
+6. **Always handle database errors with `DatabaseError`**
+   ```typescript
+   try {
+     await db.insert(posts).values(postData);
+   } catch (error) {
+     throw new DatabaseError('Failed to create post', error);
+   }
+   ```
+
+7. **Use type-safe Drizzle queries**
+   - Import types from `shared/schema.ts`
+   - Use `InsertUser`, `InsertPost` types for inserts
+   - Use `User`, `Post` types for selects
+
+8. **Batch operations for performance**
+   ```typescript
+   // Good: Batch insert
+   await db.insert(posts).values([post1, post2, post3]);
+   
+   // Bad: Individual inserts in loop
+   for (const post of posts) {
+     await db.insert(posts).values(post); // Slow!
+   }
+   ```

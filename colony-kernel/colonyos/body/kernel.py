@@ -27,6 +27,7 @@ class ColonyKernel:
         self.config = config
         self._setup_subsystems()
         self._running = False
+        self._tasks: Dict[str, Task] = {}  # Track all tasks
 
     def _setup_subsystems(self) -> None:
         # Event Bus
@@ -81,6 +82,7 @@ class ColonyKernel:
         """Submit a new task to the kernel."""
         
         task = Task.create(description=description, created_by=created_by, **kwargs)
+        self._tasks[task.id] = task  # Track task
         
         # 1. Safety Check (Guardian)
         approved, violations = await self.neurasphere.validate_task(task)
@@ -97,13 +99,56 @@ class ColonyKernel:
         await self.event_bus.publish("task_submitted", {"task_id": task.id}, "kernel")
         return task
 
+    async def get_task(self, task_id: str) -> Optional[Task]:
+        """Get a task by ID."""
+        # Check tracked tasks first
+        if task_id in self._tasks:
+            return self._tasks[task_id]
+        # Check queue
+        return await self.queue.get_task(task_id)
+
+    def list_tasks(self, status: Optional[TaskStatus] = None) -> List[Task]:
+        """List all tasks, optionally filtered by status."""
+        tasks = list(self._tasks.values())
+        if status:
+            tasks = [t for t in tasks if t.status == status]
+        return tasks
+
     async def register_worker(self, worker: Worker) -> None:
         self.worker_pool.register(worker)
         await self.event_bus.publish("worker_registered", {"worker_id": worker.id}, "kernel")
 
     def get_stats(self) -> Dict[str, Any]:
+        """Get comprehensive system statistics."""
+        tasks = self.list_tasks()
+        task_counts = {}
+        for status in TaskStatus:
+            task_counts[status.value] = len([t for t in tasks if t.status == status])
+        
+        workers = self.worker_pool.list_workers()
+        worker_counts = {}
+        for status in WorkerStatus:
+            worker_counts[status.value] = len([w for w in workers if w.status == status])
+        
         return {
-            "queue_size": self.queue.size(),
-            "workers": len(self.worker_pool.list_workers()),
+            "kernel": {
+                "queue_size": self.queue.size(),
+                "total_tasks": len(tasks),
+                "task_counts": task_counts,
+            },
+            "workers": {
+                "total": len(workers),
+                "by_status": worker_counts,
+            },
             "memory_type": self.config.memory_backend,
+            "event_bus_type": self.config.event_bus_type,
         }
+
+    async def update_worker_heartbeat(self, worker_id: str) -> bool:
+        """Update worker heartbeat timestamp."""
+        worker = self.worker_pool.get_worker(worker_id)
+        if not worker:
+            return False
+        worker.last_heartbeat = datetime.now(timezone.utc)
+        await self.event_bus.publish("worker_heartbeat", {"worker_id": worker_id}, "kernel")
+        return True

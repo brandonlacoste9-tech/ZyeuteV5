@@ -1,0 +1,95 @@
+========================================
+CURSOR @DOCS QUICK REFERENCE
+========================================
+Copy-paste these URLs one at a time into Cursor's @Docs feature
+
+========================================
+PRIORITY 1: Backend Core (Add First)
+========================================
+
+Drizzle ORM
+https://orm.drizzle.team/docs/overview
+
+Express.js
+https://expressjs.com/en/api.html
+
+Socket.io
+https://socket.io/docs/v4/
+
+Supabase
+https://supabase.com/docs
+
+Supabase JavaScript Client
+https://supabase.com/docs/reference/javascript
+
+========================================
+PRIORITY 2: AI & ML Services
+========================================
+
+Google Cloud Vertex AI
+https://cloud.google.com/vertex-ai/docs
+
+Vertex AI Node.js SDK
+https://cloud.google.com/nodejs/docs/reference/aiplatform/latest
+
+FastAPI
+https://fastapi.tiangolo.com/
+
+========================================
+PRIORITY 3: Frontend Core
+========================================
+
+React
+https://react.dev/
+
+TanStack Query
+https://tanstack.com/query/latest
+
+Tailwind CSS
+https://tailwindcss.com/docs
+
+ShadCN UI
+https://ui.shadcn.com/
+
+React Router
+https://reactrouter.com/
+
+========================================
+PRIORITY 4: Python Bridge
+========================================
+
+Pydantic
+https://docs.pydantic.dev/
+
+Uvicorn
+https://www.uvicorn.org/
+
+========================================
+PRIORITY 5: Supporting Libraries
+========================================
+
+BullMQ
+https://docs.bullmq.io/
+
+Zod
+https://zod.dev/
+
+Framer Motion
+https://www.framer.com/motion/
+
+Vite
+https://vite.dev/guide/
+
+TypeScript
+https://www.typescriptlang.org/docs/
+
+========================================
+USAGE INSTRUCTIONS
+========================================
+1. Type @Docs in Cursor chat
+2. Select "Add new doc"
+3. Paste one URL above
+4. Click "Index"
+5. Repeat for next URL
+
+========================================

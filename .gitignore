@@ -36,3 +36,11 @@ playwright-report/
 .archive/zyeute-ai-key.json
 push_error.txt
 *.log
+
+# Google Cloud Service Account Keys (NEVER commit these!)
+**/.keys/
+**/*-key.json
+**/*service-account*.json
+**/vertex-express*.json
+zyeute/backend/.keys/
+zyeute/.keys/

@@ -12,6 +12,18 @@
       "version": "detect"
     }
   },
+  "ignorePatterns": [
+    "Planexa/**",
+    "ZyeuteV5/**",
+    "zyeute-mobile/**",
+    "colony-kernel/**",
+    "temp_hive/**",
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    "*.config.js",
+    "*.config.ts"
+  ],
   "rules": {
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",

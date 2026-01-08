@@ -1,0 +1,62 @@
+# MLOps Safety Rules
+
+**Target Files**: `zyeute/backend/ai/smart-ai-router.ts`, `zyeute/backend/ai/circuit-breaker.ts`, `zyeute/backend/ai/vertex-service.ts`, `zyeute/backend/ai/multi-model-router.ts`
+
+**Purpose**: Ensure safe, reliable AI service calls with proper fallbacks and observability.
+
+## Rules
+
+1. **Never call Vertex AI without checking Circuit Breaker state first**
+   ```typescript
+   const state = circuitBreaker.getState(modelName);
+   if (state === 'OPEN') {
+     throw new CircuitBreakerOpenError(modelName);
+   }
+   ```
+
+2. **Always implement 500ms timeout for Vertex AI calls**
+   - Use `AbortController` for cancellation
+   - Fallback to DeepSeek immediately on timeout
+   - Log timeout as `AIServiceError` with context
+
+3. **Track all AI usage metadata**
+   ```typescript
+   {
+     model: string;
+     tokens: number;
+     latency: number;
+     cost: number;
+     circuitBreakerIntervened: boolean;
+   }
+   ```
+
+4. **Never expose API keys or tokens**
+   - Never log API keys
+   - Never include keys in error messages
+   - Never send keys to frontend
+
+5. **Use `Promise.allSettled()` for parallel AI calls**
+   - One model failure should not abort others
+   - Check `status: 'fulfilled' | 'rejected'` for each result
+   - Aggregate successful responses
+
+6. **Always implement fallback chain**
+   ```
+   Vertex AI → DeepSeek → Error with graceful degradation
+   ```
+
+7. **Log AI usage to Colony OS for observability**
+   ```typescript
+   await synapseBridge.publishEvent('ai.usage', {
+     model,
+     tokens,
+     latency,
+     cost,
+     hive: 'zyeute'
+   });
+   ```
+
+8. **Use per-route model policies**
+   - Check `model-policies.ts` for use case policies
+   - Respect credit requirements
+   - Apply fallback models based on policy

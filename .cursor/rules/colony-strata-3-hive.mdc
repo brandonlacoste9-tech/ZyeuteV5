@@ -1,0 +1,52 @@
+---
+description: "Strata 3: Hive (Orchestration) - Task coordination and swarm intelligence"
+globs: ["colony-os-magnum-opus/components/HiveMind.tsx", "colony-os-magnum-opus/components/SensoryCortex.tsx", "colony-os-magnum-opus/app/api/cortex/**/*.ts"]
+---
+
+# Strata 3: Hive (Orchestration)
+
+**Purpose**: Task coordination, swarm intelligence, Kanban board management
+
+## Components
+
+### HiveMind (Kanban Board)
+- **File**: `components/HiveMind.tsx`
+- **Features**: 
+  - Task management (todo, in-progress, done)
+  - AI-powered task estimation (`estimateTask()`)
+  - AI-powered task polishing (`polishTask()`)
+- **AI Integration**: Gemini 2.5 Flash via `lib/gemini.ts`
+
+### SensoryCortex (System Telemetry)
+- **File**: `components/SensoryCortex.tsx`
+- **Metrics**:
+  - Neural Throughput
+  - Swarm Coherence
+  - Memory Utilization
+  - Cognitive Load
+- **Logs**: Live mutation logs (evolution, optimization, adaptation)
+
+## API Routes
+
+- `app/api/cortex/logs/route.ts` - Mutation logs
+- `app/api/cortex/mutations/route.ts` - Mutations
+
+## AI Integration
+
+- **Provider**: Gemini 2.5 Flash (direct, not via Zyeute)
+- **Functions**: `estimateTask()`, `polishTask()`
+- **Model**: `gemini-2.0-flash-exp`
+- **Error Handling**: Graceful fallback if API key missing
+
+## State Management
+
+- **Local State**: React `useState` for tasks and metrics
+- **Real-time Updates**: Socket.IO via `colonyLink`
+- **Metrics**: Simulated updates every 2 seconds (replace with real telemetry)
+
+## Code Patterns
+
+1. **Task Management**: Use Kanban pattern (todo → in-progress → done)
+2. **AI Calls**: Always check for API key before calling Gemini
+3. **Telemetry**: Update metrics in real-time (2s intervals)
+4. **Mutation Logs**: Track evolution, optimization, adaptation events

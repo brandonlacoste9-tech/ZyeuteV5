@@ -1,0 +1,155 @@
+# Bridge Debugging Rules
+
+**Target Files**: `zyeute/backend/services/windows-automation-bridge.ts`, `Windows-Use/bridge_service.py`, `zyeute/backend/services/automation-service.ts`, `zyeute/backend/colony/synapse-bridge.ts`
+
+**Purpose**: Systematic troubleshooting patterns for Python ↔ TypeScript bridge handshake issues.
+
+## Debugging Workflow
+
+1. **Always check Python process status first**
+   ```typescript
+   // Before diagnosing bridge errors, verify:
+   // 1. Python process is running (this.pythonProcess !== null)
+   // 2. Health endpoint responds (GET /health returns 200)
+   // 3. Service URL is correct (this.serviceUrl matches config)
+   ```
+
+2. **Validate JSON serialization on both sides**
+   ```typescript
+   // TypeScript side: Ensure proper serialization
+   const payload = JSON.stringify(task); // Check for circular refs
+   
+   // Python side: Verify JSON parsing
+   # bridge_service.py
+   try:
+       task = AutomationTask(**request.json)
+   except ValidationError as e:
+       return {"error": str(e), "status": 400}
+   ```
+
+3. **Check Python stdout/stderr for errors**
+   ```typescript
+   // When Python process fails, capture stderr:
+   pythonProcess.stderr?.on('data', (data) => {
+     logger.error('[Python Bridge]', data.toString());
+   });
+   ```
+
+4. **Verify type matching between Python and TypeScript**
+   ```typescript
+   // TypeScript interface
+   interface AutomationTask {
+     id: string;
+     action: string;
+     parameters: Record<string, any>;
+   }
+   
+   // Python Pydantic model MUST match exactly:
+   # class AutomationTask(BaseModel):
+   #     id: str
+   #     action: str
+   #     parameters: Dict[str, Any]
+   ```
+
+5. **Implement request/response logging**
+   ```typescript
+   // Log all bridge requests with correlation IDs
+   const correlationId = crypto.randomUUID();
+   logger.info('[Bridge Request]', {
+     correlationId,
+     taskId: task.id,
+     action: task.action,
+     timestamp: Date.now()
+   });
+   
+   // Log responses with same correlation ID
+   logger.info('[Bridge Response]', {
+     correlationId,
+     success: result.success,
+     latency: Date.now() - requestStart
+   });
+   ```
+
+6. **Handle Python process crashes gracefully**
+   ```typescript
+   // On Python crash:
+   // 1. Emit 'error' event with context
+   // 2. Attempt automatic restart (max 3 attempts)
+   // 3. Queue failed tasks for retry after restart
+   // 4. Log crash details with stack trace
+   ```
+
+7. **Test bridge handshake with minimal payload**
+   ```typescript
+   // Debug command: Test minimal handshake
+   const testTask: AutomationTask = {
+     id: 'debug-handshake',
+     action: 'health_check',
+     parameters: {}
+   };
+   // If this fails, the issue is in basic connectivity
+   ```
+
+8. **Validate environment variables on both sides**
+   ```typescript
+   // TypeScript: Check Python can access required env vars
+   const requiredVars = ['GOOGLE_API_KEY', 'DATABASE_URL'];
+   const missing = requiredVars.filter(v => !process.env[v]);
+   if (missing.length > 0) {
+     throw new AutomationBridgeError(`Missing env vars: ${missing.join(', ')}`);
+   }
+   
+   # Python: Verify env vars in bridge_service.py
+   # import os
+   # assert os.getenv('GOOGLE_API_KEY'), "GOOGLE_API_KEY not set"
+   ```
+
+9. **Check port conflicts and service binding**
+   ```typescript
+   // Verify port 8001 is available
+   // Check if another process is using the port
+   // Ensure serviceHost matches config (127.0.0.1 vs localhost)
+   ```
+
+10. **Implement health check before task execution**
+    ```typescript
+    // Never execute task without health check
+    async executeTask(task: AutomationTask): Promise<AutomationResult> {
+      if (!this.isReady) {
+        await this.waitForReady(); // Poll /health endpoint
+      }
+      // Only proceed if health check passes
+    }
+    ```
+
+## Common Issues & Solutions
+
+### Issue: "Bridge service is not ready"
+**Solution**: Check health check polling logic, verify Python service is actually running
+
+### Issue: "JSON decode error"
+**Solution**: Validate JSON serialization on TypeScript side, ensure Python expects correct format
+
+### Issue: "Connection refused"
+**Solution**: Check Python process status, verify serviceUrl is correct, check firewall/port conflicts
+
+### Issue: "Type mismatch"
+**Solution**: Compare TypeScript interfaces with Python Pydantic models, ensure field names match exactly
+
+### Issue: "Timeout waiting for response"
+**Solution**: Check Python task execution, verify no infinite loops, check for blocking operations
+
+## Debugging Checklist
+
+When bridge fails, check in this order:
+
+1. ✅ Python process is running
+2. ✅ Health endpoint responds (GET /health)
+3. ✅ Port 8001 is accessible
+4. ✅ Environment variables are set
+5. ✅ TypeScript types match Python models
+6. ✅ JSON serialization is valid
+7. ✅ Request reaches Python (check logs)
+8. ✅ Response reaches TypeScript (check logs)
+9. ✅ No port conflicts
+10. ✅ No circular references in payloads

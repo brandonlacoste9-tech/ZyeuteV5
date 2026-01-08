@@ -1,0 +1,52 @@
+# Synapse Bridge Rules
+
+**Target Files**: `zyeute/backend/colony/synapse-bridge.ts`, `zyeute/backend/services/automation-service.ts`, `zyeute/backend/colony/bee-system.ts`
+
+**Purpose**: Maintain strict typing and event-driven architecture for inter-service communication.
+
+## Rules
+
+1. **Maintain strict Protobuf-like typing**
+   - No `any` types allowed in gateway code
+   - Use discriminated unions for event payloads
+   - Define event schemas with Zod
+
+2. **Use discriminated unions for events**
+   ```typescript
+   type ColonyEvent = 
+     | { type: 'post.created'; payload: PostCreatedPayload }
+     | { type: 'ai.usage'; payload: AIUsagePayload }
+     | { type: 'bee.status_changed'; payload: BeeStatusPayload };
+   ```
+
+3. **Always implement reconnection logic**
+   - Exponential backoff: 1s, 2s, 4s, 8s, 16s
+   - Max 5 reconnection attempts
+   - Emit `disconnected` event on failure
+
+4. **Include correlation IDs in all messages**
+   ```typescript
+   const correlationId = crypto.randomUUID();
+   await this.publishEvent('task.execute', payload, { correlationId });
+   ```
+
+5. **Emit typed events only**
+   ```typescript
+   this.emit('connected', { hive: string, timestamp: Date });
+   this.emit('task.complete', { taskId: string, result: AutomationResult });
+   ```
+
+6. **Handle event subscription errors gracefully**
+   - Wrap event handlers in try-catch
+   - Log errors but don't crash the bridge
+   - Emit `error` event for monitoring
+
+7. **Validate event payloads before processing**
+   - Use Zod schemas for validation
+   - Reject invalid events with logged warnings
+   - Never process unvalidated events
+
+8. **Use `Promise.allSettled()` for multi-hive operations**
+   - Query multiple hives in parallel
+   - Handle partial failures gracefully
+   - Aggregate successful responses
