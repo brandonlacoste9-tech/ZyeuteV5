@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google-cloud/aiplatform": "^6.0.0",
+    "@google-cloud/bigquery": "^7.0.0",
+    "@google-cloud/secret-manager": "^5.0.0",
     "@supabase/supabase-js": "^2.89.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

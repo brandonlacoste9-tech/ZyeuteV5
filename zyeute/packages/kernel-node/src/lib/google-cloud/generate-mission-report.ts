@@ -1,0 +1,212 @@
+/**
+ * 🎯 Weekly Mission Report Generator
+ *
+ * Queries BigQuery to generate a comprehensive mission report
+ * showing Colony OS activity, performance, and credit usage.
+ */
+
+import { BigQuery } from "@google-cloud/bigquery";
+
+interface MissionReport {
+  period: { start: string; end: string };
+  tasks: {
+    total: number;
+    completed: number;
+    failed: number;
+    byUnit: Record<string, number>;
+  };
+  performance: {
+    avgResponseTime: number;
+    fastestTask: number;
+    slowestTask: number;
+  };
+  credits: {
+    estimatedUsage: number;
+    remaining: number;
+  };
+  topActivities: Array<{
+    unit: string;
+    action: string;
+    count: number;
+  }>;
+}
+
+/**
+ * Generate Weekly Mission Report from BigQuery
+ */
+export async function generateMissionReport(
+  projectId: string,
+  startDate: string,
+  endDate: string,
+): Promise<MissionReport> {
+  const bigquery = new BigQuery({ projectId });
+  const datasetId = "colony_telemetry";
+
+  console.log("📊 Generating Mission Report...");
+  console.log(`   Period: ${startDate} to ${endDate}`);
+
+  // Query Queen Activity
+  const queenQuery = `
+    SELECT 
+      COUNT(*) as total_tasks,
+      COUNTIF(status = 'completed') as completed,
+      COUNTIF(status = 'failed') as failed,
+      AVG(response_time_ms) as avg_response_time,
+      MIN(response_time_ms) as fastest,
+      MAX(response_time_ms) as slowest
+    FROM \`${projectId}.${datasetId}.queen_activity\`
+    WHERE timestamp >= @start_date AND timestamp <= @end_date
+  `;
+
+  // Query by Unit
+  const unitQuery = `
+    SELECT 
+      unit,
+      COUNT(*) as count
+    FROM \`${projectId}.${datasetId}.infantry_activity\`
+    WHERE timestamp >= @start_date AND timestamp <= @end_date
+    GROUP BY unit
+    ORDER BY count DESC
+  `;
+
+  // Query Top Activities
+  const activityQuery = `
+    SELECT 
+      unit,
+      action,
+      COUNT(*) as count
+    FROM \`${projectId}.${datasetId}.infantry_activity\`
+    WHERE timestamp >= @start_date AND timestamp <= @end_date
+    GROUP BY unit, action
+    ORDER BY count DESC
+    LIMIT 10
+  `;
+
+  const options = {
+    query: queenQuery,
+    params: {
+      start_date: startDate,
+      end_date: endDate,
+    },
+  };
+
+  try {
+    const [queenResults] = await bigquery.query(options);
+    const queenData = queenResults[0];
+
+    // Get unit breakdown
+    options.query = unitQuery;
+    const [unitResults] = await bigquery.query(options);
+    const byUnit: Record<string, number> = {};
+    unitResults.forEach((row: any) => {
+      byUnit[row.unit] = row.count;
+    });
+
+    // Get top activities
+    options.query = activityQuery;
+    const [activityResults] = await bigquery.query(options);
+    const topActivities = activityResults.map((row: any) => ({
+      unit: row.unit,
+      action: row.action,
+      count: row.count,
+    }));
+
+    // Estimate credit usage (rough calculation)
+    const estimatedUsage = (queenData.total_tasks || 0) * 0.001; // $0.001 per task estimate
+    const remaining = 1778.34 - estimatedUsage;
+
+    const report: MissionReport = {
+      period: { start: startDate, end: endDate },
+      tasks: {
+        total: queenData.total_tasks || 0,
+        completed: queenData.completed || 0,
+        failed: queenData.failed || 0,
+        byUnit,
+      },
+      performance: {
+        avgResponseTime: queenData.avg_response_time || 0,
+        fastestTask: queenData.fastest || 0,
+        slowestTask: queenData.slowest || 0,
+      },
+      credits: {
+        estimatedUsage,
+        remaining,
+      },
+      topActivities,
+    };
+
+    return report;
+  } catch (error: any) {
+    console.error("❌ Failed to generate mission report:", error);
+    throw error;
+  }
+}
+
+/**
+ * Format Mission Report as Markdown
+ */
+export function formatMissionReport(report: MissionReport): string {
+  const { period, tasks, performance, credits, topActivities } = report;
+
+  return `
+# 🐝 Colony OS Weekly Mission Report
+
+**Period:** ${period.start} to ${period.end}
+
+## 📊 Task Summary
+
+- **Total Tasks:** ${tasks.total}
+- **Completed:** ${tasks.completed} (${((tasks.completed / tasks.total) * 100).toFixed(1)}%)
+- **Failed:** ${tasks.failed} (${((tasks.failed / tasks.total) * 100).toFixed(1)}%)
+
+### By Unit
+
+${Object.entries(tasks.byUnit)
+  .map(([unit, count]) => `- **${unit}:** ${count} tasks`)
+  .join("\n")}
+
+## ⚡ Performance Metrics
+
+- **Average Response Time:** ${performance.avgResponseTime.toFixed(2)}ms
+- **Fastest Task:** ${performance.fastestTask}ms
+- **Slowest Task:** ${performance.slowestTask}ms
+
+## 💰 Credit Usage
+
+- **Estimated Usage:** $${credits.estimatedUsage.toFixed(2)}
+- **Remaining Credits:** $${credits.remaining.toFixed(2)}
+
+## 🎯 Top Activities
+
+${topActivities
+  .map(
+    (activity, i) =>
+      `${i + 1}. **${activity.unit}** - ${activity.action} (${activity.count} times)`,
+  )
+  .join("\n")}
+
+---
+
+*Report generated by Colony OS Mission Control*
+`;
+}
+
+/**
+ * CLI Entry Point
+ */
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT || "zyeutev5";
+  const endDate = new Date().toISOString().split("T")[0];
+  const startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split("T")[0];
+
+  generateMissionReport(projectId, startDate, endDate)
+    .then((report) => {
+      console.log(formatMissionReport(report));
+    })
+    .catch((error) => {
+      console.error("❌ Failed to generate report:", error);
+      process.exit(1);
+    });
+}

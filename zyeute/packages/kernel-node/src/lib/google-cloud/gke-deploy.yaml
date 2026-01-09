@@ -1,0 +1,85 @@
+# GKE Autopilot Configuration for Siege Engines (Ralphs)
+# Mass-render infrastructure that scales automatically
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: siege-engines
+  namespace: colony-os
+  labels:
+    app: siege-engines
+    unit: ralphs
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: siege-engines
+  template:
+    metadata:
+      labels:
+        app: siege-engines
+        unit: ralphs
+    spec:
+      containers:
+      - name: desktop-commander
+        image: gcr.io/${GOOGLE_CLOUD_PROJECT}/siege-engine:latest
+        env:
+        - name: GOOGLE_CLOUD_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: colony-config
+              key: project_id
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: DATABASE_URL
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: GROQ_API_KEY
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        ports:
+        - containerPort: 8080
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: siege-engines-service
+  namespace: colony-os
+spec:
+  selector:
+    app: siege-engines
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: colony-config
+  namespace: colony-os
+data:
+  project_id: "${GOOGLE_CLOUD_PROJECT}"
+  region: "us-central1"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: colony-nectar
+  namespace: colony-os
+type: Opaque
+stringData:
+  # These will be populated from Secret Manager
+  DATABASE_URL: ""
+  GROQ_API_KEY: ""
+  APIFY_TOKEN: ""

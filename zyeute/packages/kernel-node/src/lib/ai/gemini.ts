@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import "../env-loader.js";
 
 /**
  * Enhanced Gemini Client (The Antigravity Core)
@@ -7,7 +6,7 @@ dotenv.config();
  * Supports Gemini Ultra, advanced reasoning, and experimental features
  */
 export class GeminiClient {
-  private apiKey: string = '';
+  private apiKey: string = "";
   private vertexProject?: string;
   private vertexLocation?: string;
   private model: string = "gemini-1.5-pro"; // Default to powerful model
@@ -19,34 +18,48 @@ export class GeminiClient {
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
     const vertexProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const vertexLocation = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+    const vertexLocation = process.env.GOOGLE_CLOUD_LOCATION || "us-central1";
 
     // Try Vertex AI first (more powerful), fallback to API key
     if (vertexProject) {
-      console.log('🚀 [Antigravity] Initializing Vertex AI connection...');
+      console.log("🚀 [Antigravity] Initializing Vertex AI connection...");
       this.vertexProject = vertexProject;
       this.vertexLocation = vertexLocation;
       this.vertexUrl = `https://${vertexLocation}-aiplatform.googleapis.com/v1/projects/${vertexProject}/locations/${vertexLocation}/publishers/google/models`;
-      this.capabilities = ['ultra-reasoning', 'advanced-code', 'multimodal-pro', 'long-context'];
+      this.capabilities = [
+        "ultra-reasoning",
+        "advanced-code",
+        "multimodal-pro",
+        "long-context",
+      ];
       this.isReady = true;
     } else if (apiKey) {
-      console.log('⚡ [Antigravity] Initializing Gemini API connection...');
+      console.log("⚡ [Antigravity] Initializing Gemini API connection...");
       this.apiKey = apiKey;
-      this.capabilities = ['vision', 'chat', 'code'];
+      this.capabilities = ["vision", "chat", "code"];
       this.isReady = true;
     } else {
-      console.warn('⚠️ [Antigravity] No Google AI credentials found. Antigravity Core offline.');
+      console.warn(
+        "⚠️ [Antigravity] No Google AI credentials found. Antigravity Core offline.",
+      );
       this.isReady = false;
       return;
     }
 
-    console.log(`✨ [Antigravity] Capabilities: ${this.capabilities.join(', ')}`);
+    console.log(
+      `✨ [Antigravity] Capabilities: ${this.capabilities.join(", ")}`,
+    );
   }
 
   /**
    * Advanced multimodal analysis with Antigravity capabilities
    */
-  async analyzeVisual(prompt: string, imageBuffer?: Uint8Array, mimeType: string = 'image/jpeg', videoUrl?: string): Promise<string> {
+  async analyzeVisual(
+    prompt: string,
+    imageBuffer?: Uint8Array,
+    mimeType: string = "image/jpeg",
+    videoUrl?: string,
+  ): Promise<string> {
     if (!this.isReady) return "Error: Antigravity Visual Cortex Offline";
 
     try {
@@ -56,31 +69,35 @@ export class GeminiClient {
         parts.push({
           inlineData: {
             mimeType: mimeType,
-            data: Buffer.from(imageBuffer).toString("base64")
-          }
+            data: Buffer.from(imageBuffer).toString("base64"),
+          },
         } as any);
       } else if (videoUrl) {
         // Video analysis not implemented yet
-        parts.push({ text: `Video analysis requested for: ${videoUrl}` } as any);
+        parts.push({
+          text: `Video analysis requested for: ${videoUrl}`,
+        } as any);
       }
 
       const payload = {
-        contents: [{
-          role: "user",
-          parts: parts
-        }],
+        contents: [
+          {
+            role: "user",
+            parts: parts,
+          },
+        ],
         generationConfig: {
           temperature: 0.1,
           topK: 32,
           topP: 1,
           maxOutputTokens: 4096,
-        }
+        },
       };
 
       const response = await this.callApi(payload);
       return response;
     } catch (error) {
-      console.error('🔴 [Antigravity] Vision Error:', error);
+      console.error("🔴 [Antigravity] Vision Error:", error);
       return "Antigravity visual analysis failed.";
     }
   }
@@ -88,24 +105,33 @@ export class GeminiClient {
   /**
    * Antigravity reasoning with advanced models
    */
-  async chat(prompt: string, options: {
-    model?: string;
-    temperature?: number;
-    reasoning?: boolean;
-    code?: boolean;
-    creative?: boolean;
-  } = {}): Promise<string> {
+  async chat(
+    prompt: string,
+    options: {
+      model?: string;
+      temperature?: number;
+      reasoning?: boolean;
+      code?: boolean;
+      creative?: boolean;
+    } = {},
+  ): Promise<string> {
     if (!this.isReady) return "Error: Antigravity Logic Core Offline";
 
     try {
-      const model = options.model || (options.reasoning ? 'gemini-1.5-pro' : 'gemini-1.5-flash');
-      const temperature = options.temperature || (options.creative ? 0.9 : options.code ? 0.1 : 0.7);
+      const model =
+        options.model ||
+        (options.reasoning ? "gemini-1.5-pro" : "gemini-1.5-flash");
+      const temperature =
+        options.temperature ||
+        (options.creative ? 0.9 : options.code ? 0.1 : 0.7);
 
       const payload = {
-        contents: [{
-          role: "user",
-          parts: [{ text: prompt }]
-        }],
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
         generationConfig: {
           temperature: temperature,
           topK: options.code ? 1 : 40,
@@ -116,15 +142,15 @@ export class GeminiClient {
         safetySettings: [
           {
             category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
+            threshold: "BLOCK_MEDIUM_AND_ABOVE",
+          },
+        ],
       };
 
       const response = await this.callApi(payload, model);
       return response;
     } catch (error) {
-      console.error('🔴 [Antigravity] Chat Error:', error);
+      console.error("🔴 [Antigravity] Chat Error:", error);
       return "Antigravity reasoning failed.";
     }
   }
@@ -145,14 +171,17 @@ export class GeminiClient {
   /**
    * Creative content generation with Antigravity
    */
-  async createContent(prompt: string, style: 'marketing' | 'creative' | 'technical' | 'educational' = 'creative'): Promise<string> {
+  async createContent(
+    prompt: string,
+    style: "marketing" | "creative" | "technical" | "educational" = "creative",
+  ): Promise<string> {
     if (!this.isReady) return "Error: Antigravity Creation Core Offline";
 
     const stylePrompts = {
       marketing: "Create compelling marketing copy for:",
       creative: "Generate creative content for:",
       technical: "Write clear technical documentation for:",
-      educational: "Create educational content explaining:"
+      educational: "Create educational content explaining:",
     };
 
     const enhancedPrompt = `${stylePrompts[style]} ${prompt}. Make it engaging, professional, and optimized for the target audience.`;
@@ -173,21 +202,23 @@ export class GeminiClient {
       // Use Vertex AI (more powerful)
       url = `${this.vertexUrl}/${model}:predict`;
       headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await this.getVertexToken()}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${await this.getVertexToken()}`,
       };
     } else {
       // Use Gemini API
       url = `${this.baseUrl}/models/${model}:generateContent?key=${this.apiKey}`;
-      headers = { 'Content-Type': 'application/json' };
+      headers = { "Content-Type": "application/json" };
     }
 
-    console.log(`🚀 [Antigravity] Calling ${model} via ${this.vertexProject ? 'Vertex AI' : 'Gemini API'}`);
+    console.log(
+      `🚀 [Antigravity] Calling ${model} via ${this.vertexProject ? "Vertex AI" : "Gemini API"}`,
+    );
 
     const response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: headers,
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -199,9 +230,16 @@ export class GeminiClient {
 
     // Handle different response formats
     if (this.vertexProject) {
-      return data.predictions?.[0]?.content || data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+      return (
+        data.predictions?.[0]?.content ||
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No response generated."
+      );
     } else {
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+      return (
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "No response generated."
+      );
     }
   }
 
@@ -211,8 +249,8 @@ export class GeminiClient {
   private async getVertexToken(): Promise<string> {
     // For now, return empty - user needs to set up gcloud auth
     // In production, this would use service account or user auth
-    console.warn('⚠️ [Antigravity] Vertex AI requires authentication setup');
-    return '';
+    console.warn("⚠️ [Antigravity] Vertex AI requires authentication setup");
+    return "";
   }
 
   /**
@@ -226,9 +264,9 @@ export class GeminiClient {
   }> {
     return {
       available: this.isReady,
-      models: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-pro-vision'],
+      models: ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro-vision"],
       features: this.capabilities,
-      vertexEnabled: !!this.vertexProject
+      vertexEnabled: !!this.vertexProject,
     };
   }
 }
@@ -241,7 +279,9 @@ export async function checkAntigravityStatus() {
     vertexAI: capabilities.vertexEnabled,
     capabilities: capabilities.features,
     models: capabilities.models,
-    powerLevel: capabilities.vertexEnabled ? 'ANTIGRAVITY_MAX' : 'STANDARD_GEMINI'
+    powerLevel: capabilities.vertexEnabled
+      ? "ANTIGRAVITY_MAX"
+      : "STANDARD_GEMINI",
   };
 }
 

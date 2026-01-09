@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "../env-loader.js";
 
 export interface DeepSeekMessage {
   role: "system" | "user" | "assistant";

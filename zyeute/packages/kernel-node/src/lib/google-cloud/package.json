@@ -1,0 +1,17 @@
+{
+  "name": "@zyeute/colony-google-cloud",
+  "version": "1.0.0",
+  "description": "Google Cloud integration for Colony OS",
+  "scripts": {
+    "setup-secrets": "bash secret-manager-setup.sh",
+    "deploy-queen": "bash cloud-run-deploy.sh",
+    "deploy-siege": "kubectl apply -f gke-deploy.yaml"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^7.0.0",
+    "@google-cloud/secret-manager": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.27"
+  }
+}

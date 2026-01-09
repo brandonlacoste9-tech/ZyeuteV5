@@ -1,0 +1,116 @@
+# 🎯 Zyeuté Siege Engines - GKE Autopilot Deployment
+# Deploys video generation workers to GKE Autopilot
+# Uses $410 Free Trial credits for worker nodes
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zyeute-video-bee
+  namespace: default
+  labels:
+    app: zyeute-video-bee
+    unit: siege-engine
+    version: v5
+spec:
+  replicas: 2  # Start with 2 workers, scales automatically
+  selector:
+    matchLabels:
+      app: zyeute-video-bee
+  template:
+    metadata:
+      labels:
+        app: zyeute-video-bee
+        unit: siege-engine
+    spec:
+      containers:
+      - name: video-bee
+        image: gcr.io/YOUR_PROJECT_ID/zyeute-video-bee:latest
+        # Or use: us-docker.pkg.dev/YOUR_PROJECT_ID/colony/zyeute-video-bee:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: GOOGLE_CLOUD_PROJECT
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: GOOGLE_CLOUD_PROJECT
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: DATABASE_URL
+        - name: SUPABASE_SERVICE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: SUPABASE_SERVICE_KEY
+        - name: FAL_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: colony-nectar
+              key: FAL_API_KEY
+        - name: QUEEN_BEE_URL
+          value: "https://queen-bee-YOUR_PROJECT_ID.a.run.app"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zyeute-video-bee-service
+  namespace: default
+  labels:
+    app: zyeute-video-bee
+spec:
+  type: LoadBalancer
+  selector:
+    app: zyeute-video-bee
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: zyeute-video-bee-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: zyeute-video-bee
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
