@@ -98,6 +98,7 @@ async function callLocalOllama(
  */
 async function callOllamaCloud(
   request: HiveMindRequest,
+  model: "llama3.1:70b" | "deepseek-r1:70b" = "llama3.1:70b",
 ): Promise<HiveMindResponse> {
   const apiKey = process.env.OLLAMA_API_KEY;
 
@@ -115,7 +116,7 @@ async function callOllamaCloud(
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama3.1:70b", // Ollama Cloud supports 70B models
+        model: model, // Support both Llama and DeepSeek
         messages: [
           ...(request.systemPrompt
             ? [{ role: "system", content: request.systemPrompt }]
@@ -138,7 +139,7 @@ async function callOllamaCloud(
     return {
       content,
       provider: "ollama",
-      model: "llama3.1:70b",
+      model: model,
       tokensUsed: data.usage?.total_tokens,
       latencyMs: Date.now() - startTime,
     };
@@ -383,11 +384,28 @@ export async function hiveMindChat(
       return response;
     }
 
-    // FALLBACK 2: DeepSeek (PAID - last resort before Ollama)
-    console.warn(`⚠️ [FALLBACK] Free tiers unavailable, using DeepSeek (PAID)`);
-    const response = await callDeepSeek(request);
-    responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
-    return response;
+    // FALLBACK 2: Try Ollama Cloud DeepSeek R1 (FREE instead of PAID!)
+    if (process.env.OLLAMA_API_KEY) {
+      try {
+        console.warn(`⚠️ [FALLBACK] Using Ollama Cloud DeepSeek R1 (FREE!)`);
+        const response = await callOllamaCloud(request, "deepseek-r1:70b");
+        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        return response;
+      } catch (error) {
+        console.warn(`⚠️ Ollama Cloud DeepSeek failed, trying paid DeepSeek API...`);
+      }
+    }
+
+    // FALLBACK 3: PAID DeepSeek API (only if Ollama unavailable)
+    if (process.env.DEEPSEEK_API_KEY) {
+      console.warn(`⚠️ [FALLBACK] Using PAID DeepSeek API (last resort)`);
+      const response = await callDeepSeek(request);
+      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+      return response;
+    }
+
+    // If we get here, nothing is configured - throw error
+    throw new Error("No AI providers configured or all failed");
 
   } catch (error) {
     // TIER 0: Emergency Ollama fallback
