@@ -2,7 +2,7 @@
 # Railway Startup Script
 # Runs database migrations and seed data before starting the app
 
-set -e  # Exit on error
+set -e  # Exit on error (but allow migration scripts to fail gracefully)
 
 echo "🚀 Zyeuté Railway Startup Script"
 echo "=================================="
@@ -43,4 +43,6 @@ echo "🚀 Starting application..."
 echo ""
 
 # Start the application
+# Railway sets PORT automatically, backend will use it
+echo "🌐 Starting on port: ${PORT:-5000}"
 exec node dist/index.cjs
