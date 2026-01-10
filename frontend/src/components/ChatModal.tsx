@@ -132,8 +132,10 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
     setIsTyping(true);
 
     try {
-      const response = await tiguyService.sendMessage(text, messages);
-      addMessage({ sender: "tiguy", text: response });
+      const response = await tiguyService.sendMessage(text);
+      // Handle both { response: string } and direct string responses
+      const responseText = typeof response === "string" ? response : response.response || response.message || "Je n'ai pas de réponse pour ça, tsé?";
+      addMessage({ sender: "tiguy", text: responseText });
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Erreur de connexion. Réessaie!");
