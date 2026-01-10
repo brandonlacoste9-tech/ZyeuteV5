@@ -128,6 +128,14 @@ app.use((req, res, next) => {
     );
   } catch (error) {
     console.error("❌ CRITICAL STARTUP ERROR:", error);
-    process.exit(1);
+    console.error(
+      "Stack:",
+      error instanceof Error ? error.stack : "No stack trace",
+    );
+    // Don't exit immediately - allow Railway to retry health checks
+    // Exit after a delay to give time for logs to be captured
+    setTimeout(() => {
+      process.exit(1);
+    }, 5000);
   }
 })();
