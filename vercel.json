@@ -4,7 +4,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.ts"
+      "destination": "https://zyeute-api.railway.app/api/$1"
     },
     {
       "source": "/(.*)",
