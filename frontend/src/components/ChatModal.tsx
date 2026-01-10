@@ -1,29 +1,76 @@
 /**
- * ChatModal - Premium Full-Screen Chat Interface
- * Features TI-Guy's authentic Quebec French slang personality
- * Smooth slide animations and gold/leather theme
+ * ChatModal.tsx
+ * SOVEREIGN LEATHER & GOLD - Louis Vuitton x Québec Aesthetic
+ * Luxury chat interface with deep brown leather, gold Fleur-de-lis, and regal typography
  */
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   IoCloseOutline,
   IoSend,
-  IoAppsOutline,
+  IoMenuOutline,
   IoImageOutline,
+  IoSwapHorizontalOutline,
 } from "react-icons/io5";
 import { useHaptics } from "@/hooks/useHaptics";
-import {
-  getTiGuyResponse,
-  getTiGuyWelcomeMessage,
-} from "@/utils/tiGuyResponses";
 import { tiguyService } from "@/services/tiguyService";
 import type { ChatMessage } from "@/types/chat";
 import { toast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
+import { getTiGuyWelcomeMessage } from "@/utils/tiGuyResponses";
 
 interface ChatModalProps {
   onClose: () => void;
 }
+
+// Fleur-de-lis SVG pattern for background
+const FLEUR_DE_LIS_PATTERN = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.15'%3E%3Cpath d='M30 5c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L20 12l-1.46-3.46C17.56 7.63 17 6.38 17 5c0-2.76-2.24-5-5-5S7 2.24 7 5c0 1.38.56 2.63 1.46 3.54L10 15l5.54 1.46C17.38 17.56 18.62 18 20 18s2.62-.44 4.46-1.54L30 15l1.54-6.46C33.38 7.56 34.62 7 36 7c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L28 12l-1.46-3.46C25.56 7.63 25 6.38 25 5c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L18 12l5.54 1.46C25.38 14.56 26.62 15 28 15s2.62-.44 4.46-1.54L38 12l1.54-6.46C41.38 4.56 42.62 4 44 4c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
+
+// Tiny Gold Beaver Icon SVG
+const BeaverSealIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+      fill="#d4af37"
+      stroke="#d4af37"
+      strokeWidth="1.5"
+    />
+    {/* Simplified beaver shape */}
+    <circle cx="12" cy="10" r="3" fill="#d4af37" opacity="0.8" />
+    <ellipse cx="10" cy="8" rx="1" ry="1.5" fill="#b8860b" />
+    <ellipse cx="14" cy="8" rx="1" ry="1.5" fill="#b8860b" />
+    <path
+      d="M8 14 Q12 16 16 14"
+      stroke="#d4af37"
+      strokeWidth="2"
+      fill="none"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+// Piasse Gold Coin Component
+const PiasseCoin = ({ pulsing = true }: { pulsing?: boolean }) => (
+  <div
+    className={cn(
+      "w-8 h-8 rounded-full flex items-center justify-center border-2 border-[#d4af37] shadow-lg",
+      pulsing && "animate-pulse"
+    )}
+    style={{
+      background:
+        "radial-gradient(circle, #d4af37 0%, #b8860b 50%, #8b6914 100%)",
+      boxShadow: "0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 10px rgba(0,0,0,0.3)",
+    }}
+  >
+    <span className="text-[10px] font-bold text-black">₱</span>
+  </div>
+);
 
 export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const { tap, impact } = useHaptics();
@@ -31,348 +78,239 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [tiguMode, setTiguMode] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showToolsMenu, setShowToolsMenu] = useState(false);
-  const [isJoualizing, setIsJoualizing] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showDMMenu, setShowDMMenu] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Slide-in animation on mount
+  // Animations & Welcome
   useEffect(() => {
-    // Trigger animation after mount
     setTimeout(() => setIsVisible(true), 10);
-
-    // Add welcome message
-    const welcomeMessage = getTiGuyWelcomeMessage();
-    setMessages([welcomeMessage]);
+    setMessages([getTiGuyWelcomeMessage()]);
   }, []);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Handle sending a message
-  const handleSendMessage = async (e?: React.FormEvent | string) => {
-    if (e && typeof e !== "string") e.preventDefault();
-
-    const text = typeof e === "string" ? e : inputText.trim();
-    if ((!text && !selectedImage) || isTyping || loading) return;
-
-    tap();
-
-    const currentImage = selectedImage;
-
-    // Add user message if not already added by quick action
-    if (typeof e !== "string") {
-      const userMessage: ChatMessage = {
-        id: `user-${Date.now()}-${Math.random()}`,
-        sender: "user",
-        text: text,
-        timestamp: new Date(),
-        image: currentImage || undefined,
-      };
-      setMessages((prev) => [...prev, userMessage]);
-      setInputText("");
-      setSelectedImage(null);
-      setImagePreview(null);
-    }
-
-    setIsTyping(true);
-
-    if (tiguMode) {
-      setLoading(true);
-      try {
-        const responseData = await tiguyService.sendMessage(
-          text,
-          currentImage || undefined,
-        );
-        const tiGuyMessage: ChatMessage = {
-          id: `tiguy-${Date.now()}-${Math.random()}`,
-          sender: "tiGuy",
-          text: responseData.response,
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, tiGuyMessage]);
-      } catch (error) {
-        const errorMessage: ChatMessage = {
-          id: `error-${Date.now()}`,
-          sender: "tiGuy",
-          text: "⚠️ TI-GUY est occupé, essaie plus tard!",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, errorMessage]);
-      } finally {
-        setIsTyping(false);
-        setLoading(false);
-      }
-    } else {
-      // Simulate typing delay (800ms for natural feel)
-      setTimeout(() => {
-        const tiGuyResponse = getTiGuyResponse(text);
-        setMessages((prev) => [...prev, tiGuyResponse]);
-        setIsTyping(false);
-      }, 800);
-    }
+  const handleClose = () => {
+    impact();
+    setIsVisible(false);
+    setTimeout(onClose, 300);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("L'image est trop grosse! (max 5MB)");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setImagePreview(base64);
-        setSelectedImage(base64);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleJoualize = async (style: "street" | "old" | "enhanced") => {
-    const textToJoualize =
-      inputText.trim() ||
-      (messages.length > 1 ? messages[messages.length - 1].text : "");
-
-    if (!textToJoualize || isJoualizing) return;
-
-    tap();
-    setIsJoualizing(true);
-    setShowToolsMenu(false);
-
-    try {
-      const response = await fetch("/api/ai/joualize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("supabase.auth.token")}`, // Placeholder for real JWT
-        },
-        body: JSON.stringify({ text: textToJoualize, style }),
-      });
-
-      if (!response.ok) throw new Error("Failed to joualize");
-
-      const data = await response.json();
-      setInputText(data.rewrittenText);
-      toast.success("Texte transformé! ✨");
-    } catch (error) {
-      console.error("Joualizer error:", error);
-      toast.error("Échec de la transformation. 🦫");
-    } finally {
-      setIsJoualizing(false);
-    }
-  };
-
-  const addMessage = (message: Omit<ChatMessage, "id" | "timestamp">) => {
+  const addMessage = (msg: Omit<ChatMessage, "id" | "timestamp">) => {
     const newMessage: ChatMessage = {
-      ...message,
-      id: `${message.sender}-${Date.now()}-${Math.random()}`,
+      ...msg,
+      id: `${msg.sender}-${Date.now()}-${Math.random()}`,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, newMessage]);
   };
 
-  // Handle close with slide-out animation
-  const handleClose = () => {
-    impact();
-    setIsVisible(false);
-    // Delay unmounting until animation completes
-    setTimeout(() => {
-      onClose();
-    }, 300);
+  const handleSendMessage = async (e?: React.FormEvent | string) => {
+    if (e && typeof e !== "string") e.preventDefault();
+    const text = typeof e === "string" ? e : inputText.trim();
+
+    if (!text || isTyping) return;
+
+    tap();
+
+    if (typeof e !== "string") {
+      addMessage({ sender: "user", text: text });
+      setInputText("");
+    } else {
+      addMessage({ sender: "user", text: text });
+    }
+
+    setIsTyping(true);
+
+    try {
+      const response = await tiguyService.sendMessage(text, messages);
+      addMessage({ sender: "tiguy", text: response });
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast.error("Erreur de connexion. Réessaie!");
+      addMessage({
+        sender: "tiguy",
+        text: "Oups, j'ai eu un p'tit problème de connexion là! 🦫 Réessaie dans une minute, tsé?",
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  // Format timestamp in French
-  const formatTime = (date: Date): string => {
-    return new Intl.DateTimeFormat("fr-CA", {
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const imageUrl = reader.result as string;
+      addMessage({ sender: "user", text: "📎 Fichier attaché", image: imageUrl });
+    };
+    reader.readAsDataURL(file);
   };
 
-  return (
+  if (!isVisible) return null;
+
+  return createPortal(
     <div
-      className={cn(
-        "fixed inset-0 z-[60] flex items-end justify-center",
-        "transition-transform duration-300 ease-out",
-        isVisible ? "translate-y-0" : "translate-y-full",
-      )}
-      style={{
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        backdropFilter: "blur(4px)",
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={handleClose}
     >
-      <style>{`
-          .chat-tiguy-mode {
-            background: linear-gradient(135deg, #0051A5 0%, #EF3E42 100%) !important;
-            border: 2px solid #FFD700 !important;
-          }
-          .chat-leather-bg {
-            background-color: #E8D7C1;
-            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
-          }
-          .no-scrollbar::-webkit-scrollbar {
-            display: none;
-          }
-          .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-        `}</style>
       <div
         className={cn(
-          "w-full max-w-md h-[80vh] chat-leather-bg rounded-t-[2.5rem] rounded-b-[1.5rem] mb-24 md:mb-6 mx-2 transition-all duration-500",
-          "flex flex-col overflow-hidden relative",
-          "border-2 border-[#8B6914] shadow-[0_10px_40px_rgba(0,0,0,0.3)]",
-          "transition-transform duration-300 ease-out",
-          isVisible ? "translate-y-0" : "translate-y-full",
-          tiguMode && "chat-tiguy-mode",
+          "relative w-full max-w-md h-[90vh] max-h-[800px] rounded-lg overflow-hidden shadow-2xl transform transition-all duration-300",
+          isVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
         )}
         onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#3d2b1f", // Deep Leather Brown
+          backgroundImage: FLEUR_DE_LIS_PATTERN,
+          border: "3px solid #d4af37", // Gold border
+          boxShadow:
+            "0 0 40px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(0,0,0,0.3)",
+        }}
       >
-        {/* Header */}
-        <div className="bg-[#D4C4A8]/90 backdrop-blur-md border-b border-[#8B6914]/30 p-4 flex items-center justify-between shadow-sm relative z-10">
+        {/* SOVEREIGN HEADER */}
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b-2 border-[#d4af37]/30"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(61, 43, 31, 0.95) 0%, rgba(45, 32, 22, 0.95) 100%)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          {/* Left: Hamburger Menu + Piasse Coin */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#8B6914] shadow-md relative">
-              <img
-                src="/ti-guy-logo.jpg?v=2"
-                alt="Ti-Guy"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h3 className="text-[#4A3728] font-bold text-lg tracking-tight">
-                Ti-Guy
-              </h3>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
-                <p className="text-[#5D4037] text-xs font-medium uppercase tracking-wider">
-                  En ligne
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
             <button
-              className={cn(
-                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all border shadow-sm",
-                tiguMode
-                  ? "bg-red-600 border-yellow-400 text-white shadow-md scale-105"
-                  : "bg-[#C1A88A] border-[#8B6914]/30 text-[#4A3728] hover:bg-[#B09A7D]",
-              )}
-              onClick={() => {
-                tap();
-                setTiguMode(!tiguMode);
-              }}
+              onClick={() => setShowDMMenu(!showDMMenu)}
+              className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
+              style={{ color: "#d4af37" }}
             >
-              {tiguMode ? "🔱 Mode" : "Standard"}
+              <IoMenuOutline className="w-6 h-6" />
             </button>
-            <button
-              onClick={handleClose}
-              className="p-2 bg-[#C1A88A]/50 hover:bg-[#C1A88A] rounded-full transition-colors border border-[#8B6914]/10 text-[#4A3728]"
-              aria-label="Fermer"
-            >
-              <IoCloseOutline className="w-5 h-5" />
-            </button>
+            <PiasseCoin pulsing={true} />
           </div>
+
+          {/* Center: TI-GUY in Bold Serif */}
+          <h2
+            className="text-2xl font-bold tracking-wider"
+            style={{
+              fontFamily: "'Playfair Display', 'Georgia', serif",
+              color: "#d4af37",
+              textShadow: "0 2px 8px rgba(212, 175, 55, 0.5), 0 0 20px rgba(212, 175, 55, 0.3)",
+              letterSpacing: "0.1em",
+            }}
+          >
+            TI-GUY
+          </h2>
+
+          {/* Right: Close Button */}
+          <button
+            onClick={handleClose}
+            className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
+            style={{ color: "#d4af37" }}
+          >
+            <IoCloseOutline className="w-6 h-6" />
+          </button>
         </div>
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
+        {/* MESSAGES - NO BUBBLES, DIRECT ON LEATHER */}
+        <div
+          className="flex-1 overflow-y-auto p-4 space-y-4"
+          style={{
+            background: "#3d2b1f",
+            backgroundImage: FLEUR_DE_LIS_PATTERN,
+          }}
+        >
           {messages.map((message) => (
             <div
               key={message.id}
               className={cn(
-                "flex gap-3 items-end transition-all duration-300 animate-in fade-in slide-in-from-bottom-2",
-                message.sender === "user" ? "flex-row-reverse" : "flex-row",
+                "flex items-start gap-3",
+                message.sender === "user" ? "flex-row-reverse" : "flex-row"
               )}
             >
-              {message.sender === "tiGuy" && (
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#8B6914]/30 shadow-sm">
-                  <img
-                    src="/ti-guy-logo.jpg?v=2"
-                    alt="Ti-Guy"
-                    className="w-full h-full object-cover"
-                  />
+              {/* Tiny Gold Beaver for Ti-Guy messages */}
+              {message.sender === "tiguy" && (
+                <div className="flex-shrink-0 mt-1">
+                  <BeaverSealIcon className="w-6 h-6 drop-shadow-[0_0_5px_rgba(212,175,55,0.8)]" />
                 </div>
               )}
 
+              {/* Message Text - BOLD GOLD INK, NO BUBBLE */}
               <div
                 className={cn(
-                  "max-w-[80%] rounded-2xl p-3.5 text-sm leading-relaxed shadow-sm border",
-                  message.sender === "user"
-                    ? "bg-[#D2B48C] text-[#2C1810] font-medium border-[#8B6914]/20"
-                    : "bg-[#FAF0E6] text-[#4A3728] border-[#8B6914]/10",
+                  "flex-1",
+                  message.sender === "tiguy" && "border-l-2 pl-3",
+                  message.sender === "user" && "border-r-2 pr-3 text-right"
                 )}
                 style={{
-                  borderRadius:
-                    message.sender === "user"
-                      ? "20px 20px 4px 20px"
-                      : "20px 20px 20px 4px",
+                  borderColor: message.sender === "tiguy" ? "#d4af37" : "transparent",
                 }}
               >
-                <p className="whitespace-pre-wrap break-words">
+                {message.image && (
+                  <img
+                    src={message.image}
+                    alt="Attachment"
+                    className="rounded-lg mb-2 max-w-full"
+                  />
+                )}
+                <p
+                  className="leading-relaxed"
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 700,
+                    color: message.sender === "tiguy" ? "#d4af37" : "#f5f5dc",
+                    textShadow:
+                      message.sender === "tiguy"
+                        ? "0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(212, 175, 55, 0.3)"
+                        : "0 2px 4px rgba(0,0,0,0.8)",
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
                   {message.text}
                 </p>
-                {message.image && (
-                  <div className="mt-3 rounded-xl overflow-hidden border border-[#8B6914]/20 shadow-sm">
-                    <img
-                      src={message.image}
-                      alt="Chat attachment"
-                      className="w-full max-h-52 object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex items-center justify-end gap-1 mt-1 opacity-60">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#4A3728]">
-                    {formatTime(message.timestamp)}
-                  </span>
-                </div>
               </div>
             </div>
           ))}
 
+          {/* Typing Indicator */}
           {isTyping && (
-            <div className="flex gap-3 items-center animate-pulse">
-              <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-[#8B6914]/30">
-                <img
-                  src="/ti-guy-logo.jpg?v=2"
-                  alt="Ti-Guy"
-                  className="w-full h-full object-cover"
-                />
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-1">
+                <BeaverSealIcon className="w-6 h-6 drop-shadow-[0_0_5px_rgba(212,175,55,0.8)] animate-pulse" />
               </div>
-              <div className="bg-[#FAF0E6]/80 p-3 rounded-2xl rounded-bl-sm border border-[#8B6914]/10">
-                <div className="flex gap-1.5">
+              <div className="flex-1 border-l-2 pl-3" style={{ borderColor: "#d4af37" }}>
+                <div className="flex gap-1">
                   <span
-                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
-                    style={{ animationDelay: "0ms" }}
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: "#d4af37",
+                      animationDelay: "0ms",
+                    }}
                   />
                   <span
-                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: "#d4af37",
+                      animationDelay: "150ms",
+                    }}
                   />
                   <span
-                    className="w-1.5 h-1.5 bg-[#8B6914] rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{
+                      backgroundColor: "#d4af37",
+                      animationDelay: "300ms",
+                    }}
                   />
                 </div>
               </div>
@@ -382,186 +320,93 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Quick Actions Scrollable */}
-        <div className="px-5 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-[#8B6914]/10 bg-[#D4C4A8]/20">
-          <button
-            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
-            onClick={async () => {
-              tap();
-              try {
-                const joke = await tiguyService.getJoke();
-                addMessage({ sender: "tiGuy", text: joke.joke });
-              } catch (error) {
-                addMessage({
-                  sender: "tiGuy",
-                  text: "Oups, j'ai oublié la chute! Réessaye plus tard!",
-                });
-              }
-            }}
-          >
-            🎭 Joke
-          </button>
-          <button
-            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
-            onClick={() => {
-              const text = "raconte-moi une histoire";
-              handleSendMessage(text);
-            }}
-          >
-            📜 Histoire
-          </button>
-          <button
-            className="bg-[#C1A88A] hover:bg-[#B09A7D] text-[#4A3728] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border border-[#8B6914]/20 whitespace-nowrap transition-all active:scale-95 shadow-sm"
-            onClick={() => {
-              const text = "parle-moi du Québec";
-              handleSendMessage(text);
-            }}
-          >
-            ⚜️ Culture
-          </button>
-        </div>
-
-        {/* Input Area */}
+        {/* SOVEREIGN INPUT - GOLD-BORDERED LEATHER STRIP */}
         <div
-          className="p-4 border-t border-[#8B6914]/20 bg-[#D4C4A8]/90 backdrop-blur-xl relative z-10"
+          className="p-4 border-t-2"
           style={{
-            paddingBottom:
-              "calc(max(1rem, env(safe-area-inset-bottom)) + 0.5rem)",
+            background:
+              "linear-gradient(180deg, rgba(45, 32, 22, 0.95) 0%, rgba(61, 43, 31, 0.95) 100%)",
+            borderColor: "#d4af37",
+            boxShadow: "0 -5px 20px rgba(0,0,0,0.5)",
           }}
         >
-          {imagePreview && (
-            <div className="mb-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="relative inline-block group">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-16 h-16 object-cover rounded-xl border-2 border-[#8B6914] shadow-sm"
-                />
-                <button
-                  onClick={() => {
-                    setImagePreview(null);
-                    setSelectedImage(null);
-                  }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-500 transition-all hover:scale-110 active:scale-90"
-                >
-                  <IoCloseOutline size={14} />
-                </button>
-              </div>
-            </div>
-          )}
           <form
             onSubmit={handleSendMessage}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
+            style={{
+              border: "2px solid #d4af37",
+              borderRadius: "12px",
+              padding: "12px",
+              background: "rgba(61, 43, 31, 0.8)",
+              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(212, 175, 55, 0.2)",
+            }}
           >
-            {/* Action Buttons */}
-            <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    tap();
-                    setShowToolsMenu(!showToolsMenu);
-                  }}
-                  className={cn(
-                    "w-9 h-9 flex items-center justify-center rounded-full bg-[#C1A88A] text-[#4A3728] hover:bg-[#B09A7D] border transition-all shadow-sm group",
-                    showToolsMenu
-                      ? "border-[#8B6914] bg-[#B09A7D]"
-                      : "border-[#8B6914]/20",
-                  )}
-                  aria-label="Extensions"
-                >
-                  <IoAppsOutline
-                    className={cn(
-                      "w-4 h-4 transition-transform",
-                      showToolsMenu ? "rotate-45" : "group-hover:rotate-12",
-                    )}
-                  />
-                </button>
-
-                {/* Tools Dropup Menu */}
-                {showToolsMenu && (
-                  <div className="absolute bottom-12 left-0 w-44 bg-[#E8D7C1] rounded-xl p-2 border border-[#8B6914]/30 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-200 z-50">
-                    <div className="text-[9px] font-bold text-[#8B6914] uppercase tracking-widest px-2 py-1 mb-1">
-                      Le Joualizer ⚜️
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleJoualize("street")}
-                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
-                    >
-                      <span>🔥</span> Urban Street
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleJoualize("old")}
-                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
-                    >
-                      <span>🏡</span> Pure Laine
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleJoualize("enhanced")}
-                      className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-[#D4C4A8] text-[#4A3728] text-xs flex items-center gap-2 transition-colors"
-                    >
-                      <span>🚀</span> Viral Boost
-                    </button>
-                  </div>
-                )}
-              </div>
+            {/* Left: Character Switch + File Attach */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  tap();
-                  fileInputRef.current?.click();
-                }}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-[#C1A88A] text-[#4A3728] hover:bg-[#B09A7D] border border-[#8B6914]/20 active:scale-90 transition-all shadow-sm group"
-                aria-label="Téléverser"
+                className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
+                style={{ color: "#d4af37" }}
+                title="Switch Character"
               >
-                <IoImageOutline className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <IoSwapHorizontalOutline className="w-5 h-5" />
               </button>
               <input
-                type="file"
                 ref={fileInputRef}
-                onChange={handleImageSelect}
-                className="hidden"
+                type="file"
                 accept="image/*"
-              />
-            </div>
-
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder="Jase avec moi..."
-                className="w-full bg-[#FAF0E6] border-2 border-[#8B6914]/30 rounded-full py-2.5 pl-4 pr-10 text-sm text-[#4A3728] placeholder-[#8B6914]/50 focus:outline-none focus:border-[#8B6914] transition-all shadow-inner"
-                disabled={isTyping}
+                onChange={handleFileSelect}
+                className="hidden"
               />
               <button
-                type="submit"
-                disabled={!inputText.trim() || isTyping}
-                className={cn(
-                  "absolute right-1 top-1 bottom-1 aspect-square rounded-full",
-                  "bg-[#8B6914] text-[#E8D7C1]",
-                  "hover:bg-[#6D4C0A] transition-all active:scale-90",
-                  "disabled:opacity-40 disabled:grayscale",
-                  "flex items-center justify-center shadow-md group",
-                )}
-                aria-label="Envoyer"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
+                style={{ color: "#d4af37" }}
+                title="Attach File"
               >
-                <IoSend className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <IoImageOutline className="w-5 h-5" />
               </button>
             </div>
-          </form>
 
-          <p className="mt-3 text-center text-[9px] font-bold text-[#8B6914]/70 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-            <span className="w-6 h-px bg-[#8B6914]/30"></span>
-            ⚜️ Zyeuté AI 🦫
-            <span className="w-6 h-px bg-[#8B6914]/30"></span>
-          </p>
+            {/* Center: Input Field */}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder="Jase avec moi..."
+              className="flex-1 bg-transparent outline-none"
+              style={{
+                fontSize: "16px",
+                fontWeight: 500,
+                color: "#d4af37",
+                fontFamily: "'Inter', sans-serif",
+              }}
+            />
+
+            {/* Right: Send Button */}
+            <button
+              type="submit"
+              disabled={!inputText.trim() || isTyping}
+              className="p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110"
+              style={{
+                background:
+                  inputText.trim() && !isTyping
+                    ? "linear-gradient(135deg, #d4af37 0%, #b8860b 100%)"
+                    : "rgba(212, 175, 55, 0.3)",
+                boxShadow:
+                  inputText.trim() && !isTyping
+                    ? "0 0 15px rgba(212, 175, 55, 0.5)"
+                    : "none",
+              }}
+            >
+              <IoSend className="w-5 h-5" style={{ color: "#000" }} />
+            </button>
+          </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
