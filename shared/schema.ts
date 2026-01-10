@@ -202,9 +202,15 @@ export const posts = pgTable(
     aiLabels: jsonb("ai_labels").default([]), // AI generated tags
     contentFr: text("content_fr"),
     contentEn: text("content_en"),
-    hashtags: text("hashtags").array().default(sql`'{}'::text[]`),
-    detectedThemes: text("detected_themes").array().default(sql`'{}'::text[]`),
-    detectedItems: text("detected_items").array().default(sql`'{}'::text[]`),
+    hashtags: text("hashtags")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedThemes: text("detected_themes")
+      .array()
+      .default(sql`'{}'::text[]`),
+    detectedItems: text("detected_items")
+      .array()
+      .default(sql`'{}'::text[]`),
     aiGenerated: boolean("ai_generated").default(false),
     viralScore: integer("viral_score").default(0), // Le Buzz Predictor
     safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
@@ -220,6 +226,7 @@ export const posts = pgTable(
     expiresAt: timestamp("expires_at"),
     burnedAt: timestamp("burned_at"), // The "Scar" - remains after content deletion
     deletedAt: timestamp("deleted_at"),
+    isVaulted: boolean("is_vaulted").default(false), // For "Vault" swipe gesture
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -665,6 +672,31 @@ export const transactions = pgTable(
   (table) => ({
     senderIdx: index("idx_transactions_sender").on(table.senderId),
     receiverIdx: index("idx_transactions_receiver").on(table.receiverId),
+  }),
+);
+
+// AI Generation Cost Tracking
+export const aiGenerationCosts = pgTable(
+  "ai_generation_costs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    service: varchar("service", { length: 50 }).notNull(), // "fal", "vertex", "groq"
+    operation: varchar("operation", { length: 50 }).notNull(), // "video", "image", "regenerate"
+    baseCost: doublePrecision("base_cost").notNull(), // Original cost before discount
+    finalCost: doublePrecision("final_cost").notNull(), // Cost after volume discount
+    volumeTier: integer("volume_tier").default(1), // 1-5 (tier based on monthly uploads)
+    discountPercent: doublePrecision("discount_percent").default(0), // Applied discount %
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_ai_costs_user_id").on(table.userId),
+    postIdIdx: index("idx_ai_costs_post_id").on(table.postId),
+    createdAtIdx: index("idx_ai_costs_created_at").on(table.createdAt),
+    serviceIdx: index("idx_ai_costs_service").on(table.service),
   }),
 );
 

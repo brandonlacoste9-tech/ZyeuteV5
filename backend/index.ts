@@ -7,6 +7,7 @@ import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
 import { createServer } from "http";
+import { feedAutoGenerator } from "./services/feed-auto-generator.js";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
 
 console.log("🚀 Starting ZyeuteV5 backend...");
@@ -94,6 +95,12 @@ app.use((req, res, next) => {
   try {
     app.use("/api/tiguy", tiGuyRouter);
     await registerRoutes(httpServer, app);
+
+    // Start auto-generator if enabled
+    if (process.env.ENABLE_AUTO_GENERATION === "true") {
+      feedAutoGenerator.start();
+      console.log("✅ Feed auto-generator started");
+    }
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

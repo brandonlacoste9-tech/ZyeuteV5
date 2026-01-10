@@ -51,6 +51,15 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const { tap, impact } = useHaptics();
     const navigate = useNavigate();
 
+    // Horizontal swipe gesture tracking
+    const touchStartX = useRef<number>(0);
+    const touchStartY = useRef<number>(0);
+    const touchEndX = useRef<number>(0);
+    const touchEndY = useRef<number>(0);
+    const [swipeDirection, setSwipeDirection] = useState<
+      "left" | "right" | null
+    >(null);
+
     // Real-time Presence & Engagement
     const { viewerCount, engagement } = usePresence(post.id);
     const [isLiked, setIsLiked] = useState(false);
@@ -99,10 +108,85 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       tap();
     };
 
+    // Horizontal swipe handlers
+    const handleTouchStart = (e: React.TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      touchEndX.current = e.touches[0].clientX;
+      touchEndY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = async () => {
+      if (!touchStartX.current || !touchEndX.current) return;
+
+      const deltaX = touchStartX.current - touchEndX.current;
+      const deltaY = Math.abs(touchStartY.current - touchEndY.current);
+      const minSwipeDistance = 50; // Minimum distance for a swipe
+
+      // Only trigger if horizontal swipe is more dominant than vertical
+      if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > minSwipeDistance) {
+        if (deltaX > 0) {
+          // Swipe Left: Regenerate/Modify
+          setSwipeDirection("left");
+          if (navigator.vibrate) {
+            navigator.vibrate([50, 30, 50]); // Hammer pulse
+          }
+
+          try {
+            const response = await fetch(`/api/ai/regenerate-video`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ postId: post.id }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              // Video will be updated via real-time subscription or page refresh
+              console.log("Video regenerated:", data.videoUrl);
+            }
+          } catch (error) {
+            console.error("Failed to regenerate video:", error);
+          }
+
+          setTimeout(() => setSwipeDirection(null), 500);
+        } else {
+          // Swipe Right: Save/Favorite (Vault)
+          setSwipeDirection("right");
+          if (navigator.vibrate) {
+            navigator.vibrate([20, 10, 20]); // Vault click
+          }
+
+          try {
+            const response = await fetch(`/api/posts/${post.id}/vault`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            });
+
+            if (response.ok) {
+              console.log("Post vaulted");
+            }
+          } catch (error) {
+            console.error("Failed to vault post:", error);
+          }
+
+          setTimeout(() => setSwipeDirection(null), 500);
+        }
+      }
+
+      // Reset touch positions
+      touchStartX.current = 0;
+      touchEndX.current = 0;
+    };
+
     // Deep Enhance: Select best video source
     const isVideo = post.type === "video";
     let videoSrc = "";
-    
+
     if (isVideo) {
       // Priority order: enhanced_url > media_url > original_url
       if (post.processing_status === "ready" && post.enhanced_url) {
@@ -112,23 +196,29 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       } else if (post.original_url) {
         videoSrc = post.original_url;
       }
-      
+
       // Debug log if video source is empty
       if (!videoSrc) {
-        console.error("[SingleVideoView] No valid video source found for post:", {
-          postId: post.id,
-          type: post.type,
-          enhanced_url: post.enhanced_url,
-          media_url: post.media_url,
-          original_url: post.original_url,
-          processing_status: post.processing_status,
-        });
+        console.error(
+          "[SingleVideoView] No valid video source found for post:",
+          {
+            postId: post.id,
+            type: post.type,
+            enhanced_url: post.enhanced_url,
+            media_url: post.media_url,
+            original_url: post.original_url,
+            processing_status: post.processing_status,
+          },
+        );
       } else {
         // Log valid video source for debugging
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
           source: videoSrc.substring(0, 50) + "...",
-          type: post.processing_status === "ready" && post.enhanced_url ? "enhanced" : "original",
+          type:
+            post.processing_status === "ready" && post.enhanced_url
+              ? "enhanced"
+              : "original",
         });
       }
     }
@@ -144,7 +234,34 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         ref={videoRef}
         className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none"
         onDoubleClick={handleDoubleTap}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Swipe Direction Indicator */}
+        {swipeDirection && (
+          <div
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
+              swipeDirection === "left" ? "animate-pulse" : ""
+            }`}
+          >
+            <div className="text-center">
+              {swipeDirection === "left" ? (
+                <>
+                  <div className="text-6xl mb-2">🔨</div>
+                  <p className="text-gold-400 font-bold text-lg">
+                    Régénération...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl mb-2">🔒</div>
+                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         {/* Full-screen Media */}
         <div className="absolute inset-0 w-full h-full">
           {post.type === "video" ? (

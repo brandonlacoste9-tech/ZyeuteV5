@@ -1,37 +1,48 @@
-You are an expert in TypeScript, Node.js, Vite, React.js, React Router, TanStack Query, ShadCN UI, and Tailwind, with a deep understanding of best practices and performance optimization techniques.
+# Zyeuté Project Rules
 
-Code Style and Structure
+## 1. Technical Stack
+- Framework: **Vite + React Router** (current stack, NOT Next.js).
+- Style: Tailwind CSS 4.
+- Database: Supabase (Auth + DB).
+- Video/AI: FAL.ai (Kling) for 5s videos, Vertex AI for images.
+- AI Agent: Ti-Guy (Tone: Helpful, uses Quebecois slang, no metaphors).
+
+## 2. Interaction Model
+- Vertical Scroll: Standard native scrolling for the feed.
+- Horizontal Swipe Left: Action = "Regenerate/Modify" (Calls AI video API).
+- Horizontal Swipe Right: Action = "Save/Favorite" (Updates Supabase `is_vaulted` column).
+- Haptics: Use `navigator.vibrate` for all horizontal swipes.
+
+## 3. Critical Backend Logic
+- API Routing: All `/api/*` calls must go through `api/index.ts` (Vercel Serverless).
+- No Railway: Ignore any mention of Railway backends.
+- Feed Logic: Fetch content from Supabase `publications` table where `visibility = 'public'`. Do NOT use localStorage for the main feed.
+- Cost Tracking: Always track AI generation costs and apply volume-based pricing.
+
+## 4. Design Guidelines
+- Format: 9:16 Portrait only.
+- Theme: Dark slate, gold accents, leather textures.
+- Animation: Use Framer Motion for swipe transitions.
+
+## 5. Code Style
 - Write concise, maintainable, and technically accurate TypeScript code.
-- Use functional programming patterns; **avoid classes**.
-- Favor iteration and modularization to adhere to DRY principles.
+- Use functional programming patterns; avoid classes.
+- Use React Functional Components with TypeScript interfaces.
+- Use ShadCN UI (built on Radix UI) and Tailwind CSS.
+- Leverage TanStack Query for server state management.
+- Ensure strictly **NO WHITE SCREENS**: Always handle loading and error states gracefully with UI feedback.
 - Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
 - Organize files systematically: exported components, helpers, static content, and types.
-
-Naming Conventions
 - Use lowercase with dashes for directories (e.g., `components/auth-wizard`).
 - Use PascalCase for component filenames (e.g., `AuthWizard.tsx`).
 - Favor named exports for functions.
-
-TypeScript Usage
 - Use TypeScript for all code; prefer **interfaces** over types for extendability.
 - Avoid enums; use `const` objects (maps) or literal unions for better type safety.
-- Use **React Functional Components** with TypeScript interfaces.
-
-Syntax and Formatting
 - Use the `function` keyword for pure functions.
 - Always use **React Hooks** (e.g., `useState`, `useEffect`) correctly; never use class components.
-
-UI and Styling
-- Use **ShadCN UI** (built on Radix UI) and **Tailwind CSS** for components and styling.
 - Implement responsive design with Tailwind CSS; use a *mobile-first* approach.
 - Use `lucide-react` for icons.
-
-Performance Optimization
-- Leverage **TanStack Query** (`useQuery`, `useMutation`) for server state management.
 - Wrap asynchronous components in `React.Suspense` with a fallback UI.
 - Use simple `lazy()` loading for non-critical routes.
 - Optimize images: use WebP format, include size data.
-
-Key Conventions
 - Optimize Web Vitals (LCP, CLS, FID).
-- Ensure strictly **NO WHITE SCREENS**: Always handle loading and error states gracefully with UI feedback.

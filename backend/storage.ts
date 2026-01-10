@@ -33,6 +33,7 @@ import {
   parentalControls,
   type ParentalControl,
   type InsertParentalControl,
+  aiGenerationCosts,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -94,8 +95,14 @@ export interface IStorage {
   deletePost(id: string): Promise<boolean>;
   incrementPostViews(id: string): Promise<number>;
   markPostBurned(id: string, reason: string): Promise<void>;
-  updatePostByMuxAssetId(muxAssetId: string, updates: Partial<Post>): Promise<Post | undefined>;
-  updatePostByMuxUploadId(muxUploadId: string, updates: Partial<Post>): Promise<Post | undefined>;
+  updatePostByMuxAssetId(
+    muxAssetId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined>;
+  updatePostByMuxUploadId(
+    muxUploadId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined>;
 
   // Comments
   getPostComments(
@@ -550,6 +557,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(posts.muxUploadId, muxUploadId))
       .returning();
     return result[0];
+  }
+
+  async updatePost(
+    postId: string,
+    updates: Partial<Post>,
+  ): Promise<Post | undefined> {
+    return traceDatabase("UPDATE", "posts", async () => {
+      const result = await db
+        .update(posts)
+        .set(updates)
+        .where(eq(posts.id, postId))
+        .returning();
+      return result[0];
+    });
   }
 
   // Comments
@@ -1170,6 +1191,109 @@ export class DatabaseStorage implements IStorage {
       // Placeholder implementation
       return true;
     });
+  }
+
+  // AI Generation Cost Tracking
+  async createAIGenerationCost(cost: {
+    userId: string;
+    postId: string;
+    service: string;
+    operation: string;
+    baseCost: number;
+    finalCost: number;
+    volumeTier: number;
+    discountPercent: number;
+  }) {
+    return traceDatabase("INSERT", "ai_generation_costs", async () => {
+      const result = await db
+        .insert(aiGenerationCosts)
+        .values({
+          userId: cost.userId,
+          postId: cost.postId,
+          service: cost.service,
+          operation: cost.operation,
+          baseCost: cost.baseCost,
+          finalCost: cost.finalCost,
+          volumeTier: cost.volumeTier,
+          discountPercent: cost.discountPercent,
+        })
+        .returning();
+      return result[0];
+    });
+  }
+
+  async getAIGenerationCosts(filters?: { startDate?: Date; endDate?: Date }) {
+    return traceDatabase("SELECT", "ai_generation_costs", async () => {
+      let query = db.select().from(aiGenerationCosts);
+
+      const conditions = [];
+      if (filters?.startDate) {
+        conditions.push(gte(aiGenerationCosts.createdAt, filters.startDate));
+      }
+      if (filters?.endDate) {
+        conditions.push(lte(aiGenerationCosts.createdAt, filters.endDate));
+      }
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      return await query.orderBy(desc(aiGenerationCosts.createdAt));
+    });
+  }
+
+  async getPostCount(filters?: {
+    startDate?: Date;
+    where?: Record<string, any>;
+  }) {
+    return traceDatabase("SELECT", "post_count", async () => {
+      let query = db.select({ count: sql<number>`count(*)` }).from(posts);
+
+      const conditions = [];
+      if (filters?.startDate) {
+        conditions.push(gte(posts.createdAt, filters.startDate));
+      }
+      if (filters?.where) {
+        // Apply where filters
+        Object.entries(filters.where).forEach(([key, value]) => {
+          const column = (posts as any)[key];
+          if (column) {
+            conditions.push(eq(column, value));
+          }
+        });
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const result = await query;
+      return Number(result[0]?.count || 0);
+    });
+  }
+
+  // System user for auto-generated content
+  private systemUserId: string | null = null;
+
+  async getSystemUserId(): Promise<string | null> {
+    if (this.systemUserId) return this.systemUserId;
+
+    // Try to find existing system user
+    const systemUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, "zyeute_ai"))
+      .limit(1);
+
+    if (systemUser[0]) {
+      this.systemUserId = systemUser[0].id;
+      return this.systemUserId;
+    }
+
+    return null;
+  }
+
+  async setSystemUserId(userId: string): Promise<void> {
+    this.systemUserId = userId;
   }
 }
 

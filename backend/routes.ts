@@ -52,6 +52,8 @@ import { VertexBridge } from "./ai/vertex-bridge.js";
 import { RoyaleService } from "./services/royale-service.js";
 import { hiveTapService } from "./services/hive-tap-service.js";
 import { giftbitService } from "./services/giftbit-service.js";
+import { volumePricingService } from "./services/volume-pricing-service.js";
+import { feedAutoGenerator } from "./services/feed-auto-generator.js";
 import {
   generateWithTIGuy,
   moderateContent,
@@ -64,6 +66,7 @@ import {
   type ImageGenerationRequest,
   type ImageGenerationResponse,
 } from "./ai/vertex-service.js";
+import { generateVideo } from "./ai/media/video-engine.js";
 
 // Configure FAL client
 fal.config({
@@ -1131,6 +1134,9 @@ export async function registerRoutes(
 
         const result: ImageGenerationResponse = await generateImage(request);
 
+        // Note: Cost tracking will be done when post is created from this image
+        // The frontend should call createPost endpoint which will track costs
+
         res.json(result);
       } catch (error: any) {
         console.error("Image generation error:", error);
@@ -1435,6 +1441,10 @@ export async function registerRoutes(
           return res.status(500).json({ error: "No video generated" });
         }
 
+        // Create post if needed (optional - can be done by frontend)
+        // For now, just return the video URL
+        // Cost tracking will be done when post is created
+
         res.json({
           videoUrl: video.url,
           prompt,
@@ -1447,6 +1457,173 @@ export async function registerRoutes(
       }
     },
   );
+
+  // ============ VAULT & REGENERATE ROUTES ============
+
+  // Vault a post (swipe right)
+  app.post("/api/posts/:postId/vault", requireAuth, async (req, res) => {
+    try {
+      const { postId } = req.params;
+      const userId = req.userId!;
+
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      // Update post to vaulted
+      await storage.updatePost(postId, { isVaulted: true });
+
+      res.json({ success: true, message: "Post vaulted" });
+    } catch (error: any) {
+      console.error("Vault error:", error);
+      res.status(500).json({ error: "Failed to vault post" });
+    }
+  });
+
+  // Regenerate video (swipe left)
+  app.post("/api/ai/regenerate-video", requireAuth, async (req, res) => {
+    try {
+      const { postId, prompt } = req.body;
+      const userId = req.userId!;
+
+      if (!postId) {
+        return res.status(400).json({ error: "Post ID is required" });
+      }
+
+      // Fetch original post
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+      if (post.userId !== userId) {
+        return res.status(403).json({ error: "Unauthorized" });
+      }
+
+      if (!post.mediaUrl && !post.thumbnailUrl) {
+        return res
+          .status(400)
+          .json({ error: "Post has no media to regenerate" });
+      }
+
+      // Generate new video
+      const videoResult = await generateVideo({
+        imageUrl: post.thumbnailUrl || post.mediaUrl,
+        prompt:
+          prompt || post.caption || "Animate this image with natural movement",
+        duration: 5,
+        modelHint: "kling",
+      });
+
+      if (!videoResult.url) {
+        return res.status(500).json({ error: "Video generation failed" });
+      }
+
+      // Update post with new video URL
+      await storage.updatePost(postId, {
+        mediaUrl: videoResult.url,
+        processingStatus: "ready",
+      });
+
+      // Track cost with volume discount
+      await volumePricingService.trackCost({
+        userId,
+        postId,
+        service: "fal",
+        operation: "regenerate",
+      });
+
+      res.json({ videoUrl: videoResult.url });
+    } catch (error: any) {
+      console.error("Regenerate video error:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to regenerate video" });
+    }
+  });
+
+  // ============ ADMIN ROUTES ============
+
+  // Get cost summary (admin only)
+  app.get("/api/admin/cost-summary", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (user?.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
+      }
+
+      const summary = await volumePricingService.getMonthlyCostSummary();
+      res.json(summary);
+    } catch (error: any) {
+      console.error("Cost summary error:", error);
+      res.status(500).json({ error: "Failed to get cost summary" });
+    }
+  });
+
+  // Auto-generation control endpoints
+  app.post("/api/admin/auto-generate/start", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (user?.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
+      }
+
+      feedAutoGenerator.start();
+      res.json({ success: true, message: "Auto-generation started" });
+    } catch (error: any) {
+      console.error("Start auto-generation error:", error);
+      res.status(500).json({ error: "Failed to start auto-generation" });
+    }
+  });
+
+  app.post("/api/admin/auto-generate/stop", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (user?.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
+      }
+
+      feedAutoGenerator.stop();
+      res.json({ success: true, message: "Auto-generation stopped" });
+    } catch (error: any) {
+      console.error("Stop auto-generation error:", error);
+      res.status(500).json({ error: "Failed to stop auto-generation" });
+    }
+  });
+
+  app.post(
+    "/api/admin/auto-generate/trigger",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const user = await storage.getUser(req.userId!);
+        if (user?.role !== "admin") {
+          return res.status(403).json({ error: "Admin only" });
+        }
+
+        const { count = 1 } = req.body;
+        const result = await feedAutoGenerator.generateNow(count);
+        res.json(result);
+      } catch (error: any) {
+        console.error("Trigger auto-generation error:", error);
+        res.status(500).json({ error: "Failed to trigger generation" });
+      }
+    },
+  );
+
+  app.get("/api/admin/auto-generate/status", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.userId!);
+      if (user?.role !== "admin") {
+        return res.status(403).json({ error: "Admin only" });
+      }
+
+      res.json(feedAutoGenerator.getStatus());
+    } catch (error: any) {
+      console.error("Auto-generation status error:", error);
+      res.status(500).json({ error: "Failed to get status" });
+    }
+  });
 
   // ============ STRIPE SUBSCRIPTION ROUTES ============
 
