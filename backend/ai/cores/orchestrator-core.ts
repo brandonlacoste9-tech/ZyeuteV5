@@ -3,7 +3,7 @@
  * Routes tasks to appropriate bees based on capability
  */
 
-import { HiveTask, HiveTaskResult } from "../types";
+import { HiveTask, HiveTaskResult } from "../types.js";
 import { getBeesByCapability } from "../bee-registry";
 // @ts-ignore - The bridge module definitely exists, TS just might be fussy about extensions
 import { sendMetricsToColony } from "../../colony/bridge";
