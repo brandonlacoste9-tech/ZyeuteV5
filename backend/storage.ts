@@ -35,7 +35,7 @@ import {
   type InsertParentalControl,
   aiGenerationCosts,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 
 const { Pool } = pg;
@@ -47,6 +47,16 @@ const pool = new Pool({
   idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 5000,
   statement_timeout: 60000,
+});
+
+// Database error handling - prevent crashes on connection failures
+pool.on("error", (err) => {
+  console.error("❌ Unexpected database pool error:", err);
+  // Don't crash the process - let health checks handle degraded state
+});
+
+pool.on("connect", () => {
+  console.log("✅ Database pool connection established");
 });
 
 export const db = drizzle(pool);

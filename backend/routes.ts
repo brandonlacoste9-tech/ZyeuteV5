@@ -74,9 +74,10 @@ fal.config({
 });
 
 // Rate limiters for different endpoint types
+// AI rate limiter - reduced to prevent cost overruns
 const aiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per 15 minutes per IP
+  max: 30, // 30 requests per 15 minutes per IP (reduced from 100 to prevent API cost abuse)
   message: { error: "Trop de requêtes AI. Réessaie dans quelques minutes! 🦫" },
   standardHeaders: true,
   legacyHeaders: false,
@@ -238,9 +239,10 @@ export async function registerRoutes(
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      // const { password: _, ...safeUser } = user;
-      // res.json({ user: safeUser });
-      res.json({ user: user }); // User object from Drizzle should be safe now
+
+      // Exclude sensitive fields from response (taxId, internal permissions)
+      const { taxId, customPermissions, ...safeUser } = user;
+      res.json({ user: safeUser });
     } catch (error) {
       console.error("Get me error:", error);
       res.status(500).json({ error: "Failed to get user profile" });
@@ -275,23 +277,44 @@ export async function registerRoutes(
   // Update current user profile
   app.patch("/api/users/me", requireAuth, async (req, res) => {
     try {
-      const { displayName, bio, avatarUrl, region, tiGuyCommentsEnabled } =
-        req.body;
-
-      const updated = await storage.updateUser(req.userId!, {
-        displayName,
-        bio,
-        avatarUrl,
-        region,
-        tiGuyCommentsEnabled,
+      // Validate input with Zod schema
+      const updateUserSchema = z.object({
+        displayName: z.string().min(1).max(100).optional(),
+        bio: z.string().max(500).optional(),
+        avatarUrl: z.string().url().max(2048).optional(),
+        region: z
+          .enum([
+            "montreal",
+            "quebec",
+            "gatineau",
+            "sherbrooke",
+            "trois-rivieres",
+            "saguenay",
+            "levis",
+            "terrebonne",
+            "laval",
+            "gaspesie",
+            "other",
+          ])
+          .optional(),
+        tiGuyCommentsEnabled: z.boolean().optional(),
       });
+
+      const parsed = updateUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "Invalid input",
+          details: parsed.error.flatten().fieldErrors,
+        });
+      }
+
+      const updated = await storage.updateUser(req.userId!, parsed.data);
 
       if (!updated) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const safeUser = updated;
-      res.json({ user: safeUser });
+      res.json({ user: updated });
     } catch (error) {
       console.error("Update user error:", error);
       res.status(500).json({ error: "Failed to update profile" });

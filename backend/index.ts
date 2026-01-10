@@ -1,11 +1,13 @@
 import "dotenv/config"; // Load environment variables from .env
 import "express-async-errors";
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 // --- OpenTelemetry Tracing (Disabled temporarily due to version mismatch) ---
 // import '../tracing-setup';
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
+import hiveRouter from "./routes/hive.js";
 import { createServer } from "http";
 import { feedAutoGenerator } from "./services/feed-auto-generator.js";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
@@ -14,10 +16,54 @@ console.log("🚀 Starting ZyeuteV5 backend...");
 console.log("📍 Environment:", process.env.NODE_ENV);
 console.log("🔌 Port:", process.env.PORT || 5000);
 
+// Display AI Provider Status
+console.log("\n🐝 HIVE MIND AI STATUS:");
+console.log("├─ TIER 1 (Ollama Cloud):", process.env.OLLAMA_API_KEY ? "✅ FREE & Ready!" : "⚠️ Not configured");
+console.log("├─ TIER 1 (Groq):", process.env.GROQ_API_KEY ? "✅ FREE & Ready!" : "⚠️ Not configured");
+console.log("├─ TIER 2 (Vertex AI):", process.env.GOOGLE_CLOUD_PROJECT ? `✅ Project: ${process.env.GOOGLE_CLOUD_PROJECT}` : "⚠️ Not configured");
+console.log("├─ TIER 2 (Gemini):", process.env.GEMINI_API_KEY ? "✅ Ready" : "⚠️ Not configured");
+console.log("├─ TIER 3 (DeepSeek):", process.env.DEEPSEEK_API_KEY ? "⚠️ PAID fallback available" : "❌ Not configured");
+console.log("└─ TIER 0 (Ollama Local):", process.env.OLLAMA_HOST ? `✅ ${process.env.OLLAMA_HOST}` : "❌ Not configured");
+
+const hasFreeAI = process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.GOOGLE_CLOUD_PROJECT || process.env.OLLAMA_HOST;
+if (hasFreeAI) {
+  console.log("💰 Cost Optimization: Active! Using FREE tiers for 90%+ of requests");
+} else {
+  console.log("⚠️ WARNING: No free AI providers configured - will use PAID services only!");
+}
+console.log("");
+
 const app = express();
 
 // Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
+
+// CORS Configuration - Allow frontend and mobile apps
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [
+      "https://zyeute.vercel.app",
+      "https://zyeute-api.railway.app",
+      process.env.VITE_APP_URL,
+    ].filter(Boolean) as string[]
+  : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5000"];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️ CORS blocked origin: ${origin}`);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 const httpServer = createServer(app);
 
@@ -35,15 +81,17 @@ declare global {
   }
 }
 
+// Request size limits to prevent DoS attacks
 app.use(
   express.json({
+    limit: "10mb", // Adjust based on your needs (images, videos handled separately)
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 // Add tracing middleware early to capture all requests
 // app.use(tracingMiddleware()); // Disabled - OTel version mismatch
@@ -94,6 +142,7 @@ app.use((req, res, next) => {
 (async () => {
   try {
     app.use("/api/tiguy", tiGuyRouter);
+    app.use("/api/hive", hiveRouter);
     await registerRoutes(httpServer, app);
 
     // Start auto-generator if enabled
@@ -102,9 +151,20 @@ app.use((req, res, next) => {
       console.log("✅ Feed auto-generator started");
     }
 
+    // Global error handler - sanitize errors in production
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+
+      // In production, don't expose internal error details
+      const message = process.env.NODE_ENV === "production" && status === 500
+        ? "Une erreur est survenue. Réessaie plus tard."
+        : err.message || "Internal Server Error";
+
+      // Log full error details server-side
+      if (status === 500) {
+        console.error("❌ Internal server error:", err);
+      }
+
       res.status(status).json({ message });
     });
 
