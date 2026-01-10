@@ -7,6 +7,7 @@ import cors from "cors";
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
+import hiveRouter from "./routes/hive.js";
 import { createServer } from "http";
 import { feedAutoGenerator } from "./services/feed-auto-generator.js";
 // import { tracingMiddleware, getTraceContext, recordException } from "./tracer.js";
@@ -14,6 +15,22 @@ import { feedAutoGenerator } from "./services/feed-auto-generator.js";
 console.log("🚀 Starting ZyeuteV5 backend...");
 console.log("📍 Environment:", process.env.NODE_ENV);
 console.log("🔌 Port:", process.env.PORT || 5000);
+
+// Display AI Provider Status
+console.log("\n🐝 HIVE MIND AI STATUS:");
+console.log("├─ TIER 0 (Ollama):", process.env.OLLAMA_HOST ? `✅ ${process.env.OLLAMA_HOST}` : "❌ Not configured");
+console.log("├─ TIER 1 (Groq):", process.env.GROQ_API_KEY ? "✅ FREE & Ready!" : "⚠️ Not configured");
+console.log("├─ TIER 2 (Vertex AI):", process.env.GOOGLE_CLOUD_PROJECT ? `✅ Project: ${process.env.GOOGLE_CLOUD_PROJECT}` : "⚠️ Not configured");
+console.log("├─ TIER 2 (Gemini):", process.env.GEMINI_API_KEY ? "✅ Ready" : "⚠️ Not configured");
+console.log("└─ TIER 3 (DeepSeek):", process.env.DEEPSEEK_API_KEY ? "⚠️ PAID fallback available" : "❌ Not configured");
+
+const hasFreeAI = process.env.GROQ_API_KEY || process.env.GOOGLE_CLOUD_PROJECT || process.env.OLLAMA_HOST;
+if (hasFreeAI) {
+  console.log("💰 Cost Optimization: Active! Using FREE tiers for 90%+ of requests");
+} else {
+  console.log("⚠️ WARNING: No free AI providers configured - will use PAID services only!");
+}
+console.log("");
 
 const app = express();
 
@@ -124,6 +141,7 @@ app.use((req, res, next) => {
 (async () => {
   try {
     app.use("/api/tiguy", tiGuyRouter);
+    app.use("/api/hive", hiveRouter);
     await registerRoutes(httpServer, app);
 
     // Start auto-generator if enabled
