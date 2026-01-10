@@ -29,11 +29,11 @@ pip install -r requirements.txt
 ### 2. Configure Environment
 
 ```bash
-# Copy environment template
-cp .env.example .env.colony
+# Copy environment template from root
+cp ../../.env.example ../../.env
 
 # Edit with your actual keys
-nano .env.colony
+nano ../../.env
 ```
 
 Required variables:
@@ -179,7 +179,7 @@ docker build -t colony-finance-bee .
 docker run -d \
   --name finance-bee \
   -p 8001:8001 \
-  --env-file .env.colony \
+  --env-file ../../.env \
   colony-finance-bee \
   python3 bees/finance_bee.py
 ```
@@ -218,7 +218,7 @@ Set up a cron job to run health checks:
 
 1. Check Stripe webhook configuration
 2. Verify endpoint URL is publicly accessible
-3. Confirm webhook secret matches `.env.colony`
+3. Confirm webhook secret matches root `.env`
 4. Check firewall/security group rules
 
 ### Guardian Bee False Positives
@@ -239,7 +239,7 @@ Set up a cron job to run health checks:
 1. Check port availability: `lsof -i :8001`
 2. Verify Python version: `python3 --version` (need 3.12+)
 3. Install missing dependencies: `pip install -r requirements.txt`
-4. Check environment variables: `cat .env.colony`
+4. Check environment variables: `cat ../../.env`
 
 ---
 
@@ -247,8 +247,6 @@ Set up a cron job to run health checks:
 
 ```
 infrastructure/colony/
-├── .env.example              # Environment template
-├── .env.colony               # Your environment (gitignored)
 ├── requirements.txt          # Python dependencies
 ├── Dockerfile                # Container definition
 ├── docker-compose.yml        # Multi-service orchestration

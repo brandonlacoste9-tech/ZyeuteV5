@@ -12,9 +12,8 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment
+// Load environment from root .env
 config({ path: join(__dirname, '../../.env') });
-config({ path: join(__dirname, '.env.colony') });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;

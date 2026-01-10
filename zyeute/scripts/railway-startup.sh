@@ -23,19 +23,19 @@ export DATABASE_URL
 # Run migrations in order (idempotent - safe to run multiple times)
 echo ""
 echo "📋 Step 1: Creating database schema..."
-npx tsx scripts/run-schema-migration.ts || echo "⚠️  Schema migration skipped (may already exist)"
+npx tsx zyeute/scripts/run-schema-migration.ts || echo "⚠️  Schema migration skipped (may already exist)"
 
 echo ""
 echo "📋 Step 2: Creating publications table..."
-npx tsx scripts/create-publications-table.ts || echo "⚠️  Publications table creation skipped (may already exist)"
+npx tsx zyeute/scripts/create-publications-table.ts || echo "⚠️  Publications table creation skipped (may already exist)"
 
 echo ""
 echo "📋 Step 3: Ensuring test user exists..."
-npx tsx scripts/create-test-user.ts || echo "⚠️  Test user creation skipped (may already exist)"
+npx tsx zyeute/scripts/create-test-user.ts || echo "⚠️  Test user creation skipped (may already exist)"
 
 echo ""
 echo "📋 Step 4: Running seed migration..."
-npx tsx scripts/run-seed-migration.ts || echo "⚠️  Seed migration skipped (may already exist)"
+npx tsx zyeute/scripts/run-seed-migration.ts || echo "⚠️  Seed migration skipped (may already exist)"
 
 echo ""
 echo "✅ Database setup complete!"

@@ -22,8 +22,10 @@ except ImportError as e:
     print("Run: pip install -r ../requirements.txt")
     sys.exit(1)
 
-# Load environment
-load_dotenv("../.env.colony")
+# Load environment from root .env
+import pathlib
+root_dir = pathlib.Path(__file__).parent.parent.parent
+load_dotenv(root_dir / ".env")
 
 # Configure logging
 logging.basicConfig(

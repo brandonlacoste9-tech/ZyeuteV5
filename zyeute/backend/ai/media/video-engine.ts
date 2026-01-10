@@ -1,9 +1,11 @@
 /**
  * Video Engine
  * Real FAL/Kling integration for video generation
+ * Supports Veo 3.1 (when available via Python bridge)
  */
 
 import { fal } from "@fal-ai/client";
+import { logger } from "../../utils/logger.js";
 
 // Configure FAL if not already done
 if (process.env.FAL_API_KEY) {
@@ -14,7 +16,8 @@ export interface VideoGenerationParams {
   prompt: string;
   imageUrl?: string; // For image-to-video
   duration?: number;
-  modelHint?: "kling" | "hunyuan_video";
+  modelHint?: "kling" | "hunyuan_video" | "veo-3.1";
+  aspectRatio?: "9:16" | "16:9" | "1:1";
 }
 
 export interface VideoGenerationResult {
@@ -24,23 +27,29 @@ export interface VideoGenerationResult {
   duration: number;
 }
 
-export async function generateVideo(
+/**
+ * Generate video with Veo 3.1 (Google Vertex AI)
+ * Note: Requires Python bridge or @google/genai TypeScript SDK when available
+ */
+async function generateVideoWithVeo31(
   params: VideoGenerationParams,
 ): Promise<VideoGenerationResult> {
-  const { prompt, imageUrl, duration = 5, modelHint = "kling" } = params;
+  // TODO: Implement Veo 3.1 via Python bridge or TypeScript SDK
+  // For now, fallback to Kling
+  logger.warn("[Video Engine] Veo 3.1 not yet implemented, using Kling fallback");
+  return generateVideoWithKling(params);
+}
 
-  console.log("[Video Engine] Generating video:", prompt.substring(0, 50));
+/**
+ * Generate video with Kling (FAL)
+ */
+async function generateVideoWithKling(
+  params: VideoGenerationParams,
+): Promise<VideoGenerationResult> {
+  const { prompt, imageUrl, duration = 5, aspectRatio = "9:16" } = params;
 
   if (!process.env.FAL_API_KEY) {
-    console.warn(
-      "[Video Engine] FAL API key not configured, returning placeholder",
-    );
-    return {
-      url: "https://placehold.co/1920x1080/1a1a1a/gold?text=Video+Generation+Disabled",
-      cost: 0,
-      model: "placeholder",
-      duration: 0,
-    };
+    throw new Error("FAL_API_KEY not configured");
   }
 
   try {
@@ -77,7 +86,7 @@ export async function generateVideo(
           input: {
             prompt,
             duration: String(duration) as "5" | "10",
-            aspect_ratio: "9:16", // Default to vertical for mobile feed
+            aspect_ratio: aspectRatio,
           },
           logs: true,
         },
@@ -96,7 +105,23 @@ export async function generateVideo(
       };
     }
   } catch (error: any) {
-    console.error("[Video Engine] Generation failed:", error.message);
+    logger.error(`[Video Engine] Kling generation failed: ${error.message}`);
     throw error;
   }
+}
+
+export async function generateVideo(
+  params: VideoGenerationParams,
+): Promise<VideoGenerationResult> {
+  const { prompt, modelHint = "kling" } = params;
+
+  logger.info(`[Video Engine] Generating video with ${modelHint}: ${prompt.substring(0, 50)}...`);
+
+  // Route to appropriate video generation service
+  if (modelHint === "veo-3.1") {
+    return generateVideoWithVeo31(params);
+  }
+
+  // Default to Kling
+  return generateVideoWithKling(params);
 }

@@ -987,3 +987,308 @@ export const insertParentalControlSchema = createInsertSchema(
   updatedAt: true,
 });
 export type InsertParentalControl = z.infer<typeof insertParentalControlSchema>;
+
+// --- PIASSE ECONOMY PROTOCOL TABLES ---
+
+// Jackpot Pool Status Enum
+export const jackpotStatusEnum = pgEnum("jackpot_status", [
+  "active",
+  "locked",
+  "calculating",
+  "completed",
+  "cancelled",
+]);
+
+// Bee Type Enum (for marketplace)
+export const beeTypeEnum = pgEnum("bee_type", [
+  "cinema",
+  "content",
+  "moderation",
+  "translation",
+  "analytics",
+  "creative",
+  "custom",
+]);
+
+// Listing Status Enum
+export const listingStatusEnum = pgEnum("listing_status", [
+  "active",
+  "pending",
+  "sold",
+  "cancelled",
+]);
+
+// Piasse Wallets (Le Portefeuille Crypté)
+export const piasseWallets = pgTable(
+  "piasse_wallets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull()
+      .unique(),
+    // AES-256 Encrypted wallet private key (encrypted at rest)
+    encryptedPrivateKey: text("encrypted_private_key").notNull(),
+    // Public wallet address (derived from private key, not encrypted)
+    publicAddress: varchar("public_address", { length: 128 }).notNull().unique(),
+    // Wallet balance in Piasses (cached, source of truth is transactions table)
+    balance: integer("balance").default(0).notNull(),
+    // Encryption metadata (IV, key derivation salt)
+    encryptionMetadata: jsonb("encryption_metadata").notNull(),
+    // Ghost Shell protection (wallet remains encrypted even if server compromised)
+    isGhostShellEnabled: boolean("is_ghost_shell_enabled").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_piasse_wallets_user_id").on(table.userId),
+    publicAddressIdx: index("idx_piasse_wallets_public_address").on(
+      table.publicAddress,
+    ),
+  }),
+);
+
+// Jackpot Pools (Le Pot Commun)
+export const jackpotPools = pgTable(
+  "jackpot_pools",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 100 }).notNull(),
+    description: text("description"),
+    // Target amount in Piasses (cents)
+    targetAmount: integer("target_amount").notNull(), // e.g., 100000 ($1,000.00)
+    // Current accumulated amount (from transaction fees)
+    currentAmount: integer("current_amount").default(0).notNull(),
+    // Minimum contribution threshold (in Piasses)
+    minContribution: integer("min_contribution").default(100).notNull(), // $1.00
+    status: jackpotStatusEnum("status").default("active").notNull(),
+    // Trigger conditions (swarm activity threshold)
+    triggerConditions: jsonb("trigger_conditions").default({
+      minActiveUsers: 100,
+      minTransactions: 1000,
+      swarmActivityLevel: "high",
+    }),
+    // Scheduled draw time (null = triggered by conditions)
+    scheduledDrawAt: timestamp("scheduled_draw_at"),
+    // Actual draw time
+    drawnAt: timestamp("drawn_at"),
+    // Winner selection seed (provably fair)
+    winnerSeed: text("winner_seed"), // Cryptographic seed for random selection
+    hiveId: hiveEnum("hive_id").default("quebec"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_jackpot_pools_status").on(table.status),
+    hiveIdIdx: index("idx_jackpot_pools_hive_id").on(table.hiveId),
+  }),
+);
+
+// Jackpot Entries (User Participation)
+export const jackpotEntries = pgTable(
+  "jackpot_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    poolId: uuid("pool_id")
+      .references(() => jackpotPools.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Contribution amount (in Piasses)
+    contributionAmount: integer("contribution_amount").notNull(),
+    // Transaction ID that contributed to the pool
+    transactionId: uuid("transaction_id").references(() => transactions.id),
+    // Entry weight (for weighted random selection)
+    entryWeight: integer("entry_weight").default(1).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    poolIdIdx: index("idx_jackpot_entries_pool_id").on(table.poolId),
+    userIdIdx: index("idx_jackpot_entries_user_id").on(table.userId),
+    poolUserIdx: index("idx_jackpot_entries_pool_user").on(
+      table.poolId,
+      table.userId,
+    ),
+  }),
+);
+
+// Jackpot Winners (Historical Record)
+export const jackpotWinners = pgTable(
+  "jackpot_winners",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    poolId: uuid("pool_id")
+      .references(() => jackpotPools.id)
+      .notNull(),
+    winnerId: uuid("winner_id")
+      .references(() => users.id)
+      .notNull(),
+    // Prize amount in Piasses
+    prizeAmount: integer("prize_amount").notNull(),
+    // Payout transaction ID
+    payoutTransactionId: uuid("payout_transaction_id").references(
+      () => transactions.id,
+    ),
+    // Provably fair proof (hash of seed + pool state)
+    fairnessProof: text("fairness_proof"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    poolIdIdx: index("idx_jackpot_winners_pool_id").on(table.poolId),
+    winnerIdIdx: index("idx_jackpot_winners_winner_id").on(table.winnerId),
+  }),
+);
+
+// Bee Marketplace (Hive Exchange)
+export const beeMarketplace = pgTable(
+  "bee_marketplace",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Bee name/identifier
+    beeName: varchar("bee_name", { length: 100 }).notNull(),
+    beeType: beeTypeEnum("bee_type").notNull(),
+    // Bee owner (seller)
+    ownerId: uuid("owner_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Bee metadata (capabilities, stats, history)
+    beeMetadata: jsonb("bee_metadata").default({
+      aestheticScore: 0,
+      videoCount: 0,
+      successRate: 0,
+      specializations: [],
+    }),
+    // Price in Piasses
+    price: integer("price").notNull(),
+    status: listingStatusEnum("status").default("active").notNull(),
+    hiveId: hiveEnum("hive_id").default("quebec"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    soldAt: timestamp("sold_at"),
+  },
+  (table) => ({
+    ownerIdIdx: index("idx_bee_marketplace_owner_id").on(table.ownerId),
+    statusIdx: index("idx_bee_marketplace_status").on(table.status),
+    beeTypeIdx: index("idx_bee_marketplace_bee_type").on(table.beeType),
+    hiveIdIdx: index("idx_bee_marketplace_hive_id").on(table.hiveId),
+  }),
+);
+
+// Bee Listings (Active Sale Offers)
+export const beeListings = pgTable(
+  "bee_listings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    marketplaceId: uuid("marketplace_id")
+      .references(() => beeMarketplace.id, { onDelete: "cascade" })
+      .notNull(),
+    sellerId: uuid("seller_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Listing price (can differ from marketplace base price)
+    listingPrice: integer("listing_price").notNull(),
+    // Description of this specific listing
+    description: text("description"),
+    status: listingStatusEnum("status").default("active").notNull(),
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    marketplaceIdIdx: index("idx_bee_listings_marketplace_id").on(
+      table.marketplaceId,
+    ),
+    sellerIdIdx: index("idx_bee_listings_seller_id").on(table.sellerId),
+    statusIdx: index("idx_bee_listings_status").on(table.status),
+  }),
+);
+
+// Bee Trades (Completed Transactions)
+export const beeTrades = pgTable(
+  "bee_trades",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listingId: uuid("listing_id")
+      .references(() => beeListings.id)
+      .notNull(),
+    sellerId: uuid("seller_id")
+      .references(() => users.id)
+      .notNull(),
+    buyerId: uuid("buyer_id")
+      .references(() => users.id)
+      .notNull(),
+    marketplaceId: uuid("marketplace_id")
+      .references(() => beeMarketplace.id)
+      .notNull(),
+    // Trade amount in Piasses
+    tradeAmount: integer("trade_amount").notNull(),
+    // Platform fee (deducted from seller)
+    platformFee: integer("platform_fee").default(0).notNull(),
+    // Trade transaction ID
+    transactionId: uuid("transaction_id").references(() => transactions.id),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    sellerIdIdx: index("idx_bee_trades_seller_id").on(table.sellerId),
+    buyerIdIdx: index("idx_bee_trades_buyer_id").on(table.buyerId),
+    listingIdIdx: index("idx_bee_trades_listing_id").on(table.listingId),
+  }),
+);
+
+// Zod Schemas for new tables
+export const insertPiasseWalletSchema = createInsertSchema(piasseWallets).omit(
+  {
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  },
+);
+
+export const insertJackpotPoolSchema = createInsertSchema(jackpotPools).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertJackpotEntrySchema = createInsertSchema(jackpotEntries).omit(
+  {
+    id: true,
+    createdAt: true,
+  },
+);
+
+export const insertBeeMarketplaceSchema = createInsertSchema(
+  beeMarketplace,
+).omit({
+  id: true,
+  createdAt: true,
+  soldAt: true,
+});
+
+export const insertBeeListingSchema = createInsertSchema(beeListings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBeeTradeSchema = createInsertSchema(beeTrades).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports
+export type PiasseWallet = typeof piasseWallets.$inferSelect;
+export type InsertPiasseWallet = z.infer<typeof insertPiasseWalletSchema>;
+
+export type JackpotPool = typeof jackpotPools.$inferSelect;
+export type InsertJackpotPool = z.infer<typeof insertJackpotPoolSchema>;
+
+export type JackpotEntry = typeof jackpotEntries.$inferSelect;
+export type InsertJackpotEntry = z.infer<typeof insertJackpotEntrySchema>;
+
+export type JackpotWinner = typeof jackpotWinners.$inferSelect;
+
+export type BeeMarketplace = typeof beeMarketplace.$inferSelect;
+export type InsertBeeMarketplace = z.infer<typeof insertBeeMarketplaceSchema>;
+
+export type BeeListing = typeof beeListings.$inferSelect;
+export type InsertBeeListing = z.infer<typeof insertBeeListingSchema>;
+
+export type BeeTrade = typeof beeTrades.$inferSelect;
+export type InsertBeeTrade = z.infer<typeof insertBeeTradeSchema>;

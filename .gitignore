@@ -11,6 +11,12 @@ vite.config.ts.*
 .env.test
 
 .vercel
+.railway
+RAILWAY_TOKEN
+RAILWAY_CREDENTIALS.md
+DEPLOYMENT_CREDENTIALS.md
+GITHUB_TOKEN
+VERCEL_TOKEN
 
 # Colony OS
 infrastructure/colony/.env.colony

@@ -38,6 +38,7 @@ import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
 import { economyRoutes } from "./routes/economy.js";
+import metricsRoutes from "./routes/metrics.js";
 // Import tracing utilities
 import {
   traced,
@@ -142,6 +143,9 @@ export async function registerRoutes(
 
   // [NEW] Economy Routes
   app.use("/api/economy", economyRoutes);
+
+  // [NEW] Metrics Routes (Prometheus-compatible, public for scraping)
+  app.use("/api", metricsRoutes);
 
   // Apply general rate limiting to all other API routes
 
@@ -1667,6 +1671,114 @@ export async function registerRoutes(
         res
           .status(500)
           .json({ error: error.message || "Failed to generate video" });
+      }
+    },
+  );
+
+  // ============ FLOW-QA LOOP - ZERO-WASTE CINEMATIC OUTPUT ============
+  /**
+   * Flow-QA Loop: Recursive Quality Gate for TI-GUY Video Generation
+   * 1. Creates video with Veo 3.1/Kling
+   * 2. Analyzes with Qwen3-VL vision model
+   * 3. If score < 80, generates corrective prompt and re-renders
+   * 4. Only 10/10 videos cached for feed
+   */
+  app.post(
+    "/api/ai/flow-qa/generate-video",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const {
+          concept,
+          imageUrl,
+          duration = 5,
+          style = "cinematic",
+          maxIterations = 3,
+        } = req.body;
+
+        if (!concept || typeof concept !== "string") {
+          return res.status(400).json({
+            error: "Concept is required (e.g., 'TI-GUY beaver celebrating Quebec National Day')",
+          });
+        }
+
+        console.log(`🎬 [Flow-QA] Starting Flow-QA loop for: ${concept}`);
+
+        const { generateVideoWithFlowQA } = await import(
+          "../ai/media/flow-qa-loop.js"
+        );
+
+        const result = await generateVideoWithFlowQA(concept, {
+          imageUrl,
+          duration,
+          style,
+          maxIterations,
+        });
+
+        res.json({
+          videoUrl: result.videoUrl,
+          finalScore: result.finalScore,
+          iterations: result.iterations,
+          corrections: result.corrections,
+          metadata: result.metadata,
+          success: result.finalScore >= 80,
+        });
+      } catch (error: any) {
+        console.error("[Flow-QA] Error:", error);
+        res.status(500).json({
+          error: error.message || "Flow-QA loop failed",
+        });
+      }
+    },
+  );
+
+  /**
+   * Generate TI-GUY Social Ad with Flow-QA
+   * High-level wrapper for social media content
+   */
+  app.post(
+    "/api/ai/flow-qa/ti-guy-social-ad",
+    aiRateLimiter,
+    requireAuth,
+    async (req, res) => {
+      try {
+        const {
+          concept,
+          duration = 5,
+          style = "social",
+        } = req.body;
+
+        if (!concept || typeof concept !== "string") {
+          return res.status(400).json({
+            error: "Concept is required (e.g., 'TI-GUY promoting poutine festival')",
+          });
+        }
+
+        console.log(`🦫 [Flow-QA] Generating TI-GUY social ad: ${concept}`);
+
+        const { generateTI_GUY_SocialAd } = await import(
+          "../ai/media/flow-qa-loop.js"
+        );
+
+        const result = await generateTI_GUY_SocialAd(concept, {
+          duration,
+          style,
+        });
+
+        res.json({
+          videoUrl: result.videoUrl,
+          finalScore: result.finalScore,
+          iterations: result.iterations,
+          corrections: result.corrections,
+          metadata: result.metadata,
+          success: result.finalScore >= 80,
+        });
+      } catch (error: any) {
+        console.error("[Flow-QA] TI-GUY Social Ad Error:", error);
+        res.status(500).json({
+          error: error.message || "TI-GUY social ad generation failed",
+        });
       }
     },
   );

@@ -4,11 +4,10 @@ import sys
 from dotenv import load_dotenv
 from supabase import create_client
 
-# Path setup to load env
+# Path setup to load env from root
 script_dir = os.path.dirname(os.path.abspath(__file__))
-# Load from .env.colony or root .env
-load_dotenv(os.path.join(script_dir, '../../.env.colony'))
-load_dotenv(os.path.join(script_dir, '../../../.env'))
+root_dir = os.path.abspath(os.path.join(script_dir, '../../../'))
+load_dotenv(os.path.join(root_dir, '.env'))
 
 url = os.environ.get("VITE_SUPABASE_URL")
 key = os.environ.get("SUPABASE_SERVICE_KEY")

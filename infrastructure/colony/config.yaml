@@ -1,0 +1,20 @@
+# Llama Stack Configuration for Colony OS
+# Llama 4 Maverick via Groq Provider
+
+inference:
+  provider: groq
+  config:
+    groq_api_key: ${GROQ_API_KEY}
+    model: meta-llama/llama-4-maverick-17b-128e-instruct
+
+# Server configuration
+server:
+  host: localhost
+  port: 8321
+
+# Optional: Add other providers for fallback
+# providers:
+#   - name: groq
+#     type: groq
+#     config:
+#       api_key: ${GROQ_API_KEY}

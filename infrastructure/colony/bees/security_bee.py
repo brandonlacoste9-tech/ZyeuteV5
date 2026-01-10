@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger("security_bee")
 
 # Initialize dedicated Security Client (Service Role)
-# This requires SUPABASE_SERVICE_KEY in .env.colony
+# This requires SUPABASE_SERVICE_KEY in root .env
 url: str = os.environ.get("VITE_SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_SERVICE_KEY")
 

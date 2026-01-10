@@ -44,10 +44,9 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 # Add parent directory to path so we can import 'bees' and 'utils'
 sys.path.append(os.path.dirname(script_dir))
 
-# Try loading from colony env first (core/../.env.colony)
-load_dotenv(os.path.join(script_dir, '../.env.colony'))
-# Fallback/Additional from root
-load_dotenv(os.path.join(script_dir, '../../../.env'))
+# Load environment from root .env
+root_dir = os.path.abspath(os.path.join(script_dir, '../../../'))
+load_dotenv(os.path.join(root_dir, '.env'))
 
 # Import bees
 from bees import security_bee
@@ -114,6 +113,34 @@ if DEEPSEEK_API_KEY:
 else:
     logger.warning("⚠️ [NEUROSPHERE] DeepSeek Offline (Missing Key)")
 
+# =============================================================================
+# GOOGLE ADK SETUP (Native Google Agent Infrastructure)
+# =============================================================================
+
+try:
+    from core.google_adk_agent import get_google_adk_agent
+    google_adk_agent = get_google_adk_agent()
+    GOOGLE_ADK_AVAILABLE = True
+    logger.info("🤖 [GOOGLE ADK] Google ADK agent available")
+except Exception as e:
+    GOOGLE_ADK_AVAILABLE = False
+    google_adk_agent = None
+    logger.warning(f"⚠️ [GOOGLE ADK] Google ADK not available: {e}")
+
+# =============================================================================
+# LLAMA 4 MAVERICK SETUP (Sovereign High-Reasoning)
+# =============================================================================
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+LLAMA_STACK_URL = os.environ.get("LLAMA_STACK_URL", "http://localhost:8321")
+LLAMA_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
+
+# Llama Stack HTTP API client (llama-stack runs as a service)
+llama_client_available = bool(GROQ_API_KEY)
+if llama_client_available:
+    logger.info("🦙 [SOVEREIGN REASONING] Llama 4 Maverick configured (via HTTP API)")
+else:
+    logger.warning("⚠️ [SOVEREIGN REASONING] Llama 4 Maverick Offline (Missing GROQ_API_KEY)")
 
 # =============================================================================
 # PROCESSORS
@@ -172,6 +199,112 @@ def process_gemini_vision_task(task):
         return {"status": "completed", "result": {"description": response.text}}
     except Exception as e:
         print(f"❌ Gemini Vision Error: {e}")
+        return {"status": "failed", "error": str(e)}
+
+# Import tool utilities
+try:
+    from utils.llama_tools import execute_tool, chat_with_tool_loop
+    HAS_TOOL_UTILS = True
+except ImportError:
+    HAS_TOOL_UTILS = False
+    logger.warning("⚠️ Tool utilities not available - using inline implementation")
+
+@retry(max_retries=3, base_delay=1.0)
+def process_llama_task(task):
+    """
+    Routes high-reasoning tasks to Llama 4 Maverick (Sovereign Reasoning).
+    Supports OpenAI-style tool calling with automatic multi-turn tool execution loop.
+    Uses native Llama 4 Maverick tool calling (no deprecated formats).
+    """
+    print(f"🦙 [SOVEREIGN REASONING] Llama 4 Maverick processing: {task['id']}")
+    
+    metadata = task.get('metadata', {})
+    messages = metadata.get('messages', [])
+    if not messages and 'prompt' in metadata:
+        messages = [{"role": "user", "content": metadata['prompt']}]
+    
+    # Extract tools from metadata (OpenAI-style format)
+    tools = metadata.get('tools', [])
+    tool_choice = metadata.get('tool_choice', 'auto')  # 'auto', 'none', or specific tool
+    tool_executor = metadata.get('tool_executor')
+    max_iterations = metadata.get('max_tool_iterations', 10)  # Prevent infinite loops
+    
+    try:
+        if not llama_client_available:
+            raise ValueError("Llama Stack not available (check GROQ_API_KEY and llama-stack service)")
+        
+        # Use HTTP API to llama-stack server (OpenAI-compatible endpoint)
+        api_url = f"{LLAMA_STACK_URL}/v1/chat/completions"
+        
+        # Build base payload
+        base_payload = {
+            "model": LLAMA_MODEL,
+            "temperature": metadata.get('temperature', 0.7)
+        }
+        
+        # Add tools if provided (OpenAI-style tool calling)
+        if tools:
+            base_payload["tools"] = tools
+            base_payload["tool_choice"] = tool_choice
+            print(f"🔧 [SOVEREIGN TOOLS] Using {len(tools)} tool(s) with tool_choice='{tool_choice}'")
+        
+        # Use utility function if available, otherwise inline implementation
+        if HAS_TOOL_UTILS and tools and tool_executor:
+            # Use production-ready chat_with_tool_loop
+            prompt_text = messages[0]['content'] if messages else metadata.get('prompt', '')
+            loop_result = chat_with_tool_loop(
+                prompt=prompt_text,
+                tools=tools,
+                tool_executor=tool_executor,
+                api_url=api_url,
+                model=LLAMA_MODEL,
+                tool_choice=tool_choice,
+                max_iterations=max_iterations,
+                temperature=metadata.get('temperature', 0.7),
+                timeout=API_TIMEOUT_SECONDS
+            )
+            
+            return {
+                "status": "completed",
+                "result": {
+                    "text": loop_result.get('text', ''),
+                    "model": "llama-4-maverick",
+                    "usage": loop_result.get('usage', {}),
+                    "tool_calls": loop_result.get('tool_calls'),
+                    "iterations": loop_result.get('iterations', 1),
+                    "warning": loop_result.get('warning')
+                }
+            }
+        
+        # Fallback: Simple single-request (no tools or no executor)
+        payload = {**base_payload, "messages": messages}
+        response = requests.post(
+            api_url,
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=API_TIMEOUT_SECONDS
+        )
+        response.raise_for_status()
+        
+        result_data = response.json()
+        message = result_data['choices'][0]['message']
+        result_text = message.get('content', '')
+        
+        return {
+            "status": "completed",
+            "result": {
+                "text": result_text,
+                "model": "llama-4-maverick",
+                "usage": result_data.get('usage', {}),
+                "tool_calls": message.get('tool_calls') if message.get('tool_calls') else None
+            }
+        }
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Llama 4 Maverick HTTP Error: {e}")
+        return {"status": "failed", "error": f"HTTP error: {str(e)}"}
+    except Exception as e:
+        print(f"❌ Llama 4 Maverick Error: {e}")
         return {"status": "failed", "error": str(e)}
 
 def process_fal_task(task):
@@ -255,7 +388,19 @@ def process_task(task):
 
     # ROUTING LOGIC
     
-    # 0. HEALTH
+    # 0. GOOGLE ADK (Native Google Agent - Highest Priority for Google Cloud tasks)
+    if GOOGLE_ADK_AVAILABLE and google_adk_agent and (
+        command in ['google_cloud_task', 'gcp_operation', 'vertex_ai_task'] or
+        metadata.get('use_google_adk', False) or
+        target_bee == 'google_adk_agent'
+    ):
+        print("🤖 [GOOGLE ADK] Routing to Google ADK agent")
+        prompt = metadata.get('prompt', task.get('description', ''))
+        if not prompt:
+            prompt = f"Execute: {command}"
+        return google_adk_agent.execute_directive(prompt)
+    
+    # 0.5. HEALTH
     if command in ['check_vitals', 'cleanup_systems'] or target_bee == 'health_bee':
         return health_bee.handle_task(command, metadata)
 
@@ -265,7 +410,22 @@ def process_task(task):
 
     # 2. INTELLIGENCE
     elif command in ['chat', 'improve_text', 'write_script']:
-        return process_deepseek_task(task)
+        # Route to Llama 4 Maverick for high-reasoning tasks
+        # Check metadata for "sovereign" or "high_reasoning" flag
+        if metadata.get('sovereign', False) or metadata.get('high_reasoning', False):
+            if llama_client_available:
+                return process_llama_task(task)
+            else:
+                # Fallback to DeepSeek if Llama not available
+                logger.warning("⚠️ Llama 4 Maverick not available, falling back to DeepSeek")
+                return process_deepseek_task(task)
+        else:
+            # Standard reasoning tasks go to DeepSeek
+            return process_deepseek_task(task)
+    
+    # 2.5. SOVEREIGN HIGH-REASONING (Explicit Llama 4 Maverick tasks)
+    elif command in ['sovereign_reasoning', 'high_reasoning', 'complex_analysis']:
+        return process_llama_task(task)
     
     # 3. VISION
     elif command in ['analyze_image', 'scan_moderation']:

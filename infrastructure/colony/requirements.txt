@@ -34,3 +34,9 @@ python-json-logger==3.2.1
 # Creation Bee (AI Media)
 fal-client==0.5.3
 google-generativeai==0.8.3
+
+# Llama Stack (Llama 4 Maverick Integration)
+llama-stack>=0.4.0
+google-adk>=0.1.0
+# Note: llama-stack client may need to be imported differently
+# If client import fails, use direct HTTP API calls to llama-stack server

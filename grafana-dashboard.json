@@ -1,0 +1,157 @@
+{
+  "dashboard": {
+    "title": "Zyeuté Hive Resilience Dashboard",
+    "tags": ["zyeute", "guardian-bee", "production"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Self-Heal Events",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(recovery_count_total)",
+            "legendFormat": "Total Recoveries",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 3, "color": "yellow" },
+                { "value": 10, "color": "red" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Node Uptime",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "node_uptime_seconds",
+            "legendFormat": "Uptime (seconds)",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "Node Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "node_health_status{job=\"zyeute\"}",
+            "legendFormat": "Health Status",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "value", "value": 0, "text": "❌ Unhealthy" },
+              { "type": "value", "value": 1, "text": "✅ Healthy" }
+            ],
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 1, "color": "green" }
+              ]
+            }
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Jackpot Pool Value",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "jackpot_value_total_piasses",
+            "legendFormat": "Total Piasses",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "Active Jackpot Pools",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "jackpot_pools_active",
+            "legendFormat": "Active Pools",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 }
+      },
+      {
+        "id": 6,
+        "title": "Transaction Volume (24h)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "transaction_volume_24h_piasses",
+            "legendFormat": "Volume (Piasses)",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 }
+      },
+      {
+        "id": 7,
+        "title": "Bee Trades (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "bee_trades_24h",
+            "legendFormat": "Trades",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+      },
+      {
+        "id": 8,
+        "title": "Transaction Count (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "transaction_count_24h",
+            "legendFormat": "Transactions",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
+      }
+    ]
+  }
+}

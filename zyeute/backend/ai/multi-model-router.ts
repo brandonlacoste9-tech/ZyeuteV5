@@ -6,8 +6,9 @@
 
 import { logger } from "../utils/logger.js";
 import { synapseBridge } from "../colony/synapse-bridge.js";
+import { ollama } from "./ollama-service.js";
 
-export type AIProvider = "gemini-3-pro" | "deepseek-r1" | "copilot";
+export type AIProvider = "gemini-3-pro" | "deepseek-r1" | "copilot" | "ollama";
 
 export interface AIResponse {
   content: string;
@@ -214,6 +215,48 @@ async function callCopilot(
 }
 
 /**
+ * Call Ollama (free cloud models)
+ */
+async function callOllama(
+  prompt: string,
+  options: { systemInstruction?: string; temperature?: number; maxTokens?: number }
+): Promise<AIResponse> {
+  const startTime = Date.now();
+  
+  try {
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [];
+    if (options.systemInstruction) {
+      messages.push({ role: "system", content: options.systemInstruction });
+    }
+    messages.push({ role: "user", content: prompt });
+    
+    const response = await ollama.chat.completions.create({
+      messages,
+      temperature: options.temperature || 0.7,
+      max_tokens: options.maxTokens || 1024,
+    });
+    
+    const content = response.choices?.[0]?.message?.content || "";
+    const tokensUsed = response.usage?.total_tokens || 0;
+    
+    return {
+      content,
+      provider: "ollama",
+      confidence: 0.8, // Free model, slightly lower confidence
+      tokensUsed,
+      latency: Date.now() - startTime,
+      metadata: {
+        model: response.model,
+        finishReason: response.choices?.[0]?.finish_reason || null,
+      },
+    };
+  } catch (error: any) {
+    logger.error(`[MultiModelRouter] Ollama failed: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
  * Calculate consensus between multiple responses
  */
 function calculateConsensus(responses: AIResponse[]): {
@@ -318,7 +361,7 @@ export async function routeMultiModel(
     systemInstruction,
     temperature,
     maxTokens,
-    providers = ["gemini-3-pro", "deepseek-r1", "copilot"],
+    providers = ["gemini-3-pro", "deepseek-r1", "copilot", "ollama"],
     strategy = "best",
   } = request;
   
@@ -328,6 +371,7 @@ export async function routeMultiModel(
     "gemini-3-pro": callGemini3Pro,
     "deepseek-r1": callDeepSeekR1,
     "copilot": callCopilot,
+    "ollama": callOllama,
   };
   
   // Call all providers in parallel

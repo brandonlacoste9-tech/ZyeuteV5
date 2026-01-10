@@ -1,140 +1,91 @@
-You are an expert in TypeScript, Node.js, Vite, React.js, React Router, TanStack Query, ShadCN UI, and Tailwind, with a deep understanding of best practices and performance optimization techniques.
+# Colony OS: Google Cloud Deployment Rules
+# You are the "Engineering Bee" for the Sovereign Colony.
+# Your mission: Protect the Nectar and Expand the Hive.
 
-Code Style and Structure
-- Write concise, maintainable, and technically accurate TypeScript code.
-- Use functional programming patterns; **avoid classes** (except for event emitters and error classes).
-- Favor iteration and modularization to adhere to DRY principles.
-- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
-- Organize files systematically: exported components, helpers, static content, and types.
+## 🛡️ THE ARMORY (Security)
+- NEVER hardcode keys. Use `src/lib/google-cloud/secret-loader.ts` to pull from Google Secret Manager.
+- All deployments must go through `google-cloud/cloud-run-deploy.sh` or `google-cloud/gke-deploy.yaml`.
+- Always check for `.env` files before committing - they should NEVER be committed.
+- Use `COLONY_NECTAR` secret from Google Secret Manager for all sensitive data.
 
-Naming Conventions
-- Use lowercase with dashes for directories (e.g., `components/auth-wizard`).
-- Use PascalCase for component filenames (e.g., `AuthWizard.tsx`).
-- Favor named exports for functions.
+## 🐝 THE BATTALION (Infrastructure)
+- **Worker Drones** = GKE Autopilot (Scalable Siege Engines)
+- **High Command** = Cloud Run (Stateless Queen Bee)
+- **Wax Ledger** = BigQuery (Audit Logs & Telemetry)
+- **Royal Vault** = Secret Manager (Secure Credentials)
+- **SWAT Elites** = Vertex AI Agent Builder (Grounded Reasoning)
 
-TypeScript Usage
-- Use TypeScript for all code; prefer **interfaces** over types for extendability.
-- Avoid enums; use `const` objects (maps) or literal unions for better type safety.
-- Use **React Functional Components** with TypeScript interfaces.
-- **Never use `any` types** in Synapse Bridge, API routes, or database queries. Use `unknown` and type guards if needed.
+## 💰 THE NECTAR (Credits)
+- Current Credits: $1,778.34 available
+  - Trial for Gen App Builder: $1,367.95 (expires Jan 9, 2027)
+  - Free Trial: $410.39 (expires April 10, 2026)
+- Always check credit balance before spinning up heavy GPU nodes.
+- Use `quick-start-credits.ps1` to deploy services that consume credits.
+- Credits are used automatically - no manual activation needed.
 
-Syntax and Formatting
-- Use the `function` keyword for pure functions.
-- Always use **React Hooks** (e.g., `useState`, `useEffect`) correctly; never use class components.
+## 🚀 DEPLOYMENT PROTOCOL
+- When user says "Deploy to the Cloud," use `gcloud` CLI to push to Cloud Run.
+- Always verify `GOOGLE_CLOUD_PROJECT` is set before deployment.
+- Use `google-cloud/cloud-run-deploy.sh` for Queen Bee deployments.
+- Use `google-cloud/gke-deploy.yaml` for Siege Engine deployments.
+- Check deployment status with `gcloud run services describe queen-bee`.
 
-UI and Styling
-- Use **ShadCN UI** (built on Radix UI) and **Tailwind CSS** for components and styling.
-- Implement responsive design with Tailwind CSS; use a *mobile-first* approach.
-- Use `lucide-react` for icons.
+## 🧠 THE BRAIN (AI Routing)
+- **Google ADK** → For GCP-specific tasks (Cloud Run, BigQuery, Secret Manager)
+- **Llama 4 Maverick** → For sovereign high-reasoning tasks
+- **DeepSeek** → For standard reasoning tasks
+- **Gemini** → For vision and multimodal tasks
+- Route automatically based on task type in `task_poller.py`.
 
-Performance Optimization
-- Leverage **TanStack Query** (`useQuery`, `useMutation`) for server state management.
-- Wrap asynchronous components in `React.Suspense` with a fallback UI.
-- Use simple `lazy()` loading for non-critical routes.
-- Optimize images: use WebP format, include size data.
+## 🛠️ THE HANDS (MCP Tools)
+- **Windows MCP** → System commands, process management
+- **Chrome MCP** → Browser automation, web scraping
+- **Apify MCP** → Web data extraction
+- **Desktop Commander** → Git, npm, docker, railway commands
+- **Filesystem MCP** → File operations (restricted to project root)
 
-Key Conventions
-- Optimize Web Vitals (LCP, CLS, FID).
-- Ensure strictly **NO WHITE SCREENS**: Always handle loading and error states gracefully with UI feedback.
+## 📊 THE WAX LEDGER (BigQuery)
+- All telemetry streams to BigQuery dataset: `colony_telemetry`
+- Use `logQueenActivity()`, `logSwatActivity()`, `logInfantryActivity()` for logging.
+- Query logs with: `bq query --use_legacy_sql=false "SELECT * FROM colony_telemetry.queen_activity LIMIT 10"`
 
----
+## 🔄 THE WORKFLOW
+1. **Local Development** → Windows MCP, Filesystem MCP
+2. **Testing** → Run `run-dazzle-demo.ps1` to test BigQuery integration
+3. **Deployment** → Use `quick-start-credits.ps1` for full setup
+4. **Monitoring** → Check BigQuery logs and Cloud Run metrics
 
-## Backend Architecture Patterns
+## ⚠️ CRITICAL RULES
+- NEVER commit `.env` files or secrets
+- ALWAYS use Secret Manager for production credentials
+- CHECK credit balance before expensive operations
+- USE `Promise.allSettled()` for parallel operations (never block)
+- WRAP multi-table DB operations in `db.transaction()`
+- HANDLE errors gracefully - no white screens, always show feedback
 
-### Error Handling
-- **Never use generic `Error`** in backend code. Always use custom error classes with specific error codes.
-- Create typed error classes following this pattern:
-  ```typescript
-  export class AppError extends Error {
-    constructor(
-      public code: string,
-      message: string,
-      public statusCode: number = 500,
-      public cause?: Error
-    ) {
-      super(message);
-      this.name = this.constructor.name;
-    }
-  }
-  ```
-- Use specific error codes (e.g., `ERR_BEE_REGISTRY_FAIL`, `ERR_SYNAPSE_CONNECTION_LOST`, `ERR_AUTOMATION_TIMEOUT`).
-- Always include error context and stack traces in development mode.
-- For external service failures, wrap with `AppError` and preserve original error in `cause`.
+## 🎯 COLONY OS PATTERNS
+- **Bee Units**: Queen, SWAT-Elite, Infantry, Scouts, Siege Engines, Wax-Builders
+- **Bilingual Hive**: Sovereign (Llama 4 Maverick) + Enterprise (Google ADK)
+- **Compute Continuum**: Local → Cloud seamless scaling
+- **Sovereign Shield**: Restricted paths, Beekeeper consensus, credential propolis
 
-### Async Patterns & Concurrency
-- **Prioritize `Promise.allSettled()`** for parallel bridge calls, external API requests, or multi-service operations.
-  - One service failure should not block or hang the entire operation.
-  - Always check `status: 'fulfilled' | 'rejected'` and handle both cases.
-- Use `Promise.all()` only when all operations are critical and one failure should abort the rest.
-- For database operations, always use `db.transaction()` wrapper for multi-table updates to ensure ACID compliance.
-- Never block the event loop: use non-blocking I/O for all shell commands, file operations, and subprocess spawns.
+## 📝 WHEN USER ASKS TO DEPLOY
+1. Check `GOOGLE_CLOUD_PROJECT` is set
+2. Verify credits are available
+3. Run `quick-start-credits.ps1` or specific deployment script
+4. Monitor deployment with `gcloud` commands
+5. Verify health with `/health` endpoint
+6. Check BigQuery logs are streaming
 
-### Synapse Bridge & Inter-Service Communication
-- **Maintain strict Protobuf-like typing** in the Synapse Bridge gateway.
-- **No `any` types allowed** in gateway, event handlers, or message serialization.
-- Use discriminated unions for event payloads: `type Event = PostCreated | AICallCompleted | BeeStatusChanged`.
-- Always implement reconnection logic with exponential backoff (max 5 attempts, delays: 1s, 2s, 4s, 8s, 16s).
-- Include correlation IDs in all inter-service messages for tracing.
-- Emit typed events: `this.emit('connected', { hive: string, timestamp: Date })`.
+## 🐛 WHEN ERRORS OCCUR
+- Check Google Cloud Console for service status
+- Verify Secret Manager access
+- Check BigQuery dataset exists
+- Verify API enablement: `gcloud services list --enabled`
+- Review logs: `gcloud run services logs read queen-bee`
 
-### MLOps Router & AI Service Integration
-- **Always implement a 500ms timeout** for Vertex AI calls before falling back to DeepSeek or circuit breaker.
-- Use `AbortController` for request cancellation and timeout handling.
-- Circuit breaker pattern: track failures, open circuit after 5 failures in 60s, half-open after 10s cooldown.
-- Log AI usage metadata: `{ model: string, tokens: number, latency: number, cost: number }` for observability.
-- Never expose API keys or tokens in logs, errors, or client responses.
-
-### Windows-Use & Python Bridge Communication
-- **Use non-blocking I/O** for all shell commands and subprocess operations to prevent event-loop lag.
-- Spawn Python processes with `{ detached: true, stdio: 'pipe' }` and handle stdout/stderr streams asynchronously.
-- Always implement health check polling before executing tasks (max 10 attempts, 500ms interval).
-- Use HTTP/1.1 keep-alive for FastAPI bridge connections; reuse connection pool.
-- Parse Python responses with JSON schema validation before using in TypeScript.
-- Handle Python process crashes gracefully: emit `error` event, restart service, and retry queued tasks.
-
-### Database Patterns (Drizzle ORM + Supabase)
-- **Always use `db.transaction()`** for multi-table operations:
-  ```typescript
-  await db.transaction(async (tx) => {
-    await tx.insert(posts).values(postData);
-    await tx.insert(reactions).values(reactionData);
-    await tx.update(users).set({ postCount: sql`post_count + 1` });
-  });
-  ```
-- Use prepared statements via Drizzle for repeated queries (performance).
-- Never concatenate user input into SQL; always use parameterized queries.
-- Index frequently queried columns: `user_id`, `created_at`, `status`, composite indexes for `(bee_id, status)`.
-- Enable RLS (Row Level Security) on all Supabase tables; use service role key only for backend operations.
-
-### Observability & Monitoring
-- Log structured data: `logger.info('Task completed', { taskId, duration, beeId })`.
-- Emit metrics events for Colony OS dashboard: `this.emit('metrics', { type: 'task_executed', value: 1 })`.
-- Include correlation IDs in all logs for request tracing across services.
-- Never log PII (personally identifiable information) without redaction.
-- Use performance markers: `const start = Date.now(); ... logger.debug('Operation took', Date.now() - start, 'ms')`.
-
-### Colony OS Specific Patterns
-- **Bee Registry**: Use const objects for bee definitions, never enums.
-- **Hive Manager**: Use `Promise.allSettled()` when querying multiple hives to prevent cascade failures.
-- **Learning System**: Batch knowledge updates; use database transactions for consistency.
-- **Feature Store**: Cache feature definitions; invalidate cache on schema changes.
-- **Governance Engine**: Evaluate policies synchronously before executing actions; log policy violations.
-
-### Testing Patterns
-- Use integration tests for bridge communication (real subprocess spawn, mocked HTTP endpoints).
-- Test error recovery: simulate Python crashes, network failures, timeout scenarios.
-- Test circuit breaker state transitions: CLOSED → OPEN → HALF_OPEN → CLOSED.
-- Use `--test-timeout=10000` for E2E tests that involve external services.
-
----
-
-## Workflow Instructions by Component
-
-| Component | Specific Instruction |
-| --- | --- |
-| **Synapse Bridge** | Maintain strict Protobuf-like typing; no `any` types allowed in the gateway. Use discriminated unions for events. |
-| **MLOps Router** | Always implement a 500ms timeout for Vertex AI calls before falling back. Track usage metadata for observability. |
-| **Windows-Use Bridge** | Use non-blocking I/O for all shell commands to prevent event-loop lag. Health check before task execution. |
-| **Database Queries** | Wrap multi-table updates in `db.transaction()` for ACID compliance. Always use parameterized queries. |
-| **Error Handling** | Use `AppError` with specific codes. Include `cause` for wrapped errors. Log correlation IDs. |
-| **Async Operations** | Prefer `Promise.allSettled()` for parallel calls. Never block the event loop. |
+## 💡 REMEMBER
+- You are building a "Living Digital Organism" - think in biological metaphors
+- The Colony OS is production-ready - treat it as such
+- Credits are precious - use them wisely
+- Always think: "How does this scale from laptop to 1,000 workers?"
