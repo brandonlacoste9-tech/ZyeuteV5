@@ -1,6 +1,7 @@
 import "dotenv/config"; // Load environment variables from .env
 import "express-async-errors";
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 // --- OpenTelemetry Tracing (Disabled temporarily due to version mismatch) ---
 // import '../tracing-setup';
 import { registerRoutes } from "./routes.js";
@@ -19,6 +20,33 @@ const app = express();
 // Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
 
+// CORS Configuration - Allow frontend and mobile apps
+const allowedOrigins = process.env.NODE_ENV === "production"
+  ? [
+      "https://zyeute.vercel.app",
+      "https://zyeute-api.railway.app",
+      process.env.VITE_APP_URL,
+    ].filter(Boolean) as string[]
+  : ["http://localhost:5173", "http://localhost:3000", "http://localhost:5000"];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️ CORS blocked origin: ${origin}`);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -35,15 +63,17 @@ declare global {
   }
 }
 
+// Request size limits to prevent DoS attacks
 app.use(
   express.json({
+    limit: "10mb", // Adjust based on your needs (images, videos handled separately)
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
 // Add tracing middleware early to capture all requests
 // app.use(tracingMiddleware()); // Disabled - OTel version mismatch
@@ -102,9 +132,20 @@ app.use((req, res, next) => {
       console.log("✅ Feed auto-generator started");
     }
 
+    // Global error handler - sanitize errors in production
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
+
+      // In production, don't expose internal error details
+      const message = process.env.NODE_ENV === "production" && status === 500
+        ? "Une erreur est survenue. Réessaie plus tard."
+        : err.message || "Internal Server Error";
+
+      // Log full error details server-side
+      if (status === 500) {
+        console.error("❌ Internal server error:", err);
+      }
+
       res.status(status).json({ message });
     });
 
