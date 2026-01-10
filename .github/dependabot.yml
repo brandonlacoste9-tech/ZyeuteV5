@@ -1,0 +1,38 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "brandonlacoste9-tech"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Group updates to reduce PR noise
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+    # Ignore major version updates for critical packages (review manually)
+    ignore:
+      # React Router - review major updates manually
+      - dependency-name: "react-router*"
+        update-types: ["version-update:semver-major"]
+      # React - review major updates manually
+      - dependency-name: "react*"
+        update-types: ["version-update:semver-major"]
+      # TypeScript - review major updates manually
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # Node.js runtime dependencies
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
