@@ -31,6 +31,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 
 # Ensure startup script is executable
