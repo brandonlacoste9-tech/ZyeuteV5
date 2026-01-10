@@ -377,13 +377,19 @@ export const AIStudio: React.FC = () => {
               >
                 <div className="overflow-hidden rounded-xl border border-gold-500/30 bg-zinc-900 video-hover-glow">
                   <video
+                    key={generatedVideo} // Force re-render if source changes
                     src={generatedVideo}
                     controls
                     autoPlay
                     loop
+                    muted // CRITICAL for production - required for autoplay
+                    playsInline // CRITICAL for iOS production
                     className="w-full"
                     data-testid="video-generated"
-                  />
+                  >
+                    <source src={generatedVideo} type="video/mp4" />
+                    Votre navigateur ne supporte pas la balise vidéo.
+                  </video>
                 </div>
 
                 <div className="flex gap-3">

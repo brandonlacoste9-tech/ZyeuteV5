@@ -567,7 +567,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ref={videoRef}
         src={effectiveSrc}
         poster={poster}
-        playsInline
+        playsInline // CRITICAL for iOS production
+        muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
         crossOrigin="anonymous"
         preload={preload}
         className="w-full h-full object-cover"
@@ -577,7 +578,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onLoadStart={handleLoadStart}
         onPlaying={handlePlaying}
         onWaiting={handleWaiting}
-        // Controlled props handled by useEffects now
+        // Controlled props (autoPlay, loop) handled by useEffects
       />
 
       {/* Loading State */}
