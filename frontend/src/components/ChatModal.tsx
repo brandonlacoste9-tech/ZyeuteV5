@@ -135,12 +135,12 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
       const response = await tiguyService.sendMessage(text);
       // Handle both { response: string } and direct string responses
       const responseText = typeof response === "string" ? response : response.response || response.message || "Je n'ai pas de réponse pour ça, tsé?";
-      addMessage({ sender: "tiguy", text: responseText });
+      addMessage({ sender: "tiGuy", text: responseText });
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Erreur de connexion. Réessaie!");
       addMessage({
-        sender: "tiguy",
+        sender: "tiGuy",
         text: "Oups, j'ai eu un p'tit problème de connexion là! 🦫 Réessaie dans une minute, tsé?",
       });
     } finally {
@@ -242,7 +242,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               )}
             >
               {/* Tiny Gold Beaver for Ti-Guy messages */}
-              {message.sender === "tiguy" && (
+              {message.sender === "tiGuy" && (
                 <div className="flex-shrink-0 mt-1">
                   <BeaverSealIcon className="w-6 h-6 drop-shadow-[0_0_5px_rgba(212,175,55,0.8)]" />
                 </div>
@@ -252,11 +252,11 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               <div
                 className={cn(
                   "flex-1",
-                  message.sender === "tiguy" && "border-l-2 pl-3",
+                  message.sender === "tiGuy" && "border-l-2 pl-3",
                   message.sender === "user" && "border-r-2 pr-3 text-right"
                 )}
                 style={{
-                  borderColor: message.sender === "tiguy" ? "#d4af37" : "transparent",
+                  borderColor: message.sender === "tiGuy" ? "#d4af37" : "transparent",
                 }}
               >
                 {message.image && (
@@ -271,9 +271,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                   style={{
                     fontSize: "20px",
                     fontWeight: 700,
-                    color: message.sender === "tiguy" ? "#d4af37" : "#f5f5dc",
+                    color: message.sender === "tiGuy" ? "#d4af37" : "#f5f5dc",
                     textShadow:
-                      message.sender === "tiguy"
+                      message.sender === "tiGuy"
                         ? "0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(212, 175, 55, 0.3)"
                         : "0 2px 4px rgba(0,0,0,0.8)",
                     fontFamily: "'Inter', sans-serif",
