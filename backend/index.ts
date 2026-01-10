@@ -18,13 +18,14 @@ console.log("🔌 Port:", process.env.PORT || 5000);
 
 // Display AI Provider Status
 console.log("\n🐝 HIVE MIND AI STATUS:");
-console.log("├─ TIER 0 (Ollama):", process.env.OLLAMA_HOST ? `✅ ${process.env.OLLAMA_HOST}` : "❌ Not configured");
+console.log("├─ TIER 1 (Ollama Cloud):", process.env.OLLAMA_API_KEY ? "✅ FREE & Ready!" : "⚠️ Not configured");
 console.log("├─ TIER 1 (Groq):", process.env.GROQ_API_KEY ? "✅ FREE & Ready!" : "⚠️ Not configured");
 console.log("├─ TIER 2 (Vertex AI):", process.env.GOOGLE_CLOUD_PROJECT ? `✅ Project: ${process.env.GOOGLE_CLOUD_PROJECT}` : "⚠️ Not configured");
 console.log("├─ TIER 2 (Gemini):", process.env.GEMINI_API_KEY ? "✅ Ready" : "⚠️ Not configured");
-console.log("└─ TIER 3 (DeepSeek):", process.env.DEEPSEEK_API_KEY ? "⚠️ PAID fallback available" : "❌ Not configured");
+console.log("├─ TIER 3 (DeepSeek):", process.env.DEEPSEEK_API_KEY ? "⚠️ PAID fallback available" : "❌ Not configured");
+console.log("└─ TIER 0 (Ollama Local):", process.env.OLLAMA_HOST ? `✅ ${process.env.OLLAMA_HOST}` : "❌ Not configured");
 
-const hasFreeAI = process.env.GROQ_API_KEY || process.env.GOOGLE_CLOUD_PROJECT || process.env.OLLAMA_HOST;
+const hasFreeAI = process.env.OLLAMA_API_KEY || process.env.GROQ_API_KEY || process.env.GOOGLE_CLOUD_PROJECT || process.env.OLLAMA_HOST;
 if (hasFreeAI) {
   console.log("💰 Cost Optimization: Active! Using FREE tiers for 90%+ of requests");
 } else {

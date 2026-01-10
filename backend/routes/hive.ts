@@ -232,6 +232,12 @@ router.get("/stats", async (req, res) => {
 
     res.json({
       providers: {
+        ollamaCloud: {
+          available: stats.ollamaCloudAvailable,
+          tier: "1",
+          cost: "FREE",
+          description: "Llama 3.1 70B - Cloud-hosted Ollama",
+        },
         groq: {
           available: stats.groqAvailable,
           tier: "1",
@@ -250,12 +256,20 @@ router.get("/stats", async (req, res) => {
           cost: "PAID (Last resort)",
           description: "DeepSeek R1",
         },
+        ollamaLocal: {
+          available: stats.ollamaLocalAvailable,
+          tier: "0",
+          cost: "FREE",
+          description: "Local fallback",
+        },
       },
       cache: {
         size: stats.cacheSize,
         ttl: "5 minutes",
       },
-      recommendation: stats.groqAvailable
+      recommendation: stats.ollamaCloudAvailable
+        ? "Using FREE Ollama Cloud tier - optimal cost! 🚀"
+        : stats.groqAvailable
         ? "Using FREE Groq tier - optimal cost! 🚀"
         : stats.vertexAvailable
         ? "Using Vertex credits - good! 💰"

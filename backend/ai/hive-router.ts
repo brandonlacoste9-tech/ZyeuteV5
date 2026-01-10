@@ -88,8 +88,63 @@ async function callLocalOllama(
     const data = await response.json();
     return data.response;
   } catch (error) {
-    console.error("❌ [OLLAMA] Failed:", error);
+    console.error("❌ [OLLAMA LOCAL] Failed:", error);
     throw new Error("All AI providers failed - Ollama unreachable");
+  }
+}
+
+/**
+ * Call Ollama Cloud (TIER 1 - FREE, Cloud-hosted)
+ */
+async function callOllamaCloud(
+  request: HiveMindRequest,
+): Promise<HiveMindResponse> {
+  const apiKey = process.env.OLLAMA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Ollama Cloud API key not configured");
+  }
+
+  const startTime = Date.now();
+
+  try {
+    const response = await fetch("https://api.ollama.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama3.1:70b", // Ollama Cloud supports 70B models
+        messages: [
+          ...(request.systemPrompt
+            ? [{ role: "system", content: request.systemPrompt }]
+            : []),
+          { role: "user", content: request.prompt },
+        ],
+        temperature: request.temperature ?? 0.8,
+        max_tokens: request.maxTokens ?? 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Ollama Cloud failed: ${response.statusText} - ${error}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content || "";
+
+    return {
+      content,
+      provider: "ollama",
+      model: "llama3.1:70b",
+      tokensUsed: data.usage?.total_tokens,
+      latencyMs: Date.now() - startTime,
+    };
+  } catch (error: any) {
+    console.error("❌ [OLLAMA CLOUD] Failed:", error.message);
+    throw error;
   }
 }
 
@@ -270,12 +325,27 @@ export async function hiveMindChat(
 
   // SMART ROUTING LOGIC
   try {
-    // LOW COMPLEXITY (90% of requests) → GROQ (FREE)
-    if (complexity === "low" && groq) {
-      console.log(`🚀 [TIER 1] Routing to Groq (FREE)`);
-      const response = await callGroq(request);
-      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
-      return response;
+    // LOW COMPLEXITY (90% of requests) → OLLAMA CLOUD or GROQ (FREE)
+    if (complexity === "low") {
+      // Try Ollama Cloud first if available
+      if (process.env.OLLAMA_API_KEY) {
+        try {
+          console.log(`🐝 [TIER 1] Routing to Ollama Cloud (FREE)`);
+          const response = await callOllamaCloud(request);
+          responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+          return response;
+        } catch (error) {
+          console.warn(`⚠️ Ollama Cloud failed, trying Groq...`);
+        }
+      }
+
+      // Fallback to Groq
+      if (groq) {
+        console.log(`🚀 [TIER 1] Routing to Groq (FREE)`);
+        const response = await callGroq(request);
+        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        return response;
+      }
     }
 
     // MEDIUM COMPLEXITY → VERTEX FLASH (CREDITS)
@@ -294,9 +364,20 @@ export async function hiveMindChat(
       return response;
     }
 
-    // FALLBACK 1: Try Groq if Vertex unavailable
+    // FALLBACK 1: Try Ollama Cloud or Groq if Vertex unavailable
+    if (process.env.OLLAMA_API_KEY) {
+      try {
+        console.warn(`⚠️ [FALLBACK] Vertex unavailable, using Ollama Cloud`);
+        const response = await callOllamaCloud(request);
+        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        return response;
+      } catch (error) {
+        console.warn(`⚠️ Ollama Cloud failed, trying Groq...`);
+      }
+    }
+
     if (groq) {
-      console.warn(`⚠️ [FALLBACK] Vertex unavailable, using Groq`);
+      console.warn(`⚠️ [FALLBACK] Using Groq`);
       const response = await callGroq(request);
       responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
       return response;
@@ -330,9 +411,11 @@ export async function hiveMindChat(
  */
 export function getProviderStats() {
   return {
+    ollamaCloudAvailable: !!process.env.OLLAMA_API_KEY,
     groqAvailable: !!groq,
     vertexAvailable: !!vertex,
     deepseekAvailable: !!process.env.DEEPSEEK_API_KEY,
+    ollamaLocalAvailable: !!process.env.OLLAMA_HOST,
     cacheSize: responseCache.size,
   };
 }
