@@ -12,8 +12,8 @@ import { toast } from "../components/Toast";
 import { AIVideoResponseSchema } from "../schemas/ai";
 
 const aspectRatios = [
+  { label: "TikTok (9:16)", value: "9:16" }, // TikTok vertical format - first priority
   { label: "Carré", value: "1:1" },
-  { label: "Portrait", value: "9:16" },
   { label: "Paysage", value: "16:9" },
   { label: "4:3", value: "4:3" },
 ];
@@ -23,7 +23,7 @@ export const AIStudio: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = React.useState<"image" | "video">("image");
   const [prompt, setPrompt] = React.useState("");
-  const [aspectRatio, setAspectRatio] = React.useState("1:1");
+  const [aspectRatio, setAspectRatio] = React.useState("9:16"); // Default to TikTok vertical format
   const [isGeneratingImage, setIsGeneratingImage] = React.useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = React.useState(false);
   const [generatedImage, setGeneratedImage] = React.useState<string | null>(
@@ -82,7 +82,9 @@ export const AIStudio: React.FC = () => {
         credentials: "include",
         body: JSON.stringify({
           imageUrl: sourceImage,
-          prompt: prompt || "Anime cette image avec un mouvement naturel",
+          prompt: prompt || "Anime cette image avec un mouvement naturel pour TikTok",
+          aspectRatio: "9:16", // TikTok vertical format
+          duration: 5, // 5 seconds for TikTok-style short videos
         }),
       });
 
@@ -197,6 +199,10 @@ export const AIStudio: React.FC = () => {
                 </div>
               </div>
 
+              <div className="rounded-lg bg-zinc-800/50 border border-gold-500/10 p-3 text-xs text-zinc-400">
+                💡 <strong className="text-gold-400">Tip TikTok:</strong> Les vidéos 9:16 (vertical) performent mieux sur le feed continu. Génère d'abord une image verticale, puis anime-la en vidéo!
+              </div>
+
               <Button
                 onClick={handleGenerateImage}
                 disabled={!prompt.trim() || isGeneratingImage}
@@ -206,7 +212,9 @@ export const AIStudio: React.FC = () => {
               >
                 {isGeneratingImage
                   ? "☄️ Création en cours..."
-                  : "✨ Générer une image"}
+                  : aspectRatio === "9:16" 
+                    ? "✨ Générer image TikTok (9:16)"
+                    : "✨ Générer une image"}
               </Button>
             </div>
 
@@ -328,6 +336,10 @@ export const AIStudio: React.FC = () => {
                 data-testid="input-motion-prompt"
               />
 
+              <div className="rounded-lg bg-zinc-800/50 border border-gold-500/10 p-3 text-xs text-zinc-400">
+                💡 <strong className="text-gold-400">TikTok Ready:</strong> Vidéos verticales 9:16 optimisées pour le feed continu. Génération 5 secondes, format parfait pour TikTok!
+              </div>
+
               <Button
                 onClick={handleGenerateVideo}
                 disabled={!sourceImage || isGeneratingVideo}
@@ -336,8 +348,8 @@ export const AIStudio: React.FC = () => {
                 data-testid="button-generate-video"
               >
                 {isGeneratingVideo
-                  ? "☄️ Création en cours..."
-                  : "🎬 Générer une vidéo"}
+                  ? "☄️ Création vidéo TikTok..."
+                  : "🎬 Générer vidéo TikTok (9:16)"}
               </Button>
             </div>
 
