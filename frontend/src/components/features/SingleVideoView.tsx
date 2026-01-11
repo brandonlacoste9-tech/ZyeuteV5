@@ -269,7 +269,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               src={videoSrc}
               poster={post.thumbnail_url || post.media_url}
               autoPlay={isActive}
-              muted={!isActive}
+              muted={true}
               loop
               className="w-full h-full object-cover"
               style={filterStyle}
