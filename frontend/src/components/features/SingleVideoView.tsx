@@ -68,7 +68,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Real-time Presence & Engagement
     const { viewerCount, engagement } = usePresence(post.id);
     const [isLiked, setIsLiked] = useState(false);
-    const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+    const [showFireAnimation, setShowFireAnimation] = useState(false);
 
     // Derive counts from props OR real-time updates
     const fireCount = engagement.fireCount ?? post.fire_count;
@@ -98,8 +98,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       e.stopPropagation();
       e.preventDefault();
       handleFire();
-      setShowHeartAnimation(true);
-      setTimeout(() => setShowHeartAnimation(false), 800);
+      setShowFireAnimation(true);
+      setTimeout(() => setShowFireAnimation(false), 800);
       impact();
     };
 
@@ -331,16 +331,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           )}
         </div>
 
-        {/* Double Tap Heart Animation */}
-        {showHeartAnimation && (
+        {/* Double Tap Fire Animation */}
+        {showFireAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 animate-heart-pump">
-            <svg
-              className="w-24 h-24 text-orange-500 drop-shadow-[0_0_15px_rgba(255,100,0,0.8)]"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-            </svg>
+            <div className="text-[120px] drop-shadow-[0_0_30px_rgba(255,100,0,0.9)] animate-pulse">
+              🔥
+            </div>
           </div>
         )}
 
@@ -501,29 +497,18 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 handleLikeToggle();
               }}
               className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked
-                  ? "text-orange-500 scale-110 drop-shadow-[0_0_10px_rgba(255,100,0,0.6)]"
-                  : "text-white hover:text-gold-400"
+                isLiked ? "scale-110" : ""
               }`}
             >
-              <svg
-                className="w-8 h-8"
-                fill={isLiked ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
+              <div
+                className={`text-4xl transition-all ${
+                  isLiked
+                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                    : "grayscale opacity-80"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"
-                />
-              </svg>
+                🔥
+              </div>
               <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
                 {fireCount}
               </span>
