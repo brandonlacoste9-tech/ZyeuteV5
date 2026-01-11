@@ -10,6 +10,7 @@ import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
+import { useSettingsPreferences } from "@/hooks/useSettingsPreferences";
 import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
@@ -50,11 +51,15 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const videoRef = useRef<HTMLDivElement>(null);
     const { tap, impact } = useHaptics();
     const navigate = useNavigate();
+    const { preferences } = useSettingsPreferences();
 
     // Audio Control State (TikTok-style tap to unmute)
     const [isMuted, setIsMuted] = useState(true);
     const [showMuteIndicator, setShowMuteIndicator] = useState(false);
     const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Get swipe gesture setting
+    const swipeGesturesEnabled = preferences.interactions.swipeGestures;
 
     // Horizontal swipe gesture tracking
     const touchStartX = useRef<number>(0);
@@ -159,53 +164,92 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
       // Only trigger if horizontal swipe is more dominant than vertical
       if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > minSwipeDistance) {
-        if (deltaX > 0) {
-          // Swipe Left: Regenerate/Modify
-          setSwipeDirection("left");
-          if (navigator.vibrate) {
-            navigator.vibrate([50, 30, 50]); // Hammer pulse
-          }
-
-          try {
-            const response = await fetch(`/api/ai/regenerate-video`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ postId: post.id }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              // Video will be updated via real-time subscription or page refresh
-              console.log("Video regenerated:", data.videoUrl);
+        if (swipeGesturesEnabled) {
+          // NEW MODE: Swipe Gestures (TikTok-style engagement)
+          if (deltaX > 0) {
+            // Swipe Left: Not Interested (hide similar content)
+            setSwipeDirection("left");
+            if (navigator.vibrate) {
+              navigator.vibrate([30, 20, 30]); // Quick feedback
             }
-          } catch (error) {
-            console.error("Failed to regenerate video:", error);
-          }
 
-          setTimeout(() => setSwipeDirection(null), 500);
+            try {
+              const response = await fetch(`/api/posts/${post.id}/not-interested`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+              });
+
+              if (response.ok) {
+                console.log("Marked as not interested");
+              }
+            } catch (error) {
+              console.error("Failed to mark as not interested:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          } else {
+            // Swipe Right: Fire/Like (quick engagement)
+            setSwipeDirection("right");
+            if (navigator.vibrate) {
+              navigator.vibrate([20, 10, 20]); // Fire vibration
+            }
+
+            // Trigger fire action
+            handleFire();
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          }
         } else {
-          // Swipe Right: Save/Favorite (Vault)
-          setSwipeDirection("right");
-          if (navigator.vibrate) {
-            navigator.vibrate([20, 10, 20]); // Vault click
-          }
-
-          try {
-            const response = await fetch(`/api/posts/${post.id}/vault`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-            });
-
-            if (response.ok) {
-              console.log("Post vaulted");
+          // LEGACY MODE: Advanced features (Regenerate/Vault)
+          if (deltaX > 0) {
+            // Swipe Left: Regenerate/Modify
+            setSwipeDirection("left");
+            if (navigator.vibrate) {
+              navigator.vibrate([50, 30, 50]); // Hammer pulse
             }
-          } catch (error) {
-            console.error("Failed to vault post:", error);
-          }
 
-          setTimeout(() => setSwipeDirection(null), 500);
+            try {
+              const response = await fetch(`/api/ai/regenerate-video`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ postId: post.id }),
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                // Video will be updated via real-time subscription or page refresh
+                console.log("Video regenerated:", data.videoUrl);
+              }
+            } catch (error) {
+              console.error("Failed to regenerate video:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          } else {
+            // Swipe Right: Save/Favorite (Vault)
+            setSwipeDirection("right");
+            if (navigator.vibrate) {
+              navigator.vibrate([20, 10, 20]); // Vault click
+            }
+
+            try {
+              const response = await fetch(`/api/posts/${post.id}/vault`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+              });
+
+              if (response.ok) {
+                console.log("Post vaulted");
+              }
+            } catch (error) {
+              console.error("Failed to vault post:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          }
         }
       }
 
@@ -287,18 +331,38 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             }`}
           >
             <div className="text-center">
-              {swipeDirection === "left" ? (
-                <>
-                  <div className="text-6xl mb-2">🔨</div>
-                  <p className="text-gold-400 font-bold text-lg">
-                    Régénération...
-                  </p>
-                </>
+              {swipeGesturesEnabled ? (
+                // NEW MODE: Swipe Gestures
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🚫</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Pas intéressé
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔥</div>
+                    <p className="text-orange-400 font-bold text-lg">Feu!</p>
+                  </>
+                )
               ) : (
-                <>
-                  <div className="text-6xl mb-2">🔒</div>
-                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                </>
+                // LEGACY MODE: Advanced Features
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🔨</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Régénération...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔒</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Sauvegardé!
+                    </p>
+                  </>
+                )
               )}
             </div>
           </div>

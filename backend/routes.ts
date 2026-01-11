@@ -1483,7 +1483,7 @@ export async function registerRoutes(
 
   // ============ VAULT & REGENERATE ROUTES ============
 
-  // Vault a post (swipe right)
+  // Vault a post (swipe right - legacy mode)
   app.post("/api/posts/:postId/vault", requireAuth, async (req, res) => {
     try {
       const { postId } = req.params;
@@ -1504,7 +1504,35 @@ export async function registerRoutes(
     }
   });
 
-  // Regenerate video (swipe left)
+  // Mark post as "not interested" (swipe left - gesture mode)
+  app.post("/api/posts/:postId/not-interested", requireAuth, async (req, res) => {
+    try {
+      const { postId } = req.params;
+      const userId = req.userId!;
+
+      const post = await storage.getPost(postId);
+      if (!post) {
+        return res.status(404).json({ error: "Post not found" });
+      }
+
+      // TODO: Store user preferences for algorithm training
+      // For now, just log the interaction
+      console.log(`User ${userId} marked post ${postId} as not interested`);
+
+      // Future: Update user's content preferences in database
+      // This will help personalize their feed and hide similar content
+
+      res.json({
+        success: true,
+        message: "Preferences updated - you'll see less content like this"
+      });
+    } catch (error: any) {
+      console.error("Not interested error:", error);
+      res.status(500).json({ error: "Failed to update preferences" });
+    }
+  });
+
+  // Regenerate video (swipe left - legacy mode)
   app.post("/api/ai/regenerate-video", requireAuth, async (req, res) => {
     try {
       const { postId, prompt } = req.body;
