@@ -538,6 +538,26 @@ export interface PexelsCollectionResponse {
   videos?: PexelsVideo[];
 }
 
+export interface PexelsCuratedResponse {
+  page: number;
+  per_page: number;
+  photos: PexelsPhoto[];
+  total_results: number;
+  next_page?: string;
+}
+
+export async function getPexelsCurated(
+  perPage: number = 15,
+  page: number = 1,
+): Promise<PexelsCuratedResponse | null> {
+  const { data, error } = await apiCall<PexelsCuratedResponse>(
+    `/pexels/curated?per_page=${perPage}&page=${page}`,
+  );
+
+  if (error || !data) return null;
+  return data;
+}
+
 export async function getPexelsCollection(
   collectionId: string,
   perPage: number = 30,

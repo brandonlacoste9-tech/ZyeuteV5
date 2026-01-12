@@ -1513,7 +1513,53 @@ export async function registerRoutes(
 
   // ============ PEXELS ROUTES ============
 
-  // Get Pexels collection by ID
+  // Get Pexels curated photos (more reliable than collections)
+  app.get("/api/pexels/curated", optionalAuth, async (req, res) => {
+    try {
+      const { per_page = "15", page = "1" } = req.query;
+
+      if (!process.env.PEXELS_API_KEY) {
+        return res.status(500).json({ error: "Pexels API key not configured" });
+      }
+
+      const response = await fetch(
+        `https://api.pexels.com/v1/curated?per_page=${per_page}&page=${page}`,
+        {
+          headers: {
+            Authorization: process.env.PEXELS_API_KEY,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "Unknown error");
+        console.error("Pexels API error:", response.status, errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        return res.status(response.status).json({
+          error: "Failed to fetch Pexels curated photos",
+          details: errorData,
+          statusCode: response.status,
+        });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Pexels curated error:", error);
+      res
+        .status(500)
+        .json({
+          error: error.message || "Failed to fetch Pexels curated photos",
+        });
+    }
+  });
+
+  // Get Pexels collection by ID (for specific collections)
   app.get("/api/pexels/collection", optionalAuth, async (req, res) => {
     try {
       const { id, per_page = "30" } = req.query;

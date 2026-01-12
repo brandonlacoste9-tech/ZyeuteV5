@@ -42,7 +42,7 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
-  getPexelsCollection,
+  getPexelsCurated,
   type PexelsPhoto,
   type PexelsVideo,
 } from "@/services/api";
@@ -306,23 +306,30 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         }) as Array<Post & { user: User }>;
       }
 
-      // Fetch Pexels collection and merge with feed posts
+      // Fetch Pexels curated photos and merge with feed posts
       try {
-        const pexelsCollection = await getPexelsCollection("featured", 10);
-        if (pexelsCollection) {
+        const pexelsData = await getPexelsCurated(10, 1);
+        if (pexelsData && pexelsData.photos?.length) {
           const pexelsPosts = transformPexelsToPosts(
-            pexelsCollection.photos || [],
-            pexelsCollection.videos || [],
+            pexelsData.photos || [],
+            [], // Curated endpoint only returns photos, not videos
           );
           // Merge Pexels posts at the beginning of the feed
+          feedLogger.info(
+            `Fetched ${pexelsPosts.length} Pexels items, merging with ${validPosts.length} regular posts`,
+          );
           setPosts([...pexelsPosts, ...validPosts]);
         } else {
+          feedLogger.warn(
+            "Pexels curated returned empty or null, using regular posts only",
+          );
           setPosts(validPosts);
         }
       } catch (error) {
         // If Pexels fails, just use regular posts
         feedLogger.warn(
-          "Pexels collection fetch failed, using regular posts only",
+          "Pexels curated fetch failed, using regular posts only",
+          error,
         );
         setPosts(validPosts);
       }
@@ -370,9 +377,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [page, loadingMore, hasMore]);
 
-  // Initial fetch
+  // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
-    if (!savedState) {
+    if (!savedState || !savedState.posts?.length) {
       fetchVideoFeed();
     }
   }, [fetchVideoFeed, savedState]);
