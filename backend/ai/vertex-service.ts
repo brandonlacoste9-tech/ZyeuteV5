@@ -373,7 +373,8 @@ export async function transcribeAudio(
     };
 
     const config = {
-      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
+      encoding:
+        protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
       sampleRateHertz: 16000,
       languageCode: language,
       enableWordTimeOffsets: true,

@@ -102,10 +102,30 @@ const AuthCallback: React.FC = () => {
     handleAuth();
   }, [navigate, searchParams]);
 
+  // State to show manual entry if it takes too long
+  const [showManual, setShowManual] = React.useState(false);
+
+  useEffect(() => {
+    // Show manual override after 3 seconds
+    const timer = setTimeout(() => setShowManual(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-black gap-4">
-      <LoadingScreen message="Connexion sécurisée..." />
-      <p className="text-zinc-500 text-xs">Vérification des identifiants...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-black gap-6">
+      <div className="flex flex-col items-center gap-4">
+        <LoadingScreen message="Connexion sécurisée..." />
+        <p className="text-zinc-500 text-xs animate-pulse">Vérification des identifiants...</p>
+      </div>
+
+      {showManual && (
+        <button
+          onClick={() => navigate("/", { replace: true })}
+          className="text-amber-500 hover:text-amber-400 text-sm underline decoration-amber-500/30 underline-offset-4 transition-colors p-2"
+        >
+          Ça prend trop de temps? Continuer
+        </button>
+      )}
     </div>
   );
 };

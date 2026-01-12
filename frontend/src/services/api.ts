@@ -455,9 +455,25 @@ export async function generateImage(
 
   if (error || !data) return null;
 
-  // Validate with Zod
+// Validate with Zod
   const result = AIImageResponseSchema.safeParse(data);
   return result.success ? result.data : null;
+}
+
+export async function generateVideo(
+  prompt: string,
+  imageUrl: string,
+): Promise<{ videoUrl: string; prompt: string } | null> {
+  const { data, error } = await apiCall<{ videoUrl: string; prompt: string }>(
+    "/ai/generate-video",
+    {
+      method: "POST",
+      body: JSON.stringify({ prompt, imageUrl }),
+    },
+  );
+
+  if (error || !data) return null;
+  return data;
 }
 
 // ============ PARENTAL CONTROLS FUNCTIONS ============

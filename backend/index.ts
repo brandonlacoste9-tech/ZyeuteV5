@@ -19,7 +19,13 @@ httpServer.listen({ port, host: "0.0.0.0" }, () => {
 
 // [NEW] Instant Health Check Route (responds even while server is still booting)
 app.get("/api/health", (_req, res) => {
-  res.status(200).json({ status: "healthy", timestamp: new Date().toISOString(), message: "Zyeuté Live" });
+  res
+    .status(200)
+    .json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      message: "Zyeuté Live",
+    });
 });
 
 // Trust proxy for proper IP detection behind reverse proxy

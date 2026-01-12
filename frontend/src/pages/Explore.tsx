@@ -184,6 +184,16 @@ export const Explore: React.FC = () => {
               />
             </svg>
           </div>
+
+          {/* Quick Pexels Filter */}
+          <div className="mt-3 flex justify-end">
+            <button
+              onClick={() => { setSearchQuery("Pexels"); toast.success("Affichage du stock Pexels ✨"); }}
+              className="text-xs text-gold-500/80 hover:text-gold-400 underline decoration-dotted"
+            >
+              Voir la collection Pexels &rarr;
+            </button>
+          </div>
         </div>
 
         {/* Enhanced Trending Hashtags Component */}

@@ -34,3 +34,12 @@ playwright-report/
 
 # Documentation archive
 .archive/
+Windows-Use/
+ZyeuteV5-1/
+colony-os-magnum-opus/
+
+zyeute-ai-key.json
+*.log
+push_error.txt
+pin-hero.js
+tsc_*.txt

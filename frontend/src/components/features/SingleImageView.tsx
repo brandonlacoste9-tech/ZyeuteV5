@@ -1,3 +1,4 @@
+```typescript
 /**
  * SingleImageView - Individual image view in continuous feed
  * Full-screen image with GPU-accelerated "Blurred Backdrop" effect
@@ -7,6 +8,7 @@
 import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Avatar } from "../Avatar";
+import { generateVideo } from "@/services/api";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -53,6 +55,10 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
     const [isLiked, setIsLiked] = useState(false);
     const [showFireAnimation, setShowFireAnimation] = useState(false);
 
+    // AI Generation State
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+
     // Derive counts from props OR real-time updates
     const fireCount = engagement.fireCount ?? post.fire_count;
     const commentCount = engagement.commentCount ?? post.comment_count;
@@ -90,6 +96,23 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
       tap();
     };
 
+    const handleGenerate = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isGenerating) return;
+
+      setIsGenerating(true);
+      try {
+        const result = await generateVideo(post.caption || "Animate this aesthetic scene naturally", post.media_url);
+        if (result?.videoUrl) {
+          setGeneratedVideoUrl(result.videoUrl);
+        }
+      } catch (err) {
+        console.error("Failed to generate video", err);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
     const imageSrc = post.media_url || (post as any).original_url || "";
 
     return (
@@ -98,6 +121,26 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
         className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none overflow-hidden"
         onDoubleClick={handleDoubleTap}
       >
+        {/* Generated Video Overlay */}
+        {generatedVideoUrl && (
+          <div className="absolute inset-0 z-30 bg-black flex items-center justify-center animate-in fade-in duration-500">
+            <video
+              src={generatedVideoUrl}
+              autoPlay
+              loop
+              playsInline
+              controls
+              className="w-full h-full object-contain"
+            />
+            <button
+              onClick={(e) => { e.stopPropagation(); setGeneratedVideoUrl(null); }}
+              className="absolute top-20 left-4 text-white bg-black/40 backdrop-blur-md rounded-full p-2 hover:bg-white/20 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        )}
+
         {/* GPU-Accelerated Blurred Background Layer */}
         <div
           className="absolute inset-0 scale-110"
@@ -161,7 +204,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
         {/* User Info Overlay (Top Left) */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3">
           <Link
-            to={`/profile/${user.username}`}
+            to={`/ profile / ${ user.username } `}
             onClick={tap}
             className="relative"
           >
@@ -176,7 +219,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
           </Link>
           <div className="flex-1">
             <Link
-              to={`/profile/${user.username}`}
+              to={`/ profile / ${ user.username } `}
               onClick={tap}
               className="font-bold text-white hover:text-gold-400 transition-colors flex items-center gap-1 text-sm"
             >
@@ -222,7 +265,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
           {post.caption && (
             <div className="mb-4">
               <Link
-                to={`/profile/${user.username}`}
+                to={`/ profile / ${ user.username } `}
                 onClick={tap}
                 className="font-bold text-white hover:text-gold-400 transition-colors mr-2"
               >
@@ -241,7 +284,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               {post.hashtags.map((tag) => (
                 <Link
                   key={tag}
-                  to={`/explore?tag=${tag}`}
+                  to={`/ explore ? tag = ${ tag } `}
                   onClick={tap}
                   className="text-gold-400 hover:text-gold-300 text-xs font-medium transition-colors"
                 >
@@ -253,22 +296,35 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
           {/* Action Buttons (Right Side) */}
           <div className="absolute right-4 bottom-20 flex flex-col items-center gap-6">
+            
+            {/* AI Generator Button */}
+            <button
+               onClick={handleGenerate}
+               disabled={isGenerating}
+               className={`flex flex - col items - center gap - 1 transition - all press - scale ${ isGenerating ? 'animate-pulse opacity-80' : 'text-white hover:text-purple-400' } `}
+            >
+               <div className={`text - 3xl filter drop - shadow - lg ${ isGenerating ? 'animate-spin' : '' } `}>✨</div>
+               <span className="font-bold text-xs font-mono text-white drop-shadow-lg uppercase">
+                  {isGenerating ? '...' : 'AI'}
+               </span>
+            </button>
+
             {/* Fire Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked ? "scale-110" : ""
-              }`}
+              className={`flex flex - col items - center gap - 1 transition - all press - scale ${
+  isLiked ? "scale-110" : ""
+} `}
             >
               <div
-                className={`text-4xl transition-all ${
-                  isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                    : "grayscale opacity-80"
-                }`}
+                className={`text - 4xl transition - all ${
+  isLiked
+    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+    : "grayscale opacity-80"
+} `}
               >
                 🔥
               </div>
@@ -340,3 +396,4 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
     );
   },
 );
+```

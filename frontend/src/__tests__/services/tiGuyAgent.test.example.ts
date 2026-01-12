@@ -10,7 +10,11 @@
  * 3. Check console output
  */
 
-import { TiGuyAgent, type TiGuyInput, type TiGuyResponse } from "../../services/tiGuyAgent";
+import {
+  TiGuyAgent,
+  type TiGuyInput,
+  type TiGuyResponse,
+} from "../../services/tiGuyAgent";
 
 /**
  * Test: Generate content for a joke
