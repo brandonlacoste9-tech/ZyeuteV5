@@ -261,10 +261,29 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       // Transform videos
       videos.forEach((video) => {
-        const videoUrl =
-          video.video_files?.[0]?.link ||
-          video.video_files?.[0]?.link ||
-          video.image;
+        // Select best quality video file (prefer HD, then highest resolution)
+        let videoUrl = video.image; // Fallback to thumbnail
+        if (video.video_files && video.video_files.length > 0) {
+          // Prefer HD quality videos
+          const hdVideos = video.video_files.filter((f) => f.quality === "hd");
+          if (hdVideos.length > 0) {
+            // Sort by resolution (width * height) descending
+            hdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
+            videoUrl = hdVideos[0].link;
+          } else {
+            // Fallback to SD quality, prefer higher resolution
+            const sdVideos = video.video_files.filter(
+              (f) => f.quality === "sd",
+            );
+            if (sdVideos.length > 0) {
+              sdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
+              videoUrl = sdVideos[0].link;
+            } else {
+              // Last resort: use first available file
+              videoUrl = video.video_files[0].link;
+            }
+          }
+        }
         transformed.push({
           id: `pexels-video-${video.id}`,
           user_id: "pexels",
