@@ -160,9 +160,9 @@ export const users = pgTable("user_profiles", {
   }), // For Parental Controls
 });
 
-// Posts Table mapped to publications
+// Posts Table
 export const posts = pgTable(
-  "publications",
+  "posts",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id")
@@ -186,10 +186,10 @@ export const posts = pgTable(
     enhanceFinishedAt: timestamp("enhance_finished_at"),
     content: text("content").notNull(), // Confirmed required by DB insert error
     caption: text("caption"),
-    visibility: text("visibilite").default("public"),
-    fireCount: integer("reactions_count").default(0),
-    commentCount: integer("comments_count").default(0),
-    isHidden: boolean("est_masque").default(false),
+    visibility: text("visibility").default("public"),
+    fireCount: integer("fire_count").default(0),
+    commentCount: integer("comment_count").default(0),
+    isHidden: boolean("is_hidden").default(false),
     location: geography("location"),
     city: text("city"),
     region: text("region"),
@@ -230,17 +230,17 @@ export const posts = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
-    userIdIdx: index("publications_user_id_idx").on(table.userId),
-    createdAtIdx: index("publications_created_at_idx").on(table.createdAt),
-    userCreatedIdx: index("publications_user_created_idx").on(
+    userIdIdx: index("posts_user_id_idx").on(table.userId),
+    createdAtIdx: index("posts_created_at_idx").on(table.createdAt),
+    userCreatedIdx: index("posts_user_created_idx").on(
       table.userId,
       table.createdAt,
     ),
-    locationIndex: index("idx_publications_location").using(
+    locationIndex: index("idx_posts_location").using(
       "gist",
       table.location,
     ),
-    regionIndex: index("idx_publications_region_created_at").on(
+    regionIndex: index("idx_posts_region_created_at").on(
       table.regionId,
       table.createdAt,
     ),
