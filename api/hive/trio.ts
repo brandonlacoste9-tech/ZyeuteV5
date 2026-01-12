@@ -57,7 +57,7 @@ Output ONLY the rewritten prompt.
 
 // --- 3. HIVE ENGINE ---
 export class HiveEngine {
-  private generalist: GoogleGenerativeAI | null = null;
+  private generalist: any = null;
 
   constructor() {
     // DeepSeek is a singleton exported from the utility, no instantiation needed here
