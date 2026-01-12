@@ -80,8 +80,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         created_at: new Date().toISOString(),
       } as unknown as User;
     } catch (e) {
-      console.error("Error fetching full profile:", e);
-      return null;
+      console.warn(
+        "⚠️ [Auth Resilience] Profile fetch failed - Using fallback to prevent redirect loop:",
+        e,
+      );
+      // Ensure we return a valid user object to prevent redirect loops even if the table query fails
+      return {
+        id: sessionUser.id,
+        username:
+          sessionUser.user_metadata?.username ||
+          sessionUser.email?.split("@")[0],
+        email: sessionUser.email,
+        role: "citoyen", // Default safe role
+        created_at: new Date().toISOString(),
+      } as unknown as User;
     }
   };
 
@@ -117,8 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
-                  profile.role === "moderator" ||
-                  (await checkIsAdmin(initialSession.user as any)),
+                profile.role === "moderator" ||
+                (await checkIsAdmin(initialSession.user as any)),
               );
             }
           } else {
@@ -208,6 +220,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
     setIsGuest(true);
   };
+
+  // Log auth state changes to help debug redirect loops
+  useEffect(() => {
+    if (!isLoading) {
+      console.log("[Auth] State stabilized:", {
+        isAuthenticated: !!user || isGuest,
+        userId: user?.id,
+        isGuest,
+        role: user?.role,
+      });
+    }
+  }, [user, isGuest, isLoading]);
 
   const value = {
     user,
