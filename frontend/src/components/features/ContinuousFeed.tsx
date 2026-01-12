@@ -42,6 +42,9 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
+  getPexelsCollection,
+  type PexelsPhoto,
+  type PexelsVideo,
 } from "@/services/api";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -209,6 +212,77 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [saveFeedState, stateKey, page, currentIndex]); // Removed posts from deps, using ref
 
+  // Transform Pexels items to Post format
+  const transformPexelsToPosts = useCallback(
+    (
+      photos: PexelsPhoto[],
+      videos: PexelsVideo[],
+    ): Array<Post & { user: User }> => {
+      const transformed: Array<Post & { user: User }> = [];
+      const pexelsUser: User = {
+        id: "pexels",
+        username: "pexels",
+        display_name: "Pexels",
+        avatar_url: null,
+        bio: null,
+        city: null,
+        region: null,
+        is_verified: false,
+        coins: 0,
+        fire_score: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen" as const,
+        custom_permissions: {},
+        tiGuyCommentsEnabled: true,
+        last_daily_bonus: null,
+      } as User;
+
+      // Transform photos
+      photos.forEach((photo) => {
+        transformed.push({
+          id: `pexels-photo-${photo.id}`,
+          user_id: "pexels",
+          media_url: photo.src.original,
+          thumbnail_url: photo.src.medium,
+          caption: photo.alt || `Photo by ${photo.photographer}`,
+          type: "photo" as const,
+          fire_count: 0,
+          comment_count: 0,
+          created_at: new Date().toISOString(),
+          user: pexelsUser,
+        } as Post & { user: User });
+      });
+
+      // Transform videos
+      videos.forEach((video) => {
+        const videoUrl =
+          video.video_files?.[0]?.link ||
+          video.video_files?.[0]?.link ||
+          video.image;
+        transformed.push({
+          id: `pexels-video-${video.id}`,
+          user_id: "pexels",
+          media_url: videoUrl,
+          thumbnail_url: video.image,
+          caption: `Video from Pexels`,
+          type: "video" as const,
+          fire_count: 0,
+          comment_count: 0,
+          created_at: new Date().toISOString(),
+          user: pexelsUser,
+        } as Post & { user: User });
+      });
+
+      return transformed;
+    },
+    [],
+  );
+
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
     // If we already have posts (restored state), don't fetch initial
@@ -219,8 +293,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
 
+      let validPosts: Array<Post & { user: User }> = [];
       if (data) {
-        const validPosts = data.filter((p) => {
+        validPosts = data.filter((p) => {
           // Filter out invalid users
           if (!p.user) return false;
           // Filter out burned or expired posts (Client-side safety net)
@@ -228,16 +303,37 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
           return true;
         }) as Array<Post & { user: User }>;
-        setPosts(validPosts);
-        setHasMore(data.length === 10);
-        setPage(0);
       }
+
+      // Fetch Pexels collection and merge with feed posts
+      try {
+        const pexelsCollection = await getPexelsCollection("featured", 10);
+        if (pexelsCollection) {
+          const pexelsPosts = transformPexelsToPosts(
+            pexelsCollection.photos || [],
+            pexelsCollection.videos || [],
+          );
+          // Merge Pexels posts at the beginning of the feed
+          setPosts([...pexelsPosts, ...validPosts]);
+        } else {
+          setPosts(validPosts);
+        }
+      } catch (error) {
+        // If Pexels fails, just use regular posts
+        feedLogger.warn(
+          "Pexels collection fetch failed, using regular posts only",
+        );
+        setPosts(validPosts);
+      }
+
+      setHasMore(data?.length === 10 || false);
+      setPage(0);
     } catch (error) {
       feedLogger.error("Error fetching video feed:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [savedState]);
+  }, [savedState, transformPexelsToPosts]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {

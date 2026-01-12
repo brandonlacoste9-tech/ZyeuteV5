@@ -70,6 +70,7 @@ const WatchLive = lazy(() => import("@/pages/WatchLive"));
 const LiveDiscover = lazy(() => import("@/pages/LiveDiscover"));
 const AIStudio = lazy(() => import("@/pages/AIStudio"));
 const LaZyeute = lazy(() => import("@/pages/LaZyeute"));
+const PexelsGallery = lazy(() => import("@/pages/PexelsGallery"));
 const Pulse = lazy(() =>
   import("@/components/skins/SkinSelector").then((module) => ({
     default: module.SkinSelector,
@@ -250,6 +251,22 @@ function App() {
                                                   <ProtectedRoute>
                                                     <RouteErrorBoundary>
                                                       <Explore />
+                                                    </RouteErrorBoundary>
+                                                  </ProtectedRoute>
+                                                }
+                                              />
+                                              <Route
+                                                path="/pexels"
+                                                element={
+                                                  <ProtectedRoute>
+                                                    <RouteErrorBoundary>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <PexelsGallery />
+                                                      </Suspense>
                                                     </RouteErrorBoundary>
                                                   </ProtectedRoute>
                                                 }

@@ -225,12 +225,12 @@ export async function createMuxUpload(): Promise<{
   uploadUrl: string;
   uploadId: string;
 } | null> {
-  const { data, error } = await apiCall<{ uploadUrl: string; uploadId: string }>(
-    "/mux/create-upload",
-    {
-      method: "POST",
-    },
-  );
+  const { data, error } = await apiCall<{
+    uploadUrl: string;
+    uploadId: string;
+  }>("/mux/create-upload", {
+    method: "POST",
+  });
 
   if (error || !data) return null;
   return data;
@@ -450,6 +450,95 @@ export async function generateImage(
   // Validate with Zod
   const result = AIImageResponseSchema.safeParse(data);
   return result.success ? result.data : null;
+}
+
+export async function generateVideo(
+  imageUrl: string,
+  prompt?: string,
+): Promise<{ videoUrl: string; prompt: string } | null> {
+  const { data, error } = await apiCall<{ videoUrl: string; prompt: string }>(
+    "/ai/generate-video",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        imageUrl,
+        prompt: prompt || "Animate this image with natural movement",
+      }),
+    },
+  );
+
+  if (error || !data) return null;
+  return data;
+}
+
+// ============ PEXELS FUNCTIONS ============
+
+export interface PexelsPhoto {
+  id: number;
+  width: number;
+  height: number;
+  url: string;
+  photographer: string;
+  photographer_url: string;
+  photographer_id: number;
+  avg_color: string;
+  src: {
+    original: string;
+    large2x: string;
+    large: string;
+    medium: string;
+    small: string;
+    portrait: string;
+    landscape: string;
+    tiny: string;
+  };
+  liked: boolean;
+  alt?: string;
+}
+
+export interface PexelsVideo {
+  id: number;
+  width: number;
+  height: number;
+  duration: number;
+  image: string;
+  video_files: Array<{
+    id: number;
+    quality: string;
+    file_type: string;
+    width: number;
+    height: number;
+    link: string;
+  }>;
+  video_pictures: Array<{
+    id: number;
+    picture: string;
+    nr: number;
+  }>;
+}
+
+export interface PexelsCollectionResponse {
+  id: string;
+  title: string;
+  description: string;
+  private: boolean;
+  media_count: number;
+  photos_count: number;
+  videos_count: number;
+  photos?: PexelsPhoto[];
+  videos?: PexelsVideo[];
+}
+
+export async function getPexelsCollection(
+  collectionId: string,
+  perPage: number = 30,
+): Promise<PexelsCollectionResponse | null> {
+  const { data, error } = await apiCall<PexelsCollectionResponse>(
+    `/pexels/collection?id=${collectionId}&per_page=${perPage}`,
+  );
+
+  if (error || !data) return null;
+  return data;
 }
 
 // ============ PARENTAL CONTROLS FUNCTIONS ============
