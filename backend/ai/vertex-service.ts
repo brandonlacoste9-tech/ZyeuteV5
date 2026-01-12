@@ -35,8 +35,8 @@ if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
 }
 
 // Initialize clients
-let vertexAI: VertexAI | null = null;
-let genAI: GoogleGenerativeAI | null = null;
+let vertexAI: any | null = null;
+let genAI: any | null = null;
 let speechClient: SpeechClient | null = null;
 let visionClient: ImageAnnotatorClient | null = null;
 
