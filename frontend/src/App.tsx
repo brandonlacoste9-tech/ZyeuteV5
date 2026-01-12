@@ -25,6 +25,7 @@ import { ColonyProvider } from "@/components/providers/colony-provider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
+import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { OfflineIndicator } from "@/components/features/OfflineIndicator";
 import { FactoryThemeProvider } from "@/providers/FactoryThemeProvider";
 import { AppConfig } from "@/config/factory";
