@@ -42,6 +42,9 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
+  getPexelsCurated,
+  type PexelsPhoto,
+  type PexelsVideo,
 } from "@/services/api";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -210,6 +213,96 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [saveFeedState, stateKey, page, currentIndex]); // Removed posts from deps, using ref
 
+  // Transform Pexels items to Post format
+  const transformPexelsToPosts = useCallback(
+    (
+      photos: PexelsPhoto[],
+      videos: PexelsVideo[],
+    ): Array<Post & { user: User }> => {
+      const transformed: Array<Post & { user: User }> = [];
+      const pexelsUser: User = {
+        id: "pexels",
+        username: "pexels",
+        display_name: "Pexels",
+        avatar_url: null,
+        bio: null,
+        city: null,
+        region: null,
+        is_verified: false,
+        coins: 0,
+        fire_score: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen" as const,
+        custom_permissions: {},
+        tiGuyCommentsEnabled: true,
+        last_daily_bonus: null,
+      } as User;
+
+      // Transform photos
+      photos.forEach((photo) => {
+        transformed.push({
+          id: `pexels-photo-${photo.id}`,
+          user_id: "pexels",
+          media_url: photo.src.original,
+          thumbnail_url: photo.src.medium,
+          caption: photo.alt || `Photo by ${photo.photographer}`,
+          type: "photo" as const,
+          fire_count: 0,
+          comment_count: 0,
+          created_at: new Date().toISOString(),
+          user: pexelsUser,
+        } as Post & { user: User });
+      });
+
+      // Transform videos
+      videos.forEach((video) => {
+        // Select best quality video file (prefer HD, then highest resolution)
+        let videoUrl = video.image; // Fallback to thumbnail
+        if (video.video_files && video.video_files.length > 0) {
+          // Prefer HD quality videos
+          const hdVideos = video.video_files.filter((f) => f.quality === "hd");
+          if (hdVideos.length > 0) {
+            // Sort by resolution (width * height) descending
+            hdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
+            videoUrl = hdVideos[0].link;
+          } else {
+            // Fallback to SD quality, prefer higher resolution
+            const sdVideos = video.video_files.filter(
+              (f) => f.quality === "sd",
+            );
+            if (sdVideos.length > 0) {
+              sdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
+              videoUrl = sdVideos[0].link;
+            } else {
+              // Last resort: use first available file
+              videoUrl = video.video_files[0].link;
+            }
+          }
+        }
+        transformed.push({
+          id: `pexels-video-${video.id}`,
+          user_id: "pexels",
+          media_url: videoUrl,
+          thumbnail_url: video.image,
+          caption: `Video from Pexels`,
+          type: "video" as const,
+          fire_count: 0,
+          comment_count: 0,
+          created_at: new Date().toISOString(),
+          user: pexelsUser,
+        } as Post & { user: User });
+      });
+
+      return transformed;
+    },
+    [],
+  );
+
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
     // If we already have posts (restored state), don't fetch initial
@@ -220,8 +313,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
 
+      let validPosts: Array<Post & { user: User }> = [];
       if (data) {
-        const validPosts = data.filter((p) => {
+        validPosts = data.filter((p) => {
           // Filter out invalid users
           if (!p.user) return false;
           // Filter out burned or expired posts (Client-side safety net)
@@ -229,16 +323,44 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
           return true;
         }) as Array<Post & { user: User }>;
-        setPosts(validPosts);
-        setHasMore(data.length === 10);
-        setPage(0);
       }
+
+      // Fetch Pexels curated videos and merge with feed posts
+      try {
+        const pexelsData = await getPexelsCurated(10, 1);
+        if (pexelsData && pexelsData.videos?.length) {
+          const pexelsPosts = transformPexelsToPosts(
+            [], // Curated endpoint returns videos, not photos
+            pexelsData.videos || [],
+          );
+          // Merge Pexels posts at the beginning of the feed
+          feedLogger.info(
+            `Fetched ${pexelsPosts.length} Pexels items, merging with ${validPosts.length} regular posts`,
+          );
+          setPosts([...pexelsPosts, ...validPosts]);
+        } else {
+          feedLogger.warn(
+            "Pexels curated returned empty or null, using regular posts only",
+          );
+          setPosts(validPosts);
+        }
+      } catch (error) {
+        // If Pexels fails, just use regular posts
+        feedLogger.warn(
+          "Pexels curated fetch failed, using regular posts only",
+          error,
+        );
+        setPosts(validPosts);
+      }
+
+      setHasMore(data?.length === 10 || false);
+      setPage(0);
     } catch (error) {
       feedLogger.error("Error fetching video feed:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [savedState]);
+  }, [savedState, transformPexelsToPosts]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
@@ -274,9 +396,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [page, loadingMore, hasMore]);
 
-  // Initial fetch
+  // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
-    if (!savedState) {
+    if (!savedState || !savedState.posts?.length) {
       fetchVideoFeed();
     }
   }, [fetchVideoFeed, savedState]);

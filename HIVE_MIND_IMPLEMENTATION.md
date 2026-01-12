@@ -1,4 +1,5 @@
 # 🐝 HIVE MIND Implementation Guide
+
 ## Zero-Cost AI Infrastructure for Zyeuté V5
 
 **Created:** January 10, 2026
@@ -27,6 +28,7 @@ Response with cost tracking
 ```
 
 **New Files Created:**
+
 1. `/backend/ai/hive-router.ts` - Smart routing logic
 2. `/backend/ai/tiguy-personality.ts` - Authentic Québécois personality
 3. `/backend/routes/hive.ts` - New API endpoints
@@ -40,6 +42,7 @@ Response with cost tracking
 ### Step 1: Get Your Free API Keys (15 minutes)
 
 #### A) Groq (TIER 1 - Primary, FREE) ✨
+
 ```bash
 # 1. Go to https://console.groq.com
 # 2. Sign up with Google/GitHub
@@ -52,6 +55,7 @@ GROQ_API_KEY=gsk_your_key_here
 **Why:** Groq is INSANELY fast (500+ tokens/sec) and 100% FREE. This will handle 90% of your Ti-Guy chat requests.
 
 #### B) Google Cloud Setup (TIER 2 - Complex tasks, FREE CREDITS)
+
 ```bash
 # You already have this! Just verify:
 # 1. Go to https://console.cloud.google.com
@@ -67,6 +71,7 @@ VERTEX_LOCATION=us-central1
 **Why:** You already paid for this with credits - might as well use it!
 
 #### C) Optional: Gemini API (Alternative to Vertex)
+
 ```bash
 # 1. Go to https://makersuite.google.com/app/apikey
 # 2. Create API key
@@ -77,6 +82,7 @@ GEMINI_API_KEY=AIza...
 **Why:** Easier to set up than Vertex, same models, same free credits.
 
 #### D) Optional: Ollama (TIER 0 - Local fallback)
+
 ```bash
 # If you want local AI as emergency backup:
 # 1. Install Ollama: https://ollama.ai
@@ -121,11 +127,13 @@ DEEPSEEK_API_KEY=sk_your_existing_key
 ### Step 3: Test the New System (10 minutes)
 
 #### Start your backend:
+
 ```bash
 npm run dev
 ```
 
 **You should see this on startup:**
+
 ```
 🚀 Starting ZyeuteV5 backend...
 📍 Environment: development
@@ -148,6 +156,7 @@ If you see ⚠️ warnings, you're missing keys!
 ### Step 4: Test The New Endpoints
 
 #### Test 1: Basic Ti-Guy Chat
+
 ```bash
 curl -X POST http://localhost:5000/api/hive/chat \
   -H "Content-Type: application/json" \
@@ -158,6 +167,7 @@ curl -X POST http://localhost:5000/api/hive/chat \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "response": "Yo! Bienvenue dans la ruche! 🐝 Zyeuté c'est LE réseau social québécois...",
@@ -176,6 +186,7 @@ curl -X POST http://localhost:5000/api/hive/chat \
 ---
 
 #### Test 2: Content Generation
+
 ```bash
 curl -X POST http://localhost:5000/api/hive/generate-content \
   -H "Content-Type: application/json" \
@@ -191,11 +202,13 @@ curl -X POST http://localhost:5000/api/hive/generate-content \
 ---
 
 #### Test 3: Check Provider Stats
+
 ```bash
 curl http://localhost:5000/api/hive/stats
 ```
 
 **Expected Response:**
+
 ```json
 {
   "providers": {
@@ -234,14 +247,15 @@ Every API call now includes cost metadata:
 
 ```json
 {
-  "provider": "groq",     // ← Shows which tier was used
-  "latencyMs": 234,       // ← Response speed
-  "tokensUsed": 156,      // ← Usage tracking
-  "cached": false         // ← Whether from cache
+  "provider": "groq", // ← Shows which tier was used
+  "latencyMs": 234, // ← Response speed
+  "tokensUsed": 156, // ← Usage tracking
+  "cached": false // ← Whether from cache
 }
 ```
 
 **What to look for:**
+
 - ✅ `"provider": "groq"` → FREE tier (90% of requests)
 - ✅ `"provider": "vertex"` → Using your credits (complex tasks)
 - ⚠️ `"provider": "deepseek"` → PAID tier (should be <1%)
@@ -253,6 +267,7 @@ Every API call now includes cost metadata:
 ### Demo Script
 
 **1. Show the Startup Logs**
+
 ```bash
 npm run dev
 ```
@@ -260,6 +275,7 @@ npm run dev
 Point out the Hive Mind status showing Vertex AI integrated.
 
 **2. Show Ti-Guy Chat**
+
 ```bash
 # Open your app
 # Go to chat with Ti-Guy
@@ -267,23 +283,27 @@ Point out the Hive Mind status showing Vertex AI integrated.
 ```
 
 **Talking Points:**
+
 - "Ti-Guy is powered by a multi-tier AI system"
 - "We primarily use Vertex AI Gemini for Quebec French responses"
 - "We've built a smart router that optimizes for cost and quality"
 - "The personality is authentically Québécois - not European French"
 
 **3. Show Provider Stats**
+
 ```bash
 curl http://localhost:5000/api/hive/stats
 ```
 
 **Talking Points:**
+
 - "We're using $1,778 in Google Cloud credits"
 - "Vertex AI handles our complex reasoning tasks"
 - "We've architected for cost efficiency while maintaining quality"
 - "Our system automatically scales with free tiers"
 
 **4. Ask About:**
+
 - **More Vertex AI credits** - "We're a perfect showcase for GCP AI in Quebec market"
 - **Quebec French fine-tuning** - "Can we get access to custom Gemini training?"
 - **Partnership opportunity** - "We'd love to be a case study for Google Cloud"
@@ -295,25 +315,27 @@ curl http://localhost:5000/api/hive/stats
 
 Your app now has these new Hive endpoints:
 
-| Endpoint | Purpose | Tier |
-|----------|---------|------|
-| `POST /api/hive/chat` | Ti-Guy conversations | 1 (Groq) |
-| `POST /api/hive/generate-content` | Content creation | 2 (Vertex) |
-| `POST /api/hive/moderate` | Content moderation | 2 (Vertex) |
-| `POST /api/hive/onboarding` | New user welcome | 1 (Groq) |
-| `GET /api/hive/stats` | Provider status | N/A |
-| `POST /api/hive/test` | Debug routing | N/A |
+| Endpoint                          | Purpose              | Tier       |
+| --------------------------------- | -------------------- | ---------- |
+| `POST /api/hive/chat`             | Ti-Guy conversations | 1 (Groq)   |
+| `POST /api/hive/generate-content` | Content creation     | 2 (Vertex) |
+| `POST /api/hive/moderate`         | Content moderation   | 2 (Vertex) |
+| `POST /api/hive/onboarding`       | New user welcome     | 1 (Groq)   |
+| `GET /api/hive/stats`             | Provider status      | N/A        |
+| `POST /api/hive/test`             | Debug routing        | N/A        |
 
 ---
 
 ## 📊 Expected Cost Savings
 
 ### Before Hive Mind:
+
 - DeepSeek: $100-300/month
 - FAL.ai: $150-650/month
 - **Total: $250-950/month**
 
 ### After Hive Mind:
+
 - Groq (90% of chat): **$0** ✅
 - Vertex (10% complex): **$0** (using credits) ✅
 - DeepSeek (1% fallback): $5-15/month
@@ -327,14 +349,18 @@ Your app now has these new Hive endpoints:
 ## 🐛 Troubleshooting
 
 ### Issue: "Groq API key not configured"
+
 **Fix:**
+
 ```bash
 # Add to .env:
 GROQ_API_KEY=gsk_your_key_here
 ```
 
 ### Issue: "Vertex AI not configured"
+
 **Fix:**
+
 ```bash
 # Add to .env:
 GOOGLE_CLOUD_PROJECT=unique-spirit-482300-s4
@@ -342,20 +368,26 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
 ```
 
 ### Issue: "All AI providers failed"
+
 **Fix:**
+
 - Check your API keys are valid
 - Check internet connection
 - Check API quotas in Google Cloud Console
 - If all else fails, set up Ollama as local fallback
 
 ### Issue: Ti-Guy speaks English instead of French
+
 **Fix:**
+
 - The personality prompt is in French
 - Check the `systemPrompt` is being sent correctly
 - Try forcing Vertex provider: `"forceProvider": "vertex"`
 
 ### Issue: Response is slow (>5 seconds)
+
 **Check:**
+
 - Groq should respond in <500ms
 - Vertex should respond in <2s
 - DeepSeek is slower (~3-5s)
@@ -380,17 +412,20 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
 ## 🔮 Next Steps (After Google Meeting)
 
 ### If Google gives you more credits:
+
 1. Increase Vertex usage to 100%
 2. Keep Groq as fast fallback
 3. Remove DeepSeek entirely
 
 ### If Google wants partnership:
+
 1. Migrate video processing to Google Transcoder API
 2. Use Google Cloud Storage for all media
 3. Add Google Cloud CDN for delivery
 4. Become a GCP AI showcase customer
 
 ### If you want to optimize further:
+
 1. Set up Ollama on Railway for local processing
 2. Implement response caching (already built, just tune TTL)
 3. Add per-user AI quotas
@@ -401,15 +436,19 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account-key.json
 ## 📚 Additional Resources
 
 **Groq Docs:**
+
 - https://console.groq.com/docs/quickstart
 
 **Google Vertex AI:**
+
 - https://cloud.google.com/vertex-ai/docs
 
 **Gemini API:**
+
 - https://ai.google.dev/tutorials/quickstart
 
 **Ollama:**
+
 - https://ollama.ai/library
 
 ---
@@ -457,6 +496,7 @@ curl -X POST http://localhost:5000/api/hive/test \
 ---
 
 **Questions?** Everything is documented in:
+
 - `/backend/ai/hive-router.ts` - Router logic
 - `/backend/ai/tiguy-personality.ts` - Ti-Guy prompt
 - `/backend/routes/hive.ts` - API endpoints

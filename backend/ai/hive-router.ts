@@ -51,7 +51,10 @@ export interface HiveMindResponse {
 }
 
 // Response cache for identical requests (5 minute TTL)
-const responseCache = new Map<string, { response: HiveMindResponse; expiresAt: number }>();
+const responseCache = new Map<
+  string,
+  { response: HiveMindResponse; expiresAt: number }
+>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -113,7 +116,7 @@ async function callOllamaCloud(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: model, // Support both Llama and DeepSeek
@@ -152,9 +155,7 @@ async function callOllamaCloud(
 /**
  * Call Groq API (TIER 1 - FREE, Fast)
  */
-async function callGroq(
-  request: HiveMindRequest,
-): Promise<HiveMindResponse> {
+async function callGroq(request: HiveMindRequest): Promise<HiveMindResponse> {
   if (!groq) {
     throw new Error("Groq API key not configured");
   }
@@ -192,9 +193,7 @@ async function callGroq(
 /**
  * Call Vertex AI (TIER 2 - CREDITS $1,778)
  */
-async function callVertex(
-  request: HiveMindRequest,
-): Promise<HiveMindResponse> {
+async function callVertex(request: HiveMindRequest): Promise<HiveMindResponse> {
   if (!vertex) {
     throw new Error("Vertex AI not configured");
   }
@@ -203,9 +202,8 @@ async function callVertex(
 
   try {
     // Use Pro for high complexity, Flash for medium
-    const modelName = request.complexity === "high"
-      ? "gemini-1.5-pro"
-      : "gemini-1.5-flash";
+    const modelName =
+      request.complexity === "high" ? "gemini-1.5-pro" : "gemini-1.5-flash";
 
     const model = vertex.getGenerativeModel({
       model: modelName,
@@ -220,7 +218,8 @@ async function callVertex(
       },
     });
 
-    const content = result.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const content =
+      result.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     return {
       content,
@@ -305,7 +304,10 @@ export async function hiveMindChat(
         response = await callDeepSeek(request);
         break;
       case "ollama":
-        const content = await callLocalOllama(request.prompt, request.systemPrompt);
+        const content = await callLocalOllama(
+          request.prompt,
+          request.systemPrompt,
+        );
         response = {
           content,
           provider: "ollama",
@@ -333,7 +335,10 @@ export async function hiveMindChat(
         try {
           console.log(`🐝 [TIER 1] Routing to Ollama Cloud (FREE)`);
           const response = await callOllamaCloud(request);
-          responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+          responseCache.set(cacheKey, {
+            response,
+            expiresAt: Date.now() + CACHE_TTL,
+          });
           return response;
         } catch (error) {
           console.warn(`⚠️ Ollama Cloud failed, trying Groq...`);
@@ -344,7 +349,10 @@ export async function hiveMindChat(
       if (groq) {
         console.log(`🚀 [TIER 1] Routing to Groq (FREE)`);
         const response = await callGroq(request);
-        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        responseCache.set(cacheKey, {
+          response,
+          expiresAt: Date.now() + CACHE_TTL,
+        });
         return response;
       }
     }
@@ -353,7 +361,10 @@ export async function hiveMindChat(
     if (complexity === "medium" && vertex) {
       console.log(`🧠 [TIER 2] Routing to Vertex Flash (CREDITS)`);
       const response = await callVertex(request);
-      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+      responseCache.set(cacheKey, {
+        response,
+        expiresAt: Date.now() + CACHE_TTL,
+      });
       return response;
     }
 
@@ -361,7 +372,10 @@ export async function hiveMindChat(
     if (complexity === "high" && vertex) {
       console.log(`🎯 [TIER 2] Routing to Vertex Pro (CREDITS)`);
       const response = await callVertex(request);
-      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+      responseCache.set(cacheKey, {
+        response,
+        expiresAt: Date.now() + CACHE_TTL,
+      });
       return response;
     }
 
@@ -370,7 +384,10 @@ export async function hiveMindChat(
       try {
         console.warn(`⚠️ [FALLBACK] Vertex unavailable, using Ollama Cloud`);
         const response = await callOllamaCloud(request);
-        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        responseCache.set(cacheKey, {
+          response,
+          expiresAt: Date.now() + CACHE_TTL,
+        });
         return response;
       } catch (error) {
         console.warn(`⚠️ Ollama Cloud failed, trying Groq...`);
@@ -380,7 +397,10 @@ export async function hiveMindChat(
     if (groq) {
       console.warn(`⚠️ [FALLBACK] Using Groq`);
       const response = await callGroq(request);
-      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+      responseCache.set(cacheKey, {
+        response,
+        expiresAt: Date.now() + CACHE_TTL,
+      });
       return response;
     }
 
@@ -389,10 +409,15 @@ export async function hiveMindChat(
       try {
         console.warn(`⚠️ [FALLBACK] Using Ollama Cloud DeepSeek R1 (FREE!)`);
         const response = await callOllamaCloud(request, "deepseek-r1:70b");
-        responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+        responseCache.set(cacheKey, {
+          response,
+          expiresAt: Date.now() + CACHE_TTL,
+        });
         return response;
       } catch (error) {
-        console.warn(`⚠️ Ollama Cloud DeepSeek failed, trying paid DeepSeek API...`);
+        console.warn(
+          `⚠️ Ollama Cloud DeepSeek failed, trying paid DeepSeek API...`,
+        );
       }
     }
 
@@ -400,16 +425,20 @@ export async function hiveMindChat(
     if (process.env.DEEPSEEK_API_KEY) {
       console.warn(`⚠️ [FALLBACK] Using PAID DeepSeek API (last resort)`);
       const response = await callDeepSeek(request);
-      responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+      responseCache.set(cacheKey, {
+        response,
+        expiresAt: Date.now() + CACHE_TTL,
+      });
       return response;
     }
 
     // If we get here, nothing is configured - throw error
     throw new Error("No AI providers configured or all failed");
-
   } catch (error) {
     // TIER 0: Emergency Ollama fallback
-    console.error(`❌ All cloud providers failed, falling back to Local Ollama...`);
+    console.error(
+      `❌ All cloud providers failed, falling back to Local Ollama...`,
+    );
 
     const content = await callLocalOllama(request.prompt, request.systemPrompt);
     const response: HiveMindResponse = {
@@ -419,7 +448,10 @@ export async function hiveMindChat(
       latencyMs: 0,
     };
 
-    responseCache.set(cacheKey, { response, expiresAt: Date.now() + CACHE_TTL });
+    responseCache.set(cacheKey, {
+      response,
+      expiresAt: Date.now() + CACHE_TTL,
+    });
     return response;
   }
 }

@@ -3,6 +3,7 @@
  */
 
 import React, { useRef, useState, useEffect } from "react";
+import MuxPlayer from "@mux/mux-player-react";
 import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
 import { VideoSource } from "@/hooks/usePrefetchVideo";
@@ -26,6 +27,7 @@ export interface VideoPlayerProps {
   priority?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: VideoSource;
+  muxPlaybackId?: string | null;
   debug?: {
     activeRequests: number;
     concurrency: number;
@@ -48,6 +50,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   priority = false,
   preload = "metadata",
   videoSource,
+  muxPlaybackId,
   debug,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -470,6 +473,42 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
+  // Mux Player Integration - Return early if Mux ID is present
+  if (muxPlaybackId) {
+    return (
+      <div
+        className={cn(
+          "relative group video-hover-glow rounded-xl overflow-hidden",
+          className,
+        )}
+        style={style}
+      >
+        <MuxPlayer
+          playbackId={muxPlaybackId}
+          metadataVideoTitle="Zyeuté Exclusive"
+          streamType="on-demand"
+          accentColor="#FF00FF"
+          autoPlay={autoPlay}
+          muted={muted}
+          loop={loop}
+          className="w-full h-full object-cover"
+          style={
+            {
+              height: "100%",
+              width: "100%",
+              "--media-object-fit": "cover",
+              "--media-control-background": "transparent",
+              ...videoStyle,
+            } as any
+          }
+          onEnded={onEnded}
+          onPlay={onPlay}
+          onPause={onPause}
+        />
+      </div>
+    );
+  }
+
   // If no valid source URL, show placeholder
   if (!isValidVideoUrl(src)) {
     return (
@@ -478,6 +517,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           "relative flex items-center justify-center bg-zinc-900",
           className,
         )}
+        style={style}
       >
         <div className="text-center p-4">
           <div className="text-4xl mb-2">🎬</div>
@@ -536,8 +576,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           tier={debug.tier as any}
           playheadByte={
             videoSource?.type === "partial-chunks" &&
-            videoSource.totalSize &&
-            duration
+              videoSource.totalSize &&
+              duration
               ? (currentTime / duration) * videoSource.totalSize
               : 0
           }
@@ -562,7 +602,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           alt=""
           className="hidden"
           fetchPriority="high"
-          onError={() => {}} // Ignore errors on preload
+          onError={() => { }} // Ignore errors on preload
         />
       )}
       <video

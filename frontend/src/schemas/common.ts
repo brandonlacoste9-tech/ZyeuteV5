@@ -398,7 +398,8 @@ export const PostSchema = z.preprocess((val: any) => {
         : val.moderationApproved !== undefined
           ? val.moderationApproved
           : true,
-    moderationApproved: val.moderation_approved || val.moderationApproved || true,
+    moderationApproved:
+      val.moderation_approved || val.moderationApproved || true,
     is_hidden: val.is_hidden || val.isHidden || false,
     isHidden: val.is_hidden || val.isHidden || false,
     mux_asset_id: val.mux_asset_id || val.muxAssetId,

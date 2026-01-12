@@ -6,7 +6,11 @@
  */
 
 import { Router } from "express";
-import { hiveMindChat, getProviderStats, clearCache } from "../ai/hive-router.js";
+import {
+  hiveMindChat,
+  getProviderStats,
+  clearCache,
+} from "../ai/hive-router.js";
 import { getTiGuyPrompt } from "../ai/tiguy-personality.js";
 import rateLimit from "express-rate-limit";
 
@@ -65,8 +69,10 @@ router.post("/chat", aiRateLimiter, async (req, res) => {
   } catch (error: any) {
     console.error("❌ [HIVE CHAT] Error:", error);
     res.status(500).json({
-      error: "Ti-Guy est temporairement indisponible. Réessaie dans quelques instants!",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined,
+      error:
+        "Ti-Guy est temporairement indisponible. Réessaie dans quelques instants!",
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 });
@@ -270,10 +276,10 @@ router.get("/stats", async (req, res) => {
       recommendation: stats.ollamaCloudAvailable
         ? "Using FREE Ollama Cloud tier - optimal cost! 🚀"
         : stats.groqAvailable
-        ? "Using FREE Groq tier - optimal cost! 🚀"
-        : stats.vertexAvailable
-        ? "Using Vertex credits - good! 💰"
-        : "Warning: Using paid DeepSeek tier ⚠️",
+          ? "Using FREE Groq tier - optimal cost! 🚀"
+          : stats.vertexAvailable
+            ? "Using Vertex credits - good! 💰"
+            : "Warning: Using paid DeepSeek tier ⚠️",
     });
   } catch (error: any) {
     res.status(500).json({ error: "Failed to get stats" });

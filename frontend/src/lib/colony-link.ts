@@ -1,11 +1,6 @@
 import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY!,
-);
+import { supabase } from "./supabase";
 
 const COLONY_API_URL =
   import.meta.env.VITE_COLONY_API_URL || "http://localhost:10000";
@@ -51,22 +46,22 @@ class ColonyLink {
         this.socket?.emit("join_channel", "quebec_social");
         this.socket?.emit("join_channel", "global_feed");
       });
- 
+
       this.socket?.on("disconnect", (reason: string) => {
         console.log("⚜️ Zyeuté: Disconnected from Colony OS:", reason);
       });
- 
+
       this.socket?.on("connect_error", (error: Error) => {
         console.log("⚜️ Zyeuté: Connection error:", error.message);
         this.reconnectAttempts++;
- 
+
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           console.log(
             "⚜️ Zyeuté: Max reconnection attempts reached. Operating in standalone mode.",
           );
         }
       });
- 
+
       this.socket?.on("reconnect", () => {
         console.log("⚜️ Zyeuté: Reconnected to Colony OS.");
         this.reconnectAttempts = 0;
