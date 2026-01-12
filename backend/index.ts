@@ -35,6 +35,11 @@ console.log("");
 
 const app = express();
 
+// [NEW] Instant Health Check for Railway
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
+});
+
 // Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
 
