@@ -25,7 +25,10 @@ app.get("/api/health", (_req, res) => {
 // Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
 
-// ... rest of configuration ...
+// Standard Body Parsers (REQUIRED for all routes)
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: false, limit: "10mb" }));
+
 // [Removing CORS origins block for simplicity/speed during demo prep]
 app.use(cors({ origin: true, credentials: true }));
 
