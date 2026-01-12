@@ -682,3 +682,15 @@ export async function getPexelsCurated(
   if (error || !data) return null;
   return data;
 }
+
+export async function getPexelsCollection(
+  id: string,
+  limit: number = 10,
+  page: number = 1,
+): Promise<PexelsResponse | null> {
+  const { data, error } = await apiCall<PexelsResponse>(
+    `/pexels/collection/${id}?per_page=${limit}&page=${page}`,
+  );
+  if (error || !data) return null;
+  return data;
+}
