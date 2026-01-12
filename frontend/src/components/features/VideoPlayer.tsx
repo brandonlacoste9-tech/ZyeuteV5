@@ -309,7 +309,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Set a timeout to prevent infinite loading
     // If video doesn't load within 15 seconds, show error
     loadingTimeoutRef.current = setTimeout(() => {
-      videoPlayerLogger.warn(`Video loading timeout for ${src.substring(0, 50)}...`);
+      videoPlayerLogger.warn(
+        `Video loading timeout for ${src.substring(0, 50)}...`,
+      );
       setHasError(true);
       setIsLoading(false);
     }, 15000);
@@ -569,6 +571,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         poster={poster}
         playsInline // CRITICAL for iOS production
         muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
+        autoPlay={autoPlay} // Explicit attribute + useEffect sync for better compatibility
+        loop={loop} // Explicit attribute for continuous playback
         crossOrigin="anonymous"
         preload={preload}
         className="w-full h-full object-cover"
@@ -578,7 +582,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onLoadStart={handleLoadStart}
         onPlaying={handlePlaying}
         onWaiting={handleWaiting}
-        // Controlled props (autoPlay, loop) handled by useEffects
       />
 
       {/* Loading State */}

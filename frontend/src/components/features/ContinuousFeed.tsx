@@ -37,7 +37,7 @@ interface FeedRowProps extends RowData {
 }
 
 import AutoSizer from "react-virtualized-auto-sizer";
-import { SingleVideoView } from "./SingleVideoView";
+import { UnifiedMediaCard } from "./UnifiedMediaCard";
 import {
   getExplorePosts,
   togglePostFire,
@@ -114,20 +114,21 @@ const FeedRow = memo(
         data-video-index={index}
         className="w-full h-full"
       >
-        <SingleVideoView
+        <UnifiedMediaCard
           post={post}
           user={post.user}
-          isActive={shouldPlay} // Controlled by Activation Logic now (was isActive from props)
+          isActive={shouldPlay}
           onFireToggle={handleFireToggle}
           onComment={handleComment}
           onShare={handleShare}
-          priority={isPriority} // Keep priority for UI cues
+          priority={isPriority}
           preload={
             preloadTier >= 2 ? "auto" : preloadTier === 1 ? "metadata" : "none"
           }
-          videoSource={source} // Pass the full source object (MSE or Blob or URL)
+          videoSource={source}
           isCached={isCached}
           debug={debug}
+          shouldPrefetch={isPredictive} // Prefetch adjacent images
         />
       </div>
     );

@@ -78,6 +78,10 @@ export interface SettingsPreferences {
     notifyFires: boolean;
     notifyFollows: boolean;
   };
+  interactions: {
+    swipeGestures: boolean;
+    doubleTapToFire: boolean;
+  };
   region: string;
   language: LanguageOption;
 }
@@ -96,6 +100,7 @@ type PreferencePath =
   | `app.${keyof SettingsPreferences["app"]}`
   | `privacy.${keyof SettingsPreferences["privacy"]}`
   | `notifications.${keyof SettingsPreferences["notifications"]}`
+  | `interactions.${keyof SettingsPreferences["interactions"]}`
   | "region"
   | "language";
 
@@ -169,6 +174,10 @@ const basePreferences: SettingsPreferences = {
     notifyComments: true,
     notifyFires: true,
     notifyFollows: true,
+  },
+  interactions: {
+    swipeGestures: true,
+    doubleTapToFire: true,
   },
   region: "mtl",
   language: "fr",
