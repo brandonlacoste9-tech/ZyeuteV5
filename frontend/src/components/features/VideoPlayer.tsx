@@ -12,6 +12,13 @@ import StreamingDebugOverlay from "./StreamingDebugOverlay";
 
 const videoPlayerLogger = logger.withContext("VideoPlayer");
 
+// HTML5 Video Network State Constants
+// https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/networkState
+const NETWORK_EMPTY = 0;       // No data has been loaded
+const NETWORK_IDLE = 1;        // Data is loaded and not actively downloading
+const NETWORK_LOADING = 2;     // Actively downloading media data
+const NETWORK_NO_SOURCE = 3;   // No suitable source found (CSP/CORS issue)
+
 export interface VideoPlayerProps {
   src: string;
   poster?: string;
@@ -263,10 +270,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
 
     // Network state meanings:
-    // 0 = NETWORK_EMPTY, 1 = NETWORK_IDLE, 2 = NETWORK_LOADING, 3 = NETWORK_NO_SOURCE
-    if (video.networkState === 2) {
-      videoPlayerLogger.warn("⚠️ Video stuck in NETWORK_LOADING state (networkState: 2)", errorDetails);
-    } else if (video.networkState === 3) {
+    // NETWORK_EMPTY = 0, NETWORK_IDLE = 1, NETWORK_LOADING = 2, NETWORK_NO_SOURCE = 3
+    if (video.networkState === NETWORK_LOADING) {
+      videoPlayerLogger.warn("⚠️ Video stuck in NETWORK_LOADING state", errorDetails);
+    } else if (video.networkState === NETWORK_NO_SOURCE) {
       videoPlayerLogger.error("❌ NETWORK_NO_SOURCE - CSP or CORS issue likely", errorDetails);
     } else {
       videoPlayerLogger.error("Video playback error:", errorDetails);
@@ -344,7 +351,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {
             networkState,
             readyState: videoRef.current.readyState,
-            stuck_in_network_loading: networkState === 2,
+            stuck_in_network_loading: networkState === NETWORK_LOADING,
           }
         );
       }

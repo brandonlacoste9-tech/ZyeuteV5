@@ -13,6 +13,20 @@ import { logger } from "@/lib/logger";
 
 const validatorLogger = logger.withContext("VideoSourceValidator");
 
+// Constants for video validation
+const LFS_POINTER_MAX_SIZE = 200; // LFS pointer files are typically ~130 bytes
+
+// Network Information API types
+interface NetworkInformation {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
 export interface VideoSourceValidationResult {
   isValid: boolean;
   issues: string[];
@@ -93,7 +107,7 @@ export async function validateVideoSource(
         result.details.estimatedSize = size;
         
         // LFS pointer files are typically around 130 bytes
-        if (size < 200) {
+        if (size < LFS_POINTER_MAX_SIZE) {
           result.issues.push(
             `File appears to be an LFS pointer (${size} bytes). Video files should be much larger.`
           );
@@ -290,7 +304,7 @@ export async function generateDiagnosticReport(
     issues,
     networkState: {
       online: navigator.onLine,
-      effectiveType: (navigator as any).connection?.effectiveType,
+      effectiveType: (navigator as NavigatorWithConnection).connection?.effectiveType,
     },
   };
 

@@ -17,6 +17,17 @@ import { logger } from "@/lib/logger";
 
 const debugLogger = logger.withContext("VideoDebugDashboard");
 
+// Network Information API types
+interface NetworkInformation {
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+}
+
+interface NavigatorWithConnection extends Navigator {
+  connection?: NetworkInformation;
+}
+
 interface CheckResult {
   name: string;
   status: "pending" | "success" | "warning" | "error";
@@ -121,7 +132,7 @@ export const VideoDebugDashboard: React.FC = () => {
   const checkNetworkConnectivity = async (): Promise<CheckResult> => {
     try {
       const online = navigator.onLine;
-      const connection = (navigator as any).connection;
+      const connection = (navigator as NavigatorWithConnection).connection;
       
       if (!online) {
         return {
