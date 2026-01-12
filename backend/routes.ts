@@ -2407,7 +2407,8 @@ export async function registerRoutes(
 
   // ============ BOOTSTRAP AI / SWARM ROUTES ============
   // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
-  app.use("/api/ai", aiRoutes);
+  // [FIXED] Removed duplicate /api/ai route registration - already registered at line 201
+  // app.use("/api/ai", aiRoutes); // Already registered at line 201
   app.use("/api/moderation", requireAuth, moderationRoutes);
   app.use("/api/presence", presenceRouter);
 
