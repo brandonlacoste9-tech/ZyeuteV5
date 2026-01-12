@@ -14,13 +14,15 @@ const redis = new Redis({
   // Ensure we don't crash if Redis is unavailable
   retryStrategy: (times) => {
     if (times > 3) {
-      logger.warn(
-        "[ModerationCache] Redis connection failed. Caching disabled.",
-      );
       return null; // stop retrying
     }
     return Math.min(times * 50, 2000);
   },
+});
+
+// [CRITICAL] Handle Redis errors to prevent unhandled exception crash
+redis.on("error", (err) => {
+  logger.warn(`[ModerationCache] Redis Error: ${err.message}`);
 });
 
 /**

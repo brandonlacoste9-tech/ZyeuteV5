@@ -3,14 +3,16 @@
  * Payment processing for Marketplace and Premium subscriptions
  */
 
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { logger } from "@/lib/logger";
 
 const stripeServiceLogger = logger.withContext("StripeService");
 import { supabase } from "../lib/supabase";
 import { toast } from "../components/Toast";
 
-let stripePromise: Promise<Stripe | null> | null = null;
+type Stripe = Awaited<ReturnType<typeof loadStripe>>;
+
+let stripePromise: Promise<Stripe> | null = null;
 
 /**
  * Initialize Stripe with public key

@@ -74,7 +74,7 @@ export function RBACProvider({ children }: { children: ReactNode }) {
       user?.custom_permissions &&
       user.custom_permissions[permission] !== undefined
     ) {
-      return user.custom_permissions[permission];
+      return !!user.custom_permissions[permission];
     }
 
     // 2. Role Base

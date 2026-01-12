@@ -52,7 +52,7 @@ export async function generateHashtags(topic: string): Promise<string[]> {
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    return text.split(" ").filter((tag) => tag.startsWith("#"));
+    return text.split(" ").filter((tag: string) => tag.startsWith("#"));
   } catch (error) {
     geminiServiceLogger.error("Hashtag generation error:", error);
     return ["#Quebec", "#Zyeute"];

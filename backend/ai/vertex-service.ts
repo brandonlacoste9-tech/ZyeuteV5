@@ -33,7 +33,7 @@ if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
 }
 
 // Initialize clients inside try-catch to prevent crash if config is bad
-let vertexAI: VertexAI;
+let vertexAI: any;
 let speechClient: SpeechClient;
 let visionClient: ImageAnnotatorClient;
 
@@ -373,7 +373,8 @@ export async function transcribeAudio(
     };
 
     const config = {
-      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
+      encoding:
+        protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
       sampleRateHertz: 16000,
       languageCode: language,
       enableWordTimeOffsets: true,

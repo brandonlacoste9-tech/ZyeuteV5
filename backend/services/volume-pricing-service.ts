@@ -117,9 +117,12 @@ export class VolumePricingService {
       startDate: startOfMonth,
     });
 
-    const totalCost = costs.reduce((sum, c) => sum + c.finalCost, 0);
+    const totalCost = costs.reduce(
+      (sum: number, c: any) => sum + Number(c.finalCost),
+      0,
+    );
     const totalSavings = costs.reduce(
-      (sum, c) => sum + (c.baseCost - c.finalCost),
+      (sum: number, c: any) => sum + (Number(c.baseCost) - Number(c.finalCost)),
       0,
     );
     const uploadCount = costs.length;

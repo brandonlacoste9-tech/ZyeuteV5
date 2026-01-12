@@ -12,6 +12,7 @@
  */
 
 import React, { ReactElement, ReactNode } from "react";
+import "@testing-library/jest-dom";
 import { render, RenderOptions } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { vi } from "vitest";
@@ -133,6 +134,5 @@ export {
   fireEvent,
   cleanup,
   renderHook,
-  waitForElementToBeRemoved,
 } from "@testing-library/react";
 export { default as userEvent } from "@testing-library/user-event";

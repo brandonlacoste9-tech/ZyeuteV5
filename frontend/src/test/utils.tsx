@@ -1,4 +1,5 @@
-import { ReactElement } from "react";
+import React, { ReactElement } from "react";
+import "@testing-library/jest-dom";
 import { render, RenderOptions } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { vi } from "vitest";

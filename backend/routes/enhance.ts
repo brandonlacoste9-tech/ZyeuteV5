@@ -19,7 +19,7 @@ export const enhancePostHandler = async (req: Request, res: Response) => {
         enhanceStartedAt: new Date(),
         visualFilter: filter || "none",
       })
-      .where(eq(posts.id, postId))
+      .where(eq(posts.id, postId as string))
       .returning();
 
     if (!updatedPost) {

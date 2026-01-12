@@ -6,10 +6,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
-import Login from "../Login";
-import Signup from "../Signup";
-import ForgotPassword from "../ForgotPassword";
-import ResetPassword from "../ResetPassword";
+import Login from "../../pages/Login";
+import Signup from "../../pages/Signup";
+import ForgotPassword from "../../pages/ForgotPassword";
+import ResetPassword from "../../pages/ResetPassword";
 import { FactoryThemeProvider } from "../../providers/FactoryThemeProvider";
 import { AppConfig } from "../../config/factory";
 
@@ -117,7 +117,7 @@ describe("Password Management", () => {
 
       const passwordInput = screen.getByPlaceholderText("••••••••");
       const toggleButtons = screen.getAllByRole("button");
-      const toggleButton = toggleButtons.find((btn) =>
+      const toggleButton = toggleButtons.find((btn: any) =>
         btn.getAttribute("aria-label")?.includes("Afficher le mot de passe"),
       );
 
@@ -155,7 +155,7 @@ describe("Password Management", () => {
 
       const passwordInput = screen.getByPlaceholderText("••••••••");
       const toggleButtons = screen.getAllByRole("button");
-      const toggleButton = toggleButtons.find((btn) =>
+      const toggleButton = toggleButtons.find((btn: any) =>
         btn.getAttribute("aria-label")?.includes("Afficher le mot de passe"),
       );
 
@@ -286,7 +286,7 @@ describe("Password Management", () => {
       renderWithProviders(<Login />);
 
       const toggleButtons = screen.getAllByRole("button");
-      const toggleButton = toggleButtons.find((btn) =>
+      const toggleButton = toggleButtons.find((btn: any) =>
         btn.getAttribute("aria-label")?.includes("mot de passe"),
       );
 

@@ -1,4 +1,5 @@
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -43,7 +44,7 @@ class ColonyLink {
         reconnectionDelay: 1000,
       });
 
-      this.socket.on("connect", () => {
+      this.socket?.on("connect", () => {
         console.log("⚜️ Zyeuté: Connected to Colony OS Core.");
         this.reconnectAttempts = 0;
         // Join Quebec social channels
@@ -51,11 +52,11 @@ class ColonyLink {
         this.socket?.emit("join_channel", "global_feed");
       });
 
-      this.socket.on("disconnect", (reason) => {
+      this.socket?.on("disconnect", (reason: string) => {
         console.log("⚜️ Zyeuté: Disconnected from Colony OS:", reason);
       });
 
-      this.socket.on("connect_error", (error) => {
+      this.socket?.on("connect_error", (error: Error) => {
         console.log("⚜️ Zyeuté: Connection error:", error.message);
         this.reconnectAttempts++;
 
@@ -66,7 +67,7 @@ class ColonyLink {
         }
       });
 
-      this.socket.on("reconnect", () => {
+      this.socket?.on("reconnect", () => {
         console.log("⚜️ Zyeuté: Reconnected to Colony OS.");
         this.reconnectAttempts = 0;
       });

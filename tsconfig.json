@@ -16,7 +16,12 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "downlevelIteration": true,
-    "types": ["node", "vite/client"],
+    "types": [
+      "node",
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
     "paths": {
       "@/*": ["./frontend/src/*"],
       "@shared/*": ["./shared/*"]

@@ -38,28 +38,17 @@ export class MemStorage implements IStorage {
       id: "guest-id",
       username: "invite",
       email: "invite@zyeute.com",
-      fullName: "Invité Spécial",
-      role: "user",
+      displayName: "Invité Spécial",
+      role: "citoyen",
       hiveId: "quebec",
       avatarUrl: null,
       bio: "Bienvenue au Québec!",
       createdAt: new Date(),
       updatedAt: new Date(),
-      isPrivate: false,
-      lastLogin: new Date(),
-      password: "",
-      bannerUrl: null,
-      location: null,
-      website: null,
-      theme: "leather",
-      isFired: false,
-      piasses: 100,
-      karma: 50,
+      piasseBalance: 100,
+      totalKarma: 50,
       regionId: "montreal",
-      socialLinks: null,
-      twoFactorEnabled: false,
-      verificationLevel: 0,
-    };
+    } as any;
     this.users.set(guestUser.id, guestUser);
 
     const firstPost: Post = {
@@ -68,7 +57,6 @@ export class MemStorage implements IStorage {
       content:
         "Bienvenue sur Zyeuté! Le réseau social du Québec est enfin là. ⚜️ #Zyeute #Quebec",
       mediaUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34",
-      mediaType: "image",
       thumbnailUrl: null,
       fireCount: 10,
       commentCount: 2,
@@ -89,7 +77,9 @@ export class MemStorage implements IStorage {
       embedding: null,
       isHidden: false,
       metadata: null,
-    };
+      isVaulted: false,
+      type: "photo",
+    } as any;
     this.posts.set(firstPost.id, firstPost);
   }
 
@@ -112,10 +102,9 @@ export class MemStorage implements IStorage {
       ...user,
       createdAt: new Date(),
       updatedAt: new Date(),
-      role: "user",
-      isFired: false,
-      piasses: 0,
-      karma: 0,
+      role: "citoyen",
+      piasseBalance: 0,
+      totalKarma: 0,
     } as User;
     this.users.set(newUser.id, newUser);
     return newUser;
@@ -205,7 +194,7 @@ export class MemStorage implements IStorage {
   }
   async incrementPostViews(id: string): Promise<number> {
     const p = this.posts.get(id);
-    if (p) p.viewCount++;
+    if (p && p.viewCount !== null) p.viewCount++;
     return p?.viewCount || 0;
   }
   async markPostBurned(id: string, _reason: string): Promise<void> {
@@ -234,7 +223,7 @@ export class MemStorage implements IStorage {
     _userId: string,
   ): Promise<{ added: boolean; newCount: number }> {
     const p = this.posts.get(postId);
-    if (p) p.fireCount++;
+    if (p && p.fireCount !== null) p.fireCount++;
     return { added: true, newCount: p?.fireCount || 0 };
   }
   async toggleCommentReaction(
@@ -281,7 +270,7 @@ export class MemStorage implements IStorage {
   async markStoryViewed(_s: string, _u: string): Promise<void> {}
 
   async getUserNotifications(
-    userId: string,
+    _userId: string,
   ): Promise<(Notification & { fromUser?: User })[]> {
     return [];
   }

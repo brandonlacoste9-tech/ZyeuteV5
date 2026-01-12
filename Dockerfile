@@ -3,8 +3,8 @@ FROM node:22 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files and .npmrc
+COPY package*.json .npmrc ./
 
 # Install ALL dependencies (including optional ones for the build platform)
 RUN npm install
@@ -19,8 +19,8 @@ FROM node:22 AS production
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files and .npmrc
+COPY package*.json .npmrc ./
 
 # Install ONLY production dependencies (tsx is now in dependencies)
 RUN npm install --omit=dev

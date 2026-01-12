@@ -51,7 +51,7 @@ export type V3FeedItem = z.infer<typeof V3FeedItemSchema>;
 export const V3FlowResponseSchema = z.object({
   type: z.enum(["text", "image", "feed_item", "error"]),
   content: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export type V3FlowResponse = z.infer<typeof V3FlowResponseSchema>;
@@ -64,7 +64,7 @@ export function validateAIResponse<T>(schema: z.Schema<T>, data: unknown): T {
     console.error("AI Response Validation Error:", error);
     if (error instanceof z.ZodError) {
       throw new Error(
-        `Invalid AI response: ${error.errors.map((e) => e.message).join(", ")}`,
+        `Invalid AI response: ${error.issues.map((e) => e.message).join(", ")}`,
       );
     }
     throw error;
