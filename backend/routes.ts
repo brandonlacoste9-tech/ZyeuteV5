@@ -1458,6 +1458,56 @@ export async function registerRoutes(
     },
   );
 
+  // ============ PEXELS ROUTES ============
+
+  // Get Pexels collection by ID
+  app.get("/api/pexels/collection", optionalAuth, async (req, res) => {
+    try {
+      const { id, per_page = "30" } = req.query;
+
+      if (!id || typeof id !== "string") {
+        return res.status(400).json({ error: "Collection ID is required" });
+      }
+
+      if (!process.env.PEXELS_API_KEY) {
+        return res.status(500).json({ error: "Pexels API key not configured" });
+      }
+
+      const response = await fetch(
+        `https://api.pexels.com/v1/collections/${id}?per_page=${per_page}`,
+        {
+          headers: {
+            Authorization: process.env.PEXELS_API_KEY,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "Unknown error");
+        console.error("Pexels API error:", response.status, errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        return res.status(response.status).json({
+          error: "Failed to fetch Pexels collection",
+          details: errorData,
+          statusCode: response.status,
+        });
+      }
+
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Pexels collection error:", error);
+      res
+        .status(500)
+        .json({ error: error.message || "Failed to fetch Pexels collection" });
+    }
+  });
+
   // ============ VAULT & REGENERATE ROUTES ============
 
   // Vault a post (swipe right)
