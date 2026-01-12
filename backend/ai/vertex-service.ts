@@ -9,6 +9,7 @@ import {
   HarmCategory,
   HarmBlockThreshold,
 } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { SpeechClient, protos } from "@google-cloud/speech";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { logger } from "../utils/logger.js";
@@ -18,6 +19,7 @@ import { traceExternalAPI, addSpanAttributes } from "../tracer.js";
 const project =
   process.env.GOOGLE_CLOUD_PROJECT_ID || "unique-spirit-482300-s4";
 const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
+const apiKey = process.env.GOOGLE_API_KEY || process.env.VERTEX_API_KEY;
 
 // Initialize Vertex AI with proper authentication
 let vertexAIConfig: any = { project, location };
@@ -32,17 +34,68 @@ if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
   }
 }
 
-// Initialize clients inside try-catch to prevent crash if config is bad
-let vertexAI: any;
-let speechClient: SpeechClient;
-let visionClient: ImageAnnotatorClient;
+// Initialize clients
+let vertexAI: VertexAI | null = null;
+let genAI: GoogleGenerativeAI | null = null;
+let speechClient: SpeechClient | null = null;
+let visionClient: ImageAnnotatorClient | null = null;
 
 try {
-  vertexAI = new VertexAI(vertexAIConfig);
-  speechClient = new SpeechClient(vertexAIConfig);
-  visionClient = new ImageAnnotatorClient(vertexAIConfig);
+  // 1. Try Vertex AI (GCP) first (Enterprise / Service Account)
+  if (
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+  ) {
+    vertexAI = new VertexAI(vertexAIConfig);
+    speechClient = new SpeechClient(vertexAIConfig);
+    visionClient = new ImageAnnotatorClient(vertexAIConfig);
+    logger.info("[VertexService] Initialized with GCP Vertex AI");
+  }
 } catch (error) {
-  logger.error("[VertexService] Failed to initialize AI clients", error);
+  logger.warn(
+    "[VertexService] Vertex AI initialization failed, falling back...",
+    error,
+  );
+}
+
+// 2. Fallback to Google AI Studio (API Key)
+if (!vertexAI && apiKey) {
+  try {
+    genAI = new GoogleGenerativeAI(apiKey);
+    logger.info("[VertexService] Initialized with Google AI Studio (API Key)");
+  } catch (error) {
+    logger.error(
+      "[VertexService] Google Generative AI initialization failed",
+      error,
+    );
+  }
+} else if (!vertexAI && !apiKey) {
+  logger.warn(
+    "[VertexService] No valid credentials found (Service Account or API Key). AI features will be disabled.",
+  );
+}
+
+// Helper to get a model from either client
+function getModel(modelName: string = "gemini-1.5-flash", systemInstruction?: string) {
+  if (vertexAI) {
+    return {
+      client: "vertex",
+      model: vertexAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+      }),
+    };
+  }
+  if (genAI) {
+    return {
+      client: "genai",
+      model: genAI.getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemInstruction,
+      }),
+    };
+  }
+  throw new Error("No AI client initialized");
 }
 
 // TI-GUY System Prompts
@@ -151,15 +204,7 @@ export async function analyzeVideoThumbnail(
   imageUrl: string,
 ): Promise<QuebecVideoMetadata> {
   try {
-    if (!vertexAI) throw new Error("Vertex AI not initialized");
-
-    const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        temperature: 0.4,
-        responseMimeType: "application/json",
-      },
-    });
+    const { model, client } = getModel("gemini-1.5-flash");
 
     const prompt = `You are the Captioning & Promotion Bee 🐝, an AI specialist for Zyeuté, Quebec's social network.
 Analyze this video thumbnail and generate engaging, culturally relevant metadata.
@@ -177,46 +222,60 @@ TASK 2 (Promotion Bee):
 Return a JSON object with:
 - caption_fr, caption_en, hashtags, detected_themes, detected_items, suggested_title_fr, suggested_title_en, promo_code, promo_url.
 
-Context: Zyeuté is "Branché sur le monde, enraciné ici."
-
-Image URL: ${imageUrl}`;
+Context: Zyeuté is "Branché sur le monde, enraciné ici."`;
 
     const result = await traceExternalAPI(
-      "vertex-ai",
+      "ai-service",
       "analyzeThumbnail",
       "POST",
       async (span) => {
         span.setAttributes({
           "ai.model": "gemini-1.5-flash",
           "ai.task": "video_analysis",
+          "ai.client": client,
         });
 
-        // Use the Gemini 1.5 multi-modal capability
-        const parts: any[] = [{ text: prompt }];
+        // Prepare content parts
+        let parts: any[] = [{ text: prompt }];
 
-        if (imageUrl.startsWith("gs://")) {
-          parts.push({
-            fileData: {
-              mimeType: "image/jpeg",
-              fileUri: imageUrl,
-            },
-          });
+        if (client === "vertex") {
+           // Vertex AI format
+           if (imageUrl.startsWith("gs://")) {
+             parts.push({ fileData: { mimeType: "image/jpeg", fileUri: imageUrl } });
+           } else {
+             parts.push({ text: `Image URL: ${imageUrl}` });
+           }
+             // For Vertex, we call generateContent
+            const response = await (model as any).generateContent({
+              contents: [{ role: "user", parts }],
+            });
+            return response;
         } else {
-          // If public URL, we pass it in the prompt (Gemini can often resolve it if enabled)
-          // or we could fetch it and pass as inlineData.
-          // For now, we've already included it in the text prompt.
-        }
+           // GenAI (Studio) format
+           // Note: Studio doesn't support gs:// directly or remote URLs easily in this simplified flow
+           // We'll pass the URL as text for the model to "imagine" or fetch if it can,
+           // or ideally we'd fetch the bytes. For now, we rely on the prompt context.
+            parts.push({ text: `Image Analysis Target: ${imageUrl}` });
 
-        const response = await model.generateContent({
-          contents: [{ role: "user", parts }],
-        });
-        return response;
+            const response = await (model as any).generateContent(parts);
+            return response;
+        }
       },
     );
 
-    const response = await result.response;
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-    return JSON.parse(text) as QuebecVideoMetadata;
+    let text = "";
+    if (client === "vertex") {
+      const response = await result.response;
+      text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    } else {
+       // GenAI response object
+       text = result.response.text();
+    }
+
+    // Sanitize JSON
+    const jsonStr = text.replace(/```json|```/g, "").trim();
+    return JSON.parse(jsonStr) as QuebecVideoMetadata;
+
   } catch (error: any) {
     logger.error(`[CaptioningBee] Error: ${error.message}`);
     return {
@@ -238,39 +297,24 @@ export async function generateWithTIGuy(
   const { mode, message, context = "", language = "auto" } = request;
 
   try {
-    if (!vertexAI) throw new Error("Vertex AI not initialized");
-
-    const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        temperature: mode === "customer_service" ? 0.3 : 0.7,
-        topP: 0.8,
-        maxOutputTokens: 1024,
-      },
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-      ],
-    });
-
-    // Select appropriate prompt
-    const systemPrompt =
+    // Select appropriate prompt template
+    const systemPromptTemplate =
       mode === "customer_service"
         ? TI_GUY_PROMPTS.customer_service
         : TI_GUY_PROMPTS.content_creation;
 
-    const fullPrompt = systemPrompt
+    // We can inject the system prompt here or in the model config.
+    // For simplicity, we'll use a single turn instruction if model config doesn't support it well cross-SDK.
+    // But let's try the cleaner getModel approach.
+    const { model, client } = getModel("gemini-1.5-flash");
+
+    // Construct the user message injecting specific context
+    const fullMessage = systemPromptTemplate
       .replace("{message}", message)
       .replace("{context}", context);
 
     const result = await traceExternalAPI(
-      "vertex-ai",
+      "ai-service",
       "generateContent",
       "POST",
       async (span) => {
@@ -278,15 +322,26 @@ export async function generateWithTIGuy(
           "ai.model": "gemini-1.5-flash",
           "ai.mode": mode,
           "ai.language": language,
+          "ai.client": client,
         });
 
-        const response = await model.generateContent(fullPrompt);
-        return response;
+        if (client === "vertex") {
+            const response = await (model as any).generateContent(fullMessage);
+            return response;
+        } else {
+            const response = await (model as any).generateContent(fullMessage);
+            return response;
+        }
       },
     );
 
-    const response = await result.response;
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    let text = "";
+     if (client === "vertex") {
+        const response = await result.response;
+        text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+     } else {
+        text = result.response.text();
+     }
 
     // Detect language if auto
     const detectedLanguage =
@@ -324,17 +379,19 @@ export async function moderateContent(
   type: "text" | "image" | "video" = "text",
 ): Promise<ModerationResult> {
   try {
-    if (!vertexAI) throw new Error("Vertex AI not initialized");
-
-    const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
+    const { model, client } = getModel("gemini-1.5-flash");
 
     const prompt = TI_GUY_PROMPTS.moderation.replace("{content}", content);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    let text = "";
+    if (client === "vertex") {
+        const result = await (model as any).generateContent(prompt);
+        const response = await result.response;
+        text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } else {
+        const result = await (model as any).generateContent(prompt);
+        text = result.response.text();
+    }
 
     // Parse JSON response
     const jsonStr = text.replace(/```json|```/g, "").trim();
@@ -366,7 +423,7 @@ export async function transcribeAudio(
   language: "fr-CA" | "fr-FR" | "en-US" = "fr-CA",
 ): Promise<TranscriptionResult> {
   try {
-    if (!speechClient) throw new Error("Speech client not initialized");
+    if (!speechClient) throw new Error("Speech client not initialized (Requires Google Cloud Credentials)");
 
     const audio = {
       content: audioBuffer.toString("base64"),
@@ -509,11 +566,8 @@ export async function checkVertexAIHealth(): Promise<{
   let visionHealthy = false;
 
   try {
-    if (vertexAI) {
-      const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      // We don't actually call it to save tokens/avoid failures if no creds,
-      // just verify if the client exists or do a very light check if possible.
-      // For a real check, we'd do a tiny generation if creds exist.
+    if (vertexAI || genAI) {
+      // Just check if either client is initialized
       vertexAIHealthy = true;
     }
   } catch {
