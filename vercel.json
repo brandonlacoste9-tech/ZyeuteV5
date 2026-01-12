@@ -1,17 +1,14 @@
 {
-  "version": 2,
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://zyeute-api.railway.app/api/$1"
-    },
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self' https://vuanulvyqkfefmjcikfk.supabase.co https://*.pexels.com https://images.pexels.com https://videos.pexels.com https://*.stripe.com https://zyeutev5-production.up.railway.app; img-src 'self' data: https: blob:; media-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; connect-src 'self' https: wss: https://zyeutev5-production.up.railway.app; style-src 'self' 'unsafe-inline';"
+        }
+      ]
     }
-  ],
-  "env": {
-    "VITE_HIVE_AUTO_DETECT": "true"
-  }
+  ]
 }
