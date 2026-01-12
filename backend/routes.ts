@@ -138,7 +138,8 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
         });
       }
 
-      req.userId = userId;
+      (req as any).userId = payload.sub as string;
+      (req as any).userRole = payload.role as string;
       return next();
     }
   }
