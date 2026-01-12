@@ -10,6 +10,7 @@ import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
+import { useSettingsPreferences } from "@/hooks/useSettingsPreferences";
 import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
@@ -50,6 +51,15 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const videoRef = useRef<HTMLDivElement>(null);
     const { tap, impact } = useHaptics();
     const navigate = useNavigate();
+    const { preferences } = useSettingsPreferences();
+
+    // Audio Control State (TikTok-style tap to unmute)
+    const [isMuted, setIsMuted] = useState(true);
+    const [showMuteIndicator, setShowMuteIndicator] = useState(false);
+    const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Get swipe gesture setting
+    const swipeGesturesEnabled = preferences.interactions.swipeGestures;
 
     // Horizontal swipe gesture tracking
     const touchStartX = useRef<number>(0);
@@ -63,7 +73,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Real-time Presence & Engagement
     const { viewerCount, engagement } = usePresence(post.id);
     const [isLiked, setIsLiked] = useState(false);
-    const [showHeartAnimation, setShowHeartAnimation] = useState(false);
+    const [showFireAnimation, setShowFireAnimation] = useState(false);
 
     // Derive counts from props OR real-time updates
     const fireCount = engagement.fireCount ?? post.fire_count;
@@ -93,9 +103,35 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       e.stopPropagation();
       e.preventDefault();
       handleFire();
-      setShowHeartAnimation(true);
-      setTimeout(() => setShowHeartAnimation(false), 800);
+      setShowFireAnimation(true);
+      setTimeout(() => setShowFireAnimation(false), 800);
       impact();
+    };
+
+    // Single tap to toggle mute (TikTok-style)
+    const handleSingleTap = (e: React.MouseEvent | React.TouchEvent) => {
+      // Don't interfere with UI button clicks
+      const target = e.target as HTMLElement;
+      if (
+        target.closest("button") ||
+        target.closest("a") ||
+        target.closest("[role='button']")
+      ) {
+        return;
+      }
+
+      // Clear any pending double-tap timeout
+      if (tapTimeoutRef.current) {
+        clearTimeout(tapTimeoutRef.current);
+      }
+
+      // Debounce to avoid conflicts with double-tap
+      tapTimeoutRef.current = setTimeout(() => {
+        setIsMuted(!isMuted);
+        setShowMuteIndicator(true);
+        tap();
+        setTimeout(() => setShowMuteIndicator(false), 1000);
+      }, 200); // 200ms debounce
     };
 
     const handleComment = () => {
@@ -128,53 +164,95 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
       // Only trigger if horizontal swipe is more dominant than vertical
       if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > minSwipeDistance) {
-        if (deltaX > 0) {
-          // Swipe Left: Regenerate/Modify
-          setSwipeDirection("left");
-          if (navigator.vibrate) {
-            navigator.vibrate([50, 30, 50]); // Hammer pulse
-          }
-
-          try {
-            const response = await fetch(`/api/ai/regenerate-video`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ postId: post.id }),
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              // Video will be updated via real-time subscription or page refresh
-              console.log("Video regenerated:", data.videoUrl);
+        if (swipeGesturesEnabled) {
+          // NEW MODE: Swipe Gestures (TikTok-style engagement)
+          if (deltaX > 0) {
+            // Swipe Left: Not Interested (hide similar content)
+            setSwipeDirection("left");
+            if (navigator.vibrate) {
+              navigator.vibrate([30, 20, 30]); // Quick feedback
             }
-          } catch (error) {
-            console.error("Failed to regenerate video:", error);
-          }
 
-          setTimeout(() => setSwipeDirection(null), 500);
+            try {
+              const response = await fetch(
+                `/api/posts/${post.id}/not-interested`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                },
+              );
+
+              if (response.ok) {
+                console.log("Marked as not interested");
+              }
+            } catch (error) {
+              console.error("Failed to mark as not interested:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          } else {
+            // Swipe Right: Fire/Like (quick engagement)
+            setSwipeDirection("right");
+            if (navigator.vibrate) {
+              navigator.vibrate([20, 10, 20]); // Fire vibration
+            }
+
+            // Trigger fire action
+            handleFire();
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          }
         } else {
-          // Swipe Right: Save/Favorite (Vault)
-          setSwipeDirection("right");
-          if (navigator.vibrate) {
-            navigator.vibrate([20, 10, 20]); // Vault click
-          }
-
-          try {
-            const response = await fetch(`/api/posts/${post.id}/vault`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-            });
-
-            if (response.ok) {
-              console.log("Post vaulted");
+          // LEGACY MODE: Advanced features (Regenerate/Vault)
+          if (deltaX > 0) {
+            // Swipe Left: Regenerate/Modify
+            setSwipeDirection("left");
+            if (navigator.vibrate) {
+              navigator.vibrate([50, 30, 50]); // Hammer pulse
             }
-          } catch (error) {
-            console.error("Failed to vault post:", error);
-          }
 
-          setTimeout(() => setSwipeDirection(null), 500);
+            try {
+              const response = await fetch(`/api/ai/regenerate-video`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ postId: post.id }),
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                // Video will be updated via real-time subscription or page refresh
+                console.log("Video regenerated:", data.videoUrl);
+              }
+            } catch (error) {
+              console.error("Failed to regenerate video:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          } else {
+            // Swipe Right: Save/Favorite (Vault)
+            setSwipeDirection("right");
+            if (navigator.vibrate) {
+              navigator.vibrate([20, 10, 20]); // Vault click
+            }
+
+            try {
+              const response = await fetch(`/api/posts/${post.id}/vault`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+              });
+
+              if (response.ok) {
+                console.log("Post vaulted");
+              }
+            } catch (error) {
+              console.error("Failed to vault post:", error);
+            }
+
+            setTimeout(() => setSwipeDirection(null), 500);
+          }
         }
       }
 
@@ -182,6 +260,15 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       touchStartX.current = 0;
       touchEndX.current = 0;
     };
+
+    // Cleanup tap timeout on unmount
+    useEffect(() => {
+      return () => {
+        if (tapTimeoutRef.current) {
+          clearTimeout(tapTimeoutRef.current);
+        }
+      };
+    }, []);
 
     // Deep Enhance: Select best video source
     const isVideo = post.type === "video";
@@ -233,6 +320,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       <div
         ref={videoRef}
         className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none"
+        onClick={handleSingleTap}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -246,7 +334,23 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             }`}
           >
             <div className="text-center">
-              {swipeDirection === "left" ? (
+              {swipeGesturesEnabled ? (
+                // NEW MODE: Swipe Gestures
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🚫</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Pas intéressé
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔥</div>
+                    <p className="text-orange-400 font-bold text-lg">Feu!</p>
+                  </>
+                )
+              ) : // LEGACY MODE: Advanced Features
+              swipeDirection === "left" ? (
                 <>
                   <div className="text-6xl mb-2">🔨</div>
                   <p className="text-gold-400 font-bold text-lg">
@@ -269,7 +373,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               src={videoSrc}
               poster={post.thumbnail_url || post.media_url}
               autoPlay={isActive}
-              muted={!isActive}
+              muted={isMuted}
               loop
               className="w-full h-full object-cover"
               style={filterStyle}
@@ -290,16 +394,44 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           )}
         </div>
 
-        {/* Double Tap Heart Animation */}
-        {showHeartAnimation && (
+        {/* Double Tap Fire Animation */}
+        {showFireAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 animate-heart-pump">
-            <svg
-              className="w-24 h-24 text-orange-500 drop-shadow-[0_0_15px_rgba(255,100,0,0.8)]"
-              fill="currentColor"
-              viewBox="0 0 24 24"
+            <div className="text-[120px] drop-shadow-[0_0_30px_rgba(255,100,0,0.9)] animate-pulse">
+              🔥
+            </div>
+          </div>
+        )}
+
+        {/* Mute/Unmute Indicator (TikTok-style, bottom-right) */}
+        {post.type === "video" && (
+          <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
+            {/* Persistent mute icon */}
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                showMuteIndicator
+                  ? "bg-white/90 scale-125"
+                  : "bg-black/40 backdrop-blur-sm"
+              }`}
             >
-              <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-            </svg>
+              {isMuted ? (
+                <svg
+                  className={`w-5 h-5 ${showMuteIndicator ? "text-black" : "text-white"}`}
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
+                </svg>
+              ) : (
+                <svg
+                  className={`w-5 h-5 ${showMuteIndicator ? "text-black" : "text-white"}`}
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                </svg>
+              )}
+            </div>
           </div>
         )}
 
@@ -428,29 +560,18 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 handleLikeToggle();
               }}
               className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked
-                  ? "text-orange-500 scale-110 drop-shadow-[0_0_10px_rgba(255,100,0,0.6)]"
-                  : "text-white hover:text-gold-400"
+                isLiked ? "scale-110" : ""
               }`}
             >
-              <svg
-                className="w-8 h-8"
-                fill={isLiked ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
+              <div
+                className={`text-4xl transition-all ${
+                  isLiked
+                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                    : "grayscale opacity-80"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"
-                />
-              </svg>
+                🔥
+              </div>
               <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
                 {fireCount}
               </span>
