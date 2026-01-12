@@ -21,9 +21,36 @@ Should contain: `media-src 'self' https://videos.pexels.com https://images.pexel
 
 ---
 
-### 2. ✅ Verify Database Schema (Supabase SQL Editor)
+### 2. ✅ Run Critical Database Migration (MUST DO FIRST!)
 
-Run these queries in **Supabase Dashboard → SQL Editor**:
+**⚠️ CRITICAL:** The `content` column is missing from your database but is REQUIRED by the schema. This will cause 500 errors when creating posts.
+
+**Step 1: Run Migration**
+
+1. Go to **Railway Dashboard → PostgreSQL → Query** tab
+   - OR **Supabase Dashboard → SQL Editor**
+2. Copy/paste the entire contents of `migrations/0013_add_missing_posts_columns.sql`
+3. Click **"Run"**
+4. Wait for success message
+
+**Step 2: Verify Migration Worked**
+Run this verification query:
+
+```sql
+-- Verify critical columns exist
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'publications'
+AND column_name IN ('content', 'hive_id', 'mux_asset_id');
+
+-- Expected: Should return 3 rows
+-- If missing, migration failed - check error logs
+```
+
+**Step 3: Run Diagnostic Script (Optional)**
+For a full health check, run `scripts/check-database-columns.sql` in your SQL editor.
+
+### 3. ✅ Verify Database Schema (Additional Checks)
 
 ```sql
 -- 1. Confirm English columns exist on publications table
@@ -52,7 +79,7 @@ SELECT COUNT(*) as user_count FROM users;
 
 ---
 
-### 3. ✅ Sync System Clock (Critical for Auth)
+### 4. ✅ Sync System Clock (Critical for Auth)
 
 **Windows:**
 
@@ -70,7 +97,7 @@ SELECT COUNT(*) as user_count FROM users;
 
 ---
 
-### 4. ✅ Clear Browser Cache (Clean Slate)
+### 5. ✅ Clear Browser Cache (Clean Slate - INCLUDING SERVICE WORKER!)
 
 **Chrome/Edge:**
 
@@ -93,7 +120,7 @@ SELECT COUNT(*) as user_count FROM users;
 
 ---
 
-### 5. ✅ Test Login Flow
+### 6. ✅ Test Login Flow
 
 **Steps:**
 
@@ -148,8 +175,10 @@ curl "https://zyeutev5-production.up.railway.app/api/pexels/curated?per_page=1&p
 
 ## 📋 Final Pre-Meeting Checklist
 
+- [ ] **CRITICAL: Database migration run** (`migrations/0013_add_missing_posts_columns.sql`)
+- [ ] **CRITICAL: Migration verified** (content, hive_id, mux_asset_id columns exist)
 - [ ] System clock synced (Windows: Sync now, Mac: Toggle auto-sync)
-- [ ] Browser cache cleared (Application tab → Clear site data)
+- [ ] Browser cache cleared **WITH service worker unregister** (Application → Service Workers → Unregister)
 - [ ] CSP headers verified (curl command shows videos.pexels.com)
 - [ ] Database schema verified (SQL queries return expected results)
 - [ ] Test login successful
