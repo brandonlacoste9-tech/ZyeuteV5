@@ -332,9 +332,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Swipe Direction Indicator */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
-              swipeDirection === "left" ? "animate-pulse" : ""
-            }`}
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
+              }`}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -353,19 +352,19 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   </>
                 )
               ) : // LEGACY MODE: Advanced Features
-              swipeDirection === "left" ? (
-                <>
-                  <div className="text-6xl mb-2">🔨</div>
-                  <p className="text-gold-400 font-bold text-lg">
-                    Régénération...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-6xl mb-2">🔒</div>
-                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                </>
-              )}
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🔨</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Régénération...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔒</div>
+                    <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                  </>
+                )}
             </div>
           </div>
         )}
@@ -383,6 +382,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               priority={priority}
               preload={isActive ? "auto" : preload}
               videoSource={videoSource}
+              muxPlaybackId={post.muxPlaybackId || post.mux_playback_id}
               debug={debug}
             />
           ) : (
@@ -411,11 +411,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
             {/* Persistent mute icon */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                showMuteIndicator
-                  ? "bg-white/90 scale-125"
-                  : "bg-black/40 backdrop-blur-sm"
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${showMuteIndicator
+                ? "bg-white/90 scale-125"
+                : "bg-black/40 backdrop-blur-sm"
+                }`}
             >
               {isMuted ? (
                 <svg
@@ -562,16 +561,14 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked ? "scale-110" : ""
-              }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
+                }`}
             >
               <div
-                className={`text-4xl transition-all ${
-                  isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                    : "grayscale opacity-80"
-                }`}
+                className={`text-4xl transition-all ${isLiked
+                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                  : "grayscale opacity-80"
+                  }`}
               >
                 🔥
               </div>

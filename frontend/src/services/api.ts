@@ -12,10 +12,9 @@ import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
 // [CONFIG] Live Railway Backend URL
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? ""
-    : "https://zyeutev5-production.up.railway.app";
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? '' 
+  : 'https://zyeutev5-production.up.railway.app';
 
 // Base API call helper
 async function apiCall<T>(
@@ -39,7 +38,7 @@ async function apiCall<T>(
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-
+    
     const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
     const response = await fetch(apiUrl, {
@@ -234,12 +233,12 @@ export async function createMuxUpload(): Promise<{
   uploadUrl: string;
   uploadId: string;
 } | null> {
-  const { data, error } = await apiCall<{
-    uploadUrl: string;
-    uploadId: string;
-  }>("/mux/create-upload", {
-    method: "POST",
-  });
+  const { data, error } = await apiCall<{ uploadUrl: string; uploadId: string }>(
+    "/mux/create-upload",
+    {
+      method: "POST",
+    },
+  );
 
   if (error || !data) return null;
   return data;
@@ -456,114 +455,21 @@ export async function generateImage(
 
   if (error || !data) return null;
 
-  // Validate with Zod
+// Validate with Zod
   const result = AIImageResponseSchema.safeParse(data);
   return result.success ? result.data : null;
 }
 
 export async function generateVideo(
+  prompt: string,
   imageUrl: string,
-  prompt?: string,
 ): Promise<{ videoUrl: string; prompt: string } | null> {
   const { data, error } = await apiCall<{ videoUrl: string; prompt: string }>(
     "/ai/generate-video",
     {
       method: "POST",
-      body: JSON.stringify({
-        imageUrl,
-        prompt: prompt || "Animate this image with natural movement",
-      }),
+      body: JSON.stringify({ prompt, imageUrl }),
     },
-  );
-
-  if (error || !data) return null;
-  return data;
-}
-
-// ============ PEXELS FUNCTIONS ============
-
-export interface PexelsPhoto {
-  id: number;
-  width: number;
-  height: number;
-  url: string;
-  photographer: string;
-  photographer_url: string;
-  photographer_id: number;
-  avg_color: string;
-  src: {
-    original: string;
-    large2x: string;
-    large: string;
-    medium: string;
-    small: string;
-    portrait: string;
-    landscape: string;
-    tiny: string;
-  };
-  liked: boolean;
-  alt?: string;
-}
-
-export interface PexelsVideo {
-  id: number;
-  width: number;
-  height: number;
-  duration: number;
-  image: string;
-  video_files: Array<{
-    id: number;
-    quality: string;
-    file_type: string;
-    width: number;
-    height: number;
-    link: string;
-  }>;
-  video_pictures: Array<{
-    id: number;
-    picture: string;
-    nr: number;
-  }>;
-}
-
-export interface PexelsCollectionResponse {
-  id: string;
-  title: string;
-  description: string;
-  private: boolean;
-  media_count: number;
-  photos_count: number;
-  videos_count: number;
-  photos?: PexelsPhoto[];
-  videos?: PexelsVideo[];
-}
-
-export interface PexelsCuratedResponse {
-  page: number;
-  per_page: number;
-  videos: PexelsVideo[];
-  total_results: number;
-  url?: string;
-}
-
-export async function getPexelsCurated(
-  perPage: number = 15,
-  page: number = 1,
-): Promise<PexelsCuratedResponse | null> {
-  const { data, error } = await apiCall<PexelsCuratedResponse>(
-    `/pexels/curated?per_page=${perPage}&page=${page}`,
-  );
-
-  if (error || !data) return null;
-  return data;
-}
-
-export async function getPexelsCollection(
-  collectionId: string,
-  perPage: number = 30,
-): Promise<PexelsCollectionResponse | null> {
-  const { data, error } = await apiCall<PexelsCollectionResponse>(
-    `/pexels/collection?id=${collectionId}&per_page=${perPage}`,
   );
 
   if (error || !data) return null;
@@ -706,4 +612,85 @@ function mapBackendStory(story: Record<string, any>): Story {
     is_viewed: story.isViewed || story.is_viewed || false,
     user: story.user ? mapBackendUser(story.user) : undefined,
   } as Story;
+}
+
+// ============ PEXELS FUNCTIONS ============
+
+export interface PexelsVideoFile {
+  id: number;
+  quality: string;
+  file_type: string;
+  width: number;
+  height: number;
+  link: string;
+}
+
+export interface PexelsVideo {
+  id: number;
+  width: number;
+  height: number;
+  url: string;
+  image: string;
+  duration: number;
+  user: {
+    id: number;
+    name: string;
+    url: string;
+  };
+  video_files: PexelsVideoFile[];
+}
+
+export interface PexelsPhoto {
+  id: number;
+  width: number;
+  height: number;
+  url: string;
+  photographer: string;
+  photographer_url: string;
+  photographer_id: number;
+  avg_color: string;
+  src: {
+    original: string;
+    large2x: string;
+    large: string;
+    medium: string;
+    small: string;
+    portrait: string;
+    landscape: string;
+    tiny: string;
+  };
+  liked: boolean;
+  alt: string;
+}
+
+export interface PexelsResponse {
+  page: number;
+  per_page: number;
+  total_results: number;
+  videos?: PexelsVideo[];
+  photos?: PexelsPhoto[];
+  url?: string;
+}
+
+export async function getPexelsCurated(
+  limit: number = 10,
+  page: number = 1,
+): Promise<PexelsResponse | null> {
+  const { data, error } = await apiCall<PexelsResponse>(
+    `/pexels/curated?per_page=${limit}&page=${page}`,
+  );
+  if (error || !data) return null;
+  return data;
+}
+
+export async function getPexelsCollection(
+  id: string,
+  limit: number = 10,
+  page: number = 1,
+): Promise<PexelsResponse | null> {
+  const { data, error } = await apiCall<PexelsResponse>(
+    `/pexels/collection/${id}?per_page=${limit}&page=${page}`,
+  );
+  if (error || !data) return null;
+  return data;
 }

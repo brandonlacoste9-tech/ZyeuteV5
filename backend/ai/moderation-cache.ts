@@ -13,12 +13,23 @@ const redisTls = process.env.REDIS_TLS === "true";
 let redis: Redis | null = null;
 
 if (redisHost) {
+// Initialize Redis client only if REDIS_HOST is set (graceful degradation)
+const redisHost = process.env.REDIS_HOST;
+const redisPort = parseInt(process.env.REDIS_PORT || "6379");
+const redisPassword = process.env.REDIS_PASSWORD;
+const redisTLS = process.env.REDIS_TLS === "true";
+
+let redis: Redis | null = null;
+
+if (redisHost) {
+  // Redis is configured - initialize connection
   redis = new Redis({
     host: redisHost,
     port: redisPort,
     password: redisPassword,
     username: redisUsername,
     tls: redisTls ? {} : undefined, // Essential for managed Redis (Upstash/Railway)
+    tls: redisTLS ? {} : undefined, // Support TLS for managed Redis (Railway/Upstash)
     // Ensure we don't crash if Redis is unavailable
     retryStrategy: (times) => {
       if (times > 3) {
@@ -36,6 +47,18 @@ if (redisHost) {
   logger.info("[ModerationCache] Redis connection initialized");
 } else {
   logger.warn("[ModerationCache] Redis disabled (REDIS_HOST not set)");
+
+  // [CRITICAL] Handle Redis errors to prevent unhandled exception crash
+  redis.on("error", (err) => {
+    logger.warn(`[ModerationCache] Redis Error: ${err.message}`);
+  });
+
+  redis.on("connect", () => {
+    logger.info(`[ModerationCache] Redis connection initialized`);
+  });
+} else {
+  // Redis not configured - graceful degradation
+  logger.info(`[ModerationCache] Redis disabled (REDIS_HOST not set)`);
 }
 
 /**
@@ -44,6 +67,9 @@ if (redisHost) {
 export async function checkModerationCache(content: string) {
   // Skip cache if Redis is not available
   if (!redis) return null;
+  if (!redis) {
+    return null;
+  }
 
   try {
     const hash = crypto.createHash("sha256").update(content).digest("hex");
@@ -67,6 +93,9 @@ export async function checkModerationCache(content: string) {
 export async function setModerationCache(content: string, result: any) {
   // Skip cache if Redis is not available
   if (!redis) return;
+  if (!redis) {
+    return;
+  }
 
   try {
     const hash = crypto.createHash("sha256").update(content).digest("hex");

@@ -1,12 +1,19 @@
 {
-    "window.autoDetectColorScheme": true,
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        "./playwright-report",
-        "-p",
-        "*test.py"
-    ],
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#FFD700",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#15202b",
+        "activityBarBadge.foreground": "#FFD700",
+        "titleBar.activeBackground": "#FFD700",
+        "titleBar.activeForeground": "#15202b",
+        "titleBar.inactiveBackground": "#FFD70099",
+        "titleBar.inactiveForeground": "#15202b99",
+        "statusBar.background": "#FFD700",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#E6C200",
+        "statusBarItem.remoteBackground": "#FFD700",
+        "statusBarItem.remoteForeground": "#15202b"
+    },
+    "peacock.color": "#FFD700"
 }
