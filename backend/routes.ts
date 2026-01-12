@@ -46,6 +46,7 @@ import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
 import { muxRouter } from "./routes/mux.js";
 import { presenceRouter } from "./routes/presence.js";
+import pexelsRoutes from "./routes/pexels.js";
 // Import tracing utilities
 import {
   traced,
@@ -193,6 +194,8 @@ export async function registerRoutes(
     }
     return generalRateLimiter(req, res, next);
   });
+
+  app.use("/api/pexels", pexelsRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);
@@ -1515,100 +1518,6 @@ export async function registerRoutes(
       }
     },
   );
-
-  // ============ PEXELS ROUTES ============
-
-  // Get Pexels curated photos (more reliable than collections)
-  app.get("/api/pexels/curated", optionalAuth, async (req, res) => {
-    try {
-      const { per_page = "15", page = "1" } = req.query;
-
-      if (!process.env.PEXELS_API_KEY) {
-        return res.status(500).json({ error: "Pexels API key not configured" });
-      }
-
-      const response = await fetch(
-        `https://api.pexels.com/v1/curated?per_page=${per_page}&page=${page}`,
-        {
-          headers: {
-            Authorization: process.env.PEXELS_API_KEY,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        console.error("Pexels API error:", response.status, errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: errorText };
-        }
-        return res.status(response.status).json({
-          error: "Failed to fetch Pexels curated photos",
-          details: errorData,
-          statusCode: response.status,
-        });
-      }
-
-      const data = await response.json();
-      res.json(data);
-    } catch (error: any) {
-      console.error("Pexels curated error:", error);
-      res.status(500).json({
-        error: error.message || "Failed to fetch Pexels curated photos",
-      });
-    }
-  });
-
-  // Get Pexels collection by ID (for specific collections)
-  app.get("/api/pexels/collection", optionalAuth, async (req, res) => {
-    try {
-      const { id, per_page = "30" } = req.query;
-
-      if (!id || typeof id !== "string") {
-        return res.status(400).json({ error: "Collection ID is required" });
-      }
-
-      if (!process.env.PEXELS_API_KEY) {
-        return res.status(500).json({ error: "Pexels API key not configured" });
-      }
-
-      const response = await fetch(
-        `https://api.pexels.com/v1/collections/${id}?per_page=${per_page}`,
-        {
-          headers: {
-            Authorization: process.env.PEXELS_API_KEY,
-          },
-        },
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "Unknown error");
-        console.error("Pexels API error:", response.status, errorText);
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: errorText };
-        }
-        return res.status(response.status).json({
-          error: "Failed to fetch Pexels collection",
-          details: errorData,
-          statusCode: response.status,
-        });
-      }
-
-      const data = await response.json();
-      res.json(data);
-    } catch (error: any) {
-      console.error("Pexels collection error:", error);
-      res
-        .status(500)
-        .json({ error: error.message || "Failed to fetch Pexels collection" });
-    }
-  });
 
   // ============ VAULT & REGENERATE ROUTES ============
 
