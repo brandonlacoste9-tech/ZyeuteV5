@@ -46,6 +46,7 @@ import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
 import { muxRouter } from "./routes/mux.js";
 import { presenceRouter } from "./routes/presence.js";
+import pexelsRoutes from "./routes/pexels.js";
 // Import tracing utilities
 import {
   traced,
@@ -185,9 +186,16 @@ export async function registerRoutes(
   app.use("/api/admin", requireAuth, adminRoutes);
 
   // Apply general rate limiting to all other API routes
+  // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
+  app.use("/api", (req, res, next) => {
+    // Skip rate limiting for Pexels endpoints (they're read-only external data fetches)
+    if (req.path.startsWith("/pexels")) {
+      return next();
+    }
+    return generalRateLimiter(req, res, next);
+  });
 
-  // Apply general rate limiting to all other API routes
-  app.use("/api", generalRateLimiter);
+  app.use("/api/pexels", pexelsRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);
@@ -265,7 +273,9 @@ export async function registerRoutes(
   // Get user by username
   app.get("/api/users/:username", optionalAuth, async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(req.params.username as string);
+      const user = await storage.getUserByUsername(
+        req.params.username as string,
+      );
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -534,20 +544,28 @@ export async function registerRoutes(
       // Check if current user has fired this post
       let isFired = false;
       if (req.userId) {
-        isFired = await storage.hasUserFiredPost((req.params.id as string), req.userId);
+        isFired = await storage.hasUserFiredPost(
+          req.params.id as string,
+          req.userId,
+        );
       }
 
       // Handle ephemeral posts (Fantasma Mode)
       let viewCountIncremented = false;
       if (req.userId && post.isEphemeral) {
         // Increment view count for ephemeral posts
-        const newViewCount = await storage.incrementPostViews(req.params.id as string);
+        const newViewCount = await storage.incrementPostViews(
+          req.params.id as string,
+        );
         viewCountIncremented = true;
 
         // Check if post should be deleted (view count exceeded)
         if (post.maxViews && newViewCount >= post.maxViews) {
           // Mark post as burned (deleted due to ephemeral expiration)
-          await storage.markPostBurned((req.params.id as string), "view_limit_exceeded");
+          await storage.markPostBurned(
+            req.params.id as string,
+            "view_limit_exceeded",
+          );
           // Note: Post content deletion will be handled by a cleanup job
         }
       } else if (!post.isEphemeral) {
@@ -578,7 +596,9 @@ export async function registerRoutes(
   // Get user's posts
   app.get("/api/users/:username/posts", async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(req.params.username as string);
+      const user = await storage.getUserByUsername(
+        req.params.username as string,
+      );
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -704,7 +724,7 @@ export async function registerRoutes(
   app.post("/api/posts/:id/fire", requireAuth, async (req, res) => {
     try {
       const result = await storage.togglePostReaction(
-        (req.params.id as string),
+        req.params.id as string,
         req.userId!,
       );
       res.json(result);
@@ -731,7 +751,7 @@ export async function registerRoutes(
   app.post("/api/posts/:id/comments", requireAuth, async (req, res) => {
     try {
       const parsed = insertCommentSchema.safeParse({
-        postId: (req.params.id as string),
+        postId: req.params.id as string,
         userId: req.userId,
         content: req.body.content,
       });
@@ -757,7 +777,7 @@ export async function registerRoutes(
   // Delete comment
   app.delete("/api/comments/:id", requireAuth, async (req, res) => {
     try {
-      const success = await storage.deleteComment((req.params.id as string));
+      const success = await storage.deleteComment(req.params.id as string);
       if (!success) {
         return res.status(404).json({ error: "Comment not found" });
       }
@@ -772,7 +792,7 @@ export async function registerRoutes(
   app.post("/api/comments/:id/fire", requireAuth, async (req, res) => {
     try {
       const result = await storage.toggleCommentReaction(
-        (req.params.id as string),
+        req.params.id as string,
         req.userId!,
       );
       res.json(result);
@@ -791,7 +811,10 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Cannot follow yourself" });
       }
 
-      const success = await storage.followUser(req.userId!, (req.params.id as string));
+      const success = await storage.followUser(
+        req.userId!,
+        req.params.id as string,
+      );
       res.json({ success, isFollowing: success });
     } catch (error) {
       console.error("Follow error:", error);
@@ -802,7 +825,10 @@ export async function registerRoutes(
   // Unfollow user
   app.delete("/api/users/:id/follow", requireAuth, async (req, res) => {
     try {
-      const success = await storage.unfollowUser(req.userId!, (req.params.id as string));
+      const success = await storage.unfollowUser(
+        req.userId!,
+        req.params.id as string,
+      );
       res.json({ success, isFollowing: false });
     } catch (error) {
       console.error("Unfollow error:", error);
@@ -813,7 +839,7 @@ export async function registerRoutes(
   // Get followers
   app.get("/api/users/:id/followers", async (req, res) => {
     try {
-      const followers = await storage.getFollowers((req.params.id as string));
+      const followers = await storage.getFollowers(req.params.id as string);
       res.json({
         followers: followers.map((f) => {
           return f;
@@ -828,7 +854,7 @@ export async function registerRoutes(
   // Get following
   app.get("/api/users/:id/following", async (req, res) => {
     try {
-      const following = await storage.getFollowing((req.params.id as string));
+      const following = await storage.getFollowing(req.params.id as string);
       res.json({
         following: following.map((f) => {
           return f;
@@ -931,7 +957,7 @@ export async function registerRoutes(
   // Mark story as viewed
   app.post("/api/stories/:id/view", requireAuth, async (req, res) => {
     try {
-      await storage.markStoryViewed((req.params.id as string), req.userId!);
+      await storage.markStoryViewed(req.params.id as string, req.userId!);
       res.json({ success: true });
     } catch (error) {
       console.error("Mark story viewed error:", error);
@@ -955,7 +981,7 @@ export async function registerRoutes(
   // Mark notification as read
   app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
     try {
-      await storage.markNotificationRead((req.params.id as string));
+      await storage.markNotificationRead(req.params.id as string);
       res.json({ success: true });
     } catch (error) {
       console.error("Mark notification read error:", error);
@@ -1286,7 +1312,9 @@ export async function registerRoutes(
 
   app.get("/api/support/tickets/:ticketId", requireAuth, async (req, res) => {
     try {
-      const ticket = await storage.getSupportTicket(req.params.ticketId as string);
+      const ticket = await storage.getSupportTicket(
+        req.params.ticketId as string,
+      );
 
       if (!ticket) {
         return res.status(404).json({ error: "Ticket not found" });
@@ -1573,7 +1601,7 @@ export async function registerRoutes(
 
       // Generate new video
       const videoResult = await generateVideo({
-        imageUrl: (post.thumbnailUrl || post.mediaUrl || undefined),
+        imageUrl: post.thumbnailUrl || post.mediaUrl || undefined,
         prompt:
           prompt || post.caption || "Animate this image with natural movement",
         duration: 5,
@@ -2108,7 +2136,7 @@ export async function registerRoutes(
   });
 
   // Re-use same logic for root path (or rely on the /api/gifts/catalog route at 1923)
-  // Actually, line 1923 already handles /api/gifts/catalog - we just need to make sure 
+  // Actually, line 1923 already handles /api/gifts/catalog - we just need to make sure
   // they are consistent or point to the same handler.
 
   // Clean up expired ephemeral posts (Fantasma Mode maintenance)
@@ -2136,7 +2164,7 @@ export async function registerRoutes(
   // Get gifts for a post
   app.get("/api/posts/:id/gifts", async (req, res) => {
     try {
-      const postId = (req.params.id as string);
+      const postId = req.params.id as string;
       const gifts = await storage.getGiftsByPost(postId);
       const count = await storage.getPostGiftCount(postId);
 
@@ -2379,7 +2407,10 @@ export async function registerRoutes(
 
   // ============ BOOTSTRAP AI / SWARM ROUTES ============
   // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
-  app.use("/api/ai", aiRoutes);
+  // [FIXED] Removed duplicate /api/ai route registration - already registered at line 201
+  // app.use("/api/ai", aiRoutes); // Already registered at line 201
+  // NOTE: /api/ai route is already registered at line 201 - duplicate removed to prevent PathError
+  // app.use("/api/ai", aiRoutes); // ❌ DUPLICATE - Commented out to prevent PathError
   app.use("/api/moderation", requireAuth, moderationRoutes);
   app.use("/api/presence", presenceRouter);
 

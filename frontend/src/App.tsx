@@ -24,8 +24,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ColonyProvider } from "@/components/providers/colony-provider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
-import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
+import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { OfflineIndicator } from "@/components/features/OfflineIndicator";
 import { FactoryThemeProvider } from "@/providers/FactoryThemeProvider";
 import { AppConfig } from "@/config/factory";
@@ -71,6 +71,7 @@ const WatchLive = lazy(() => import("@/pages/WatchLive"));
 const LiveDiscover = lazy(() => import("@/pages/LiveDiscover"));
 const AIStudio = lazy(() => import("@/pages/AIStudio"));
 const LaZyeute = lazy(() => import("@/pages/LaZyeute"));
+const PexelsGallery = lazy(() => import("@/pages/PexelsGallery"));
 const Pulse = lazy(() =>
   import("@/components/skins/SkinSelector").then((module) => ({
     default: module.SkinSelector,
@@ -172,8 +173,8 @@ function App() {
                 <ColonyProvider>
                   <RBACProvider>
                     <NavigationStateProvider>
-                      <MediaSessionProvider>
-                        <NetworkQueueProvider>
+                      <NetworkQueueProvider>
+                        <MediaSessionProvider>
                           <GlobalAuthLoader>
                             <BorderColorProvider>
                               <BrowserRouter>
@@ -252,6 +253,22 @@ function App() {
                                                     <ProtectedRoute>
                                                       <RouteErrorBoundary>
                                                         <Explore />
+                                                      </RouteErrorBoundary>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/pexels"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RouteErrorBoundary>
+                                                        <Suspense
+                                                          fallback={
+                                                            <LazyLoadFallback />
+                                                          }
+                                                        >
+                                                          <PexelsGallery />
+                                                        </Suspense>
                                                       </RouteErrorBoundary>
                                                     </ProtectedRoute>
                                                   }
@@ -682,8 +699,8 @@ function App() {
                               </BrowserRouter>
                             </BorderColorProvider>
                           </GlobalAuthLoader>
-                        </NetworkQueueProvider>
-                      </MediaSessionProvider>
+                        </MediaSessionProvider>
+                      </NetworkQueueProvider>
                     </NavigationStateProvider>
                   </RBACProvider>
                 </ColonyProvider>

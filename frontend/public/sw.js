@@ -24,9 +24,19 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - Network first strategy
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
   // Don't cache POST requests or API calls
   if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
     return;
+  }
+
+  // Don't intercept external requests (Pexels, etc.) - let browser handle them directly
+  // This avoids CSP issues with service worker fetch requests
+  if (url.origin !== self.location.origin && 
+      !url.hostname.includes('supabase.co') &&
+      !url.hostname.includes('zyeute')) {
+    return; // Let browser handle external requests directly
   }
 
   event.respondWith(

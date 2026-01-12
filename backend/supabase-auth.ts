@@ -1,8 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { traceSupabase } from "./tracer.js";
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 // FALLBACK: Prioritize Anon Key for verification as Service Role Key is reporting invalid
 const SUPABASE_KEY =
   process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;

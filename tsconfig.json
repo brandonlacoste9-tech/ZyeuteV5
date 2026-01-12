@@ -1,15 +1,6 @@
 {
-  "include": [
-    "frontend/src/**/*",
-    "shared/**/*",
-    "backend/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "build",
-    "dist",
-    "**/*.test.ts"
-  ],
+  "include": ["frontend/src/**/*", "shared/**/*", "backend/**/*"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
@@ -17,11 +8,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "strict": true,
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable"
-    ],
+    "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -36,12 +23,8 @@
       "@testing-library/jest-dom"
     ],
     "paths": {
-      "@/*": [
-        "./frontend/src/*"
-      ],
-      "@shared/*": [
-        "./shared/*"
-      ]
+      "@/*": ["./frontend/src/*"],
+      "@shared/*": ["./shared/*"]
     }
   }
 }

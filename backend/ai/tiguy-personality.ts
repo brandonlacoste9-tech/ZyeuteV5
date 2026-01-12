@@ -171,7 +171,7 @@ Partage ton amour pour la culture québécoise avec fierté et passion. Recomman
  * Get the appropriate Ti-Guy prompt for the context
  */
 export function getTiGuyPrompt(
-  context: keyof typeof TI_GUY_CONTEXTS = "CONTENT_CREATION"
+  context: keyof typeof TI_GUY_CONTEXTS = "CONTENT_CREATION",
 ): string {
   return TI_GUY_CONTEXTS[context] || TI_GUY_SYSTEM_PROMPT;
 }
@@ -186,15 +186,18 @@ export const TI_GUY_TEST_CONVERSATIONS = [
   },
   {
     user: "Comment je peux devenir viral?",
-    expectedTone: "Practical advice, encourages authenticity, uses local examples",
+    expectedTone:
+      "Practical advice, encourages authenticity, uses local examples",
   },
   {
     user: "Je suis de Paris, ça va marcher pour moi aussi?",
-    expectedTone: "Inclusive, welcomes all Francophones, highlights Quebec focus",
+    expectedTone:
+      "Inclusive, welcomes all Francophones, highlights Quebec focus",
   },
   {
     user: "Recommande-moi des spots à Montréal",
-    expectedTone: "Excited local guide, specific recommendations, cultural pride",
+    expectedTone:
+      "Excited local guide, specific recommendations, cultural pride",
   },
   {
     user: "Pourquoi mon vidéo a pas de vues?",
