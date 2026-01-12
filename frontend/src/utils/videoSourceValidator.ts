@@ -27,6 +27,22 @@ interface NavigatorWithConnection extends Navigator {
   connection?: NetworkInformation;
 }
 
+/**
+ * Safely checks if a hostname belongs to a specific domain
+ * Prevents incomplete URL substring sanitization vulnerabilities
+ */
+function isValidDomain(hostname: string, domain: string): boolean {
+  // Exact match
+  if (hostname === domain) {
+    return true;
+  }
+  // Subdomain match (must end with .domain)
+  if (hostname.endsWith(`.${domain}`)) {
+    return true;
+  }
+  return false;
+}
+
 export interface VideoSourceValidationResult {
   isValid: boolean;
   issues: string[];
@@ -70,16 +86,22 @@ export async function validateVideoSource(
     result.details.isValidUrl = true;
     result.details.domain = url.hostname;
 
-    // Check for Pexels domains
+    // Check for Pexels domains (secure subdomain validation)
     if (
-      url.hostname.includes("pexels.com") ||
-      url.hostname.includes("video-files.pexels.com")
+      isValidDomain(url.hostname, "pexels.com") ||
+      isValidDomain(url.hostname, "video-files.pexels.com") ||
+      isValidDomain(url.hostname, "videos.pexels.com") ||
+      isValidDomain(url.hostname, "images.pexels.com")
     ) {
       result.details.isPexels = true;
     }
 
-    // Check for Mux domains
-    if (url.hostname.includes("mux.com")) {
+    // Check for Mux domains (secure subdomain validation)
+    if (
+      isValidDomain(url.hostname, "mux.com") ||
+      isValidDomain(url.hostname, "stream.mux.com") ||
+      isValidDomain(url.hostname, "image.mux.com")
+    ) {
       result.details.isMux = true;
     }
   } catch (e) {
