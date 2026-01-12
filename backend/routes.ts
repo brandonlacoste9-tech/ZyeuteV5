@@ -2075,8 +2075,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get available gifts for a hive
-  app.get("/api/gifts/catalog/:hiveId?", async (req, res) => {
+  // Get available gifts for a hive (Compatibility Fix: Split optional param)
+  app.get("/api/gifts/catalog/:hiveId", async (req, res) => {
     try {
       const hiveId = req.params.hiveId || "quebec";
 
@@ -2096,6 +2096,10 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to get gift catalog" });
     }
   });
+
+  // Re-use same logic for root path (or rely on the /api/gifts/catalog route at 1923)
+  // Actually, line 1923 already handles /api/gifts/catalog - we just need to make sure 
+  // they are consistent or point to the same handler.
 
   // Clean up expired ephemeral posts (Fantasma Mode maintenance)
   app.post("/api/admin/cleanup-ephemeral", requireAuth, async (req, res) => {
