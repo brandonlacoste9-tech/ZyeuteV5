@@ -1,4 +1,3 @@
-```typescript
 /**
  * SingleImageView - Individual image view in continuous feed
  * Full-screen image with GPU-accelerated "Blurred Backdrop" effect
@@ -204,7 +203,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
         {/* User Info Overlay (Top Left) */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3">
           <Link
-            to={`/ profile / ${ user.username } `}
+            to={`/profile/${user.username}`}
             onClick={tap}
             className="relative"
           >
@@ -219,7 +218,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
           </Link>
           <div className="flex-1">
             <Link
-              to={`/ profile / ${ user.username } `}
+              to={`/profile/${user.username}`}
               onClick={tap}
               className="font-bold text-white hover:text-gold-400 transition-colors flex items-center gap-1 text-sm"
             >
@@ -265,7 +264,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
           {post.caption && (
             <div className="mb-4">
               <Link
-                to={`/ profile / ${ user.username } `}
+                to={`/profile/${user.username}`}
                 onClick={tap}
                 className="font-bold text-white hover:text-gold-400 transition-colors mr-2"
               >
@@ -284,7 +283,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               {post.hashtags.map((tag) => (
                 <Link
                   key={tag}
-                  to={`/ explore ? tag = ${ tag } `}
+                  to={`/explore?tag=${tag}`}
                   onClick={tap}
                   className="text-gold-400 hover:text-gold-300 text-xs font-medium transition-colors"
                 >
@@ -296,17 +295,17 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
           {/* Action Buttons (Right Side) */}
           <div className="absolute right-4 bottom-20 flex flex-col items-center gap-6">
-            
+
             {/* AI Generator Button */}
             <button
-               onClick={handleGenerate}
-               disabled={isGenerating}
-               className={`flex flex - col items - center gap - 1 transition - all press - scale ${ isGenerating ? 'animate-pulse opacity-80' : 'text-white hover:text-purple-400' } `}
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isGenerating ? 'animate-pulse opacity-80' : 'text-white hover:text-purple-400'}`}
             >
-               <div className={`text - 3xl filter drop - shadow - lg ${ isGenerating ? 'animate-spin' : '' } `}>✨</div>
-               <span className="font-bold text-xs font-mono text-white drop-shadow-lg uppercase">
-                  {isGenerating ? '...' : 'AI'}
-               </span>
+              <div className={`text-3xl filter drop-shadow-lg ${isGenerating ? 'animate-spin' : ''}`}>✨</div>
+              <span className="font-bold text-xs font-mono text-white drop-shadow-lg uppercase">
+                {isGenerating ? '...' : 'AI'}
+              </span>
             </button>
 
             {/* Fire Button */}
@@ -315,16 +314,14 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex - col items - center gap - 1 transition - all press - scale ${
-  isLiked ? "scale-110" : ""
-} `}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
+                }`}
             >
               <div
-                className={`text - 4xl transition - all ${
-  isLiked
-    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-    : "grayscale opacity-80"
-} `}
+                className={`text-4xl transition-all ${isLiked
+                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                    : "grayscale opacity-80"
+                  }`}
               >
                 🔥
               </div>
@@ -332,12 +329,12 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                 {fireCount}
               </span>
             </button>
+
             {/* Comment Button */}
             <button
-               onClick={(e) => {
-                 e.stopPropagation();
-                 handleComment();
-
+              onClick={(e) => {
+                e.stopPropagation();
+                handleComment();
               }}
               className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
             >
@@ -396,4 +393,3 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
     );
   },
 );
-```
