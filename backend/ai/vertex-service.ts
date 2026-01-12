@@ -33,7 +33,7 @@ if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
 }
 
 // Initialize clients inside try-catch to prevent crash if config is bad
-let vertexAI: VertexAI;
+let vertexAI: any;
 let speechClient: SpeechClient;
 let visionClient: ImageAnnotatorClient;
 

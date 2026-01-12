@@ -276,7 +276,7 @@ class ColonySwarmBridge {
           creativity: 0.35,
         },
         logs: true,
-        onQueueUpdate: (update) => {
+        onQueueUpdate: (update: any) => {
           if (update.status === "IN_PROGRESS") {
             // logger.debug(update.logs.map(l => l.message).join('\n'));
           }

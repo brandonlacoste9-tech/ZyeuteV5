@@ -13,6 +13,11 @@ const connection = {
   password: process.env.REDIS_PASSWORD,
   username: process.env.REDIS_USERNAME,
   tls: process.env.REDIS_TLS === "true" ? {} : undefined, // Essential for managed Redis (Upstash/Railway)
+  maxRetriesPerRequest: null, // Required for BullMQ
+  retryStrategy(times: number) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  },
 };
 
 // 🚨 QUEUE 1: Video Enhancement (High Priority)

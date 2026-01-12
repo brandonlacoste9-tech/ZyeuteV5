@@ -4,6 +4,7 @@ import { storage } from "../storage.js";
 import { volumePricingService } from "./volume-pricing-service.js";
 import { logger } from "../utils/logger.js";
 import { generateWithTIGuy } from "../ai/vertex-service.js";
+import { randomUUID } from "crypto";
 
 const autoGenLogger = logger.withContext("FeedAutoGenerator");
 
@@ -131,7 +132,7 @@ export class FeedAutoGenerator {
       const captionResult = await generateWithTIGuy({
         mode: "content",
         message: `Génère une caption en joual québécois pour cette vidéo: ${prompt}`,
-        context: { type: "video", theme: "quebec" },
+        context: JSON.stringify({ type: "video", theme: "quebec" }),
       });
 
       const caption =
@@ -143,6 +144,7 @@ export class FeedAutoGenerator {
       if (!systemUserId) {
         // Create a system user for auto-generated content
         const systemUser = await storage.createUser({
+          id: randomUUID(),
           username: "zyeute_ai",
           email: "ai@zyeute.com",
           displayName: "Zyeuté AI",
@@ -162,12 +164,13 @@ export class FeedAutoGenerator {
         thumbnailUrl: imageResult.imageUrl,
         type: "video",
         caption: caption,
+        content: caption, // Ensure required content field is populated
         visibility: "public",
         aiGenerated: true,
         aspectRatio: "9:16",
         duration: 5,
         hiveId: "quebec",
-        processingStatus: "ready",
+        processingStatus: "completed",
       } as any);
 
       // 8. Track cost

@@ -977,7 +977,7 @@ export class DatabaseStorage implements IStorage {
 
   async getModerationLogsByUser(userId: string): Promise<any[]> {
     return traceDatabase("SELECT", "moderation_logs", async (span) => {
-      return db
+      return await db
         .select()
         .from(moderationLogs)
         .where(eq(moderationLogs.userId, userId))
@@ -1234,7 +1234,7 @@ export class DatabaseStorage implements IStorage {
 
   async getAIGenerationCosts(filters?: { startDate?: Date; endDate?: Date }) {
     return traceDatabase("SELECT", "ai_generation_costs", async () => {
-      let query = db.select().from(aiGenerationCosts);
+      let query: any = db.select().from(aiGenerationCosts);
 
       const conditions = [];
       if (filters?.startDate) {
@@ -1256,7 +1256,7 @@ export class DatabaseStorage implements IStorage {
     where?: Record<string, any>;
   }) {
     return traceDatabase("SELECT", "post_count", async () => {
-      let query = db.select({ count: sql<number>`count(*)` }).from(posts);
+      let query: any = db.select({ count: sql<number>`count(*)` }).from(posts);
 
       const conditions = [];
       if (filters?.startDate) {

@@ -1,5 +1,14 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+      userRole?: string;
+    }
+  }
+}
 import rateLimit from "express-rate-limit";
 import { sql } from "drizzle-orm";
 import { storage } from "./storage.js";
@@ -138,8 +147,9 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
         });
       }
 
-      (req as any).userId = payload.sub as string;
-      (req as any).userRole = payload.role as string;
+      (req as any).userId = userId;
+      // We don't have role in token currently, default to citoyen or fetch from user
+      (req as any).userRole = user?.role || "citoyen";
       return next();
     }
   }
@@ -154,7 +164,7 @@ async function optionalAuth(req: Request, res: Response, next: NextFunction) {
     const userId = await verifyAuthToken(token);
 
     if (userId) {
-      req.userId = userId;
+      (req as any).userId = userId;
     }
   }
   next();
@@ -255,7 +265,7 @@ export async function registerRoutes(
   // Get user by username
   app.get("/api/users/:username", optionalAuth, async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(req.params.username);
+      const user = await storage.getUserByUsername(req.params.username as string);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -502,7 +512,7 @@ export async function registerRoutes(
         : undefined;
 
       const posts = await storage.getRegionalTrendingPosts(
-        req.params.regionId,
+        req.params.regionId as string,
         limit,
         before,
       );
@@ -516,7 +526,7 @@ export async function registerRoutes(
   // Get single post
   app.get("/api/posts/:id", optionalAuth, async (req, res) => {
     try {
-      const post = await storage.getPost(req.params.id);
+      const post = await storage.getPost(req.params.id as string);
       if (!post) {
         return res.status(404).json({ error: "Post not found" });
       }
@@ -524,25 +534,25 @@ export async function registerRoutes(
       // Check if current user has fired this post
       let isFired = false;
       if (req.userId) {
-        isFired = await storage.hasUserFiredPost(req.params.id, req.userId);
+        isFired = await storage.hasUserFiredPost((req.params.id as string), req.userId);
       }
 
       // Handle ephemeral posts (Fantasma Mode)
       let viewCountIncremented = false;
       if (req.userId && post.isEphemeral) {
         // Increment view count for ephemeral posts
-        const newViewCount = await storage.incrementPostViews(req.params.id);
+        const newViewCount = await storage.incrementPostViews(req.params.id as string);
         viewCountIncremented = true;
 
         // Check if post should be deleted (view count exceeded)
         if (post.maxViews && newViewCount >= post.maxViews) {
           // Mark post as burned (deleted due to ephemeral expiration)
-          await storage.markPostBurned(req.params.id, "view_limit_exceeded");
+          await storage.markPostBurned((req.params.id as string), "view_limit_exceeded");
           // Note: Post content deletion will be handled by a cleanup job
         }
       } else if (!post.isEphemeral) {
         // Only increment views for non-ephemeral posts
-        await storage.incrementPostViews(req.params.id);
+        await storage.incrementPostViews(req.params.id as string);
       }
 
       res.json({
@@ -568,7 +578,7 @@ export async function registerRoutes(
   // Get user's posts
   app.get("/api/users/:username/posts", async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(req.params.username);
+      const user = await storage.getUserByUsername(req.params.username as string);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -600,7 +610,7 @@ export async function registerRoutes(
       });
 
       if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.errors[0].message });
+        return res.status(400).json({ error: parsed.error.issues[0].message });
       }
 
       // [PHASE 9] Synchronous AI Moderation
@@ -672,16 +682,15 @@ export async function registerRoutes(
   // Delete post
   app.delete("/api/posts/:id", requireAuth, async (req, res) => {
     try {
-      const post = await storage.getPost(req.params.id);
+      const post = await storage.getPost(req.params.id as string);
       if (!post) {
         return res.status(404).json({ error: "Post not found" });
       }
-
       if (post.userId !== req.userId) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      await storage.deletePost(req.params.id);
+      await storage.deletePost(req.params.id as string);
       res.json({ success: true });
     } catch (error) {
       console.error("Delete post error:", error);
@@ -695,7 +704,7 @@ export async function registerRoutes(
   app.post("/api/posts/:id/fire", requireAuth, async (req, res) => {
     try {
       const result = await storage.togglePostReaction(
-        req.params.id,
+        (req.params.id as string),
         req.userId!,
       );
       res.json(result);
@@ -710,7 +719,7 @@ export async function registerRoutes(
   // Get post comments
   app.get("/api/posts/:id/comments", async (req, res) => {
     try {
-      const comments = await storage.getPostComments(req.params.id);
+      const comments = await storage.getPostComments(req.params.id as string);
       res.json({ comments });
     } catch (error) {
       console.error("Get comments error:", error);
@@ -722,13 +731,13 @@ export async function registerRoutes(
   app.post("/api/posts/:id/comments", requireAuth, async (req, res) => {
     try {
       const parsed = insertCommentSchema.safeParse({
-        postId: req.params.id,
+        postId: (req.params.id as string),
         userId: req.userId,
         content: req.body.content,
       });
 
       if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.errors[0].message });
+        return res.status(400).json({ error: parsed.error.issues[0].message });
       }
 
       const comment = await storage.createComment(parsed.data);
@@ -748,7 +757,7 @@ export async function registerRoutes(
   // Delete comment
   app.delete("/api/comments/:id", requireAuth, async (req, res) => {
     try {
-      const success = await storage.deleteComment(req.params.id);
+      const success = await storage.deleteComment((req.params.id as string));
       if (!success) {
         return res.status(404).json({ error: "Comment not found" });
       }
@@ -763,7 +772,7 @@ export async function registerRoutes(
   app.post("/api/comments/:id/fire", requireAuth, async (req, res) => {
     try {
       const result = await storage.toggleCommentReaction(
-        req.params.id,
+        (req.params.id as string),
         req.userId!,
       );
       res.json(result);
@@ -778,11 +787,11 @@ export async function registerRoutes(
   // Follow user
   app.post("/api/users/:id/follow", requireAuth, async (req, res) => {
     try {
-      if (req.params.id === req.userId) {
+      if ((req.params.id as string) === req.userId) {
         return res.status(400).json({ error: "Cannot follow yourself" });
       }
 
-      const success = await storage.followUser(req.userId!, req.params.id);
+      const success = await storage.followUser(req.userId!, (req.params.id as string));
       res.json({ success, isFollowing: success });
     } catch (error) {
       console.error("Follow error:", error);
@@ -793,7 +802,7 @@ export async function registerRoutes(
   // Unfollow user
   app.delete("/api/users/:id/follow", requireAuth, async (req, res) => {
     try {
-      const success = await storage.unfollowUser(req.userId!, req.params.id);
+      const success = await storage.unfollowUser(req.userId!, (req.params.id as string));
       res.json({ success, isFollowing: false });
     } catch (error) {
       console.error("Unfollow error:", error);
@@ -804,7 +813,7 @@ export async function registerRoutes(
   // Get followers
   app.get("/api/users/:id/followers", async (req, res) => {
     try {
-      const followers = await storage.getFollowers(req.params.id);
+      const followers = await storage.getFollowers((req.params.id as string));
       res.json({
         followers: followers.map((f) => {
           return f;
@@ -819,7 +828,7 @@ export async function registerRoutes(
   // Get following
   app.get("/api/users/:id/following", async (req, res) => {
     try {
-      const following = await storage.getFollowing(req.params.id);
+      const following = await storage.getFollowing((req.params.id as string));
       res.json({
         following: following.map((f) => {
           return f;
@@ -908,7 +917,7 @@ export async function registerRoutes(
       });
 
       if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.errors[0].message });
+        return res.status(400).json({ error: parsed.error.issues[0].message });
       }
 
       const story = await storage.createStory(parsed.data);
@@ -922,7 +931,7 @@ export async function registerRoutes(
   // Mark story as viewed
   app.post("/api/stories/:id/view", requireAuth, async (req, res) => {
     try {
-      await storage.markStoryViewed(req.params.id, req.userId!);
+      await storage.markStoryViewed((req.params.id as string), req.userId!);
       res.json({ success: true });
     } catch (error) {
       console.error("Mark story viewed error:", error);
@@ -946,7 +955,7 @@ export async function registerRoutes(
   // Mark notification as read
   app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
     try {
-      await storage.markNotificationRead(req.params.id);
+      await storage.markNotificationRead((req.params.id as string));
       res.json({ success: true });
     } catch (error) {
       console.error("Mark notification read error:", error);
@@ -1015,7 +1024,7 @@ export async function registerRoutes(
                 num_images: 1,
               },
               logs: true,
-              onQueueUpdate: (update) => {
+              onQueueUpdate: (update: any) => {
                 if (update.status === "IN_PROGRESS") {
                   console.log("Flux generation in progress...");
                 }
@@ -1277,7 +1286,7 @@ export async function registerRoutes(
 
   app.get("/api/support/tickets/:ticketId", requireAuth, async (req, res) => {
     try {
-      const ticket = await storage.getSupportTicket(req.params.ticketId);
+      const ticket = await storage.getSupportTicket(req.params.ticketId as string);
 
       if (!ticket) {
         return res.status(404).json({ error: "Ticket not found" });
@@ -1308,7 +1317,7 @@ export async function registerRoutes(
         }
 
         // Verify ticket ownership
-        const ticket = await storage.getSupportTicket(ticketId);
+        const ticket = await storage.getSupportTicket(ticketId as string);
         if (!ticket || ticket.user_id !== req.userId) {
           return res.status(403).json({ error: "Access denied" });
         }
@@ -1452,7 +1461,7 @@ export async function registerRoutes(
               duration: "5" as const,
             },
             logs: true,
-            onQueueUpdate: (update) => {
+            onQueueUpdate: (update: any) => {
               if (update.status === "IN_PROGRESS") {
                 console.log("Kling video generation in progress...");
               }
@@ -1487,7 +1496,7 @@ export async function registerRoutes(
   // Vault a post (swipe right - legacy mode)
   app.post("/api/posts/:postId/vault", requireAuth, async (req, res) => {
     try {
-      const { postId } = req.params;
+      const { postId } = req.params as { postId: string };
       const userId = req.userId!;
 
       const post = await storage.getPost(postId);
@@ -1511,7 +1520,7 @@ export async function registerRoutes(
     requireAuth,
     async (req, res) => {
       try {
-        const { postId } = req.params;
+        const { postId } = req.params as { postId: string };
         const userId = req.userId!;
 
         const post = await storage.getPost(postId);
@@ -1564,7 +1573,7 @@ export async function registerRoutes(
 
       // Generate new video
       const videoResult = await generateVideo({
-        imageUrl: post.thumbnailUrl || post.mediaUrl,
+        imageUrl: (post.thumbnailUrl || post.mediaUrl || undefined),
         prompt:
           prompt || post.caption || "Animate this image with natural movement",
         duration: 5,
@@ -1578,7 +1587,7 @@ export async function registerRoutes(
       // Update post with new video URL
       await storage.updatePost(postId, {
         mediaUrl: videoResult.url,
-        processingStatus: "ready",
+        processingStatus: "completed",
       });
 
       // Track cost with volume discount
@@ -1604,7 +1613,7 @@ export async function registerRoutes(
   app.get("/api/admin/cost-summary", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.userId!);
-      if (user?.role !== "admin") {
+      if (!user?.isAdmin) {
         return res.status(403).json({ error: "Admin only" });
       }
 
@@ -1620,7 +1629,7 @@ export async function registerRoutes(
   app.post("/api/admin/auto-generate/start", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.userId!);
-      if (user?.role !== "admin") {
+      if (!user?.isAdmin) {
         return res.status(403).json({ error: "Admin only" });
       }
 
@@ -1635,7 +1644,7 @@ export async function registerRoutes(
   app.post("/api/admin/auto-generate/stop", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.userId!);
-      if (user?.role !== "admin") {
+      if (!user?.isAdmin) {
         return res.status(403).json({ error: "Admin only" });
       }
 
@@ -1653,7 +1662,7 @@ export async function registerRoutes(
     async (req, res) => {
       try {
         const user = await storage.getUser(req.userId!);
-        if (user?.role !== "admin") {
+        if (!user?.isAdmin) {
           return res.status(403).json({ error: "Admin only" });
         }
 
@@ -1670,7 +1679,7 @@ export async function registerRoutes(
   app.get("/api/admin/auto-generate/status", requireAuth, async (req, res) => {
     try {
       const user = await storage.getUser(req.userId!);
-      if (user?.role !== "admin") {
+      if (!user?.isAdmin) {
         return res.status(403).json({ error: "Admin only" });
       }
 
@@ -2127,7 +2136,7 @@ export async function registerRoutes(
   // Get gifts for a post
   app.get("/api/posts/:id/gifts", async (req, res) => {
     try {
-      const postId = req.params.id;
+      const postId = (req.params.id as string);
       const gifts = await storage.getGiftsByPost(postId);
       const count = await storage.getPostGiftCount(postId);
 
@@ -2254,7 +2263,7 @@ export async function registerRoutes(
     async (req, res: Response) => {
       try {
         const parentId = req.userId!;
-        const { childId } = req.params;
+        const { childId } = req.params as { childId: string };
 
         // Verify parent owns this child
         const child = await storage.getUser(childId);

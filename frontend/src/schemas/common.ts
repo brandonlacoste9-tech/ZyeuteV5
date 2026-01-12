@@ -48,7 +48,7 @@ const BaseUserSchema = z
 
     // RBAC
     role: UserRoleSchema.optional(),
-    custom_permissions: z.record(z.boolean()).optional(),
+    custom_permissions: z.record(z.string(), z.boolean()).optional(),
 
     // Ti-Guy Preferences
     tiGuyCommentsEnabled: z.boolean().default(true),
