@@ -185,9 +185,14 @@ export async function registerRoutes(
   app.use("/api/admin", requireAuth, adminRoutes);
 
   // Apply general rate limiting to all other API routes
-
-  // Apply general rate limiting to all other API routes
-  app.use("/api", generalRateLimiter);
+  // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
+  app.use("/api", (req, res, next) => {
+    // Skip rate limiting for Pexels endpoints (they're read-only external data fetches)
+    if (req.path.startsWith("/pexels")) {
+      return next();
+    }
+    return generalRateLimiter(req, res, next);
+  });
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);
@@ -1551,11 +1556,9 @@ export async function registerRoutes(
       res.json(data);
     } catch (error: any) {
       console.error("Pexels curated error:", error);
-      res
-        .status(500)
-        .json({
-          error: error.message || "Failed to fetch Pexels curated photos",
-        });
+      res.status(500).json({
+        error: error.message || "Failed to fetch Pexels curated photos",
+      });
     }
   });
 
