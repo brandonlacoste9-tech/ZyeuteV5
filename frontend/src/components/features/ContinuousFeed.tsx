@@ -306,13 +306,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         }) as Array<Post & { user: User }>;
       }
 
-      // Fetch Pexels curated photos and merge with feed posts
+      // Fetch Pexels curated videos and merge with feed posts
       try {
         const pexelsData = await getPexelsCurated(10, 1);
-        if (pexelsData && pexelsData.photos?.length) {
+        if (pexelsData && pexelsData.videos?.length) {
           const pexelsPosts = transformPexelsToPosts(
-            pexelsData.photos || [],
-            [], // Curated endpoint only returns photos, not videos
+            [], // Curated endpoint returns videos, not photos
+            pexelsData.videos || [],
           );
           // Merge Pexels posts at the beginning of the feed
           feedLogger.info(

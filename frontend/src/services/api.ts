@@ -541,9 +541,9 @@ export interface PexelsCollectionResponse {
 export interface PexelsCuratedResponse {
   page: number;
   per_page: number;
-  photos: PexelsPhoto[];
+  videos: PexelsVideo[];
   total_results: number;
-  next_page?: string;
+  url?: string;
 }
 
 export async function getPexelsCurated(
