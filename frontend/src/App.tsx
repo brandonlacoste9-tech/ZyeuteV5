@@ -52,6 +52,7 @@ const Analytics = lazy(() => import("@/pages/Analytics"));
 const StoryCreator = lazy(() => import("@/components/features/StoryCreator"));
 const Achievements = lazy(() => import("@/pages/Achievements"));
 const CreatorRevenue = lazy(() => import("@/pages/CreatorRevenue"));
+const VideoDebugDashboard = lazy(() => import("@/pages/VideoDebugDashboard"));
 
 // Admin Pages
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
@@ -678,6 +679,20 @@ function App() {
                                                     <ProtectedRoute>
                                                       <HiveTap />
                                                     </ProtectedRoute>
+                                                  }
+                                                />
+
+                                                {/* Debug Tools */}
+                                                <Route
+                                                  path="/debug/video"
+                                                  element={
+                                                    <Suspense
+                                                      fallback={
+                                                        <LazyLoadFallback />
+                                                      }
+                                                    >
+                                                      <VideoDebugDashboard />
+                                                    </Suspense>
                                                   }
                                                 />
 

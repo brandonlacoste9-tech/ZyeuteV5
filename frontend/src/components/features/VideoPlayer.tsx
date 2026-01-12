@@ -251,11 +251,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
-    videoPlayerLogger.error("Video playback error:", {
+    // Enhanced error logging with network state
+    const errorDetails = {
       code: error?.code,
       message: error?.message,
       src: src?.substring(0, 100),
-    });
+      networkState: video.networkState,
+      readyState: video.readyState,
+      currentSrc: video.currentSrc?.substring(0, 100),
+      videoSource: videoSource?.type,
+    };
+
+    // Network state meanings:
+    // 0 = NETWORK_EMPTY, 1 = NETWORK_IDLE, 2 = NETWORK_LOADING, 3 = NETWORK_NO_SOURCE
+    if (video.networkState === 2) {
+      videoPlayerLogger.warn("⚠️ Video stuck in NETWORK_LOADING state (networkState: 2)", errorDetails);
+    } else if (video.networkState === 3) {
+      videoPlayerLogger.error("❌ NETWORK_NO_SOURCE - CSP or CORS issue likely", errorDetails);
+    } else {
+      videoPlayerLogger.error("Video playback error:", errorDetails);
+    }
+
     setHasError(true);
     setIsLoading(false);
   };
@@ -295,6 +311,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleLoadStart = () => {
     setIsLoading(true);
     metricsRef.current.startTime = Date.now();
+    
+    // Log network state on load start for debugging
+    if (videoRef.current && isDebugEnabled) {
+      videoPlayerLogger.debug("Video load started:", {
+        networkState: videoRef.current.networkState,
+        readyState: videoRef.current.readyState,
+        src: src?.substring(0, 100),
+      });
+    }
   };
 
   // Reset states when source changes
@@ -312,9 +337,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Set a timeout to prevent infinite loading
     // If video doesn't load within 15 seconds, show error
     loadingTimeoutRef.current = setTimeout(() => {
-      videoPlayerLogger.warn(
-        `Video loading timeout for ${src.substring(0, 50)}...`,
-      );
+      if (videoRef.current) {
+        const networkState = videoRef.current.networkState;
+        videoPlayerLogger.warn(
+          `Video loading timeout for ${src.substring(0, 50)}...`,
+          {
+            networkState,
+            readyState: videoRef.current.readyState,
+            stuck_in_network_loading: networkState === 2,
+          }
+        );
+      }
       setHasError(true);
       setIsLoading(false);
     }, 15000);
@@ -324,7 +357,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         clearTimeout(loadingTimeoutRef.current);
       }
     };
-  }, [src]);
+  }, [src, isDebugEnabled]);
 
   // Sync autoPlay prop updates (critical for feed scrolling)
   useEffect(() => {
