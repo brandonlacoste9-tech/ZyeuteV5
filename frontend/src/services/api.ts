@@ -11,11 +11,10 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
-// [CONFIG] Live Railway Backend URL
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? ""
-    : "https://zyeutev5-production.up.railway.app";
+// [CONFIG] Use relative URLs - Vercel rewrite handles proxying to Railway backend
+// This allows the frontend to work without knowing the backend URL
+// Vercel rewrites /api/* to https://zyeutev5-production.up.railway.app/api/*
+const API_BASE_URL = ""; // Always use relative URLs - Vercel handles the rewrite
 
 // Base API call helper
 async function apiCall<T>(
@@ -23,7 +22,6 @@ async function apiCall<T>(
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null }> {
   try {
-    // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
     // Get current session token
     const {
       data: { session },
@@ -40,6 +38,7 @@ async function apiCall<T>(
       headers["Authorization"] = `Bearer ${token}`;
     }
 
+    // Use relative URL - Vercel rewrite proxies to Railway backend
     const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
     const response = await fetch(apiUrl, {
