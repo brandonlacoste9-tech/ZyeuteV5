@@ -104,11 +104,14 @@ SELECT COUNT(*) as user_count FROM users;
 1. Open `https://www.zyeute.com`
 2. Press `F12` (DevTools)
 3. Go to **Application** tab
-4. Click **"Clear site data"** button
-5. Check all boxes
-6. Click **"Clear data"**
-7. Close DevTools
-8. Hard refresh: `Ctrl+Shift+R`
+4. Click **"Service Workers"** in left sidebar
+5. Click **"Unregister"** for any registered service workers ⚠️ CRITICAL
+6. Go to **Storage** in left sidebar
+7. Click **"Clear site data"** button
+8. Check **ALL boxes** (especially "Unregister service workers")
+9. Click **"Clear data"**
+10. Close DevTools
+11. Hard refresh: `Ctrl+Shift+R`
 
 **Firefox:**
 
