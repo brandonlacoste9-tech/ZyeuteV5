@@ -11,12 +11,18 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
+// [CONFIG] Live Railway Backend URL
+const API_BASE_URL = window.location.hostname === 'localhost' 
+  ? '' 
+  : 'https://zyeutev5-production.up.railway.app';
+
 // Base API call helper
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null }> {
   try {
+    // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
     // Get current session token
     const {
       data: { session },
@@ -32,8 +38,10 @@ async function apiCall<T>(
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
+    
+    const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
-    const response = await fetch(`/api${endpoint}`, {
+    const response = await fetch(apiUrl, {
       ...options,
       headers,
       credentials: "include", // Include cookies for session
