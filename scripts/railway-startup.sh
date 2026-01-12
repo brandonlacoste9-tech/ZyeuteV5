@@ -2,7 +2,7 @@
 # Railway Startup Script
 # Runs database migrations and seed data before starting the app
 
-set -e  # Exit on error (but allow migration scripts to fail gracefully)
+set -e
 
 echo "🚀 Zyeuté Railway Startup Script"
 echo "=================================="
@@ -17,32 +17,31 @@ fi
 
 echo "📦 Database URL found, setting up database..."
 
-# Export DATABASE_URL for Node scripts
-export DATABASE_URL
+# Run migrations using local tsx to avoid npx overhead/network issues
+TSX_BIN="./node_modules/.bin/tsx"
 
-# Run migrations in order (idempotent - safe to run multiple times)
-echo ""
-echo "📋 Step 1: Creating database schema..."
-npx tsx scripts/run-schema-migration.ts || echo "⚠️  Schema migration skipped (may already exist)"
+if [ ! -f "$TSX_BIN" ]; then
+  echo "⚠️  tsx binary not found at $TSX_BIN, trying just 'tsx' from path"
+  TSX_BIN="tsx"
+fi
 
-echo ""
-echo "📋 Step 2: Creating publications table..."
-npx tsx scripts/create-publications-table.ts || echo "⚠️  Publications table creation skipped (may already exist)"
+echo "📋 Step 1: Schema check..."
+$TSX_BIN scripts/run-schema-migration.ts || echo "⚠️  Schema migration skipped/failed"
 
-echo ""
-echo "📋 Step 3: Ensuring test user exists..."
-npx tsx scripts/create-test-user.ts || echo "⚠️  Test user creation skipped (may already exist)"
+echo "📋 Step 2: Ensure tables exist..."
+$TSX_BIN scripts/create-publications-table.ts || echo "⚠️  Table creation failed"
 
-echo ""
-echo "📋 Step 4: Running seed migration..."
-npx tsx scripts/run-seed-migration.ts || echo "⚠️  Seed migration skipped (may already exist)"
+echo "📋 Step 3: Test User..."
+$TSX_BIN scripts/create-test-user.ts || echo "⚠️  User creation failed"
+
+# Skipping Step 4 (Seed) to speed up boot - we already seeded the DB
+# echo "📋 Step 4: Seed migration..."
+# $TSX_BIN scripts/run-seed-migration.ts || echo "⚠️  Seed failed"
 
 echo ""
 echo "✅ Database setup complete!"
 echo "🚀 Starting application..."
-echo ""
-
-# Start the application
-# Railway sets PORT automatically, backend will use it
 echo "🌐 Starting on port: ${PORT:-5000}"
+
+# Run the app
 exec node dist/index.cjs
