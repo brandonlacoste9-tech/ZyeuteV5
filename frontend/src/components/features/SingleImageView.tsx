@@ -332,12 +332,12 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                 {fireCount}
               </span>
             </button>
-
             {/* Comment Button */}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleComment();
+               onClick={(e) => {
+                 e.stopPropagation();
+                 handleComment();
+
               }}
               className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
             >
