@@ -11,10 +11,14 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
-// [CONFIG] Use relative URLs - Vercel rewrite handles proxying to Railway backend
-// This allows the frontend to work without knowing the backend URL
-// Vercel rewrites /api/* to https://zyeutev5-production.up.railway.app/api/*
-const API_BASE_URL = ""; // Always use relative URLs - Vercel handles the rewrite
+// [CONFIG] NUCLEAR FIX - Hardcoded Railway backend URL for immediate testing
+// TODO: Switch back to relative URLs after confirming connection works
+export const API_BASE_URL = "https://zyeutev5-production.up.railway.app";
+
+// Debug log to confirm URL is set
+if (typeof window !== "undefined") {
+  console.log("🚀 API_URL HARDCODED:", API_BASE_URL);
+}
 
 // Base API call helper
 async function apiCall<T>(
