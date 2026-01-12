@@ -24,6 +24,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ColonyProvider } from "@/components/providers/colony-provider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
+import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
 import { OfflineIndicator } from "@/components/features/OfflineIndicator";
 import { FactoryThemeProvider } from "@/providers/FactoryThemeProvider";
@@ -171,516 +172,518 @@ function App() {
                 <ColonyProvider>
                   <RBACProvider>
                     <NavigationStateProvider>
-                      <NetworkQueueProvider>
-                        <GlobalAuthLoader>
-                          <BorderColorProvider>
-                            <BrowserRouter>
-                              <AchievementListener />
-                              <OfflineIndicator />
-                              <Suspense fallback={<LoadingScreen />}>
-                                <HiveProvider>
-                                  <Routes>
-                                    <Route
-                                      path="/video/:videoId"
-                                      element={
-                                        <ProtectedRoute>
-                                          <Player />
-                                        </ProtectedRoute>
-                                      }
-                                    />
-                                    <Route
-                                      path="/zyeute"
-                                      element={
-                                        <ProtectedRoute>
-                                          <Suspense
-                                            fallback={<LazyLoadFallback />}
-                                          >
-                                            <LaZyeute />
-                                          </Suspense>
-                                        </ProtectedRoute>
-                                      }
-                                    />
-                                    <Route
-                                      path="*"
-                                      element={
-                                        <MainLayout>
-                                          <PageTransition>
-                                            <Routes>
-                                              <Route
-                                                path="/banned"
-                                                element={<Banned />}
-                                              />
-                                              <Route
-                                                path="/login"
-                                                element={<Login />}
-                                              />
-                                              <Route
-                                                path="/signup"
-                                                element={<Signup />}
-                                              />
-                                              <Route
-                                                path="/forgot-password"
-                                                element={<ForgotPassword />}
-                                              />
-                                              <Route
-                                                path="/reset-password"
-                                                element={<ResetPassword />}
-                                              />
-                                              <Route
-                                                path="/auth/callback"
-                                                element={<AuthCallback />}
-                                              />
-                                              <Route
-                                                path="/"
-                                                element={<Home />}
-                                              />
-                                              <Route
-                                                path="/feed"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <RouteErrorBoundary>
-                                                      <Feed />
-                                                    </RouteErrorBoundary>
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/explore"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <RouteErrorBoundary>
-                                                      <Explore />
-                                                    </RouteErrorBoundary>
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/upload"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <RouteErrorBoundary>
+                      <MediaSessionProvider>
+                        <NetworkQueueProvider>
+                          <GlobalAuthLoader>
+                            <BorderColorProvider>
+                              <BrowserRouter>
+                                <AchievementListener />
+                                <OfflineIndicator />
+                                <Suspense fallback={<LoadingScreen />}>
+                                  <HiveProvider>
+                                    <Routes>
+                                      <Route
+                                        path="/video/:videoId"
+                                        element={
+                                          <ProtectedRoute>
+                                            <Player />
+                                          </ProtectedRoute>
+                                        }
+                                      />
+                                      <Route
+                                        path="/zyeute"
+                                        element={
+                                          <ProtectedRoute>
+                                            <Suspense
+                                              fallback={<LazyLoadFallback />}
+                                            >
+                                              <LaZyeute />
+                                            </Suspense>
+                                          </ProtectedRoute>
+                                        }
+                                      />
+                                      <Route
+                                        path="*"
+                                        element={
+                                          <MainLayout>
+                                            <PageTransition>
+                                              <Routes>
+                                                <Route
+                                                  path="/banned"
+                                                  element={<Banned />}
+                                                />
+                                                <Route
+                                                  path="/login"
+                                                  element={<Login />}
+                                                />
+                                                <Route
+                                                  path="/signup"
+                                                  element={<Signup />}
+                                                />
+                                                <Route
+                                                  path="/forgot-password"
+                                                  element={<ForgotPassword />}
+                                                />
+                                                <Route
+                                                  path="/reset-password"
+                                                  element={<ResetPassword />}
+                                                />
+                                                <Route
+                                                  path="/auth/callback"
+                                                  element={<AuthCallback />}
+                                                />
+                                                <Route
+                                                  path="/"
+                                                  element={<Home />}
+                                                />
+                                                <Route
+                                                  path="/feed"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RouteErrorBoundary>
+                                                        <Feed />
+                                                      </RouteErrorBoundary>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/explore"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RouteErrorBoundary>
+                                                        <Explore />
+                                                      </RouteErrorBoundary>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/upload"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RouteErrorBoundary>
+                                                        <Suspense
+                                                          fallback={
+                                                            <LazyLoadFallback />
+                                                          }
+                                                        >
+                                                          <Upload />
+                                                        </Suspense>
+                                                      </RouteErrorBoundary>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/story/create"
+                                                  element={
+                                                    <ProtectedRoute>
                                                       <Suspense
                                                         fallback={
                                                           <LazyLoadFallback />
                                                         }
                                                       >
-                                                        <Upload />
+                                                        <StoryCreator />
                                                       </Suspense>
-                                                    </RouteErrorBoundary>
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/story/create"
-                                                element={
-                                                  <ProtectedRoute>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/p/:id"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <PostDetail />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/posts/:id"
+                                                  element={
+                                                    <Navigate
+                                                      to="/p/:id"
+                                                      replace
+                                                    />
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/profile"
+                                                  element={
+                                                    <Navigate
+                                                      to="/profile/me"
+                                                      replace
+                                                    />
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/profile/:username"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Profile />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/notifications"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Notifications />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Settings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/analytics"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Analytics />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                {/* Regional Skins Waitlist */}
+                                                <Route
+                                                  path="/pulse"
+                                                  element={
                                                     <Suspense
                                                       fallback={
                                                         <LazyLoadFallback />
                                                       }
                                                     >
-                                                      <StoryCreator />
+                                                      <MainLayout>
+                                                        <Pulse />
+                                                      </MainLayout>
                                                     </Suspense>
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/p/:id"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Suspense
-                                                      fallback={
-                                                        <LazyLoadFallback />
-                                                      }
-                                                    >
-                                                      <PostDetail />
-                                                    </Suspense>
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/posts/:id"
-                                                element={
-                                                  <Navigate
-                                                    to="/p/:id"
-                                                    replace
-                                                  />
-                                                }
-                                              />
-                                              <Route
-                                                path="/profile"
-                                                element={
-                                                  <Navigate
-                                                    to="/profile/me"
-                                                    replace
-                                                  />
-                                                }
-                                              />
-                                              <Route
-                                                path="/profile/:username"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Profile />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/notifications"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Notifications />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Settings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/analytics"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Analytics />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              {/* Regional Skins Waitlist */}
-                                              <Route
-                                                path="/pulse"
-                                                element={
-                                                  <Suspense
-                                                    fallback={
-                                                      <LazyLoadFallback />
-                                                    }
-                                                  >
-                                                    <MainLayout>
-                                                      <Pulse />
-                                                    </MainLayout>
-                                                  </Suspense>
-                                                }
-                                              />
-                                              {/* Settings Sub-routes */}
-                                              <Route
-                                                path="/settings/tags"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <TagsSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/comments"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <CommentsSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/sharing"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <SharingSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/restricted"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <RestrictedAccountsSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/favorites"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <FavoritesSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/muted"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <MutedAccountsSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/content"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <ContentPreferencesSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/media"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <MediaSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/audio"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <AudioSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/storage"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <StorageSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/app"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <AppSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/region"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <RegionSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/language"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <LanguageSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/voice"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <VoiceSettingsPage />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/profile"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <ProfileEditSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/privacy"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <PrivacySettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/settings/notifications"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <NotificationSettings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              {/* Fallback for unknown settings routes returns to main settings */}
-                                              <Route
-                                                path="/settings/*"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Settings />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/artiste"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Artiste />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/studio"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Studio />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/marketplace"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Marketplace />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/premium"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Premium />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/challenges"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Challenges />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/ai-studio"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <AIStudio />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/live/*"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <LiveDiscover />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/moderation"
-                                                element={
-                                                  <ProtectedAdminRoute>
-                                                    <Moderation />
-                                                  </ProtectedAdminRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/admin/observability"
-                                                element={
-                                                  <ProtectedAdminRoute>
-                                                    <Observability />
-                                                  </ProtectedAdminRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/admin/*"
-                                                element={
-                                                  <ProtectedAdminRoute>
-                                                    <AdminDashboard />
-                                                  </ProtectedAdminRoute>
-                                                }
-                                              />
-                                              {/* Legal */}
-                                              <Route
-                                                path="/legal/community-guidelines"
-                                                element={
-                                                  <CommunityGuidelines />
-                                                }
-                                              />
-                                              <Route
-                                                path="/legal/terms"
-                                                element={<TermsOfService />}
-                                              />
-                                              <Route
-                                                path="/legal/privacy"
-                                                element={<PrivacyPolicy />}
-                                              />
-                                              <Route
-                                                path="/achievements"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <Achievements />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/revenue"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <CreatorRevenue />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/parental"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <ParentalDashboard />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              {/* Arcade Routes */}
-                                              <Route
-                                                path="/arcade"
-                                                element={<ArcadeHub />}
-                                              />
-                                              <Route
-                                                path="/games/poutine"
-                                                element={<PoutineLobby />}
-                                              />
-                                              <Route
-                                                path="/games/poutine/play/:tournamentId"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <PoutineStackGame />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/map"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <SwarmMap />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
-                                              <Route
-                                                path="/hive-tap"
-                                                element={
-                                                  <ProtectedRoute>
-                                                    <HiveTap />
-                                                  </ProtectedRoute>
-                                                }
-                                              />
+                                                  }
+                                                />
+                                                {/* Settings Sub-routes */}
+                                                <Route
+                                                  path="/settings/tags"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <TagsSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/comments"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <CommentsSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/sharing"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <SharingSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/restricted"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RestrictedAccountsSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/favorites"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <FavoritesSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/muted"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <MutedAccountsSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/content"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <ContentPreferencesSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/media"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <MediaSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/audio"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <AudioSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/storage"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <StorageSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/app"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <AppSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/region"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RegionSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/language"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <LanguageSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/voice"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <VoiceSettingsPage />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/profile"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <ProfileEditSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/privacy"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <PrivacySettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/settings/notifications"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <NotificationSettings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                {/* Fallback for unknown settings routes returns to main settings */}
+                                                <Route
+                                                  path="/settings/*"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Settings />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/artiste"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Artiste />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/studio"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Studio />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/marketplace"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Marketplace />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/premium"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Premium />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/challenges"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Challenges />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/ai-studio"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <AIStudio />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/live/*"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <LiveDiscover />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/moderation"
+                                                  element={
+                                                    <ProtectedAdminRoute>
+                                                      <Moderation />
+                                                    </ProtectedAdminRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/admin/observability"
+                                                  element={
+                                                    <ProtectedAdminRoute>
+                                                      <Observability />
+                                                    </ProtectedAdminRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/admin/*"
+                                                  element={
+                                                    <ProtectedAdminRoute>
+                                                      <AdminDashboard />
+                                                    </ProtectedAdminRoute>
+                                                  }
+                                                />
+                                                {/* Legal */}
+                                                <Route
+                                                  path="/legal/community-guidelines"
+                                                  element={
+                                                    <CommunityGuidelines />
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/legal/terms"
+                                                  element={<TermsOfService />}
+                                                />
+                                                <Route
+                                                  path="/legal/privacy"
+                                                  element={<PrivacyPolicy />}
+                                                />
+                                                <Route
+                                                  path="/achievements"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Achievements />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/revenue"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <CreatorRevenue />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/parental"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <ParentalDashboard />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                {/* Arcade Routes */}
+                                                <Route
+                                                  path="/arcade"
+                                                  element={<ArcadeHub />}
+                                                />
+                                                <Route
+                                                  path="/games/poutine"
+                                                  element={<PoutineLobby />}
+                                                />
+                                                <Route
+                                                  path="/games/poutine/play/:tournamentId"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <PoutineStackGame />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/map"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <SwarmMap />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/hive-tap"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <HiveTap />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
 
-                                              <Route
-                                                path="*"
-                                                element={
-                                                  <Navigate to="/" replace />
-                                                }
-                                              />
-                                            </Routes>
-                                          </PageTransition>
-                                          <TiGuy />
-                                        </MainLayout>
-                                      }
-                                    />
-                                  </Routes>
-                                </HiveProvider>
-                              </Suspense>
-                            </BrowserRouter>
-                          </BorderColorProvider>
-                        </GlobalAuthLoader>
-                      </NetworkQueueProvider>
+                                                <Route
+                                                  path="*"
+                                                  element={
+                                                    <Navigate to="/" replace />
+                                                  }
+                                                />
+                                              </Routes>
+                                            </PageTransition>
+                                            <TiGuy />
+                                          </MainLayout>
+                                        }
+                                      />
+                                    </Routes>
+                                  </HiveProvider>
+                                </Suspense>
+                              </BrowserRouter>
+                            </BorderColorProvider>
+                          </GlobalAuthLoader>
+                        </NetworkQueueProvider>
+                      </MediaSessionProvider>
                     </NavigationStateProvider>
                   </RBACProvider>
                 </ColonyProvider>

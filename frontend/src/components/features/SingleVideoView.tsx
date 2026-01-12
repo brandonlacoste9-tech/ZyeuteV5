@@ -11,6 +11,7 @@ import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
 import { useSettingsPreferences } from "@/hooks/useSettingsPreferences";
+import { useAudioFocus } from "@/hooks/useAudioFocus";
 import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
@@ -54,7 +55,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const { preferences } = useSettingsPreferences();
 
     // Audio Control State (TikTok-style tap to unmute)
-    const [isMuted, setIsMuted] = useState(true);
+    // Now using global audio focus manager for single-video playback
+    const { isMuted, toggleMute: audioToggleMute } = useAudioFocus(post.id);
     const [showMuteIndicator, setShowMuteIndicator] = useState(false);
     const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -127,7 +129,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
       // Debounce to avoid conflicts with double-tap
       tapTimeoutRef.current = setTimeout(() => {
-        setIsMuted(!isMuted);
+        // Use global audio focus manager - previous video will auto-mute
+        audioToggleMute();
         setShowMuteIndicator(true);
         tap();
         setTimeout(() => setShowMuteIndicator(false), 1000);
