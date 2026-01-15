@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import Mux from "@mux/mux-node";
 import { storage } from "../storage.js";
 import { runPromoBee } from "../ai/bees/promo-bee.js";
@@ -7,6 +7,7 @@ import { runModeratorBee } from "../ai/bees/moderator-bee.js";
 export const muxRouter = express.Router();
 import multer from 'multer';
 import axios from 'axios';
+import { verifyAuthToken } from "../supabase-auth.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -36,7 +37,7 @@ if (MUX_TOKEN_ID && MUX_TOKEN_SECRET) {
 /**
  * 0. Sanity Check Endpoint
  */
-muxRouter.get("/test-create-video", async (req, res) => {
+muxRouter.get("/test-create-video", async (req: Request, res: Response) => {
   try {
     if (!mux) return res.status(500).json({ error: "Mux not configured" });
     
@@ -59,19 +60,17 @@ muxRouter.get("/test-create-video", async (req, res) => {
   }
 });
 
-import { verifyAuthToken } from "../supabase-auth.js";
-
 /**
  * 1. Direct Upload Endpoint (Proxy)
  * Receives file -> Proxies to Mux Direct Upload
  */
-muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => {
+muxRouter.post("/upload", upload.single('video'), async (req: Request, res: Response) => {
   try {
     if (!mux) return res.status(500).json({ error: "Mux not configured" });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     // 0. Authenticate User
-    let userId = req.headers['x-user-id'];
+    let userId = req.headers['x-user-id'] as string | undefined;
     
     // Try to extract from Bearer token if present
     const authHeader = req.headers.authorization;
@@ -84,12 +83,11 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
     // Fallback or Validation
     if (!userId) {
        // Try system user
-       userId = await storage.getSystemUserId();
+       const sysId = await storage.getSystemUserId();
+       if (sysId) userId = sysId;
     }
     
     // Ensure userId is a UUID (basic regex check) or fallback to 'anonymous' which might fail DB constraint
-    // But let's assume if it came from x-user-id it's what they want, unless it's clearly invalid.
-    // If we really can't find a user, we should probably error or accept it might fail.
     if (!userId) return res.status(401).json({ error: 'Unauthorized: No valid user found' });
 
     const { buffer, originalname, mimetype, size } = req.file;
@@ -151,7 +149,7 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
  * [NEW] Create a Mux Direct Upload URL
  * Allows the frontend to upload large videos directly to Mux securely.
  */
-muxRouter.post("/mux/create-upload", async (req, res) => {
+muxRouter.post("/mux/create-upload", async (req: Request, res: Response) => {
   try {
     // Check if Mux is configured
     if (!mux) {
@@ -180,7 +178,7 @@ muxRouter.post("/mux/create-upload", async (req, res) => {
   }
 });
 
-muxRouter.post("/webhooks/mux", async (req, res) => {
+muxRouter.post("/webhooks/mux", async (req: Request, res: Response) => {
   try {
     const signature = req.headers["mux-signature"] as string;
 
@@ -239,7 +237,7 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             muxAssetId: assetId, // Ensure asset ID is saved
             muxPlaybackId: playbackId,
             thumbnailUrl,
-            processingStatus: "completed",
+            processingStatus: "completed" as const,
             mediaUrl: `https://stream.mux.com/${playbackId}.m3u8?max_resolution=720p`,
             duration: Math.round(event.data.duration || 0),
             aspectRatio: event.data.aspect_ratio || "16:9",
