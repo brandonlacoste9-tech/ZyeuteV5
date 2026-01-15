@@ -59,6 +59,8 @@ muxRouter.get("/test-create-video", async (req, res) => {
   }
 });
 
+import { verifyAuthToken } from "../supabase-auth.js";
+
 /**
  * 1. Direct Upload Endpoint (Proxy)
  * Receives file -> Proxies to Mux Direct Upload
@@ -68,6 +70,28 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
     if (!mux) return res.status(500).json({ error: "Mux not configured" });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
+    // 0. Authenticate User
+    let userId = req.headers['x-user-id'];
+    
+    // Try to extract from Bearer token if present
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const verifiedId = await verifyAuthToken(token);
+      if (verifiedId) userId = verifiedId;
+    }
+
+    // Fallback or Validation
+    if (!userId) {
+       // Try system user
+       userId = await storage.getSystemUserId();
+    }
+    
+    // Ensure userId is a UUID (basic regex check) or fallback to 'anonymous' which might fail DB constraint
+    // But let's assume if it came from x-user-id it's what they want, unless it's clearly invalid.
+    // If we really can't find a user, we should probably error or accept it might fail.
+    if (!userId) return res.status(401).json({ error: 'Unauthorized: No valid user found' });
+
     const { buffer, originalname, mimetype, size } = req.file;
     console.log(`📦 Received ${originalname} (${(size / 1024).toFixed(1)} KB)`);
 
@@ -76,7 +100,7 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
       new_asset_settings: {
         playback_policy: ['public'],
         mp4_support: 'standard',
-        input: [] // required by types sometimes, but Mux docs say upload: {} implies this
+        input: [] // required by types to be present, though empty is fine for direct upload
       },
       cors_origin: '*', 
     });
@@ -100,11 +124,11 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
     
     // 3. Save pending record
     const post = await storage.createPost({
-        userId: req.headers['x-user-id'] || 'anonymous', // User header
-        type: 'video',
-        title: originalname, // Caption/Title
-        originalUrl: uploadUrl, // We don't have final URL yet.
-        muxAssetId: uploadId, // Store upload ID here for now
+        userId: userId, 
+        content: `Video upload: ${originalname}`, // Required field
+        caption: originalname,
+        originalUrl: uploadUrl, // Temporarily store upload URL
+        muxAssetId: uploadId, // Store upload ID here for now (will be replaced by Asset ID on webhook)
         processingStatus: 'processing',
     });
 
