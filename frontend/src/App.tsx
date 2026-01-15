@@ -173,7 +173,7 @@ function App() {
                    <RBACProvider>
                     <NavigationStateProvider>
                       <NetworkQueueProvider>
-                        {/* <MediaSessionProvider> */}
+                        <MediaSessionProvider>
                           <GlobalAuthLoader>
                             <BorderColorProvider>
                               <BrowserRouter>
