@@ -21,7 +21,7 @@ import { MapleSpinner } from "@/components/ui/MapleSpinner";
 import { AchievementListener } from "@/components/gamification/AchievementModal";
 import { ProtectedAdminRoute } from "@/components/auth/ProtectedAdminRoute";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { ColonyProvider } from "@/components/providers/colony-provider";
+// import { ColonyProvider } from "@/components/providers/colony-provider";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
@@ -170,11 +170,10 @@ function App() {
           <NotificationProvider>
             <AuthProvider>
               <GuestModeProvider>
-                <ColonyProvider>
-                  <RBACProvider>
+            {/* <ColonyProvider> */}                  <RBACProvider>
                     <NavigationStateProvider>
                       <NetworkQueueProvider>
-                        <MediaSessionProvider>
+                        {/* <MediaSessionProvider> */}
                           <GlobalAuthLoader>
                             <BorderColorProvider>
                               <BrowserRouter>
@@ -703,8 +702,7 @@ function App() {
                       </NetworkQueueProvider>
                     </NavigationStateProvider>
                   </RBACProvider>
-                </ColonyProvider>
-              </GuestModeProvider>
+            {/* </ColonyProvider> */}              </GuestModeProvider>
             </AuthProvider>
           </NotificationProvider>
         </ThemeProvider>
