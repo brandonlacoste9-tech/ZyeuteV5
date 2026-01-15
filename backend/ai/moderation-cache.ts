@@ -2,12 +2,14 @@ import Redis from "ioredis";
 import crypto from "crypto";
 import { logger } from "../utils/logger.js";
 
-// Initialize Redis client only if REDIS_HOST is set (graceful degradation)
+// Initialize Redis client using existing env vars
 const redisHost = process.env.REDIS_HOST;
 const redisPort = parseInt(process.env.REDIS_PORT || "6379");
 const redisPassword = process.env.REDIS_PASSWORD;
+const redisUsername = process.env.REDIS_USERNAME;
 const redisTLS = process.env.REDIS_TLS === "true";
 
+// Initialize Redis client only if REDIS_HOST is set (graceful degradation)
 let redis: Redis | null = null;
 
 if (redisHost) {
@@ -16,6 +18,7 @@ if (redisHost) {
     host: redisHost,
     port: redisPort,
     password: redisPassword,
+    username: redisUsername,
     tls: redisTLS ? {} : undefined, // Support TLS for managed Redis (Railway/Upstash)
     // Ensure we don't crash if Redis is unavailable
     retryStrategy: (times) => {
@@ -26,17 +29,17 @@ if (redisHost) {
     },
   });
 
-  // [CRITICAL] Handle Redis errors to prevent unhandled exception crash
-  redis.on("error", (err) => {
+  // Handle Redis errors to prevent unhandled exception crash
+  redis.on("error", (err: any) => {
     logger.warn(`[ModerationCache] Redis Error: ${err.message}`);
   });
 
   redis.on("connect", () => {
-    logger.info(`[ModerationCache] Redis connection initialized`);
+    logger.info("[ModerationCache] Redis connection initialized");
   });
 } else {
   // Redis not configured - graceful degradation
-  logger.info(`[ModerationCache] Redis disabled (REDIS_HOST not set)`);
+  logger.info("[ModerationCache] Redis disabled (REDIS_HOST not set)");
 }
 
 /**

@@ -14,17 +14,32 @@ const upload = multer({
 });
 const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
 
-// Initialize Mux client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID!, // Should leverage valid env
-  tokenSecret: process.env.MUX_TOKEN_SECRET!,
-});
+// Check for Mux credentials
+const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
+const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+
+// Initialize Mux client (only if credentials exist)
+let mux: Mux | null = null;
+if (MUX_TOKEN_ID && MUX_TOKEN_SECRET) {
+  mux = new Mux({
+    tokenId: MUX_TOKEN_ID,
+    tokenSecret: MUX_TOKEN_SECRET,
+  });
+  console.log("✅ Mux client initialized successfully");
+} else {
+  console.error("❌ MUX CREDENTIALS MISSING! Video uploads will fail.");
+  console.error("   Required environment variables:");
+  console.error("   - MUX_TOKEN_ID:", MUX_TOKEN_ID ? "✅ Set" : "❌ MISSING");
+  console.error("   - MUX_TOKEN_SECRET:", MUX_TOKEN_SECRET ? "✅ Set" : "❌ MISSING");
+}
 
 /**
  * 0. Sanity Check Endpoint
  */
 muxRouter.get("/test-create-video", async (req, res) => {
   try {
+    if (!mux) return res.status(500).json({ error: "Mux not configured" });
+    
     const testUrl =
       'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
     const asset = await mux.video.assets.create({
@@ -50,6 +65,7 @@ muxRouter.get("/test-create-video", async (req, res) => {
  */
 muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => {
   try {
+    if (!mux) return res.status(500).json({ error: "Mux not configured" });
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const { buffer, originalname, mimetype, size } = req.file;
@@ -82,57 +98,7 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
 
     console.log(`✅ Uploaded to Mux via Proxy. Upload ID: ${uploadId}`);
     
-    // We don't have assetId yet, Mux returns uploadId. 
-    // We must wait for webhook 'video.upload.asset_created' or 'video.asset.ready'
-    // BUT user asked to save to DB now. Mux API response above is `Upload` object, not `Asset`.
-    // The `Upload` object has no `asset_id` until processing starts. 
-    
-    // Modification: The user's example assumed `mux.video.assets.create({ upload: {} })` returns { id: assetId }.
-    // Mux Node SDK v8+ uses `mux.video.uploads.create(...)` which returns an Upload object.
-    
-    // Let's check user's code: `mux.video.assets.create({ upload: {} })`.
-    // If using older SDK (v7), that works. If v8+, it's different.
-    // Based on my experience and imports `import Mux from "@mux/mux-node"`, this is likely v8.
-    // In v8, `mux.video.assets.create` does NOT accept `upload: {}`. You must use `mux.video.uploads.create`.
-    // `mux.video.uploads.create` returns { id: "upload_XYZ", url: "..." }. 
-    // The Asset is created asynchronously.
-    
-    // User goal: "Save the returned assetId & playbackId in Supabase".
-    // Problem: We don't HAVE assetId yet with direct upload.
-    // Fix: We store the `upload_id` in DB, and update it when webhook arrives.
-    
-    // HOWEVER, to stick to user's happy path if possible:
-    // If we use 'input' with a public URL, we get Asset immediately.
-    // But here we are doing PUT.
-    
-    // OK, I will save the `upload_id` as `mux_asset_id` for now or add a column `mux_upload_id`.
-    // Or I'll just check if `directUpload` has `asset_id` (it usually doesn't initially).
-    
-    // Let's implement robustly:
-    // We'll store `upload_id` in a "pending" state.
-    
     // 3. Save pending record
-    // We need a way to track this. I'll reuse `muxAssetId` column for `uploadId` if fits, or use metadata.
-    // Actually, let's just create the post but mark it processing.
-    
-    /* 
-       For "Direct-to-Mux" (Proxy) to work identically to User's snippet, 
-       User assumed `const { id: assetId, upload } = await mux.video.assets.create(...)`.
-       This suggests using `inputs` logic or older API.
-       
-       I will use the `mux.video.uploads.create` which is correct for v8.
-       I will store the `directUpload.id` temporarily.
-    */
-
-    /*
-      DB Insert: 
-      We need to call `storage.createPost(...)` or similar? 
-      The user code used `supabase.from('videos').insert(...)`.
-      I should adapt to `storage.createPost` if possible or direct DB insert.
-      Existing `storage.ts` has `createPost`.
-    */
-    
-    // Adapting to existing DB schema (Post)
     const post = await storage.createPost({
         userId: req.headers['x-user-id'] || 'anonymous', // User header
         type: 'video',
@@ -163,6 +129,15 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
  */
 muxRouter.post("/mux/create-upload", async (req, res) => {
   try {
+    // Check if Mux is configured
+    if (!mux) {
+      console.error("❌ Mux upload failed: Credentials not configured");
+      return res.status(500).json({
+        error: "Video uploads are not configured. Please contact support.",
+        details: "MUX_TOKEN_ID or MUX_TOKEN_SECRET missing in environment variables"
+      });
+    }
+
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ["public"],
@@ -202,6 +177,11 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
     }
 
     // Verify the signature using the latest Mux SDK (v8+)
+    if (!mux) {
+      console.error("❌ Mux webhook failed: Credentials not configured");
+      return res.status(500).json({ error: "Mux not configured" });
+    }
+
     const headers = { "mux-signature": signature };
     try {
       mux.webhooks.verifySignature(rawBody.toString(), headers, webhookSecret);
