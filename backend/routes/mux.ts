@@ -125,10 +125,10 @@ muxRouter.post("/upload", upload.single('video'), async (req: any, res: any) => 
     // 3. Save pending record
     const post = await storage.createPost({
         userId: userId, 
-        content: `Video upload: ${originalname}`, // Required field
+        content: `Video upload: ${originalname}`, 
         caption: originalname,
-        originalUrl: uploadUrl, // Temporarily store upload URL
-        muxAssetId: uploadId, // Store upload ID here for now (will be replaced by Asset ID on webhook)
+        originalUrl: uploadUrl, 
+        muxUploadId: uploadId, // Store upload ID primarily
         processingStatus: 'processing',
     });
 
@@ -218,6 +218,8 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
     console.log("✅ Mux webhook received:", event.type);
 
     const assetId = event.data.id;
+    // Attempt to get upload_id from event data if present (common in asset-related events)
+    const uploadId = event.data.upload_id;
 
     switch (event.type) {
       case "video.asset.ready": {
@@ -233,7 +235,8 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             runModeratorBee(thumbnailUrl)
           ]);
 
-          await storage.updatePostByMuxAssetId(assetId, {
+          const updateData = {
+            muxAssetId: assetId, // Ensure asset ID is saved
             muxPlaybackId: playbackId,
             thumbnailUrl,
             processingStatus: "completed",
@@ -254,16 +257,36 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             moderationScore: modResult.score,
             isHidden: !modResult.approved,
             moderatedAt: new Date(),
-          });
+          };
+
+          // Try updating by Asset ID first (if we had it)
+          let updatedPost = await storage.updatePostByMuxAssetId(assetId, updateData);
+          
+          // If not found, and we have uploadId, try updating by Upload ID (most likely case for direct upload)
+          if (!updatedPost && uploadId) {
+             console.log(`ℹ️ Post not found by Asset ID ${assetId}, trying Upload ID ${uploadId}`);
+             updatedPost = await storage.updatePostByMuxUploadId(uploadId, updateData);
+          }
+          
+          if (updatedPost) {
+            console.log(`✅ Post ${updatedPost.id} updated with Mux asset info`);
+          } else {
+            console.warn(`⚠️ Could not find post to update for Asset ${assetId} / Upload ${uploadId}`);
+          }
         }
         break;
       }
       case "video.asset.errored": {
         console.error("❌ Video error:", event.data.errors);
         if (assetId) {
-          await storage.updatePostByMuxAssetId(assetId, {
+           let updatedPost = await storage.updatePostByMuxAssetId(assetId, {
             processingStatus: "failed",
-          });
+           });
+           if (!updatedPost && uploadId) {
+             await storage.updatePostByMuxUploadId(uploadId, {
+               processingStatus: "failed",
+             });
+           }
         }
         break;
       }
