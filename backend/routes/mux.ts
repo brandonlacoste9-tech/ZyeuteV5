@@ -7,11 +7,24 @@ import { runModeratorBee } from "../ai/bees/moderator-bee.js";
 export const muxRouter = express.Router();
 const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
 
-// Initialize Mux client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
-});
+// Check for Mux credentials
+const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
+const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+
+// Initialize Mux client (only if credentials exist)
+let mux: Mux | null = null;
+if (MUX_TOKEN_ID && MUX_TOKEN_SECRET) {
+  mux = new Mux({
+    tokenId: MUX_TOKEN_ID,
+    tokenSecret: MUX_TOKEN_SECRET,
+  });
+  console.log("✅ Mux client initialized successfully");
+} else {
+  console.error("❌ MUX CREDENTIALS MISSING! Video uploads will fail.");
+  console.error("   Required environment variables:");
+  console.error("   - MUX_TOKEN_ID:", MUX_TOKEN_ID ? "✅ Set" : "❌ MISSING");
+  console.error("   - MUX_TOKEN_SECRET:", MUX_TOKEN_SECRET ? "✅ Set" : "❌ MISSING");
+}
 
 /**
  * [NEW] Create a Mux Direct Upload URL
@@ -19,6 +32,15 @@ const mux = new Mux({
  */
 muxRouter.post("/mux/create-upload", async (req, res) => {
   try {
+    // Check if Mux is configured
+    if (!mux) {
+      console.error("❌ Mux upload failed: Credentials not configured");
+      return res.status(500).json({
+        error: "Video uploads are not configured. Please contact support.",
+        details: "MUX_TOKEN_ID or MUX_TOKEN_SECRET missing in environment variables"
+      });
+    }
+
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ["public"],
@@ -58,6 +80,11 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
     }
 
     // Verify the signature using the latest Mux SDK (v8+)
+    if (!mux) {
+      console.error("❌ Mux webhook failed: Credentials not configured");
+      return res.status(500).json({ error: "Mux not configured" });
+    }
+
     const headers = { "mux-signature": signature };
     try {
       mux.webhooks.verifySignature(rawBody.toString(), headers, webhookSecret);
