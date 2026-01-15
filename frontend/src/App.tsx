@@ -170,7 +170,7 @@ function App() {
           <NotificationProvider>
             <AuthProvider>
               <GuestModeProvider>
-            {/* <ColonyProvider> */}                  <RBACProvider>
+                   <RBACProvider>
                     <NavigationStateProvider>
                       <NetworkQueueProvider>
                         {/* <MediaSessionProvider> */}
@@ -702,7 +702,8 @@ function App() {
                       </NetworkQueueProvider>
                     </NavigationStateProvider>
                   </RBACProvider>
-            {/* </ColonyProvider> */}              </GuestModeProvider>
+            173
+            </GuestModeProvider>
             </AuthProvider>
           </NotificationProvider>
         </ThemeProvider>
