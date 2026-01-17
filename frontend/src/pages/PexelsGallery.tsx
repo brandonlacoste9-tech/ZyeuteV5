@@ -45,7 +45,7 @@ export const PexelsGallery: React.FC = () => {
           return;
         }
 
-        setCollectionTitle(collection.title || "Collection Pexels");
+        setCollectionTitle("Collection Pexels");
         setPhotos(collection.photos || []);
         setVideos(collection.videos || []);
       } catch (err) {
