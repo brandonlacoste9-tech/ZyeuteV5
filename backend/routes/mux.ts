@@ -1,24 +1,165 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import Mux from "@mux/mux-node";
 import { storage } from "../storage.js";
 import { runPromoBee } from "../ai/bees/promo-bee.js";
 import { runModeratorBee } from "../ai/bees/moderator-bee.js";
 
 export const muxRouter = express.Router();
+import multer from 'multer';
+import axios from 'axios';
+import { verifyAuthToken } from "../supabase-auth.js";
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit for now
+});
 const webhookSecret = process.env.MUX_WEBHOOK_SECRET;
 
-// Initialize Mux client
-const mux = new Mux({
-  tokenId: process.env.MUX_TOKEN_ID,
-  tokenSecret: process.env.MUX_TOKEN_SECRET,
+// Check for Mux credentials
+const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
+const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+
+// Initialize Mux client (only if credentials exist)
+let mux: Mux | null = null;
+if (MUX_TOKEN_ID && MUX_TOKEN_SECRET) {
+  mux = new Mux({
+    tokenId: MUX_TOKEN_ID,
+    tokenSecret: MUX_TOKEN_SECRET,
+  });
+  console.log("✅ Mux client initialized successfully");
+} else {
+  console.error("❌ MUX CREDENTIALS MISSING! Video uploads will fail.");
+  console.error("   Required environment variables:");
+  console.error("   - MUX_TOKEN_ID:", MUX_TOKEN_ID ? "✅ Set" : "❌ MISSING");
+  console.error("   - MUX_TOKEN_SECRET:", MUX_TOKEN_SECRET ? "✅ Set" : "❌ MISSING");
+}
+
+/**
+ * 0. Sanity Check Endpoint
+ */
+muxRouter.get("/test-create-video", async (req: Request, res: Response) => {
+  try {
+    if (!mux) return res.status(500).json({ error: "Mux not configured" });
+    
+    const testUrl =
+      'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
+    const asset = await mux.video.assets.create({
+      input: [{ url: testUrl }],
+      playback_policy: ['public'],
+    });
+    res.json({
+      success: true,
+      assetId: asset.id,
+      playbackId: asset.playback_ids?.[0]?.id,
+      playbackUrl: `https://stream.mux.com/${asset.playback_ids?.[0]?.id}.m3u8`,
+      dashboardUrl: `https://dashboard.mux.com/assets/${asset.id}`
+    });
+  } catch (e: any) {
+    console.error('Test asset error →', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+/**
+ * 1. Direct Upload Endpoint (Proxy)
+ * Receives file -> Proxies to Mux Direct Upload
+ */
+muxRouter.post("/upload", upload.single('video'), async (req: Request, res: Response) => {
+  try {
+    if (!mux) return res.status(500).json({ error: "Mux not configured" });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    // 0. Authenticate User
+    let userId = req.headers['x-user-id'] as string | undefined;
+    
+    // Try to extract from Bearer token if present
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const verifiedId = await verifyAuthToken(token);
+      if (verifiedId) userId = verifiedId;
+    }
+
+    // Fallback or Validation
+    if (!userId) {
+       // Try system user
+       const sysId = await storage.getSystemUserId();
+       if (sysId) userId = sysId;
+    }
+    
+    // Ensure userId is a UUID (basic regex check) or fallback to 'anonymous' which might fail DB constraint
+    if (!userId) return res.status(401).json({ error: 'Unauthorized: No valid user found' });
+
+    const { buffer, originalname, mimetype, size } = req.file;
+    console.log(`📦 Received ${originalname} (${(size / 1024).toFixed(1)} KB)`);
+
+    // 1. Ask Mux for direct upload URL
+    const directUpload = await mux.video.uploads.create({
+      new_asset_settings: {
+        playback_policy: ['public'],
+        mp4_support: 'standard',
+        input: [] // required by types to be present, though empty is fine for direct upload
+      },
+      cors_origin: '*', 
+    });
+
+    const { id: uploadId, url: uploadUrl } = directUpload;
+
+    // 2. Proxy Stream: Server RAM -> Mux
+    // Note: Railway has 256MB RAM limit. 
+    await axios({
+      method: "PUT",
+      url: uploadUrl,
+      data: buffer,
+      headers: {
+        'Content-Type': mimetype,
+      },
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    });
+
+    console.log(`✅ Uploaded to Mux via Proxy. Upload ID: ${uploadId}`);
+    
+    // 3. Save pending record
+    const post = await storage.createPost({
+        userId: userId, 
+        content: `Video upload: ${originalname}`, 
+        caption: originalname,
+        originalUrl: uploadUrl, 
+        muxUploadId: uploadId, // Store upload ID primarily
+        processingStatus: 'processing',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Upload queued - Mux will process it',
+      video: {
+        id: post.id,
+        uploadId: uploadId,
+      },
+    });
+
+  } catch (err: any) {
+    console.error('❌ Direct upload error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 /**
  * [NEW] Create a Mux Direct Upload URL
  * Allows the frontend to upload large videos directly to Mux securely.
  */
-muxRouter.post("/mux/create-upload", async (req, res) => {
+muxRouter.post("/mux/create-upload", async (req: Request, res: Response) => {
   try {
+    // Check if Mux is configured
+    if (!mux) {
+      console.error("❌ Mux upload failed: Credentials not configured");
+      return res.status(500).json({
+        error: "Video uploads are not configured. Please contact support.",
+        details: "MUX_TOKEN_ID or MUX_TOKEN_SECRET missing in environment variables"
+      });
+    }
+
     const upload = await mux.video.uploads.create({
       new_asset_settings: {
         playback_policy: ["public"],
@@ -37,7 +178,7 @@ muxRouter.post("/mux/create-upload", async (req, res) => {
   }
 });
 
-muxRouter.post("/webhooks/mux", async (req, res) => {
+muxRouter.post("/webhooks/mux", async (req: Request, res: Response) => {
   try {
     const signature = req.headers["mux-signature"] as string;
 
@@ -58,6 +199,11 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
     }
 
     // Verify the signature using the latest Mux SDK (v8+)
+    if (!mux) {
+      console.error("❌ Mux webhook failed: Credentials not configured");
+      return res.status(500).json({ error: "Mux not configured" });
+    }
+
     const headers = { "mux-signature": signature };
     try {
       mux.webhooks.verifySignature(rawBody.toString(), headers, webhookSecret);
@@ -70,6 +216,8 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
     console.log("✅ Mux webhook received:", event.type);
 
     const assetId = event.data.id;
+    // Attempt to get upload_id from event data if present (common in asset-related events)
+    const uploadId = event.data.upload_id;
 
     switch (event.type) {
       case "video.asset.ready": {
@@ -85,10 +233,11 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             runModeratorBee(thumbnailUrl)
           ]);
 
-          await storage.updatePostByMuxAssetId(assetId, {
+          const updateData = {
+            muxAssetId: assetId, // Ensure asset ID is saved
             muxPlaybackId: playbackId,
             thumbnailUrl,
-            processingStatus: "completed",
+            processingStatus: "completed" as const,
             mediaUrl: `https://stream.mux.com/${playbackId}.m3u8?max_resolution=720p`,
             duration: Math.round(event.data.duration || 0),
             aspectRatio: event.data.aspect_ratio || "16:9",
@@ -106,16 +255,36 @@ muxRouter.post("/webhooks/mux", async (req, res) => {
             moderationScore: modResult.score,
             isHidden: !modResult.approved,
             moderatedAt: new Date(),
-          });
+          };
+
+          // Try updating by Asset ID first (if we had it)
+          let updatedPost = await storage.updatePostByMuxAssetId(assetId, updateData);
+          
+          // If not found, and we have uploadId, try updating by Upload ID (most likely case for direct upload)
+          if (!updatedPost && uploadId) {
+             console.log(`ℹ️ Post not found by Asset ID ${assetId}, trying Upload ID ${uploadId}`);
+             updatedPost = await storage.updatePostByMuxUploadId(uploadId, updateData);
+          }
+          
+          if (updatedPost) {
+            console.log(`✅ Post ${updatedPost.id} updated with Mux asset info`);
+          } else {
+            console.warn(`⚠️ Could not find post to update for Asset ${assetId} / Upload ${uploadId}`);
+          }
         }
         break;
       }
       case "video.asset.errored": {
         console.error("❌ Video error:", event.data.errors);
         if (assetId) {
-          await storage.updatePostByMuxAssetId(assetId, {
+           let updatedPost = await storage.updatePostByMuxAssetId(assetId, {
             processingStatus: "failed",
-          });
+           });
+           if (!updatedPost && uploadId) {
+             await storage.updatePostByMuxUploadId(uploadId, {
+               processingStatus: "failed",
+             });
+           }
         }
         break;
       }
