@@ -5,6 +5,32 @@
  * Usage: /status
  */
 
+const https = require('https');
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+function checkUrl(url) {
+  return new Promise((resolve) => {
+    https.get(url, (res) => {
+      resolve(res.statusCode === 200);
+    }).on('error', () => resolve(false));
+  });
+}
+
 async function checkStatus() {
   const backendUrl = 'https://zyeutev5-production.up.railway.app';
   const frontendUrl = 'https://zyeute.vercel.app'; // Update with your Vercel URL
@@ -16,9 +42,8 @@ async function checkStatus() {
   console.log('\n🖥️  BACKEND (Railway)');
   try {
     const start = Date.now();
-    const response = await fetch(`${backendUrl}/api/health`);
+    const data = await fetchJson(`${backendUrl}/api/health`);
     const latency = Date.now() - start;
-    const data = await response.json();
 
     console.log(`   Status: ✅ Online (${latency}ms)`);
     console.log(`   Health: ${data.status === 'healthy' ? '✅ Healthy' : '⚠️ Degraded'}`);
@@ -40,11 +65,15 @@ async function checkStatus() {
   console.log('\n🌐 FRONTEND (Vercel)');
   try {
     const start = Date.now();
-    const response = await fetch(frontendUrl, { method: 'HEAD' });
+    const isOnline = await checkUrl(frontendUrl);
     const latency = Date.now() - start;
 
-    console.log(`   Status: ✅ Online (${latency}ms)`);
-    console.log(`   URL: ${frontendUrl}`);
+    if (isOnline) {
+      console.log(`   Status: ✅ Online (${latency}ms)`);
+      console.log(`   URL: ${frontendUrl}`);
+    } else {
+      throw new Error('Frontend not reachable');
+    }
 
   } catch (error) {
     console.log(`   Status: ❌ Offline or not deployed`);

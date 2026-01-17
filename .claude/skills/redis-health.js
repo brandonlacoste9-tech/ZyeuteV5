@@ -5,14 +5,31 @@
  * Usage: /redis-health or /rh
  */
 
+const https = require('https');
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
 async function checkRedisHealth() {
   const backendUrl = process.env.BACKEND_URL || 'https://zyeutev5-production.up.railway.app';
 
   console.log('🔍 Checking Redis health...\n');
 
   try {
-    const response = await fetch(`${backendUrl}/api/health`);
-    const data = await response.json();
+    const data = await fetchJson(`${backendUrl}/api/health`);
 
     console.log('📊 Health Check Results:');
     console.log('━'.repeat(50));
