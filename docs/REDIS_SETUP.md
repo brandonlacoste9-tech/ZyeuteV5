@@ -14,12 +14,24 @@ Redis is **optional** - the application gracefully degrades when Redis is unavai
 
 ## Quick Start
 
+**Note:** You can configure Redis using either:
+- **REDIS_URL** (single connection string) - Recommended for cloud providers
+- **Individual env vars** (REDIS_HOST, REDIS_PORT, etc.) - More flexible
+
+All examples below show both formats where applicable.
+
 ### Option 1: Railway (Recommended for Production)
 
 1. **Add Redis Plugin** in your Railway project dashboard
 2. **Copy the connection details** from Railway Redis plugin
 3. **Set environment variables** in Railway:
 
+**Using REDIS_URL (Recommended):**
+```bash
+REDIS_URL=redis://default:YOUR_PASSWORD@redis.railway.internal:6379
+```
+
+**Or using individual variables:**
 ```bash
 REDIS_HOST=redis.railway.internal  # Or the hostname from Railway
 REDIS_PORT=6379
@@ -34,6 +46,13 @@ REDIS_TLS=false  # Railway internal network doesn't need TLS
 2. **Get connection details** from Upstash dashboard
 3. **Set environment variables**:
 
+**Using REDIS_URL (Recommended):**
+```bash
+# Note: Use 'rediss://' (double 's') for TLS!
+REDIS_URL=rediss://default:YOUR_PASSWORD@xxx.upstash.io:6379
+```
+
+**Or using individual variables:**
 ```bash
 REDIS_HOST=<your-upstash-host>.upstash.io
 REDIS_PORT=6379
@@ -42,7 +61,35 @@ REDIS_USERNAME=default
 REDIS_TLS=true  # Upstash REQUIRES TLS
 ```
 
-### Option 3: Local Development (Docker)
+### Option 3: Google Cloud Memorystore (For GCP Users)
+
+**Perfect if you're already using Google Cloud for Vertex AI!**
+
+1. **Create Memorystore Redis instance** (see [detailed guide](GOOGLE_CLOUD_REDIS_SETUP.md))
+2. **Get internal IP** from GCP Console
+3. **Set environment variables**:
+
+**Using REDIS_URL (Recommended):**
+```bash
+# Format: redis://[username]:[password]@host:port
+# Memorystore has no username, just auth string
+REDIS_URL=redis://:YOUR_AUTH_STRING@10.x.x.x:6379
+```
+
+**Or using individual variables:**
+```bash
+REDIS_HOST=10.x.x.x  # Internal IP from Memorystore
+REDIS_PORT=6379
+REDIS_PASSWORD=<auth-string-from-memorystore>
+REDIS_USERNAME=  # Leave empty
+REDIS_TLS=false  # VPC internal network
+```
+
+**Note:** Memorystore uses private IPs. Your backend must be in the same GCP VPC (Cloud Run recommended).
+
+**Full setup guide:** [Google Cloud Redis Setup](GOOGLE_CLOUD_REDIS_SETUP.md)
+
+### Option 4: Local Development (Docker)
 
 1. **Start Redis container**:
 
@@ -52,6 +99,12 @@ docker-compose up -d redis
 
 2. **Set environment variables** in `.env`:
 
+**Using REDIS_URL:**
+```bash
+REDIS_URL=redis://localhost:6379
+```
+
+**Or using individual variables:**
 ```bash
 REDIS_HOST=localhost
 REDIS_PORT=6379
@@ -60,7 +113,7 @@ REDIS_USERNAME=
 REDIS_TLS=false
 ```
 
-### Option 4: Skip Redis (Development/Testing)
+### Option 5: Skip Redis (Development/Testing)
 
 Simply **don't set `REDIS_HOST`** - the app will run in degraded mode with warnings:
 
