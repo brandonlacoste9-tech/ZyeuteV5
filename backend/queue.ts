@@ -1,4 +1,10 @@
 import { Queue } from "bullmq";
+import { getBullMQConnection } from "./redis.js";
+
+/**
+ * BullMQ Queue Management with centralized Redis connection
+ * Uses lazy singleton pattern - queues are only created when needed
+ */
 
 // Lazy Singleton Pattern - Queues are only created when actually used
 let videoQueueInstance: Queue | null = null;
@@ -7,18 +13,8 @@ let blockchainQueueInstance: Queue | null = null;
 let memoryQueueInstance: Queue | null = null;
 let privacyQueueInstance: Queue | null = null;
 
-const connection = {
-  host: process.env.REDIS_HOST,
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  password: process.env.REDIS_PASSWORD,
-  username: process.env.REDIS_USERNAME,
-  tls: process.env.REDIS_TLS === "true" ? {} : undefined, // Essential for managed Redis (Upstash/Railway)
-  maxRetriesPerRequest: null, // Required for BullMQ
-  retryStrategy(times: number) {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-};
+// Use centralized Redis configuration
+const connection = getBullMQConnection();
 
 // 🚨 QUEUE 1: Video Enhancement (High Priority)
 export const getVideoQueue = (): Queue => {

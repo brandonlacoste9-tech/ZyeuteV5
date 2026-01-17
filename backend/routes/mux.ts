@@ -44,7 +44,7 @@ muxRouter.get("/test-create-video", async (req: Request, res: Response) => {
     const testUrl =
       'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4';
     const asset = await mux.video.assets.create({
-      input: [{ url: testUrl }],
+      inputs: [{ url: testUrl }],
       playback_policy: ['public'],
     });
     res.json({
@@ -98,9 +98,9 @@ muxRouter.post("/upload", upload.single('video'), async (req: Request, res: Resp
       new_asset_settings: {
         playback_policy: ['public'],
         mp4_support: 'standard',
-        input: [] // required by types to be present, though empty is fine for direct upload
+        inputs: [] // required by types to be present, though empty is fine for direct upload
       },
-      cors_origin: '*', 
+      cors_origin: '*',
     });
 
     const { id: uploadId, url: uploadUrl } = directUpload;
