@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { exec } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
+import os from "os";
 import path from "path";
 
 const execAsync = promisify(exec);
@@ -21,8 +22,8 @@ const worker = new Worker(
     const { postId, videoUrl, filterType } = job.data;
     console.log(`🎬 Processing Job ${job.id}: Post ${postId}`);
 
-    const tempIn = path.join("/tmp", `${job.id}_in.mp4`);
-    const tempOut = path.join("/tmp", `${job.id}_out.mp4`);
+    const tempIn = path.join(os.tmpdir(), `${job.id}_in.mp4`);
+    const tempOut = path.join(os.tmpdir(), `${job.id}_out.mp4`);
 
     try {
       // 1. Update Status

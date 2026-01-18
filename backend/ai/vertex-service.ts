@@ -76,7 +76,7 @@ if (!vertexAI && apiKey) {
 }
 
 // Helper to get a model from either client
-function getModel(modelName: string = "gemini-1.5-flash", systemInstruction?: string) {
+function getModel(modelName: string = "gemini-2.5-flash-lite", systemInstruction?: string) {
   if (vertexAI) {
     return {
       client: "vertex",
@@ -204,7 +204,7 @@ export async function analyzeVideoThumbnail(
   imageUrl: string,
 ): Promise<QuebecVideoMetadata> {
   try {
-    const { model, client } = getModel("gemini-1.5-flash");
+    const { model, client } = getModel("gemini-2.5-flash-lite");
 
     const prompt = `You are the Captioning & Promotion Bee 🐝, an AI specialist for Zyeuté, Quebec's social network.
 Analyze this video thumbnail and generate engaging, culturally relevant metadata.
@@ -230,7 +230,7 @@ Context: Zyeuté is "Branché sur le monde, enraciné ici."`;
       "POST",
       async (span) => {
         span.setAttributes({
-          "ai.model": "gemini-1.5-flash",
+          "ai.model": "gemini-2.5-flash-lite",
           "ai.task": "video_analysis",
           "ai.client": client,
         });
@@ -306,7 +306,7 @@ export async function generateWithTIGuy(
     // We can inject the system prompt here or in the model config.
     // For simplicity, we'll use a single turn instruction if model config doesn't support it well cross-SDK.
     // But let's try the cleaner getModel approach.
-    const { model, client } = getModel("gemini-1.5-flash");
+    const { model, client } = getModel("gemini-2.5-flash-lite");
 
     // Construct the user message injecting specific context
     const fullMessage = systemPromptTemplate
@@ -319,7 +319,7 @@ export async function generateWithTIGuy(
       "POST",
       async (span) => {
         span.setAttributes({
-          "ai.model": "gemini-1.5-flash",
+          "ai.model": "gemini-2.5-flash-lite",
           "ai.mode": mode,
           "ai.language": language,
           "ai.client": client,
@@ -379,7 +379,7 @@ export async function moderateContent(
   type: "text" | "image" | "video" = "text",
 ): Promise<ModerationResult> {
   try {
-    const { model, client } = getModel("gemini-1.5-flash");
+    const { model, client } = getModel("gemini-2.5-flash-lite");
 
     const prompt = TI_GUY_PROMPTS.moderation.replace("{content}", content);
 

@@ -20,6 +20,8 @@ const connection = {
   },
 };
 
+import { VideoOrchestrator } from "./services/videoOrchestrator.js";
+
 // 🚨 QUEUE 1: Video Enhancement (High Priority)
 export const getVideoQueue = (): Queue => {
   // 1. If we already have a queue, return it (Warm container)
@@ -29,28 +31,52 @@ export const getVideoQueue = (): Queue => {
 
   // 2. Safety Check: Do we even have Redis credentials?
   if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Video queue disabled.");
-    // Return a mock object so the app doesn't crash if Redis is missing
+    console.warn("⚠️ REDIS_HOST not defined. Using Direct Mode for Video.");
     return {
-      add: async () =>
-        console.log("Mock Video Queue: Job added (Redis missing)"),
-      close: async () => console.log("Mock Video Queue: Close called"),
+      add: async (name: string, data: any) => {
+          console.log("⚠️ [Direct Mode] Starting video processing in background...");
+          // Run immediately in background (fire & forget)
+          VideoOrchestrator.process(data).catch(e => console.error("Direct Processing Failed:", e));
+          return { id: "direct-" + Date.now() };
+      },
+      close: async () => {},
     } as unknown as Queue;
   }
 
   // 3. Connect (Only happens once per container)
   console.log("🔌 Initializing Video Queue Redis connection...");
-  videoQueueInstance = new Queue("zyeute-video-enhance", {
-    connection,
-    defaultJobOptions: {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 5000,
+  try {
+    videoQueueInstance = new Queue("zyeute-video-enhance", {
+      connection: {
+        ...connection,
+        // Fail fast if local
+        enableOfflineQueue: false,
       },
-      removeOnComplete: true,
-    },
-  });
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 5000,
+        },
+        removeOnComplete: true,
+      },
+    });
+    
+    // Error listener to prevent unhandled crashes
+    videoQueueInstance.on('error', (err) => {
+        console.error('❌ Video Queue Redis Connection Error:', err.message);
+    });
+  } catch (e) {
+      console.error("❌ Failed to initialize video queue (Redis missing). Using Direct Mode.");
+      return {
+          add: async (name: string, data: any) => {
+             console.log("⚠️ [Direct Mode] Starting video processing in background (Fallback)...");
+             VideoOrchestrator.process(data).catch(err => console.error("Direct Processing Failed:", err));
+             return { id: "direct-" + Date.now() };
+          },
+          close: async () => {},
+      } as unknown as Queue;
+  }
 
   return videoQueueInstance;
 };

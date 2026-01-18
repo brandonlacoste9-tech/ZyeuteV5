@@ -12,9 +12,9 @@ import React, {
   memo,
   ReactElement,
 } from "react";
-import { List, ListImperativeAPI } from "react-window";
+import { List, ListImperativeAPI, RowComponentProps } from "react-window";
 
-// Support for react-window 2.x which renamed FixedSizeList to List
+// react-window 2.x types - RowData is passed via rowProps
 interface RowData {
   posts: Array<Post & { user: User }>;
   currentIndex: number;
@@ -26,15 +26,7 @@ interface RowData {
   isSlowScrolling: boolean;
 }
 
-interface FeedRowProps extends RowData {
-  index: number;
-  style: React.CSSProperties;
-  ariaAttributes?: {
-    "aria-posinset": number;
-    "aria-setsize": number;
-    role: "listitem";
-  };
-}
+type FeedRowProps = RowComponentProps<RowData>;
 
 import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
@@ -74,6 +66,7 @@ const FeedRow = memo(
   ({
     index,
     style,
+    ariaAttributes,
     posts,
     currentIndex,
     handleFireToggle,
@@ -82,7 +75,7 @@ const FeedRow = memo(
     isFastScrolling,
     isMediumScrolling,
     isSlowScrolling,
-  }: FeedRowProps): ReactElement => {
+  }: FeedRowProps): ReactElement | null => {
     const post = posts[index];
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
@@ -136,24 +129,32 @@ const FeedRow = memo(
       </div>
     );
   },
-  (prevProps, nextProps) => {
+  (prevProps: FeedRowProps, nextProps: FeedRowProps) => {
     // Only re-render if:
-    // 1. Post changed
+    // 1. Data changed (deep check specific fields)
     // 2. Active index changed (affects priority)
-    // 3. Scroll velocity category changed (affects tiering)
-    // 4. Style changed
+    // 3. Style changed
 
-    // Note: We might NOT want to re-render on every tiny scroll velocity change,
-    // but we DO want to re-render if it crosses the Fast/Medium threshold.
+    if (prevProps.index !== nextProps.index) return false;
+    if (prevProps.style !== nextProps.style) return false;
 
-    return (
-      prevProps.posts[prevProps.index] === nextProps.posts[nextProps.index] &&
-      prevProps.currentIndex === nextProps.currentIndex &&
-      prevProps.isFastScrolling === nextProps.isFastScrolling &&
-      prevProps.isMediumScrolling === nextProps.isMediumScrolling &&
-      prevProps.isSlowScrolling === nextProps.isSlowScrolling &&
-      prevProps.style === nextProps.style
-    );
+    // Safe handling for potentially undefined array access
+    const prevPost = prevProps.posts[prevProps.index];
+    const nextPost = nextProps.posts[nextProps.index];
+
+    // Simple reference check first
+    if (prevPost === nextPost) {
+      // Check global transient flags
+      return (
+        prevProps.currentIndex === nextProps.currentIndex &&
+        prevProps.isFastScrolling === nextProps.isFastScrolling &&
+        prevProps.isMediumScrolling === nextProps.isMediumScrolling &&
+        prevProps.isSlowScrolling === nextProps.isSlowScrolling
+      );
+    }
+
+    // If posts differ by reference, we must re-render
+    return false;
   },
 );
 
@@ -212,6 +213,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
     };
   }, [saveFeedState, stateKey, page, currentIndex]); // Removed posts from deps, using ref
+
+  // FIX: Hydrate state if savedState arrives late (after initial mount)
+  useEffect(() => {
+    // If we have no posts but savedState has posts, we likely missed the initialization
+    if (posts.length === 0 && savedState?.posts?.length) {
+      feedLogger.info(
+        "Hydrating posts from delayed savedState",
+        savedState.posts.length,
+      );
+      setPosts(savedState.posts);
+      setPage(savedState.page || 0);
+      setCurrentIndex(savedState.currentIndex || 0);
+      // Ensure specific scroll restoration if needed, though the ref effect handles it
+      setIsLoading(false);
+    }
+  }, [savedState, posts.length]);
 
   // Transform Pexels items to Post format
   const transformPexelsToPosts = useCallback(
@@ -306,12 +323,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
     // If we already have posts (restored state), don't fetch initial
-    if (savedState?.posts?.length) return;
+    // Log the check to verify logic
+    if (savedState?.posts?.length) {
+      feedLogger.debug(
+        `Skipping fetch, found ${savedState.posts.length} posts in savedState`,
+      );
+      return;
+    }
 
+    feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
     try {
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
+      feedLogger.info(`fetchVideoFeed: API returned ${data?.length} posts`);
 
       let validPosts: Array<Post & { user: User }> = [];
       if (data) {
@@ -531,20 +556,24 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     <div className={cn("w-full h-full bg-black", className)}>
       <AutoSizer>
         {({ height, width }) => (
-          <List<RowData>
-            listRef={listRef}
-            className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-            style={{ height, width }}
-            rowCount={posts.length}
-            rowHeight={height} // Full screen height per item
-            rowProps={itemData}
-            rowComponent={
-              FeedRow as unknown as (props: FeedRowProps) => ReactElement
-            }
-            onRowsRendered={onRowsRendered}
-            overscanCount={1} // Only render 1 item above/below viewport
-            onScroll={(props: any) => handleScroll(props.scrollOffset)}
-          />
+          <>
+            {/* Debug Overlay */}
+            {/* <div className="absolute top-0 left-0 z-50 bg-black/50 text-red-500 text-xs p-2 pointer-events-none">
+              DEBUG: {width}x{height} | {posts.length} posts
+            </div> */}
+
+            <List<RowData>
+              listRef={listRef}
+              className="no-scrollbar snap-y snap-mandatory scroll-smooth"
+              style={{ height, width }}
+              rowCount={posts.length}
+              rowHeight={height} // Full screen height per item
+              rowComponent={FeedRow as unknown as (props: RowComponentProps<RowData>) => React.ReactElement | null}
+              rowProps={itemData}
+              overscanCount={1} // Only render 1 item above/below viewport
+              onRowsRendered={(visible) => onRowsRendered(visible)}
+            />
+          </>
         )}
       </AutoSizer>
 

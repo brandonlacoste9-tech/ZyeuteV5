@@ -670,6 +670,8 @@ export interface PexelsResponse {
   videos?: PexelsVideo[];
   photos?: PexelsPhoto[];
   url?: string;
+  title?: string;
+  description?: string;
 }
 
 export async function getPexelsCurated(
