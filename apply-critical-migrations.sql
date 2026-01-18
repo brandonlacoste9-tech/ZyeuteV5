@@ -63,6 +63,15 @@ ON "user_profiles" ("piasse_balance" DESC)
 WHERE "piasse_balance" > 0;
 
 -- ============================================
+-- Migration 0015: Add missing location columns to user_profiles
+-- ============================================
+
+ALTER TABLE "user_profiles"
+ADD COLUMN IF NOT EXISTS "city" text,
+ADD COLUMN IF NOT EXISTS "region_id" text,
+ADD COLUMN IF NOT EXISTS "location" text;
+
+-- ============================================
 -- Verification Queries
 -- ============================================
 
