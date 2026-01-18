@@ -68,7 +68,7 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; font-src 'self' https://fonts.gstatic.com https://r2cdn.perplexity.ai https://vercel.live data:; connect-src 'self' https://*.supabase.co wss://*.railway.app https://*.railway.app https://*.up.railway.app wss://*.up.railway.app ws://localhost:* http://localhost:* https://*.googleapis.com https://*.fal.ai; img-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline';"
+    "default-src 'self'; font-src 'self' https://fonts.gstatic.com https://*.perplexity.ai https://r2cdn.perplexity.ai https://vercel.live data:; connect-src 'self' https://*.supabase.co wss://*.railway.app https://*.railway.app https://*.up.railway.app wss://*.up.railway.app ws://localhost:* http://localhost:* https://*.googleapis.com https://*.fal.ai; img-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; style-src 'self' 'unsafe-inline';"
   );
   next();
 });
