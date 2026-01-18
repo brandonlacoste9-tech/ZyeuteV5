@@ -9,6 +9,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   memo,
   ReactElement,
 } from "react";
@@ -24,6 +25,7 @@ interface RowData {
   isFastScrolling: boolean;
   isMediumScrolling: boolean;
   isSlowScrolling: boolean;
+  isSystemOverloaded: boolean;
 }
 
 type FeedRowProps = RowComponentProps<RowData>;
@@ -66,16 +68,20 @@ const FeedRow = memo(
   ({
     index,
     style,
-    ariaAttributes,
-    posts,
-    currentIndex,
-    handleFireToggle,
-    handleComment,
-    handleShare,
-    isFastScrolling,
-    isMediumScrolling,
-    isSlowScrolling,
+    data,
   }: FeedRowProps): ReactElement | null => {
+    const {
+      posts,
+      currentIndex,
+      handleFireToggle,
+      handleComment,
+      handleShare,
+      isFastScrolling,
+      isMediumScrolling,
+      isSlowScrolling,
+      isSystemOverloaded,
+    } = data;
+
     const post = posts[index];
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
@@ -96,10 +102,13 @@ const FeedRow = memo(
       isPredictive,
     );
 
+    // Circuit Breaker: If system is overloaded (high latency), kill prefetching
+    const effectivePreloadTier = isSystemOverloaded ? 0 : preloadTier;
+
     // Smart Prefetching (Tier 2 only fetches full blob)
     // For Tier 0/1 we just pass the original URL and let SingleVideoView handle preload attr
     // But usePrefetchVideo handles cache lookup too
-    const { source, isCached, debug } = usePrefetchVideo(videoUrl, preloadTier);
+    const { source, isCached, debug } = usePrefetchVideo(videoUrl, effectivePreloadTier);
 
     if (!post) return <div style={style} />;
 
@@ -119,7 +128,7 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            preloadTier >= 2 ? "auto" : preloadTier === 1 ? "metadata" : "none"
+            effectivePreloadTier >= 2 ? "auto" : effectivePreloadTier === 1 ? "metadata" : "none"
           }
           videoSource={source}
           isCached={isCached}
@@ -138,23 +147,32 @@ const FeedRow = memo(
     if (prevProps.index !== nextProps.index) return false;
     if (prevProps.style !== nextProps.style) return false;
 
-    // Safe handling for potentially undefined array access
-    const prevPost = prevProps.posts[prevProps.index];
-    const nextPost = nextProps.posts[nextProps.index];
+    // Compare data objects
+    const prevData = prevProps.data;
+    const nextData = nextProps.data;
 
-    // Simple reference check first
-    if (prevPost === nextPost) {
-      // Check global transient flags
-      return (
-        prevProps.currentIndex === nextProps.currentIndex &&
-        prevProps.isFastScrolling === nextProps.isFastScrolling &&
-        prevProps.isMediumScrolling === nextProps.isMediumScrolling &&
-        prevProps.isSlowScrolling === nextProps.isSlowScrolling
-      );
-    }
+    // 1. If the post data itself changed, we must re-render
+    if (prevData.posts !== nextData.posts) return false;
 
-    // If posts differ by reference, we must re-render
-    return false;
+    // 2. If global scroll speed changed, we re-render to adjust quality
+    if (
+      prevData.isFastScrolling !== nextData.isFastScrolling ||
+      prevData.isMediumScrolling !== nextData.isMediumScrolling ||
+      prevData.isSlowScrolling !== nextData.isSlowScrolling ||
+      prevData.isSystemOverloaded !== nextData.isSystemOverloaded
+    ) return false;
+
+    // 3. ZERO-GRAVITY CALCULATION:
+    // Only re-render if this specific row's relationship to the "current" index changed.
+    const prevIsPriority = prevProps.index === prevData.currentIndex;
+    const nextIsPriority = nextProps.index === nextData.currentIndex;
+    if (prevIsPriority !== nextIsPriority) return false;
+
+    const prevIsPredictive = Math.abs(prevProps.index - prevData.currentIndex) === 1;
+    const nextIsPredictive = Math.abs(nextProps.index - nextData.currentIndex) === 1;
+    if (prevIsPredictive !== nextIsPredictive) return false;
+
+    return true; // Everything else is identical; skip render.
   },
 );
 
@@ -170,12 +188,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { getFeedState, saveFeedState } = useNavigationState();
   const { isOnline, addToQueue } = useNetworkQueue();
 
-    const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
+  const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
   // Initialize from saved state or defaults
   const savedState = getFeedState(stateKey);
 
   // Scroll Velocity Tracking
   const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
+  const [isSystemOverloaded, setIsSystemOverloaded] = useState(false);
 
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
@@ -437,32 +456,32 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
-      let callbackId:any = null;
-  if ((!savedState || !savedState.posts?.length) || posts.length === 0) {
-          // Prevent double-fetch in React StrictMode
-    if (hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
+    let callbackId: any = null;
 
-    // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
-    if ('requestIdleCallback' in window) {
-      callbackId = requestIdleCallback(() => fetchVideoFeed());
-    } else {
-      callbackId = setTimeout(() => fetchVideoFeed(), 1);
+    if (!savedState || !savedState.posts?.length || posts.length === 0) {
+      // Prevent double-fetch in React StrictMode
+      if (hasInitializedRef.current) return;
+      hasInitializedRef.current = true;
+
+      // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
+      if ("requestIdleCallback" in window) {
+        callbackId = requestIdleCallback(() => fetchVideoFeed());
+      } else {
+        callbackId = setTimeout(() => fetchVideoFeed(), 1);
+      }
     }
-        }
 
-      return () => {
-
-    // Cleanup: cancel callback if compon
+    return () => {
+      // Cleanup: cancel callback if component unmounts
       if (callbackId !== null) {
-        if ('cancelIdleCallback' in window) {
+        if ("cancelIdleCallback" in window) {
           cancelIdleCallback(callbackId);
         } else {
           clearTimeout(callbackId);
         }
-            }
-      };
-      }, [fetchVideoFeed, savedState]);
+      }
+    };
+  }, [fetchVideoFeed, savedState]);
 
   // Restore scroll position via ref
   useEffect(() => {
@@ -480,10 +499,84 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState]);
 
+  // Smart Prefetching: Load heavy chunks (Mux, Camera) when main thread is idle
+  // This ensures they are ready in the browser cache when the user needs them
+  useEffect(() => {
+    const prefetchHeavyChunks = () => {
+      feedLogger.debug("Prefetching heavy chunks (Mux, Camera) in background...");
+      // Trigger dynamic imports to populate browser cache without executing render logic
+      import("@mux/mux-player-react").catch(() => { });
+      import("@/components/features/CameraView").catch(() => { });
+      import("./StreamingDebugOverlay").catch(() => { });
+      import("./MuxVideoPlayer").catch(() => { });
+    };
+
+    let idleId: any = null;
+    let timeoutId: any = null;
+
+    if ("requestIdleCallback" in window) {
+      idleId = requestIdleCallback(prefetchHeavyChunks, { timeout: 4000 });
+    } else {
+      timeoutId = setTimeout(prefetchHeavyChunks, 3000);
+    }
+
+    return () => {
+      if (idleId && "cancelIdleCallback" in window) cancelIdleCallback(idleId);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const prevIndexRef = useRef(currentIndex);
+  const lastSwitchTimeRef = useRef(Date.now());
+
+  // Structured Logging for Critical State Changes
+  useEffect(() => {
+    const isSwitch = currentIndex !== prevIndexRef.current;
+
+    // Circuit Breaker & Trace Logging
+    if (isSwitch && posts[currentIndex] && posts[prevIndexRef.current]) {
+      const latency = Date.now() - lastSwitchTimeRef.current;
+
+      // Circuit Breaker: Drop prefetching if frame rate is tanking during fast scroll
+      if (isFast && latency > 200) {
+        if (!isSystemOverloaded) setIsSystemOverloaded(true);
+      } else if (latency < 100) {
+        if (isSystemOverloaded) setIsSystemOverloaded(false);
+      }
+
+      if (process.env.NODE_ENV === "development" || process.env.LOG_LEVEL === "trace") {
+        const currentPost = posts[currentIndex];
+        const prevPost = posts[prevIndexRef.current];
+        feedLogger.info(`Trace: Media Transition (${prevPost.type} -> ${currentPost.type})`, {
+          fromId: prevPost.id,
+          toId: currentPost.id,
+          latencyMs: latency,
+          direction: currentIndex > prevIndexRef.current ? 'next' : 'prev'
+        });
+      }
+    }
+
+    if (process.env.NODE_ENV === "development" || process.env.LOG_LEVEL === "trace") {
+      feedLogger.info("Feed State Update", {
+        currentIndex,
+        page,
+        postsCount: posts.length,
+        velocity: { isFast, isMedium, isSlow }
+      });
+    }
+
+    if (isSwitch) {
+      prevIndexRef.current = currentIndex;
+      lastSwitchTimeRef.current = Date.now();
+    }
+  }, [currentIndex, page, posts, isFast, isMedium, isSlow, isSystemOverloaded]);
+
   // Handle rows rendered (new API name in 2.x)
   const onRowsRendered = useCallback(
-    (visibleRows: { startIndex: number; stopIndex: number }) => {
-      const { startIndex, stopIndex } = visibleRows;
+    ({ visibleStartIndex, visibleStopIndex }: { visibleStartIndex: number; visibleStopIndex: number }) => {
+      const startIndex = visibleStartIndex;
+      const stopIndex = visibleStopIndex;
+
       // We assume the top-most visible item is the "current" one in a snap-scroll context
       const newIndex = startIndex;
 
@@ -577,7 +670,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }
 
   // Data object passed to rows
-  const itemData: RowData = {
+  const itemData: RowData = useMemo(() => ({
     posts,
     currentIndex,
     handleFireToggle,
@@ -586,10 +679,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     isFastScrolling: isFast,
     isMediumScrolling: isMedium,
     isSlowScrolling: isSlow,
-  };
+    isSystemOverloaded,
+  }), [posts, currentIndex, handleFireToggle, handleComment, handleShare, isFast, isMedium, isSlow, isSystemOverloaded]);
 
   return (
-    <div className={cn("w-full h-full bg-black", className)}>
+    <div className={cn("w-full h-full bg-black feed-root", className)}>
       <AutoSizer>
         {({ height, width }) => (
           <>
@@ -604,10 +698,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height} // Full screen height per item
-              rowComponent={FeedRow as unknown as (props: RowComponentProps<RowData>) => React.ReactElement | null}
-              rowProps={itemData}
-              overscanCount={1} // Only render 1 item above/below viewport
-              onRowsRendered={(visible) => onRowsRendered(visible)}
+              rowComponent={FeedRow}
+              itemData={itemData}
+              // Adaptive Buffer: Increase lookahead when scrolling fast to prevent gray screens
+              overscanCount={isFast ? 3 : 1}
+              onItemsRendered={onRowsRendered}
             />
           </>
         )}
@@ -621,13 +716,3 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
