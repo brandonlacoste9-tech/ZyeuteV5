@@ -17,7 +17,11 @@ import { logger } from "./utils/logger.js";
  */
 function parseRedisUrl(url: string) {
   try {
-    const parsedUrl = new URL(url);
+    let fullUrl = url;
+    if (!url.startsWith("redis://") && !url.startsWith("rediss://")) {
+      fullUrl = `redis://${url}`;
+    }
+    const parsedUrl = new URL(fullUrl);
     const useTls = parsedUrl.protocol === "rediss:";
 
     return {

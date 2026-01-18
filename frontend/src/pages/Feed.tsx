@@ -75,7 +75,7 @@ export const Feed: React.FC = () => {
     const fetchStories = async () => {
       try {
         const storyList = await getStories(currentUser?.id);
-        setStories(storyList);
+        setStories(storyList || []);
       } catch (error) {
         feedLogger.error("Error fetching stories:", error);
       } finally {
@@ -117,8 +117,8 @@ export const Feed: React.FC = () => {
       setSentGiftEmoji(GIFT_EMOJIS[giftType] || "🎁");
       setSentGiftRecipientName(
         selectedRecipient?.display_name ||
-          selectedRecipient?.username ||
-          "Créateur",
+        selectedRecipient?.username ||
+        "Créateur",
       );
       setShowGiftOverlay(true);
 

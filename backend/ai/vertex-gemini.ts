@@ -13,6 +13,23 @@ let vertexAI: any = null;
 
 // Initialize Vertex AI client
 async function initializeVertexAI() {
+    // Check for Service Account JSON in env vars (Railway pattern)
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const credPath = path.resolve(process.cwd(), "google-credentials.json");
+      // Only write if not exists or force update? Simple check for now.
+      if (!fs.existsSync(credPath)) {
+        fs.writeFileSync(credPath, process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        logger.info("[VertexGemini] Wrote GOOGLE_SERVICE_ACCOUNT_JSON to file");
+      }
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credPath;
+    } catch (err: any) {
+      logger.error("[VertexGemini] Failed to write credentials file:", err);
+    }
+  }
+
   if (vertexAI) return vertexAI;
 
   try {

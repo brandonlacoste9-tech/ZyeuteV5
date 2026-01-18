@@ -46,3 +46,5 @@ tsc_*.txt
 .agent/
 my-project/
 antigravity-kit/
+google-credentials.json
+google-credentials.json
