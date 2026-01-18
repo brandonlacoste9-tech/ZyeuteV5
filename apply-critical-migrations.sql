@@ -29,7 +29,8 @@ ADD COLUMN IF NOT EXISTS "aspect_ratio" text;
 ALTER TABLE "publications"
 ADD COLUMN IF NOT EXISTS "visual_filter" text,
 ADD COLUMN IF NOT EXISTS "enhance_started_at" timestamp with time zone,
-ADD COLUMN IF NOT EXISTS "enhance_finished_at" timestamp with time zone;
+ADD COLUMN IF NOT EXISTS "enhance_finished_at" timestamp with time zone,
+ADD COLUMN IF NOT EXISTS "visibilite" text DEFAULT 'public';
 
 -- Create indexes for video processing queries
 CREATE INDEX IF NOT EXISTS "idx_publications_processing_status"
