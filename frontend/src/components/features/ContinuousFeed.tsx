@@ -437,18 +437,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
+      let callbackId:any = null;
     if (!savedState || !savedState.posts?.length) {
           // Prevent double-fetch in React StrictMode
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
     // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
-    let callbackId:any = null;
     if ('requestIdleCallback' in window) {
       callbackId = requestIdleCallback(() => fetchVideoFeed());
     } else {
       callbackId = setTimeout(() => fetchVideoFeed(), 1);
     }
+        }
+
+      return () => {
 
     // Cleanup: cancel callback if compon
       if (callbackId !== null) {
@@ -617,6 +620,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
 
