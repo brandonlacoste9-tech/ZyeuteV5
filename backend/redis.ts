@@ -29,7 +29,8 @@ function parseRedisUrl(url: string) {
       db: parsedUrl.pathname ? parseInt(parsedUrl.pathname.slice(1)) : 0,
     };
   } catch (error: any) {
-    logger.error(`[Redis] Failed to parse REDIS_URL: ${error.message}`);
+    // Downgrade to info to avoid noise when REDIS_URL is just a placeholder
+    logger.info(`[Redis] Failed to parse REDIS_URL: ${error.message}`);
     return null;
   }
 }
@@ -38,9 +39,11 @@ function parseRedisUrl(url: string) {
 // Priority: REDIS_URL > individual env vars
 let redisConfig: any;
 
-if (process.env.REDIS_URL) {
+const redisUrl = process.env.REDIS_URL?.trim();
+
+if (redisUrl) {
   logger.info("[Redis] Using REDIS_URL for configuration");
-  const parsed = parseRedisUrl(process.env.REDIS_URL);
+  const parsed = parseRedisUrl(redisUrl);
   if (parsed) {
     redisConfig = {
       ...parsed,
@@ -56,10 +59,26 @@ if (process.env.REDIS_URL) {
       },
     };
   } else {
-    logger.error("[Redis] Invalid REDIS_URL format, falling back to individual env vars");
-    redisConfig = null;
+    logger.info("[Redis] Invalid REDIS_URL format, falling back to individual env vars");
+    // Fallback to individual env vars if URL parsing fails
+    if (process.env.REDIS_HOST) {
+      redisConfig = {
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT || "6379"),
+        password: process.env.REDIS_PASSWORD,
+        username: process.env.REDIS_USERNAME,
+        tls: process.env.REDIS_TLS === "true" ? {} : undefined,
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => {
+          if (times > 3) return null;
+          return Math.min(times * 50, 2000);
+        },
+      };
+    } else {
+      redisConfig = null;
+    }
   }
-} else {
+} else if (process.env.REDIS_HOST) {
   // Use individual environment variables
   redisConfig = {
     host: process.env.REDIS_HOST,
@@ -78,6 +97,9 @@ if (process.env.REDIS_URL) {
       return delay;
     },
   };
+} else {
+  // No Redis configuration found
+  redisConfig = null;
 }
 
 export { redisConfig };
@@ -97,8 +119,11 @@ export function initializeRedis(): Redis | null {
     return redisClient;
   }
 
+  const hasUrl = !!process.env.REDIS_URL?.trim();
+  const hasHost = !!process.env.REDIS_HOST?.trim();
+
   // Check if Redis is configured (either REDIS_URL or REDIS_HOST)
-  if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
+  if (!hasUrl && !hasHost) {
     logger.info(
       "[Redis] Not configured (REDIS_URL or REDIS_HOST not set) - Running in degraded mode",
     );
@@ -108,7 +133,11 @@ export function initializeRedis(): Redis | null {
 
   // Check if we have a valid config
   if (!redisConfig || !redisConfig.host) {
-    logger.error("[Redis] Invalid configuration - check REDIS_URL or REDIS_HOST");
+    if (hasUrl && !redisConfig) {
+      logger.info("[Redis] Configuration invalid (parsing failed). Disabling Redis.");
+    } else {
+      logger.info("[Redis] Invalid configuration - check REDIS_URL or REDIS_HOST");
+    }
     redisConnectionStatus = "not_configured";
     return null;
   }
