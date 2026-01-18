@@ -708,13 +708,13 @@ function App() {
                         </MediaSessionProvider>
                       </NetworkQueueProvider>
                     </NavigationStateProvider>
+                  </ColonyProvider>
                 </RBACProvider>
-              </ColonyProvider>
-            </GuestModeProvider>
-          </AuthProvider>
-        </NotificationProvider>
-      </ThemeProvider>
-    </FactoryThemeProvider>
+              </GuestModeProvider>
+            </AuthProvider>
+          </NotificationProvider>
+        </ThemeProvider>
+      </FactoryThemeProvider>
     </ErrorBoundary >
   );
 }
