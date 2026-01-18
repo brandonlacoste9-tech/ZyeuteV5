@@ -333,12 +333,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
+
+    let validPosts: Array<Post & { user: User }> = [];
+    let apiSuccess = false;
+
     try {
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
       feedLogger.info(`fetchVideoFeed: API returned ${data?.length} posts`);
 
-      let validPosts: Array<Post & { user: User }> = [];
       if (data) {
         validPosts = data.filter((p) => {
           // Filter out invalid users
@@ -348,43 +351,53 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
           return true;
         }) as Array<Post & { user: User }>;
+        apiSuccess = true;
       }
+    } catch (error) {
+      feedLogger.error("Error fetching API posts, will use Pexels fallback:", error);
+      // Don't rethrow - we'll try Pexels fallback below
+    }
 
-      // Fetch Pexels curated videos and merge with feed posts
-      try {
-        const pexelsData = await getPexelsCurated(10, 1);
-        if (pexelsData && pexelsData.videos?.length) {
-          const pexelsPosts = transformPexelsToPosts(
-            [], // Curated endpoint returns videos, not photos
-            pexelsData.videos || [],
-          );
+    // Always try to fetch Pexels content (as fallback or to supplement)
+    try {
+      const pexelsData = await getPexelsCurated(10, 1);
+      if (pexelsData && pexelsData.videos?.length) {
+        const pexelsPosts = transformPexelsToPosts(
+          [], // Curated endpoint returns videos, not photos
+          pexelsData.videos || [],
+        );
+
+        if (apiSuccess && validPosts.length > 0) {
           // Merge Pexels posts at the beginning of the feed
           feedLogger.info(
             `Fetched ${pexelsPosts.length} Pexels items, merging with ${validPosts.length} regular posts`,
           );
           setPosts([...pexelsPosts, ...validPosts]);
         } else {
+          // API failed or returned nothing - use ONLY Pexels as fallback
           feedLogger.warn(
-            "Pexels curated returned empty or null, using regular posts only",
+            `Using ${pexelsPosts.length} Pexels items as FALLBACK (API returned no posts)`,
           );
-          setPosts(validPosts);
+          setPosts(pexelsPosts);
         }
-      } catch (error) {
-        // If Pexels fails, just use regular posts
-        feedLogger.warn(
-          "Pexels curated fetch failed, using regular posts only",
-          error,
-        );
+      } else if (validPosts.length > 0) {
+        // Pexels returned nothing, but we have API posts
+        feedLogger.warn("Pexels curated returned empty, using API posts only");
         setPosts(validPosts);
+      } else {
+        // Both failed - this is a real problem
+        feedLogger.error("CRITICAL: Both API and Pexels returned no posts!");
+        setPosts([]);
       }
-
-      setHasMore(data?.length === 10 || false);
-      setPage(0);
-    } catch (error) {
-      feedLogger.error("Error fetching video feed:", error);
-    } finally {
-      setIsLoading(false);
+    } catch (pexelsError) {
+      feedLogger.error("Pexels fallback also failed:", pexelsError);
+      // Last resort: use whatever API posts we got (even if empty)
+      setPosts(validPosts);
     }
+
+    setHasMore(validPosts.length === 10 || false);
+    setPage(0);
+    setIsLoading(false);
   }, [savedState, transformPexelsToPosts]);
 
   // Load more videos
