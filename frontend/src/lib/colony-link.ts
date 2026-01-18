@@ -3,7 +3,10 @@ import type { Socket } from "socket.io-client";
 import { supabase } from "./supabase";
 
 const COLONY_API_URL =
-  import.meta.env.VITE_COLONY_API_URL || "http://localhost:10000";
+  import.meta.env.VITE_COLONY_API_URL ||
+  (import.meta.env.PROD
+    ? "https://zyeutev5-production.up.railway.app"
+    : "http://localhost:10000");
 
 class ColonyLink {
   public socket: Socket | null = null;
@@ -12,7 +15,10 @@ class ColonyLink {
 
   constructor() {
     if (typeof window !== "undefined") {
-      this.connect();
+      // this.connect(); // Disabled to prevent Backend Protocol Mismatch Crash
+      console.warn(
+        "🌱 Zyeuté: Colony Socket Disabled (Backend Incompatibility: Missing Socket.IO)",
+      );
     }
   }
 

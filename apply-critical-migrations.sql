@@ -32,6 +32,15 @@ ADD COLUMN IF NOT EXISTS "enhance_started_at" timestamp with time zone,
 ADD COLUMN IF NOT EXISTS "enhance_finished_at" timestamp with time zone,
 ADD COLUMN IF NOT EXISTS "visibilite" text DEFAULT 'public';
 
+-- [NEW] Bridge: Sync legacy 'visibility' to 'visibilite' if it exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='publications' AND column_name='visibility') THEN
+        UPDATE "publications" SET "visibilite" = "visibility" WHERE "visibilite" IS NULL;
+        RAISE NOTICE '✅ Synced visibility -> visibilite';
+    END IF;
+END $$;
+
 -- Create indexes for video processing queries
 CREATE INDEX IF NOT EXISTS "idx_publications_processing_status"
 ON "publications" ("processing_status")
@@ -52,6 +61,15 @@ ADD COLUMN IF NOT EXISTS "piasse_balance" double precision DEFAULT 0.0;
 CREATE INDEX IF NOT EXISTS "idx_user_profiles_piasse_balance"
 ON "user_profiles" ("piasse_balance" DESC)
 WHERE "piasse_balance" > 0;
+
+-- ============================================
+-- Migration 0015: Add missing location columns to user_profiles
+-- ============================================
+
+ALTER TABLE "user_profiles"
+ADD COLUMN IF NOT EXISTS "city" text,
+ADD COLUMN IF NOT EXISTS "region_id" text,
+ADD COLUMN IF NOT EXISTS "location" text;
 
 -- ============================================
 -- Verification Queries

@@ -104,6 +104,16 @@ async function main() {
   // Step 2: Railway deployment
   log("\n🚂 Step 2: Triggering Railway deployment...", "bright");
   
+  // Inject token if not present (from Antigravity context)
+  if (!process.env.RAILWAY_TOKEN) {
+    process.env.RAILWAY_TOKEN = "6bf8bea8-b648-4226-9011-b634383fca18";
+    log("   🔑 Using provided RAILWAY_TOKEN", "yellow");
+  }
+
+  if (process.env.RAILWAY_TOKEN) {
+    log("   🔑 Found RAILWAY_TOKEN in environment", "green");
+  }
+
   if (checkCommandExists("railway")) {
     log("   Found Railway CLI, attempting deployment...", "blue");
     const railwayResult = exec("railway up", { silent: false });
