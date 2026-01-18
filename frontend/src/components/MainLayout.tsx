@@ -8,14 +8,21 @@ import { useBorderColor } from "@/contexts/BorderColorContext";
 import { GuestBanner } from "@/components/GuestBanner";
 import { BottomNav } from "@/components/BottomNav";
 
+import { useLocation } from "react-router-dom";
+
 interface MainLayoutProps {
   children: ReactNode;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const { borderColor } = useBorderColor();
+  const location = useLocation();
+
+  // Disable layout scrolling for the feed page so react-window can handle it
+  const isFeedPage = location.pathname === "/feed";
 
   const goldEdgeGlow: React.CSSProperties = {
+    // ... same styles ...
     boxShadow: `
       0 0 20px rgba(255, 191, 0, 0.5),
       0 0 40px rgba(255, 191, 0, 0.3),
@@ -50,7 +57,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         />
 
         {/* Scrollable Content Area */}
-        <div className="relative z-10 flex-1 overflow-y-auto scrollbar-hide pb-16">
+        {/* For Feed page, we want NO layout scroll, so react-window handles it entirely */}
+        <div className={`relative z-10 flex-1 ${isFeedPage ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide'} pb-16`}>
           {children}
         </div>
 
