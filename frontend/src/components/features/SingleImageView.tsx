@@ -159,6 +159,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               willChange: "filter",
             }}
             loading="eager"
+            decoding="async"
             aria-hidden="true"
           />
         </div>
@@ -178,6 +179,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
             className="max-w-full max-h-full object-contain shadow-2xl"
             fetchPriority={priority ? "high" : "auto"}
             loading={priority ? "eager" : "lazy"}
+            decoding="async"
           />
         </div>
 
@@ -319,8 +321,8 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
             >
               <div
                 className={`text-4xl transition-all ${isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                    : "grayscale opacity-80"
+                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                  : "grayscale opacity-80"
                   }`}
               >
                 🔥

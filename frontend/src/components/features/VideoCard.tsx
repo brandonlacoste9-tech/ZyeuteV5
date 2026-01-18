@@ -3,13 +3,12 @@
  * Stitched leather frame with gold accents
  */
 
-import React from "react";
+import React, { Suspense } from "react";
 import { AppConfig } from "../../config/factory";
 import DOMPurify from "dompurify";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
-import { MuxVideoPlayer } from "./MuxVideoPlayer";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -20,6 +19,8 @@ import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "../../types";
+
+const MuxVideoPlayer = React.lazy(() => import("./MuxVideoPlayer"));
 
 interface VideoCardProps {
   post: Post;
@@ -158,15 +159,17 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
       >
         {post.type === "video" ? (
           (post as any).muxPlaybackId || (post as any).mux_playback_id ? (
-            <MuxVideoPlayer
-              playbackId={
-                (post as any).muxPlaybackId || (post as any).mux_playback_id || ""
-              }
-              poster={post.thumbnail_url || post.media_url}
-              autoPlay={autoPlay}
-              muted={muted}
-              loop
-            />
+            <Suspense fallback={<div className="w-full h-full bg-black" />}>
+              <MuxVideoPlayer
+                playbackId={
+                  (post as any).muxPlaybackId || (post as any).mux_playback_id || ""
+                }
+                poster={post.thumbnail_url || post.media_url}
+                autoPlay={autoPlay}
+                muted={muted}
+                loop
+              />
+            </Suspense>
           ) : (
             <VideoPlayer
               src={post.media_url}

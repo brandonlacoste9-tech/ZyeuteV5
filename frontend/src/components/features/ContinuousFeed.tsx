@@ -505,9 +505,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     const prefetchHeavyChunks = () => {
       feedLogger.debug("Prefetching heavy chunks (Mux, Camera) in background...");
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@mux/mux-player-react").catch(() => { });
       import("@/components/features/CameraView").catch(() => { });
-      import("./StreamingDebugOverlay").catch(() => { });
       import("./MuxVideoPlayer").catch(() => { });
     };
 
@@ -645,6 +643,19 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, []);
 
+  // Data object passed to rows
+  const itemData: RowData = useMemo(() => ({
+    posts,
+    currentIndex,
+    handleFireToggle,
+    handleComment,
+    handleShare,
+    isFastScrolling: isFast,
+    isMediumScrolling: isMedium,
+    isSlowScrolling: isSlow,
+    isSystemOverloaded,
+  }), [posts, currentIndex, handleFireToggle, handleComment, handleShare, isFast, isMedium, isSlow, isSystemOverloaded]);
+
   if (isLoading && posts.length === 0) {
     return (
       <div className={cn("w-full h-full bg-black", className)}>
@@ -668,19 +679,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       </div>
     );
   }
-
-  // Data object passed to rows
-  const itemData: RowData = useMemo(() => ({
-    posts,
-    currentIndex,
-    handleFireToggle,
-    handleComment,
-    handleShare,
-    isFastScrolling: isFast,
-    isMediumScrolling: isMedium,
-    isSlowScrolling: isSlow,
-    isSystemOverloaded,
-  }), [posts, currentIndex, handleFireToggle, handleComment, handleShare, isFast, isMedium, isSlow, isSystemOverloaded]);
 
   return (
     <div className={cn("w-full h-full bg-black feed-root", className)}>

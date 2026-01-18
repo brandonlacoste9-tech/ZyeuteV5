@@ -32,6 +32,15 @@ ADD COLUMN IF NOT EXISTS "enhance_started_at" timestamp with time zone,
 ADD COLUMN IF NOT EXISTS "enhance_finished_at" timestamp with time zone,
 ADD COLUMN IF NOT EXISTS "visibilite" text DEFAULT 'public';
 
+-- [NEW] Bridge: Sync legacy 'visibility' to 'visibilite' if it exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='publications' AND column_name='visibility') THEN
+        UPDATE "publications" SET "visibilite" = "visibility" WHERE "visibilite" IS NULL;
+        RAISE NOTICE '✅ Synced visibility -> visibilite';
+    END IF;
+END $$;
+
 -- Create indexes for video processing queries
 CREATE INDEX IF NOT EXISTS "idx_publications_processing_status"
 ON "publications" ("processing_status")

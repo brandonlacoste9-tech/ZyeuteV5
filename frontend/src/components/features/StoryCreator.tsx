@@ -2,15 +2,16 @@
  * StoryCreator - Create and upload 24-hour stories with Premium Design
  */
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../Button";
 import { supabase } from "../../lib/supabase";
 import { toast } from "../Toast";
 import { generateId } from "../../lib/utils";
 import { logger } from "../../lib/logger";
-import { CameraView } from "@/components/features/CameraView";
 import { IoCamera, IoImages, IoClose, IoFlashOutline } from "react-icons/io5";
+
+const CameraView = React.lazy(() => import("@/components/features/CameraView").then(module => ({ default: module.CameraView })));
 
 const storyCreatorLogger = logger.withContext("StoryCreator");
 
@@ -110,11 +111,13 @@ export const StoryCreator: React.FC = () => {
 
   if (showCamera) {
     return (
-      <CameraView
-        onCapture={handleCameraCapture}
-        onClose={() => setShowCamera(false)}
-        mode="video"
-      />
+      <Suspense fallback={<div className="fixed inset-0 bg-black flex items-center justify-center text-white">Chargement...</div>}>
+        <CameraView
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+          mode="video"
+        />
+      </Suspense>
     );
   }
 

@@ -2,13 +2,15 @@
  * VideoPlayer - Advanced video player with TikTok-style controls
  */
 
-import React, { useRef, useState, useEffect } from "react";
-import MuxPlayer from "@mux/mux-player-react";
+import React, { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
 import { VideoSource } from "@/hooks/usePrefetchVideo";
+import { videoCache } from "@/lib/videoWarmCache";
+import { useHaptics } from "@/hooks/useHaptics";
 
-import StreamingDebugOverlay from "./StreamingDebugOverlay";
+const MuxPlayer = React.lazy(() => import("@mux/mux-player-react"));
+const StreamingDebugOverlay = React.lazy(() => import("./StreamingDebugOverlay"));
 
 const videoPlayerLogger = logger.withContext("VideoPlayer");
 
@@ -65,6 +67,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { tap, impact } = useHaptics();
 
   // Check for debug mode
   useEffect(() => {
@@ -117,9 +120,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return;
       const playheadByte =
         (videoRef.current.currentTime / duration) * videoSource.totalSize;
-      import("@/lib/videoWarmCache").then(({ videoCache }) => {
-        videoCache.clearConsumedChunks(src, playheadByte);
-      });
+      videoCache.clearConsumedChunks(src, playheadByte);
     }, 2000);
 
     return () => clearInterval(interval);
@@ -240,7 +241,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [videoSource, mseRetryCount]);
 
   // Handle video source errors gracefully
-  const handleError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+  const handleError = useCallback((e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
     const error = video.error;
 
@@ -258,10 +259,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
     setHasError(true);
     setIsLoading(false);
-  };
+  }, [mseUrl, src]);
 
   // Metrics collection
-  const handlePlaying = () => {
+  const handlePlaying = useCallback(() => {
     if (metricsRef.current.startTime && !metricsRef.current.timeToFirstFrame) {
       metricsRef.current.timeToFirstFrame =
         Date.now() - metricsRef.current.startTime;
@@ -274,14 +275,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         Date.now() - metricsRef.current.lastStallStart;
       metricsRef.current.lastStallStart = 0;
     }
-  };
+  }, [src]);
 
-  const handleWaiting = () => {
+  const handleWaiting = useCallback(() => {
     metricsRef.current.stalledCount++;
     metricsRef.current.lastStallStart = Date.now();
-  };
+  }, []);
 
-  const handleCanPlay = () => {
+  const handleCanPlay = useCallback(() => {
     // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
@@ -289,13 +290,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     setIsLoading(false);
     setHasError(false);
-  };
+  }, []);
 
   // Handle loading started
-  const handleLoadStart = () => {
+  const handleLoadStart = useCallback(() => {
     setIsLoading(true);
     metricsRef.current.startTime = Date.now();
-  };
+  }, []);
 
   // Reset states when source changes
   useEffect(() => {
@@ -354,37 +355,40 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [muted]);
 
   // Play/Pause toggle
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
 
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
       onPause?.();
+      tap();
     } else {
       videoRef.current.play();
       setIsPlaying(true);
       onPlay?.();
+      tap();
     }
-  };
+  }, [isPlaying, onPause, onPlay, tap]);
 
   // Mute/Unmute toggle
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (!videoRef.current) return;
     videoRef.current.muted = !isMuted;
     setIsMuted(!isMuted);
-  };
+    tap();
+  }, [isMuted, tap]);
 
   // Seek to position
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!videoRef.current) return;
     const time = parseFloat(e.target.value);
     videoRef.current.currentTime = time;
     setCurrentTime(time);
-  };
+  }, []);
 
   // Volume control
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!videoRef.current) return;
     const vol = parseFloat(e.target.value);
     videoRef.current.volume = vol;
@@ -394,10 +398,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     } else {
       setIsMuted(false);
     }
-  };
+  }, []);
 
   // Fullscreen toggle
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = useCallback(async () => {
     if (!videoRef.current) return;
 
     try {
@@ -415,11 +419,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           await (document as any).webkitExitFullscreen();
         }
         setIsFullscreen(false);
+        impact();
       }
     } catch (error) {
       videoPlayerLogger.error("Fullscreen error:", error);
     }
-  };
+  }, [isFullscreen, impact]);
 
   // Update time as video plays
   useEffect(() => {
@@ -452,6 +457,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           fallback: !mseUrl && videoSource?.type === "partial-chunks",
         });
       }
+
+      // Hard cleanup to stop buffering/decoding immediately on unmount
+      // Moved outside conditional to ensure it always runs regardless of playback state
+      video.removeAttribute("src");
+      video.load();
     };
   }, [onEnded, src, mseUrl, videoSource]);
 
@@ -483,28 +493,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
         style={style}
       >
-        <MuxPlayer
-          playbackId={muxPlaybackId}
-          metadataVideoTitle="Zyeuté Exclusive"
-          streamType="on-demand"
-          accentColor="#FF00FF"
-          autoPlay={autoPlay}
-          muted={muted}
-          loop={loop}
-          className="w-full h-full object-cover"
-          style={
-            {
-              height: "100%",
-              width: "100%",
-              "--media-object-fit": "cover",
-              "--media-control-background": "transparent",
-              ...videoStyle,
-            } as any
-          }
-          onEnded={onEnded}
-          onPlay={onPlay}
-          onPause={onPause}
-        />
+        <Suspense fallback={<div className="w-full h-full bg-black" />}>
+          <MuxPlayer
+            playbackId={muxPlaybackId}
+            metadataVideoTitle="Zyeuté Exclusive"
+            streamType="on-demand"
+            accentColor="#FF00FF"
+            autoPlay={autoPlay}
+            muted={muted}
+            loop={loop}
+            className="w-full h-full object-cover"
+            style={
+              {
+                height: "100%",
+                width: "100%",
+                "--media-object-fit": "cover",
+                "--media-control-background": "transparent",
+                ...videoStyle,
+              } as any
+            }
+            onEnded={onEnded}
+            onPlay={onPlay}
+            onPause={onPause}
+          />
+        </Suspense>
       </div>
     );
   }
@@ -569,29 +581,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     >
       {/* Streaming Debug Overlay */}
       {isDebugEnabled && debug && (
-        <StreamingDebugOverlay
-          url={src}
-          activeRequests={debug.activeRequests}
-          concurrency={debug.concurrency}
-          tier={debug.tier as any}
-          playheadByte={
-            videoSource?.type === "partial-chunks" &&
-              videoSource.totalSize &&
-              duration
-              ? (currentTime / duration) * videoSource.totalSize
-              : 0
-          }
-          totalSize={
-            videoSource?.type === "partial-chunks"
-              ? videoSource.totalSize
-              : undefined
-          }
-          ttff={metricsRef.current.timeToFirstFrame}
-          stalls={metricsRef.current.stalledCount}
-          stallDuration={metricsRef.current.totalStalledTime}
-          isMse={!!mseUrl}
-          isFallback={!mseUrl && videoSource?.type === "partial-chunks"}
-        />
+        <Suspense fallback={null}>
+          <StreamingDebugOverlay
+            url={src}
+            activeRequests={debug.activeRequests}
+            concurrency={debug.concurrency}
+            tier={debug.tier as any}
+            playheadByte={
+              videoSource?.type === "partial-chunks" &&
+                videoSource.totalSize &&
+                duration
+                ? (currentTime / duration) * videoSource.totalSize
+                : 0
+            }
+            totalSize={
+              videoSource?.type === "partial-chunks"
+                ? videoSource.totalSize
+                : undefined
+            }
+            ttff={metricsRef.current.timeToFirstFrame}
+            stalls={metricsRef.current.stalledCount}
+            stallDuration={metricsRef.current.totalStalledTime}
+            isMse={!!mseUrl}
+            isFallback={!mseUrl && videoSource?.type === "partial-chunks"}
+          />
+        </Suspense>
       )}
 
       {/* Video Element */}
