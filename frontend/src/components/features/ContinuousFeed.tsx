@@ -10,6 +10,7 @@ import React, {
   useRef,
   useCallback,
   memo,
+  useMemo,
   ReactElement,
 } from "react";
 import { List, ListImperativeAPI, RowComponentProps } from "react-window";
@@ -77,6 +78,10 @@ const FeedRow = memo(
     isSlowScrolling,
   }: FeedRowProps): ReactElement | null => {
     const post = posts[index];
+
+    // CRITICAL: Guard check BEFORE any hooks to prevent React rules violation
+    if (!post) return null;
+
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
 
@@ -100,8 +105,6 @@ const FeedRow = memo(
     // For Tier 0/1 we just pass the original URL and let SingleVideoView handle preload attr
     // But usePrefetchVideo handles cache lookup too
     const { source, isCached, debug } = usePrefetchVideo(videoUrl, preloadTier);
-
-    if (!post) return <div style={style} />;
 
     return (
       <div
@@ -129,32 +132,18 @@ const FeedRow = memo(
       </div>
     );
   },
+  // Simplified memo comparator - standard shallow comparison
   (prevProps: FeedRowProps, nextProps: FeedRowProps) => {
-    // Only re-render if:
-    // 1. Data changed (deep check specific fields)
-    // 2. Active index changed (affects priority)
-    // 3. Style changed
-
-    if (prevProps.index !== nextProps.index) return false;
-    if (prevProps.style !== nextProps.style) return false;
-
-    // Safe handling for potentially undefined array access
-    const prevPost = prevProps.posts[prevProps.index];
-    const nextPost = nextProps.posts[nextProps.index];
-
-    // Simple reference check first
-    if (prevPost === nextPost) {
-      // Check global transient flags
-      return (
-        prevProps.currentIndex === nextProps.currentIndex &&
-        prevProps.isFastScrolling === nextProps.isFastScrolling &&
-        prevProps.isMediumScrolling === nextProps.isMediumScrolling &&
-        prevProps.isSlowScrolling === nextProps.isSlowScrolling
-      );
-    }
-
-    // If posts differ by reference, we must re-render
-    return false;
+    // Re-render if any critical prop changed
+    return (
+      prevProps.index === nextProps.index &&
+      prevProps.style === nextProps.style &&
+      prevProps.currentIndex === nextProps.currentIndex &&
+      prevProps.posts === nextProps.posts &&
+      prevProps.isFastScrolling === nextProps.isFastScrolling &&
+      prevProps.isMediumScrolling === nextProps.isMediumScrolling &&
+      prevProps.isSlowScrolling === nextProps.isSlowScrolling
+    );
   },
 );
 
@@ -576,17 +565,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     );
   }
 
-  // Data object passed to rows
-  const itemData: RowData = {
-    posts,
-    currentIndex,
-    handleFireToggle,
-    handleComment,
-    handleShare,
-    isFastScrolling: isFast,
-    isMediumScrolling: isMedium,
-    isSlowScrolling: isSlow,
-  };
+  // Data object passed to rows - CRITICAL: Memoized to prevent infinite re-render loop
+  const itemData: RowData = useMemo(
+    () => ({
+      posts,
+      currentIndex,
+      handleFireToggle,
+      handleComment,
+      handleShare,
+      isFastScrolling: isFast,
+      isMediumScrolling: isMedium,
+      isSlowScrolling: isSlow,
+    }),
+    [posts, currentIndex, handleFireToggle, handleComment, handleShare, isFast, isMedium, isSlow]
+  );
 
   return (
     <div className={cn("w-full h-full bg-black", className)}>
@@ -601,9 +593,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             <List<RowData>
               listRef={listRef}
               className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-              style={{ height, width }}
+              style={{ height: height || 800, width }}
               rowCount={posts.length}
-              rowHeight={height} // Full screen height per item
+              rowHeight={height || 800} // Full screen height per item with fallback
               rowComponent={FeedRow as unknown as (props: RowComponentProps<RowData>) => React.ReactElement | null}
               rowProps={itemData}
               overscanCount={1} // Only render 1 item above/below viewport
