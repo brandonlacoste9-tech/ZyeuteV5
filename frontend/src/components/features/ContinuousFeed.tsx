@@ -177,12 +177,15 @@ const FeedRow = memo(
 );
 
 // ...
+import { ZeroGravityHUD } from "./ZeroGravityHUD";
+
 export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   className,
   onVideoChange,
   stateKey = "feed",
 }) => {
-  // Use any to handle potential library variations (react-window vs custom wrapper)
+  // ... existing hooks ...
+
   const listRef = useRef<any>(null);
   const { tap } = useHaptics();
   const { getFeedState, saveFeedState } = useNavigationState();
@@ -602,6 +605,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     async (postId: string, _currentFire: number) => {
       feedLogger.debug("Fire toggle for post:", postId);
 
+      if (postId.startsWith("pexels-")) return;
+
       if (!isOnline) {
         // Queue action if offline
         // We pass a placeholder userId since the actual API call will use the session
@@ -682,6 +687,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   return (
     <div className={cn("w-full h-full bg-black feed-root", className)}>
+      <ZeroGravityHUD />
       <AutoSizer>
         {({ height, width }) => (
           <>

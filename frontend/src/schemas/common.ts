@@ -56,6 +56,7 @@ const BaseUserSchema = z
 
     // Gamification
     last_daily_bonus: z.string().nullable().optional(),
+    nectar_points: z.number().default(0),
 
     // Parent Link
     parent_id: z.string().nullable().optional(),
@@ -122,6 +123,7 @@ export const UserSchema = z.preprocess((val: any) => {
 
     // Gamification
     last_daily_bonus: val.lastDailyBonus || val.last_daily_bonus || null,
+    nectar_points: val.nectarPoints || val.nectar_points || 0,
 
     // Parent Link
     parent_id: val.parentId || val.parent_id || null,

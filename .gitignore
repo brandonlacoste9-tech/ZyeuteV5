@@ -43,3 +43,6 @@ zyeute-ai-key.json
 push_error.txt
 pin-hero.js
 tsc_*.txt
+.agent/
+my-project/
+antigravity-kit/
