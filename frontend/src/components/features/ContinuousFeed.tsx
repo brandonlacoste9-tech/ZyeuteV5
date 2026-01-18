@@ -458,7 +458,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           clearTimeout(callbackId);
         }
       }
-    };fetchVideoFeed, savedState]);
+      }, [fetchVideoFeed, savedState]);
 
   // Restore scroll position via ref
   useEffect(() => {
@@ -617,6 +617,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
 
