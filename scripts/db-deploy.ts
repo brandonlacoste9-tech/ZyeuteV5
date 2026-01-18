@@ -60,6 +60,9 @@ async function runCriticalMigration() {
         ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_daily_bonus TIMESTAMP;
         ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS unlocked_hives TEXT[] DEFAULT '{}';
         ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS parent_id UUID;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS city TEXT;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS region_id TEXT;
+        ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS hive_id UUID;
         ALTER TABLE publications ADD COLUMN IF NOT EXISTS visibilite TEXT DEFAULT 'public';
 
         DO $$
