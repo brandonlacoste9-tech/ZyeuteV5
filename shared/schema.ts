@@ -187,6 +187,7 @@ export const posts = pgTable(
     content: text("content").notNull(), // Confirmed required by DB insert error
     caption: text("caption"),
     visibility: text("visibilite").default("public"),
+    visibilityLegacy: text("visibility"),
     fireCount: integer("reactions_count").default(0),
     commentCount: integer("comments_count").default(0),
     isHidden: boolean("est_masque").default(false),
