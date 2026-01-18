@@ -310,7 +310,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     setIsLoading(true);
     try {
-      // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
 
       let validPosts: Array<Post & { user: User }> = [];
