@@ -401,7 +401,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     if (!savedState || !savedState.posts?.length) {
       fetchVideoFeed();
     }
-  }, [fetchVideoFeed, savedState]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [fetchVideoFeed]);
 
   // Restore scroll position via ref
   useEffect(() => {
