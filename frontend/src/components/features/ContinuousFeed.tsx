@@ -170,6 +170,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { getFeedState, saveFeedState } = useNavigationState();
   const { isOnline, addToQueue } = useNetworkQueue();
 
+    const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
   // Initialize from saved state or defaults
   const savedState = getFeedState(stateKey);
 
@@ -437,14 +438,28 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     if (!savedState || !savedState.posts?.length) {
-      // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
-            if ('requestIdleCallback' in window) {
-                      requestIdleCallback(() => fetchVideoFeed());
-                    } else {
-                      setTimeout(() => fetchVideoFeed(), 1);
-                    };
+          // Prevent double-fetch in React StrictMode
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
+    let callbackId: number | null = null;
+    if ('requestIdleCallback' in window) {
+      callbackId = requestIdleCallback(() => fetchVideoFeed());
+    } else {
+      callbackId = setTimeout(() => fetchVideoFeed(), 1) as unknown as number;
     }
-  }, [fetchVideoFeed, savedState]);
+
+    // Cleanup: cancel callback if component unmounts
+    return () => {
+      if (callbackId !== null) {
+        if ('cancelIdleCallback' in window) {
+          cancelIdleCallback(callbackId);
+        } else {
+          clearTimeout(callbackId);
+        }
+      }
+    };fetchVideoFeed, savedState]);
 
   // Restore scroll position via ref
   useEffect(() => {
@@ -603,4 +618,5 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
