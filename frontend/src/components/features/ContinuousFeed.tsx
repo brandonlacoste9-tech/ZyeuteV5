@@ -437,7 +437,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     if (!savedState || !savedState.posts?.length) {
-      fetchVideoFeed();
+      // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
+            if ('requestIdleCallback' in window) {
+                      requestIdleCallback(() => fetchVideoFeed());
+                    } else {
+                      setTimeout(() => fetchVideoFeed(), 1);
+                    };
     }
   }, [fetchVideoFeed, savedState]);
 
@@ -598,3 +603,4 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
