@@ -29,11 +29,14 @@ interface CacheEntry {
   timestamp: number;
 }
 
-const MAX_VIDEO_MEMORY = 30 * 1024 * 1024; // 30MB per video limit
+const MAX_VIDEO_MEMORY = 50 * 1024 * 1024; // Increased to 50MB per video for HD
+// Global Total Memory Limit (Soft Cap)
+const GLOBAL_MEMORY_CAP = 250 * 1024 * 1024; // 250MB Total
 
 class VideoWarmCache {
   private cache: Map<string, CacheEntry> = new Map();
-  private maxCapacity = 2;
+  // Capacity increased to 5 to support Adaptive Buffer (Current + 3 Future + 1 Past)
+  private maxCapacity = 5;
 
   // Instrumentation
   public stats = {
