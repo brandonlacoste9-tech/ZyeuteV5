@@ -1,4 +1,4 @@
-/**
+:450/**
  * ContinuousFeed - Full-screen vertical video feed
  * Adapts the Player experience for the main feed
  * NOW WITH VIRTUALIZATION by REACT-WINDOW
@@ -443,15 +443,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     hasInitializedRef.current = true;
 
     // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
-    let callbackId: number | null = null;
+    let callbackId:any = null;
     if ('requestIdleCallback' in window) {
       callbackId = requestIdleCallback(() => fetchVideoFeed());
     } else {
-      callbackId = setTimeout(() => fetchVideoFeed(), 1) as unknown as number;
+      callbackId = setTimeout(() => fetchVideoFeed(), 1);
     }
 
-    // Cleanup: cancel callback if component unmounts
-    return () => {
+    // Cleanup: cancel callback if compon
       if (callbackId !== null) {
         if ('cancelIdleCallback' in window) {
           cancelIdleCallback(callbackId);
@@ -618,5 +617,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
