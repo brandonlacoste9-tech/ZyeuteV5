@@ -460,6 +460,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         } else {
           clearTimeout(callbackId);
         }
+            }
       };
       }, [fetchVideoFeed, savedState]);
 
@@ -620,6 +621,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
 
