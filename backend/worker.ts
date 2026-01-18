@@ -4,21 +4,16 @@ import { VideoOrchestrator } from "./services/videoOrchestrator.js";
 import { MemoryMinerBee } from "./ai/bees/memory-miner.js";
 import { PrivacyAuditorBee } from "./ai/bees/privacy-auditor.js";
 import { HiveTask } from "./ai/types.js";
+import { getBullMQConnection } from "./redis.js";
 
-const connection = {
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379"),
-  // Fail fast if Redis is down
-  maxRetriesPerRequest: null,
-  retryStrategy: (times: number) => {
-    if (times > 3) return null; // Stop trying after 3 attempts
-    return Math.min(times * 50, 2000);
-  }
-};
+const connection = getBullMQConnection();
 
 let videoWorker: Worker<VideoProcessingJob>;
 
 try {
+  if (!connection) {
+    throw new Error("Redis connection not configured");
+  }
   videoWorker = new Worker<VideoProcessingJob>(
     "zyeute-video-enhance",
     async (job) => {
@@ -48,8 +43,12 @@ try {
       console.error("[Worker] Redis connection error:", err.message);
   });
 
-} catch (e) {
-  console.error("Failed to initialize Video Worker (Redis likely down).");
+} catch (e: any) {
+  if (e.message !== "Redis connection not configured") {
+    console.error("Failed to initialize Video Worker:", e.message);
+  } else {
+    console.log("⚠️ [Worker] Video Worker disabled (Direct Mode active)");
+  }
   // Create a dummy worker object to prevent exports validation failure
   videoWorker = {
       close: async () => {},
@@ -62,6 +61,9 @@ export { videoWorker };
 // --- MEMORY MINER WORKER ---
 let memoryWorker: Worker;
 try {
+  if (!connection) {
+    throw new Error("Redis connection not configured");
+  }
   memoryWorker = new Worker(
     "zyeute-memory-miner",
     async (job) => {
@@ -117,8 +119,10 @@ try {
       console.error("[MemoryWorker] Redis connection error:", err.message);
   });
 
-} catch (e) {
-  console.error("Failed to initialize Memory Worker (Redis likely down).");
+} catch (e: any) {
+  if (e.message !== "Redis connection not configured") {
+    console.error("Failed to initialize Memory Worker:", e.message);
+  }
   memoryWorker = {
       close: async () => {},
       on: () => {},
@@ -130,6 +134,9 @@ export { memoryWorker };
 // --- PRIVACY AUDITOR WORKER ---
 let privacyWorker: Worker;
 try {
+  if (!connection) {
+    throw new Error("Redis connection not configured");
+  }
   privacyWorker = new Worker(
     "zyeute-privacy-auditor",
     async (job) => {
@@ -154,8 +161,10 @@ try {
        console.error("[PrivacyWorker] Redis connection error:", err.message);
   });
   
-} catch (e) {
-    console.error("Failed to initialize Privacy Worker (Redis likely down).");
+} catch (e: any) {
+    if (e.message !== "Redis connection not configured") {
+      console.error("Failed to initialize Privacy Worker:", e.message);
+    }
     privacyWorker = {
         close: async () => {},
         on: () => {},

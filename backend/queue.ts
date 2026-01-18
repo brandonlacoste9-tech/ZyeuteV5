@@ -26,8 +26,8 @@ export const getVideoQueue = (): Queue => {
   }
 
   // 2. Safety Check: Do we even have Redis credentials?
-  if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Using Direct Mode for Video.");
+  if (!connection) {
+    console.warn("⚠️ Redis connection config missing. Using Direct Mode for Video.");
     return {
       add: async (name: string, data: any) => {
           console.log("⚠️ [Direct Mode] Starting video processing in background...");
@@ -83,8 +83,8 @@ export const getAnalyticsQueue = (): Queue => {
     return analyticsQueueInstance;
   }
 
-  if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Analytics queue disabled.");
+  if (!connection) {
+    console.warn("⚠️ Redis connection config missing. Analytics queue disabled.");
     return {
       add: async () =>
         console.log("Mock Analytics Queue: Job added (Redis missing)"),
@@ -103,8 +103,8 @@ export const getBlockchainQueue = (): Queue => {
     return blockchainQueueInstance;
   }
 
-  if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Blockchain queue disabled.");
+  if (!connection) {
+    console.warn("⚠️ Redis connection config missing. Blockchain queue disabled.");
     return {
       add: async () =>
         console.log("Mock Blockchain Queue: Job added (Redis missing)"),
@@ -123,8 +123,8 @@ export const getMemoryQueue = (): Queue => {
     return memoryQueueInstance;
   }
 
-  if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Memory queue disabled.");
+  if (!connection) {
+    console.warn("⚠️ Redis connection config missing. Memory queue disabled.");
     return {
       add: async () =>
         console.log("Mock Memory Queue: Job added (Redis missing)"),
@@ -143,8 +143,8 @@ export const getPrivacyQueue = (): Queue => {
     return privacyQueueInstance;
   }
 
-  if (!process.env.REDIS_HOST) {
-    console.warn("⚠️ REDIS_HOST not defined. Privacy queue disabled.");
+  if (!connection) {
+    console.warn("⚠️ Redis connection config missing. Privacy queue disabled.");
     return {
       add: async () => console.log("Mock Privacy Queue: Job added"),
       close: async () => console.log("Mock Privacy Queue: Close called"),

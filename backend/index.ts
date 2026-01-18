@@ -7,6 +7,7 @@ import tiGuyRouter from "./routes/tiguy.js";
 import hiveRouter from "./routes/hive.js";
 import { createServer } from "http";
 import pg from "pg";
+import { Server as SocketIOServer } from "socket.io";
 
 const { Pool } = pg;
 
@@ -18,6 +19,21 @@ const pool = new Pool({
 
 const app = express();
 const httpServer = createServer(app);
+
+// Initialize Socket.IO for Real-Time Features
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST"]
+  }
+});
+
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log("🔌 Socket.IO Client Connected:", socket.id);
+});
 
 // [CRITICAL] Claim the port IMMEDIATELY for Railway Health Checks
 const port = parseInt(process.env.PORT || "5000", 10);

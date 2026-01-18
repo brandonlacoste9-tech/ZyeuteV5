@@ -252,9 +252,13 @@ export async function registerRoutes(
   // [RESTORED] Get current user profile (bridged via JWT)
   // This is needed because frontend/src/services/api.ts still calls /auth/me
   // to get the full profile data (coins, region, etc.) which isn't in the JWT.
-  app.get("/api/auth/me", requireAuth, async (req, res) => {
+  app.get("/api/auth/me", optionalAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.userId!);
+      if (!req.userId) {
+        return res.json({ user: null });
+      }
+
+      const user = await storage.getUser(req.userId);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -273,9 +277,19 @@ export async function registerRoutes(
   // Get user by username
   app.get("/api/users/:username", optionalAuth, async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(
-        req.params.username as string,
-      );
+      const identifier = req.params.username as string;
+      let user;
+
+      // Allow lookup by UUID if the identifier looks like one
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(identifier)) {
+        user = await storage.getUser(identifier);
+      }
+
+      if (!user) {
+        user = await storage.getUserByUsername(identifier);
+      }
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -596,9 +610,19 @@ export async function registerRoutes(
   // Get user's posts
   app.get("/api/users/:username/posts", async (req, res) => {
     try {
-      const user = await storage.getUserByUsername(
-        req.params.username as string,
-      );
+      const identifier = req.params.username as string;
+      let user;
+
+      // Allow lookup by UUID if the identifier looks like one
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(identifier)) {
+        user = await storage.getUser(identifier);
+      }
+
+      if (!user) {
+        user = await storage.getUserByUsername(identifier);
+      }
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -1454,7 +1478,7 @@ export async function registerRoutes(
   );
 
   // Get FAL presets
-  app.get("/api/v3/fal-presets", requireAuth, (req, res) => {
+  app.get("/api/v3/fal-presets", (req, res) => {
     res.json(FAL_PRESETS);
   });
 
