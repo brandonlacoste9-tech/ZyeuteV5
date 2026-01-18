@@ -360,7 +360,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [savedState, transformPexelsToPosts]);
+    }, [transformPexelsToPosts]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
