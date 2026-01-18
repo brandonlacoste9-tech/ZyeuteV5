@@ -6,5 +6,10 @@ echo "🚀 Starting Zyeuté API (Fast Boot Mode)..."
 echo "🌐 Environment: ${NODE_ENV:-production}"
 echo "🔌 Port: ${PORT:-5000}"
 
+# Run database migrations
+echo "📦 Running database migrations..."
+npx prisma migrate deploy
+
+
 # Start the application immediately
 exec node dist/index.cjs
