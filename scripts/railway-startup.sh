@@ -8,7 +8,7 @@ echo "🔌 Port: ${PORT:-5000}"
 
 # Run database migrations
 echo "📦 Running database migrations..."
-npx prisma migrate deploy
+npm run db:deploy
 
 
 # Start the application immediately
