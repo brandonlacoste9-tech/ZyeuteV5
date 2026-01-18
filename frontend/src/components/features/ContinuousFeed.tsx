@@ -438,7 +438,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
       let callbackId:any = null;
-    if (!savedState || !savedState.posts?.length) {
+  if ((!savedState || !savedState.posts?.length) || posts.length === 0) {
           // Prevent double-fetch in React StrictMode
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
@@ -621,6 +621,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
 
