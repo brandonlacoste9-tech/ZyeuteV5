@@ -1,4 +1,4 @@
-:450/**
+**
  * ContinuousFeed - Full-screen vertical video feed
  * Adapts the Player experience for the main feed
  * NOW WITH VIRTUALIZATION by REACT-WINDOW
@@ -617,6 +617,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
 
 
 
