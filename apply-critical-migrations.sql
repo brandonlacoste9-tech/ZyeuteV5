@@ -30,14 +30,13 @@ ALTER TABLE "publications"
 ADD COLUMN IF NOT EXISTS "visual_filter" text,
 ADD COLUMN IF NOT EXISTS "enhance_started_at" timestamp with time zone,
 ADD COLUMN IF NOT EXISTS "enhance_finished_at" timestamp with time zone,
-ADD COLUMN IF NOT EXISTS "visibilite" text DEFAULT 'public';
+ADD COLUMN IF NOT EXISTS "visibility" text DEFAULT 'public';
 
--- [NEW] Bridge: Sync legacy 'visibility' to 'visibilite' if it exists
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='publications' AND column_name='visibility') THEN
-        UPDATE "publications" SET "visibilite" = "visibility" WHERE "visibilite" IS NULL;
-        RAISE NOTICE '✅ Synced visibility -> visibilite';
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='publications' AND column_name='visibilite') THEN
+        UPDATE "publications" SET "visibility" = "visibilite" WHERE "visibility" IS NULL;
+        RAISE NOTICE '✅ Synced visibilite -> visibility';
     END IF;
 END $$;
 

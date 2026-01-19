@@ -350,7 +350,7 @@ export class DatabaseStorage implements IStorage {
             followingIds.length > 0 ? followingIds : [userId],
           ),
           or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-          or(eq(posts.visibility, "public"), eq(posts.visibilityLegacy, "public")),
+          eq(posts.visibility, "public"),
           eq(posts.hiveId, hiveId as any), // Filter by Hive
         ),
       )
@@ -384,7 +384,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-          or(eq(posts.visibility, "public"), eq(posts.visibilityLegacy, "public")),
+          eq(posts.visibility, "public"),
           eq(posts.hiveId, hiveId as any),
         ),
       )

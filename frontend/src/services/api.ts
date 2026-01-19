@@ -523,6 +523,34 @@ function isVideoUrl(url?: string): boolean {
   return videoExtensions.some((ext) => url.toLowerCase().includes(ext));
 }
 
+// ============ SURGICAL UPLOAD BYPASS ============
+
+export async function surgicalUpload(file: File, caption?: string): Promise<{ success: boolean; post?: Post; error?: string }> {
+  try {
+    const formData = new FormData();
+    formData.append("video", file);
+    if (caption) formData.append("caption", caption);
+    
+    // Add hive context
+    formData.append("hiveId", "quebec");
+
+    const { data, error } = await apiCall<{ success: boolean; post: Post }>("/upload/simple", {
+      method: "POST",
+      body: formData,
+      // Note: we don't set Content-Type header manually for FormData, 
+      // fetch will automatically set it with the boundary.
+    });
+
+    if (error || !data) {
+      return { success: false, error: error?.message || "Erreur de téléversement" };
+    }
+
+    return { success: true, post: data.post };
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+}
+
 // Map backend user fields (camelCase) to frontend fields (snake_case where needed)
 function mapBackendUser(user: Record<string, any>): User {
   if (!user) return user as unknown as User;

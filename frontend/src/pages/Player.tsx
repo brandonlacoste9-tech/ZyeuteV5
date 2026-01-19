@@ -40,7 +40,7 @@ export const Player: React.FC = () => {
           user:user_profiles!user_id(*)
         `,
         )
-        .eq("visibilite", "public")
+        .eq("visibility", "public")
         .is("est_masque", null)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
@@ -66,7 +66,7 @@ export const Player: React.FC = () => {
               user:user_profiles!user_id(*)
             `,
             )
-            .eq("visibilite", "public")
+            .eq("visibility", "public")
             .is("est_masque", null)
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
@@ -128,7 +128,7 @@ export const Player: React.FC = () => {
           user:user_profiles!user_id(*)
         `,
         )
-        .eq("visibilite", "public")
+        .eq("visibility", "public")
         .is("est_masque", null)
         .is("deleted_at", null)
         .lt("created_at", lastPost.created_at)

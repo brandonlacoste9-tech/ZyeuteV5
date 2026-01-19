@@ -10,24 +10,25 @@ import {
   processVideo,
   generateCaptions,
   smartTrim,
-  type VideoProcessResult,
 } from "../services/videoService";
+import { surgicalUpload } from "../services/api";
 import { toast } from "../components/Toast";
 
 export default function Studio() {
   const [isUploading, setIsUploading] = useState(false);
-  const [videoResult, setVideoResult] = useState<VideoProcessResult | null>(
-    null,
-  );
+  const [videoResult, setVideoResult] = useState<any>(null);
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setFileToUpload(file);
     setIsUploading(true);
     try {
-      const result = await processVideo(file);
-      if (result) setVideoResult(result);
+      // Still show the preview immediately
+      const previewUrl = URL.createObjectURL(file);
+      setVideoResult({ url: previewUrl, highlights: [] });
     } finally {
       setIsUploading(false);
     }
@@ -110,20 +111,57 @@ export default function Studio() {
               </button>
             </div>
 
-            <Button
-              onClick={async () => {
-                if (!videoResult) return;
-                toast.info("Exportation en cours... 🎬");
-                // Simulate export process
-                await new Promise((resolve) => setTimeout(resolve, 1500));
-                toast.success("Vidéo exportée et publiée! 🚀");
-                // Navigate to profile after publish
-                window.location.href = "/profile/me";
-              }}
-              className="w-full py-4 text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600"
-            >
-              🚀 Exporter & Publier
-            </Button>
+            <div className="space-y-4">
+              <Button
+                onClick={async () => {
+                  if (!fileToUpload) return;
+                  setIsUploading(true);
+
+                  // Stage 1: Uploading
+                  toast.info("1/3: Téléversement vers le nuage... ☁️");
+
+                  try {
+                    const result = await surgicalUpload(fileToUpload, "Partagé via Ti-Guy Studio 🍁");
+
+                    if (result.success) {
+                      // Stage 2: Optimizing (Simulated for UX feel)
+                      toast.info("2/3: Optimisation pour le réseau... ⚡");
+                      await new Promise(r => setTimeout(r, 800));
+
+                      // Stage 3: Publishing
+                      toast.info("3/3: Publication sur Zyeuté... ⚜️");
+                      await new Promise(r => setTimeout(r, 600));
+
+                      toast.success("Vidéo publiée avec succès! +50 Nectar 🍯");
+
+                      setTimeout(() => {
+                        window.location.href = "/";
+                      }, 1000);
+                    } else {
+                      toast.error(`Erreur: ${result.error}`);
+                      setIsUploading(false);
+                    }
+                  } catch (err) {
+                    toast.error("Échec du téléversement. Réessaie.");
+                    setIsUploading(false);
+                  }
+                }}
+                className="w-full py-4 text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 shadow-lg shadow-orange-900/20"
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Traitement...</span>
+                  </div>
+                ) : (
+                  "🚀 Exporter & Publier"
+                )}
+              </Button>
+              <p className="text-center text-xs text-white/40 italic">
+                Souveraineté numérique pour le Québec ⚜️
+              </p>
+            </div>
           </div>
         )}
       </div>

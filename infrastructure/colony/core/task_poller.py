@@ -381,7 +381,7 @@ def publish_generated_content(task_id, result_data, prompt, media_type='video'):
             'caption': f"Generated via Colony OS 🐝\nPrompt: {prompt}",
             'media_url': media_url,
             # 'type': media_type, # Column might not exist in legacy table
-            'visibilite': 'public',
+            'visibility': 'public',
             'created_at': datetime.now().isoformat()
         }
         

@@ -134,7 +134,7 @@ class QuebecContentBot {
                 user_id: author.id,
                 media_url: imageUrl,
                 content: template.text, // Updated to 'content'
-                visibilite: 'public',
+                visibility: 'public',
                 reactions_count: Math.floor(Math.random() * 150),
                 comments_count: Math.floor(Math.random() * 20),
                 created_at: fakeDate.toISOString(),

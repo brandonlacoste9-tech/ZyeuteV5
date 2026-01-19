@@ -35,14 +35,25 @@ io.on("connection", (socket) => {
   console.log("🔌 Socket.IO Client Connected:", socket.id);
 });
 
-// [CRITICAL] Claim the port IMMEDIATELY for Railway Health Checks
-const port = parseInt(process.env.PORT || "5000", 10);
-httpServer.listen({ port, host: "0.0.0.0" }, () => {
-  console.log(`✅ PORT ${port} CLAIMED - Health Check should pass now!`);
-  console.log(`🏥 Health check at /api/health`);
-});
+  // Resilient Port Management
+  const startServer = (targetPort: number) => {
+    httpServer.listen({ port: targetPort, host: "0.0.0.0" }, () => {
+      console.log(`✅ PORT ${targetPort} CLAIMED - Health Check should pass now!`);
+      console.log(`🏥 Health check at http://localhost:${targetPort}/api/health`);
+    }).on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.warn(`⚠️ Port ${targetPort} is in use, trying ${targetPort + 1}...`);
+        startServer(targetPort + 1);
+      } else {
+        console.error("❌ FAILED TO START SERVER:", err);
+      }
+    });
+  };
 
-// [NEW] Instant Health Check Route (responds even while server is still booting)
+  const initialPort = parseInt(process.env.PORT || "5000", 10);
+  startServer(initialPort);
+
+  // [NEW] Instant Health Check Route (responds even while server is still booting)
 app.get("/api/health", (_req, res) => {
   res
     .status(200)
@@ -63,7 +74,7 @@ app.get("/health", async (_req, res) => {
       // Zyeute-Trace: Verify Schema Alignment
       const schemaCheck = await client.query(`
         SELECT column_name FROM information_schema.columns 
-        WHERE table_name = 'publications' AND column_name = 'visibilite'
+        WHERE table_name = 'publications' AND column_name = 'visibility'
       `);
       const isAligned = schemaCheck.rows.length > 0;
 

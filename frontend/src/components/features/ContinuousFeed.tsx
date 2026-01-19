@@ -269,20 +269,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       const transformed: Array<Post & { user: User }> = [];
       const pexelsUser: User = {
         id: "pexels",
-        username: "pexels",
-        display_name: "Pexels",
-        avatar_url: null,
-        bio: null,
-        city: null,
-        region: null,
-        is_verified: false,
+        username: "pexels_canada",
+        display_name: "Créateur Québec ⚜️", // Localized identity
+        avatar_url: "/attached_assets/logo_zyeute_gold.png", // Use local asset if possible
+        bio: "Contenu propulsé par Pexels pour Zyeuté",
+        city: "Montréal",
+        region: "Québec",
+        is_verified: true, // Pexels is a verified source for us
         coins: 0,
         fire_score: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        followers_count: 0,
+        followers_count: 5000,
         following_count: 0,
-        posts_count: 0,
+        posts_count: 100,
         is_following: false,
         role: "citoyen" as const,
         custom_permissions: {},
@@ -294,15 +294,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       photos.forEach((photo) => {
         transformed.push({
           id: `pexels-photo-${photo.id}`,
-          user_id: "pexels",
+          user_id: `pexels-${photo.photographer_id}`,
           media_url: photo.src.original,
           thumbnail_url: photo.src.medium,
-          caption: photo.alt || `Photo by ${photo.photographer}`,
+          caption: photo.alt || `Photo par ${photo.photographer} ⚜️`,
           type: "photo" as const,
-          fire_count: 0,
+          fire_count: Math.floor(Math.random() * 100), // Local flavor: start with some fires
           comment_count: 0,
           created_at: new Date().toISOString(),
-          user: pexelsUser,
+          user: {
+            ...pexelsUser,
+            id: `pexels-${photo.photographer_id}`,
+            username: photo.photographer.toLowerCase().replace(/\s/g, "_"),
+            display_name: photo.photographer,
+            avatar_url: photo.src.tiny,
+          },
         } as Post & { user: User });
       });
 
@@ -333,15 +339,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         }
         transformed.push({
           id: `pexels-video-${video.id}`,
-          user_id: "pexels",
+          user_id: `pexels-${video.user?.id || 'unknown'}`,
           media_url: videoUrl,
           thumbnail_url: video.image,
-          caption: `Video from Pexels`,
+          caption: `Moment capturé par ${video.user?.name || 'Créateur Pexels'} 🍁`,
           type: "video" as const,
-          fire_count: 0,
-          comment_count: 0,
+          fire_count: Math.floor(Math.random() * 150),
+          comment_count: Math.floor(Math.random() * 20),
           created_at: new Date().toISOString(),
-          user: pexelsUser,
+          user: {
+            ...pexelsUser,
+            id: `pexels-${video.user?.id || 'unknown'}`,
+            username: (video.user?.name || 'pexels').toLowerCase().replace(/\s/g, "_"),
+            display_name: video.user?.name || 'Créateur Québec',
+          },
         } as Post & { user: User });
       });
 
@@ -370,12 +381,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
-      feedLogger.info(`fetchVideoFeed: API returned ${data?.length} posts`);
+      feedLogger.info(`fetchVideoFeed: API returned ${data?.length || 0} posts`);
 
-      if (data) {
+      if (data && Array.isArray(data)) {
         validPosts = data.filter((p) => {
-          // Filter out invalid users
-          if (!p.user) return false;
+          // [SURGICAL FIX] Ensure post and user exist to prevent crashes
+          if (!p || !p.user) return false;
           // Filter out burned or expired posts (Client-side safety net)
           if (p.burned_at) return false;
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
@@ -385,56 +396,36 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
     } catch (error) {
       feedLogger.error(
-        "Error fetching API posts, will use Pexels fallback:",
+        "Error fetching API posts, pivoting to Pexels fallback:",
         error,
       );
-      // Don't rethrow - we'll try Pexels fallback below
+      apiSuccess = false;
     }
 
-    // Always try to fetch Pexels content (as fallback or to supplement)
-    try {
-      const pexelsData = await getPexelsCurated(10, 1);
-      if (pexelsData && pexelsData.videos?.length) {
-        const pexelsPosts = transformPexelsToPosts(
-          [], // Curated endpoint returns videos, not photos
-          pexelsData.videos || [],
-        );
-
-        if (apiSuccess && validPosts.length > 0) {
-          // Merge Pexels posts at the beginning of the feed
-          feedLogger.info(
-            `Fetched ${pexelsPosts.length} Pexels items, merging with ${validPosts.length} regular posts`,
-          );
-          console.log(
-            `📊 [Feed Diagnosis] MERGED: API(${validPosts.length}) + PEXELS(${pexelsPosts.length})`,
-          );
-          setPosts([...pexelsPosts, ...validPosts]);
-        } else {
-          // API failed or returned nothing - use ONLY Pexels as fallback
-          feedLogger.warn(
-            `Using ${pexelsPosts.length} Pexels items as FALLBACK (API returned no posts)`,
-          );
-          console.log(
-            `📊 [Feed Diagnosis] FALLBACK ONLY: PEXELS(${pexelsPosts.length}) (API was empty or failed)`,
+    // [SMART PLAY] If API failed or returned 0, we MUST have content. Pivot to Pexels.
+    if (!apiSuccess || validPosts.length === 0) {
+      feedLogger.info("Empty or failed DB feed, triggering Pexels fallback...");
+      try {
+        const pexelsData = await getPexelsCurated(15, 1);
+        if (pexelsData && pexelsData.videos?.length) {
+          const pexelsPosts = transformPexelsToPosts(
+            [],
+            pexelsData.videos || [],
           );
           setPosts(pexelsPosts);
+          setHasMore(true);
+        } else {
+          feedLogger.error("Pexels also returned nothing. Showing empty state.");
+          setPosts([]);
         }
-      } else if (validPosts.length > 0) {
-        // Pexels returned nothing, but we have API posts
-        feedLogger.warn("Pexels curated returned empty, using API posts only");
-        console.log(
-          `📊 [Feed Diagnosis] API ONLY: ${validPosts.length} posts (Pexels was empty)`,
-        );
-        setPosts(validPosts);
-      } else {
-        // Both failed - this is a real problem
-        feedLogger.error("CRITICAL: Both API and Pexels returned no posts!");
+      } catch (pexelsError) {
+        feedLogger.error("Pexels fallback also failed:", pexelsError);
         setPosts([]);
       }
-    } catch (pexelsError) {
-      feedLogger.error("Pexels fallback also failed:", pexelsError);
-      // Last resort: use whatever API posts we got (even if empty)
+    } else {
+      // We have DB posts, we can still mix in Pexels or just show DB
       setPosts(validPosts);
+      setHasMore(validPosts.length === 10);
     }
 
     setHasMore(validPosts.length === 10 || false);
@@ -476,34 +467,47 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [page, loadingMore, hasMore]);
 
+  // [SURGICAL] Momentum Check: Show content within 2 seconds max
+  useEffect(() => {
+    if (!isLoading || posts.length > 0) return;
+
+    const timer = setTimeout(() => {
+      if (isLoading && posts.length === 0) {
+        feedLogger.warn("⏱️ DB response slow (>2s). Forcing Pexels fallback for instant content.");
+        fetchVideoFeed(); // trigger fetch which has fallback logic
+      }
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, posts.length, fetchVideoFeed]);
+
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     let callbackId: any = null;
 
     if (!savedState || !savedState.posts?.length || posts.length === 0) {
-      // Prevent double-fetch in React StrictMode
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
 
-      // Use requestIdleCallback to avoid blocking main thread (Perplexity fix)
       if ("requestIdleCallback" in window) {
-        callbackId = requestIdleCallback(() => fetchVideoFeed());
+        callbackId = (window as any).requestIdleCallback(() => fetchVideoFeed());
       } else {
         callbackId = setTimeout(() => fetchVideoFeed(), 1);
       }
+    } else {
+      setIsLoading(false);
     }
 
     return () => {
-      // Cleanup: cancel callback if component unmounts
       if (callbackId !== null) {
         if ("cancelIdleCallback" in window) {
-          cancelIdleCallback(callbackId);
+          (window as any).cancelIdleCallback(callbackId);
         } else {
           clearTimeout(callbackId);
         }
       }
     };
-  }, [fetchVideoFeed, savedState]);
+  }, [fetchVideoFeed, savedState, posts.length]);
 
   // Restore scroll position via ref
   useEffect(() => {
@@ -529,8 +533,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         "Prefetching heavy chunks (Mux, Camera) in background...",
       );
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@/components/features/CameraView").catch(() => {});
-      import("./MuxVideoPlayer").catch(() => {});
+      import("@/components/features/CameraView").catch(() => { });
+      import("./MuxVideoPlayer").catch(() => { });
     };
 
     let idleId: any = null;

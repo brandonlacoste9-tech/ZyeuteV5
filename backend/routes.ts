@@ -45,6 +45,7 @@ import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import { healthRouter } from "./routes/health.js";
 import { muxRouter } from "./routes/mux.js";
+import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
 import pexelsRoutes from "./routes/pexels.js";
 // Import tracing utilities
@@ -175,6 +176,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
+  // Surgical Bypass - Launch Edition
+  app.use("/api/upload", surgicalUploadRouter);
+  
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api", healthRouter);
   app.use("/api", muxRouter);

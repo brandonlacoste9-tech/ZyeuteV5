@@ -48,7 +48,7 @@ BEGIN
     "content",
     "caption",
     "media_url",
-    "visibilite",
+    "visibility",
     "hive_id",
     "region_id",
     "reactions_count",
