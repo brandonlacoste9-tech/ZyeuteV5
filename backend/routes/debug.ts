@@ -18,6 +18,9 @@ router.get("/health", async (req, res) => {
       NODE_ENV: process.env.NODE_ENV,
       HAS_DATABASE_URL: !!process.env.DATABASE_URL,
       HAS_SUPABASE_URL: !!process.env.SUPABASE_URL,
+      HAS_PEXELS_KEY: !!process.env.PEXELS_API_KEY,
+      HAS_MUX_ID: !!process.env.MUX_TOKEN_ID,
+      HAS_MUX_SECRET: !!process.env.MUX_TOKEN_SECRET,
     },
   };
 

@@ -405,17 +405,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           feedLogger.info(
             `Fetched ${pexelsPosts.length} Pexels items, merging with ${validPosts.length} regular posts`,
           );
+          console.log(
+            `📊 [Feed Diagnosis] MERGED: API(${validPosts.length}) + PEXELS(${pexelsPosts.length})`,
+          );
           setPosts([...pexelsPosts, ...validPosts]);
         } else {
           // API failed or returned nothing - use ONLY Pexels as fallback
           feedLogger.warn(
             `Using ${pexelsPosts.length} Pexels items as FALLBACK (API returned no posts)`,
           );
+          console.log(
+            `📊 [Feed Diagnosis] FALLBACK ONLY: PEXELS(${pexelsPosts.length}) (API was empty or failed)`,
+          );
           setPosts(pexelsPosts);
         }
       } else if (validPosts.length > 0) {
         // Pexels returned nothing, but we have API posts
         feedLogger.warn("Pexels curated returned empty, using API posts only");
+        console.log(
+          `📊 [Feed Diagnosis] API ONLY: ${validPosts.length} posts (Pexels was empty)`,
+        );
         setPosts(validPosts);
       } else {
         // Both failed - this is a real problem
