@@ -18,8 +18,14 @@ import { logger } from "./utils/logger.js";
 function parseRedisUrl(url: string) {
   try {
     let fullUrl = url;
-    if (!url.startsWith("redis://") && !url.startsWith("rediss://")) {
-      fullUrl = `redis://${url}`;
+
+    // Robustness: Handle common copy-paste error where env var includes "REDIS_URL=" prefix
+    if (fullUrl.startsWith("REDIS_URL=")) {
+      fullUrl = fullUrl.replace("REDIS_URL=", "").replace(/^["']|["']$/g, "");
+    }
+
+    if (!fullUrl.startsWith("redis://") && !fullUrl.startsWith("rediss://")) {
+      fullUrl = `redis://${fullUrl}`;
     }
     const parsedUrl = new URL(fullUrl);
     const useTls = parsedUrl.protocol === "rediss:";
@@ -54,7 +60,9 @@ if (redisUrl) {
       maxRetriesPerRequest: null, // Required for BullMQ compatibility
       retryStrategy: (times: number) => {
         if (times > 3) {
-          logger.error("[Redis] Max retries reached, stopping reconnection attempts");
+          logger.error(
+            "[Redis] Max retries reached, stopping reconnection attempts",
+          );
           return null;
         }
         const delay = Math.min(times * 50, 2000);
@@ -63,7 +71,9 @@ if (redisUrl) {
       },
     };
   } else {
-    logger.info("[Redis] Invalid REDIS_URL format, falling back to individual env vars");
+    logger.info(
+      "[Redis] Invalid REDIS_URL format, falling back to individual env vars",
+    );
     // Fallback to individual env vars if URL parsing fails
     if (process.env.REDIS_HOST) {
       redisConfig = {
@@ -93,7 +103,9 @@ if (redisUrl) {
     maxRetriesPerRequest: null, // Required for BullMQ compatibility
     retryStrategy: (times: number) => {
       if (times > 3) {
-        logger.error("[Redis] Max retries reached, stopping reconnection attempts");
+        logger.error(
+          "[Redis] Max retries reached, stopping reconnection attempts",
+        );
         return null; // Stop retrying after 3 attempts
       }
       const delay = Math.min(times * 50, 2000);
@@ -138,9 +150,13 @@ export function initializeRedis(): Redis | null {
   // Check if we have a valid config
   if (!redisConfig || !redisConfig.host) {
     if (hasUrl && !redisConfig) {
-      logger.info("[Redis] Configuration invalid (parsing failed). Disabling Redis.");
+      logger.info(
+        "[Redis] Configuration invalid (parsing failed). Disabling Redis.",
+      );
     } else {
-      logger.info("[Redis] Invalid configuration - check REDIS_URL or REDIS_HOST");
+      logger.info(
+        "[Redis] Invalid configuration - check REDIS_URL or REDIS_HOST",
+      );
     }
     redisConnectionStatus = "not_configured";
     return null;
@@ -212,7 +228,8 @@ export async function checkRedisHealth(): Promise<{
   if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
     return {
       status: "not_configured",
-      message: "Redis not configured (REDIS_URL or REDIS_HOST not set) - Running in cache-free mode",
+      message:
+        "Redis not configured (REDIS_URL or REDIS_HOST not set) - Running in cache-free mode",
     };
   }
 
