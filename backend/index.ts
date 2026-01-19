@@ -1,5 +1,9 @@
-import "dotenv/config";
-console.log("🔥 [Zyeuté-Main] Process starting at", new Date().toISOString());
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled Rejection:', reason);
+});
 import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes.js";
@@ -64,7 +68,7 @@ httpServer.listen({ port: PORT, host: "0.0.0.0" }, () => {
 });
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
-app.get("/health", async (_req, res) => {
+app.get("/ready", async (_req, res) => {
   try {
     const client = await pool.connect();
     try {
