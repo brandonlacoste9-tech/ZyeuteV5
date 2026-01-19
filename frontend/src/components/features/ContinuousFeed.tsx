@@ -13,7 +13,7 @@ import React, {
   memo,
   ReactElement,
 } from "react";
-import { List, ListImperativeAPI, RowComponentProps } from "react-window";
+import { List, ListImperativeAPI } from "react-window";
 
 // react-window 2.x types - RowData is passed via rowProps
 interface RowData {
@@ -28,7 +28,8 @@ interface RowData {
   isSystemOverloaded: boolean;
 }
 
-type FeedRowProps = RowComponentProps<RowData>;
+// Relax type check for react-window compatibility
+type FeedRowProps = any;
 
 import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
@@ -65,11 +66,7 @@ interface ContinuousFeedProps {
 }
 
 const FeedRow = memo(
-  ({
-    index,
-    style,
-    data,
-  }: FeedRowProps): ReactElement | null => {
+  ({ index, style, data }: FeedRowProps): ReactElement | null => {
     const {
       posts,
       currentIndex,
@@ -108,7 +105,10 @@ const FeedRow = memo(
     // Smart Prefetching (Tier 2 only fetches full blob)
     // For Tier 0/1 we just pass the original URL and let SingleVideoView handle preload attr
     // But usePrefetchVideo handles cache lookup too
-    const { source, isCached, debug } = usePrefetchVideo(videoUrl, effectivePreloadTier);
+    const { source, isCached, debug } = usePrefetchVideo(
+      videoUrl,
+      effectivePreloadTier,
+    );
 
     if (!post) return <div style={style} />;
 
@@ -128,7 +128,11 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            effectivePreloadTier >= 2 ? "auto" : effectivePreloadTier === 1 ? "metadata" : "none"
+            effectivePreloadTier >= 2
+              ? "auto"
+              : effectivePreloadTier === 1
+                ? "metadata"
+                : "none"
           }
           videoSource={source}
           isCached={isCached}
@@ -160,7 +164,8 @@ const FeedRow = memo(
       prevData.isMediumScrolling !== nextData.isMediumScrolling ||
       prevData.isSlowScrolling !== nextData.isSlowScrolling ||
       prevData.isSystemOverloaded !== nextData.isSystemOverloaded
-    ) return false;
+    )
+      return false;
 
     // 3. ZERO-GRAVITY CALCULATION:
     // Only re-render if this specific row's relationship to the "current" index changed.
@@ -168,8 +173,10 @@ const FeedRow = memo(
     const nextIsPriority = nextProps.index === nextData.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
-    const prevIsPredictive = Math.abs(prevProps.index - prevData.currentIndex) === 1;
-    const nextIsPredictive = Math.abs(nextProps.index - nextData.currentIndex) === 1;
+    const prevIsPredictive =
+      Math.abs(prevProps.index - prevData.currentIndex) === 1;
+    const nextIsPredictive =
+      Math.abs(nextProps.index - nextData.currentIndex) === 1;
     if (prevIsPredictive !== nextIsPredictive) return false;
 
     return true; // Everything else is identical; skip render.
@@ -377,7 +384,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         apiSuccess = true;
       }
     } catch (error) {
-      feedLogger.error("Error fetching API posts, will use Pexels fallback:", error);
+      feedLogger.error(
+        "Error fetching API posts, will use Pexels fallback:",
+        error,
+      );
       // Don't rethrow - we'll try Pexels fallback below
     }
 
@@ -506,10 +516,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // This ensures they are ready in the browser cache when the user needs them
   useEffect(() => {
     const prefetchHeavyChunks = () => {
-      feedLogger.debug("Prefetching heavy chunks (Mux, Camera) in background...");
+      feedLogger.debug(
+        "Prefetching heavy chunks (Mux, Camera) in background...",
+      );
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@/components/features/CameraView").catch(() => { });
-      import("./MuxVideoPlayer").catch(() => { });
+      import("@/components/features/CameraView").catch(() => {});
+      import("./MuxVideoPlayer").catch(() => {});
     };
 
     let idleId: any = null;
@@ -545,24 +557,33 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         if (isSystemOverloaded) setIsSystemOverloaded(false);
       }
 
-      if (process.env.NODE_ENV === "development" || process.env.LOG_LEVEL === "trace") {
+      if (
+        process.env.NODE_ENV === "development" ||
+        process.env.LOG_LEVEL === "trace"
+      ) {
         const currentPost = posts[currentIndex];
         const prevPost = posts[prevIndexRef.current];
-        feedLogger.info(`Trace: Media Transition (${prevPost.type} -> ${currentPost.type})`, {
-          fromId: prevPost.id,
-          toId: currentPost.id,
-          latencyMs: latency,
-          direction: currentIndex > prevIndexRef.current ? 'next' : 'prev'
-        });
+        feedLogger.info(
+          `Trace: Media Transition (${prevPost.type} -> ${currentPost.type})`,
+          {
+            fromId: prevPost.id,
+            toId: currentPost.id,
+            latencyMs: latency,
+            direction: currentIndex > prevIndexRef.current ? "next" : "prev",
+          },
+        );
       }
     }
 
-    if (process.env.NODE_ENV === "development" || process.env.LOG_LEVEL === "trace") {
+    if (
+      process.env.NODE_ENV === "development" ||
+      process.env.LOG_LEVEL === "trace"
+    ) {
       feedLogger.info("Feed State Update", {
         currentIndex,
         page,
         postsCount: posts.length,
-        velocity: { isFast, isMedium, isSlow }
+        velocity: { isFast, isMedium, isSlow },
       });
     }
 
@@ -574,7 +595,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Handle rows rendered (new API name in 2.x)
   const onRowsRendered = useCallback(
-    ({ visibleStartIndex, visibleStopIndex }: { visibleStartIndex: number; visibleStopIndex: number }) => {
+    ({
+      visibleStartIndex,
+      visibleStopIndex,
+    }: {
+      visibleStartIndex: number;
+      visibleStopIndex: number;
+    }) => {
       const startIndex = visibleStartIndex;
       const stopIndex = visibleStopIndex;
 
@@ -649,17 +676,30 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }, []);
 
   // Data object passed to rows
-  const itemData: RowData = useMemo(() => ({
-    posts,
-    currentIndex,
-    handleFireToggle,
-    handleComment,
-    handleShare,
-    isFastScrolling: isFast,
-    isMediumScrolling: isMedium,
-    isSlowScrolling: isSlow,
-    isSystemOverloaded,
-  }), [posts, currentIndex, handleFireToggle, handleComment, handleShare, isFast, isMedium, isSlow, isSystemOverloaded]);
+  const itemData: RowData = useMemo(
+    () => ({
+      posts,
+      currentIndex,
+      handleFireToggle,
+      handleComment,
+      handleShare,
+      isFastScrolling: isFast,
+      isMediumScrolling: isMedium,
+      isSlowScrolling: isSlow,
+      isSystemOverloaded,
+    }),
+    [
+      posts,
+      currentIndex,
+      handleFireToggle,
+      handleComment,
+      handleShare,
+      isFast,
+      isMedium,
+      isSlow,
+      isSystemOverloaded,
+    ],
+  );
 
   if (isLoading && posts.length === 0) {
     return (
@@ -686,7 +726,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }
 
   return (
-    <div className={cn("w-full h-full bg-black feed-root", className)}>
+    <div className={cn("w-full h-full leather-dark feed-root", className)}>
       <ZeroGravityHUD />
       <AutoSizer>
         {({ height, width }) => (
@@ -701,12 +741,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               className="no-scrollbar snap-y snap-mandatory scroll-smooth"
               style={{ height, width }}
               rowCount={posts.length}
-              rowHeight={height} // Full screen height per item
-              rowComponent={FeedRow}
+              rowHeight={height}
               itemData={itemData}
-              // Adaptive Buffer: Increase lookahead when scrolling fast to prevent gray screens
               overscanCount={isFast ? 3 : 1}
               onItemsRendered={onRowsRendered}
+              children={FeedRow}
             />
           </>
         )}

@@ -16,6 +16,7 @@ import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
+import { useVideoVision } from "@/hooks/useVideoVision";
 
 interface SingleVideoViewProps {
   post: Post;
@@ -59,6 +60,48 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const { isMuted, toggleMute: audioToggleMute } = useAudioFocus(post.id);
     const [showMuteIndicator, setShowMuteIndicator] = useState(false);
     const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // AI Vision State
+    const { analyzeFrame, isAnalyzing } = useVideoVision();
+    const [localAiDescription, setLocalAiDescription] = useState<string | null>(
+      post.ai_description || null,
+    );
+    const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
+    // Trigger Vision Analysis if missing
+    useEffect(() => {
+      if (
+        isActive &&
+        !localAiDescription &&
+        !hasAnalyzed &&
+        !isAnalyzing &&
+        post.type === "video"
+      ) {
+        const timer = setTimeout(async () => {
+          if (videoRef.current) {
+            // Try to find the actual video tag inside the container
+            const videoEl = videoRef.current.querySelector("video");
+            if (videoEl) {
+              console.log("[VideoVision] Analyzing frame for", post.id);
+              setHasAnalyzed(true); // Prevent loop
+              const result = await analyzeFrame(videoEl);
+              if (result) {
+                setLocalAiDescription(result.description);
+              }
+            }
+          }
+        }, 3000); // Wait 3s for meaningful frame
+        return () => clearTimeout(timer);
+      }
+    }, [
+      isActive,
+      localAiDescription,
+      hasAnalyzed,
+      isAnalyzing,
+      post.id,
+      post.type,
+      analyzeFrame,
+    ]);
 
     // Get swipe gesture setting
     const swipeGesturesEnabled = preferences.interactions.swipeGestures;
@@ -332,8 +375,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Swipe Direction Indicator */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
-              }`}
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
+              swipeDirection === "left" ? "animate-pulse" : ""
+            }`}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -352,19 +396,19 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   </>
                 )
               ) : // LEGACY MODE: Advanced Features
-                swipeDirection === "left" ? (
-                  <>
-                    <div className="text-6xl mb-2">🔨</div>
-                    <p className="text-gold-400 font-bold text-lg">
-                      Régénération...
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-6xl mb-2">🔒</div>
-                    <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                  </>
-                )}
+              swipeDirection === "left" ? (
+                <>
+                  <div className="text-6xl mb-2">🔨</div>
+                  <p className="text-gold-400 font-bold text-lg">
+                    Régénération...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl mb-2">🔒</div>
+                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -411,10 +455,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
             {/* Persistent mute icon */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${showMuteIndicator
-                ? "bg-white/90 scale-125"
-                : "bg-black/40 backdrop-blur-sm"
-                }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                showMuteIndicator
+                  ? "bg-white/90 scale-125"
+                  : "bg-black/40 backdrop-blur-sm"
+              }`}
             >
               {isMuted ? (
                 <svg
@@ -510,12 +555,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
         {/* Bottom Content Area */}
         <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-20">
-          {/* Ti-Guy Insight */}
-          {post.ai_description && (
+          {/* Ti-Guy Insight (Local or Server) */}
+          {localAiDescription && (
             <div className="mb-4">
               <TiGuyInsight
-                summary={post.ai_description}
-                labels={post.ai_labels || []}
+                summary={localAiDescription}
+                labels={post.ai_labels || (hasAnalyzed ? ["Live Vision"] : [])}
               />
             </div>
           )}
@@ -561,14 +606,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
-                }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${
+                isLiked ? "scale-110" : ""
+              }`}
             >
               <div
-                className={`text-4xl transition-all ${isLiked
-                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                  : "grayscale opacity-80"
-                  }`}
+                className={`text-4xl transition-all ${
+                  isLiked
+                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                    : "grayscale opacity-80"
+                }`}
               >
                 🔥
               </div>

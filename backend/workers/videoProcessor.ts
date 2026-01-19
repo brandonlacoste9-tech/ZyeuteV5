@@ -39,9 +39,22 @@ const worker = new Worker(
       fs.writeFileSync(tempIn, Buffer.from(arrayBuffer));
 
       // 3. Run AI Upscale (Real-ESRGAN)
-      console.log("🤖 Running AI Enhancement...");
-      // MOCK AI (For now, just copy to prove flow works until GPU is set up)
-      fs.copyFileSync(tempIn, tempOut);
+      // 3. Run AI Upscale (Local LTX-2)
+      console.log("🤖 Running AI Enhancement via Local LTX-2 Executor...");
+
+      const scriptPath = path.resolve(__dirname, "../local-executor.py");
+      // Use standard python command
+      const pythonCmd = "python";
+
+      try {
+        const { stdout, stderr } = await execAsync(
+          `${pythonCmd} "${scriptPath}" "${tempIn}" "${tempOut}"`,
+        );
+        console.log(stdout);
+        if (stderr) console.warn(stderr); // LTX-2 logs might go to stderr
+      } catch (pError: any) {
+        throw new Error(`Executor Failed: ${pError.message}`);
+      }
 
       // 4. Upload Result
       console.log("⬆️ Uploading Enhanced Version...");

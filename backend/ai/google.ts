@@ -1,24 +1,27 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { OllamaModel } from "./ollama-bridge.js";
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 if (!apiKey) {
   console.warn(
-    "⚠️ GEMINI_API_KEY non trouvée dans .env. Les fonctionnalités de scouting AI seront désactivées.",
+    "⚠️ GEMINI_API_KEY not found. Switching to Local Ollama Bridge.",
   );
 }
 
 export const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 /**
- * Gets the specified Gemini model.
- * Defaults to Flash for cost/speed efficiency.
+ * Gets the specified Gemini model or Ollama fallback.
  */
 export function getGeminiModel(
   modelName: "gemini-1.5-flash" | "gemini-1.5-pro" = "gemini-1.5-flash",
   systemInstruction?: string,
 ) {
-  if (!genAI) return null;
+  if (!genAI) {
+    // Return Ollama wrapper
+    return new OllamaModel(modelName, systemInstruction) as any;
+  }
   return genAI.getGenerativeModel({
     model: modelName,
     systemInstruction: systemInstruction,
@@ -26,17 +29,18 @@ export function getGeminiModel(
 }
 
 /**
- * Generates embeddings for the given text using Gemini's embedding model.
+ * Generates embeddings.
  */
 export async function getEmbeddings(text: string): Promise<number[]> {
-  if (!genAI) return new Array(384).fill(0);
+  if (!genAI) {
+    const ollama = new OllamaModel("embedding");
+    const res = await ollama.embedContent(text);
+    return res.embedding.values;
+  }
 
   try {
     const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
     const result = await model.embedContent(text);
-    // Note: text-embedding-004 usually returns 768 dims.
-    // If our schema is 384, we take the first 384 or adjust schema.
-    // Given the 384 dims in schema.ts, we'll slice.
     return result.embedding.values.slice(0, 384);
   } catch (err) {
     console.error("🚨 [Gemini] Failed to generate embeddings:", err);
