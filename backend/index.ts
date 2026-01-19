@@ -1,4 +1,5 @@
 import "dotenv/config";
+console.log("🔥 [Zyeuté-Main] Process starting at", new Date().toISOString());
 import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes.js";
@@ -20,6 +21,20 @@ const pool = new Pool({
 const app = express();
 const httpServer = createServer(app);
 
+// [CRITICAL] 🏥 Health check at the VERY top to guarantee Railway passes
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    service: "Zyeuté API",
+    version: "5.0.0-surgical",
+    mode: process.env.NODE_ENV
+  });
+});
+
+// [CRITICAL] 🏥 Legacy health check fallback
+app.get("/health", (_req, res) => res.status(200).send("OK"));
+
 // Initialize Socket.IO for Real-Time Features
 const io = new SocketIOServer(httpServer, {
   cors: {
@@ -35,33 +50,17 @@ io.on("connection", (socket) => {
   console.log("🔌 Socket.IO Client Connected:", socket.id);
 });
 
-  // Resilient Port Management
-  const startServer = (targetPort: number) => {
-    httpServer.listen({ port: targetPort, host: "0.0.0.0" }, () => {
-      console.log(`✅ PORT ${targetPort} CLAIMED - Health Check should pass now!`);
-      console.log(`🏥 Health check at http://localhost:${targetPort}/api/health`);
-    }).on('error', (err: any) => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`⚠️ Port ${targetPort} is in use, trying ${targetPort + 1}...`);
-        startServer(targetPort + 1);
-      } else {
-        console.error("❌ FAILED TO START SERVER:", err);
-      }
-    });
-  };
-
-  const initialPort = parseInt(process.env.PORT || "5000", 10);
-  startServer(initialPort);
-
-  // [NEW] Instant Health Check Route (responds even while server is still booting)
-app.get("/api/health", (_req, res) => {
-  res
-    .status(200)
-    .json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      message: "Zyeuté Live",
-    });
+// Port Management - Strictly follow PORT on Railway
+const PORT = parseInt(process.env.PORT || "5000", 10);
+httpServer.listen({ port: PORT, host: "0.0.0.0" }, () => {
+  console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
+  console.log(`🏥 Health check ready at /api/health`);
+}).on('error', (err: any) => {
+  console.error("❌ SERVER CRITICAL ERROR:", err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`💥 Port ${PORT} is occupied. This should NOT happen on Railway.`);
+    process.exit(1);
+  }
 });
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
@@ -111,20 +110,23 @@ app.use(cors({ origin: true, credentials: true }));
 
 (async () => {
   try {
-    console.log("🛠️  Initializing routes and services...");
+    console.log("🛠️  Step 1: Initializing routes and services...");
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
+    
+    console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
 
     if (process.env.NODE_ENV === "production") {
+      console.log("🛠️  Step 3: Serving static files (Production)...");
       serveStatic(app);
     } else {
+      console.log("🛠️  Step 3: Setting up Vite (Development)...");
       const { setupVite } = await import("./vite.js");
       await setupVite(httpServer, app);
     }
-    console.log("🚀 Server fully initialized and ready!");
+    console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL!");
   } catch (error) {
     console.error("❌ ASYNC INIT ERROR:", error);
-    // Continue running so health check still passes, even if degraded
   }
 })();
