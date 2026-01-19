@@ -71,6 +71,7 @@ export interface IStorage {
   createUser(user: InsertUser & { id: string }): Promise<User>;
   // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  updateUserCredits(userId: string, amount: number): Promise<User | undefined>; // Added for Nectar Bonus
 
   // Posts
   getPost(id: string): Promise<(Post & { user: User }) | undefined>;
@@ -267,6 +268,18 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ ...updates, createdAt: undefined }) // Prevent updating createdAt
       .where(eq(users.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateUserCredits(
+    userId: string,
+    amount: number,
+  ): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ credits: sql`${users.credits} + ${amount}` })
+      .where(eq(users.id, userId))
       .returning();
     return result[0];
   }
