@@ -160,7 +160,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
         errorCategory.isRecoverable && this.state.errorCount < 3;
 
       return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="min-h-screen leather-dark flex items-center justify-center p-4">
           <div className="max-w-md w-full text-center">
             <div className="mb-6">
               <div className="text-6xl mb-4">
