@@ -11,6 +11,8 @@
     "lint": "tsc --noEmit && eslint .",
     "test": "vitest run",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "migrate": "tsx ./scripts/run-migration.ts",
+    "predeploy": "npm run migrate",
     "worker:video": "tsx backend/workers/videoProcessor.ts",
     "preflight": "npm run check && npm run lint && npm run build && npm run test",
     "worker": "tsx backend/startWorker.ts",

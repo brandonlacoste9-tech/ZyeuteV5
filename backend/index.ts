@@ -1,8 +1,8 @@
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception:", err);
 });
-process.on('unhandledRejection', (reason) => {
-  console.error('❌ Unhandled Rejection:', reason);
+process.on("unhandledRejection", (reason) => {
+  console.error("❌ Unhandled Rejection:", reason);
 });
 import express from "express";
 import cors from "cors";
@@ -13,13 +13,18 @@ import hiveRouter from "./routes/hive.js";
 import { createServer } from "http";
 import pg from "pg";
 import { Server as SocketIOServer } from "socket.io";
+import { db } from "./storage.js";
+import { posts } from "../shared/schema.js";
 
 const { Pool } = pg;
 
 // DB Pool for Health Checks
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.DIRECT_DATABASE_URL,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
 
 const app = express();
@@ -32,7 +37,7 @@ app.get("/api/health", (_req, res) => {
     timestamp: new Date().toISOString(),
     service: "Zyeuté API",
     version: "5.0.0-surgical",
-    mode: process.env.NODE_ENV
+    mode: process.env.NODE_ENV,
   });
 });
 
@@ -44,8 +49,8 @@ const io = new SocketIOServer(httpServer, {
   cors: {
     origin: true,
     credentials: true,
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
 
 app.set("io", io);
@@ -56,16 +61,20 @@ io.on("connection", (socket) => {
 
 // Port Management - Strictly follow PORT on Railway
 const PORT = parseInt(process.env.PORT || "5000", 10);
-httpServer.listen({ port: PORT, host: "0.0.0.0" }, () => {
-  console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
-  console.log(`🏥 Health check ready at /api/health`);
-}).on('error', (err: any) => {
-  console.error("❌ SERVER CRITICAL ERROR:", err);
-  if (err.code === 'EADDRINUSE') {
-    console.error(`💥 Port ${PORT} is occupied. This should NOT happen on Railway.`);
-    process.exit(1);
-  }
-});
+httpServer
+  .listen({ port: PORT, host: "0.0.0.0" }, () => {
+    console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
+    console.log(`🏥 Health check ready at /api/health`);
+  })
+  .on("error", (err: any) => {
+    console.error("❌ SERVER CRITICAL ERROR:", err);
+    if (err.code === "EADDRINUSE") {
+      console.error(
+        `💥 Port ${PORT} is occupied. This should NOT happen on Railway.`,
+      );
+      process.exit(1);
+    }
+  });
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
 app.get("/ready", async (_req, res) => {
@@ -73,7 +82,7 @@ app.get("/ready", async (_req, res) => {
     const client = await pool.connect();
     try {
       await client.query("SELECT 1");
-      
+
       // Zyeute-Trace: Verify Schema Alignment
       const schemaCheck = await client.query(`
         SELECT column_name FROM information_schema.columns 
@@ -81,7 +90,14 @@ app.get("/ready", async (_req, res) => {
       `);
       const isAligned = schemaCheck.rows.length > 0;
 
-      res.status(200).json({ status: "healthy", db: "connected", migration: "synced", schema: isAligned ? "aligned" : "drifted" });
+      res
+        .status(200)
+        .json({
+          status: "healthy",
+          db: "connected",
+          migration: "synced",
+          schema: isAligned ? "aligned" : "drifted",
+        });
     } finally {
       client.release();
     }
@@ -98,7 +114,7 @@ app.set("trust proxy", 1);
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
-    "default-src 'self'; font-src 'self' https://fonts.gstatic.com https://*.perplexity.ai https://r2cdn.perplexity.ai https://vercel.live data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://js.stripe.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vuanulvyqkfefmjcikfk.supabase.co wss://vuanulvyqkfefmjcikfk.supabase.co wss://*.railway.app https://*.railway.app https://*.up.railway.app wss://*.up.railway.app ws://localhost:* http://localhost:* https://*.googleapis.com https://*.fal.ai https://*.pexels.com https://api.pexels.com; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; frame-src 'self' https://js.stripe.com https://vercel.live;"
+    "default-src 'self'; font-src 'self' https://fonts.gstatic.com https://*.perplexity.ai https://r2cdn.perplexity.ai https://vercel.live data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://js.stripe.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vuanulvyqkfefmjcikfk.supabase.co wss://vuanulvyqkfefmjcikfk.supabase.co wss://*.railway.app https://*.railway.app https://*.up.railway.app wss://*.up.railway.app ws://localhost:* http://localhost:* https://*.googleapis.com https://*.fal.ai https://*.pexels.com https://api.pexels.com; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; frame-src 'self' https://js.stripe.com https://vercel.live;",
   );
   next();
 });
@@ -114,10 +130,26 @@ app.use(cors({ origin: true, credentials: true }));
 
 (async () => {
   try {
+    // [SAFETY NET] Verify Database Schema before starting
+    try {
+      console.log("🔍 Verifying Database Schema...");
+      await db
+        .select({ id: posts.id, vis: posts.visibility })
+        .from(posts)
+        .limit(1);
+      console.log("✅ Database Schema Verified: 'visibility' column found.");
+    } catch (err) {
+      console.error(
+        "🚨 CRITICAL: Database schema mismatch! Did you run migrations?",
+      );
+      console.error(err);
+      process.exit(1);
+    }
+
     console.log("🛠️  Step 1: Initializing routes and services...");
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
-    
+
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
 
