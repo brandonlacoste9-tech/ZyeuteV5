@@ -1,0 +1,40 @@
+name: 🛡️ Database Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  backup:
+    name: Create & Archive Backup
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🗄️ Run Backup Script
+        env:
+          # Add this secret in GitHub Repo Settings -> Secrets
+          DATABASE_URL: ${{ secrets.DATABASE_URL }} 
+          BACKUP_DIR: ./backups
+        run: |
+          mkdir -p ./backups
+          npm run db:backup
+
+      - name: ☁️ Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zyeute-db-backup-${{ github.run_id }}
+          path: ./backups/*.sql.gz
+          retention-days: 7
