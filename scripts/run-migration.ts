@@ -29,7 +29,10 @@ const maskedUrl = DATABASE_URL.replace(/:[^:@]*@/, ":****@");
 console.log(`🔌 Connecting to database at ${maskedUrl}`);
 
 async function runMigrations() {
-  const client = new Client({ connectionString: DATABASE_URL });
+  const client = new Client({
+    connectionString: DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  });
   await client.connect();
   const migrationsDir = join(__dirname, "..", "backend", "migrations");
   const files = readdirSync(migrationsDir)

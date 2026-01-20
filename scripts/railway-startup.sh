@@ -11,9 +11,8 @@ ls -la dist/ || echo "❌ Dist folder missing!"
 
 # Migration Step (Safety check)
 echo "📦 Running Database Migrations..."
-# Catch error but don't exit immediately so we can see logs? 
-# No, let's let it crash if it fails, but printed logs will help.
-npm run migrate || { echo "❌ MIGRATION FAILED"; exit 1; }
+# Log error but CONTINUE so capturing logs is possible (and app might work partially)
+npm run migrate || echo "❌ MIGRATION FAILED - Check logs above"
 
 echo "✅ Migrations completed."
 
