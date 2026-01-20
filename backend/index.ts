@@ -18,16 +18,9 @@ import { posts } from "../shared/schema.js";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { pool } from "./storage.js"; // Import pool for migrator
 
-const { Pool } = pg;
-
-// DB Pool for Health Checks
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.DIRECT_DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : undefined,
-});
+// DB Pool is imported from ./storage.js
+// const { Pool } = pg;
+// const pool = new Pool({...}) -> Removed to avoid collision
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,20 +56,21 @@ io.on("connection", (socket) => {
 
 // Port Management - Strictly follow PORT on Railway
 const PORT = parseInt(process.env.PORT || "5000", 10);
-httpServer
-  .listen({ port: PORT, host: "0.0.0.0" }, () => {
-    console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
-    console.log(`🏥 Health check ready at /api/health`);
-  })
-  .on("error", (err: any) => {
-    console.error("❌ SERVER CRITICAL ERROR:", err);
-    if (err.code === "EADDRINUSE") {
-      console.error(
-        `💥 Port ${PORT} is occupied. This should NOT happen on Railway.`,
-      );
-      process.exit(1);
-    }
-  });
+
+// HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
+httpServer.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
+  console.log(`🏥 Health check ready at http://0.0.0.0:${PORT}/api/health`);
+});
+httpServer.on("error", (err: any) => {
+  console.error("❌ SERVER CRITICAL ERROR:", err);
+  if (err.code === "EADDRINUSE") {
+    console.error(
+      `💥 Port ${PORT} is occupied. This should NOT happen on Railway.`,
+    );
+    process.exit(1);
+  }
+});
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
 app.get("/ready", async (_req, res) => {
