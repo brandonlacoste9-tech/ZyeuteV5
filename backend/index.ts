@@ -15,6 +15,8 @@ import pg from "pg";
 import { Server as SocketIOServer } from "socket.io";
 import { db } from "./storage.js";
 import { posts } from "../shared/schema.js";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { pool } from "./storage.js"; // Import pool for migrator
 
 const { Pool } = pg;
 
@@ -128,6 +130,18 @@ app.use(cors({ origin: true, credentials: true }));
 
 (async () => {
   try {
+    // [CRITICAL] Run Database Migrations before starting the application
+    console.log("📦 Running Database Migrations...");
+    try {
+      // Assuming your Drizzle migrations are in the './migrations' folder relative to the backend directory
+      await migrate(db, { migrationsFolder: "./migrations" });
+      console.log("✅ Database Migrations Completed.");
+    } catch (migrationError) {
+      console.error("🚨 CRITICAL: Database Migrations Failed!", migrationError);
+      // If migrations fail, the application cannot start correctly.
+      process.exit(1);
+    }
+
     // [SAFETY NET] Verify Database Schema before starting
     try {
       console.log("🔍 Verifying Database Schema...");

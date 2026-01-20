@@ -59,7 +59,8 @@ pool.on("connect", () => {
   console.log("✅ Database pool connection established");
 });
 
-export const db = drizzle(pool);
+export const db = drizzle(pool); // Export db
+export { pool }; // Export pool
 
 export interface IStorage {
   // Users
