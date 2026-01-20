@@ -1,21 +1,17 @@
 #!/bin/bash
-set -x # Debug mode: Print every command
+set -e  # Exit immediately if any command fails
 
-echo "🚀 Starting Deployment Sequence..."
+echo "🚀 [Startup] Starting deployment sequence..."
 
-echo "📂 Current Directory contents:"
-ls -la
+# 1. Run Migrations (only if folder exists)
+if [ -d "prisma" ] || [ -f "schema.prisma" ]; then
+  echo "📦 [Startup] Running Prisma Migrations..."
+  npx prisma migrate deploy || echo "⚠️ Warning: Migrations failed or not needed"
+fi
 
-echo "📂 Dist Directory contents:"
-ls -la dist/ || echo "❌ Dist folder missing!"
+# 2. Start the Backend
+echo "🔥 [Startup] Starting Node Server..."
 
-# Migration Step (Safety check)
-echo "📦 Running Database Migrations..."
-# Log error but CONTINUE so capturing logs is possible (and app might work partially)
-npm run migrate || echo "❌ MIGRATION FAILED - Check logs above"
-
-echo "✅ Migrations completed."
-
-# Start App
-echo "🟢 Starting Application..."
-node dist/index.cjs
+# CRITICAL: 'exec' replaces the shell process with Node.
+# This ensures the app is PID 1 and receives signals correctly.
+exec npm run start

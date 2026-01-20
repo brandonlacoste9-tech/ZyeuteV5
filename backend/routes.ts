@@ -43,7 +43,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
-import { healthRouter } from "./routes/health.js";
+import healthRoutes from "./routes/health.js";
 import { muxRouter } from "./routes/mux.js";
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
@@ -180,7 +180,7 @@ export async function registerRoutes(
   app.use("/api/upload", surgicalUploadRouter);
   
   // ============ HEALTH & SYSTEM ROUTES ============
-  app.use("/api", healthRouter);
+  app.use("/api/health", healthRoutes);
   app.use("/api", muxRouter);
 
   // [NEW] Debug and Scalability Diagnostics

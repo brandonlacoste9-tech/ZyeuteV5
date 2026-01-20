@@ -25,20 +25,6 @@ import { pool } from "./storage.js"; // Import pool for migrator
 const app = express();
 const httpServer = createServer(app);
 
-// [CRITICAL] 🏥 Health check at the VERY top to guarantee Railway passes
-app.get("/api/health", (_req, res) => {
-  res.status(200).json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    service: "Zyeuté API",
-    version: "5.0.0-surgical",
-    mode: process.env.NODE_ENV,
-  });
-});
-
-// [CRITICAL] 🏥 Legacy health check fallback
-app.get("/health", (_req, res) => res.status(200).send("OK"));
-
 // Initialize Socket.IO for Real-Time Features
 const io = new SocketIOServer(httpServer, {
   cors: {
@@ -55,21 +41,21 @@ io.on("connection", (socket) => {
 });
 
 // Port Management - Strictly follow PORT on Railway
-const PORT = parseInt(process.env.PORT || "5000", 10);
+const port = Number(process.env.PORT) || 3000;
 
 // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
-httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ ZYEUTÉ LIVE ON PORT ${PORT}`);
-  console.log(`🏥 Health check ready at http://0.0.0.0:${PORT}/api/health`);
+// This makes the server accessible to Railway's health check
+const server = httpServer.listen(port, "0.0.0.0", () => {
+  console.log(`✅ Server running on http://0.0.0.0:${port}`);
+  console.log(`Health check available at http://0.0.0.0:${port}/api/health`);
 });
-httpServer.on("error", (err: any) => {
-  console.error("❌ SERVER CRITICAL ERROR:", err);
-  if (err.code === "EADDRINUSE") {
-    console.error(
-      `💥 Port ${PORT} is occupied. This should NOT happen on Railway.`,
-    );
-    process.exit(1);
-  }
+
+// Graceful shutdown to prevent hanging processes
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
 });
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
