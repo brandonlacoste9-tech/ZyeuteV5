@@ -40,13 +40,21 @@ else:
 
 
 # Monkeypatch for browser-use compatibility (Run for ALL models)
-# Monkeypatch for browser-use compatibility (Run for ALL models)
 try:
+    # Relax Pydantic validation (v2/v1) for browser-use to set internal attributes
+    if hasattr(llm, "model_config"):
+        llm.model_config["extra"] = "allow"
+    elif hasattr(llm, "__config__"):
+        llm.__config__.extra = "allow"
+
     if not hasattr(llm, "provider"):
         object.__setattr__(llm, "provider", "openai")
 
     if not hasattr(llm, "model_name"):
         object.__setattr__(llm, "model_name", AI_MODEL)
+
+    if not hasattr(llm, "model"):
+        object.__setattr__(llm, "model", AI_MODEL)
 except Exception as e:
     logger.warning(f"⚠️ Failed to patch LLM object: {e}")
 
@@ -115,10 +123,10 @@ class ZyeuteBrowserService:
         2. Search for "{search_query}"
         3. Identify top 3 trending topics or videos.
         4. For each trend, extract:
-           - Title
-           - Description/Context
-           - Engagement metrics (if visible)
-           - Presence of French/Joual language
+            - Title
+            - Description/Context
+            - Engagement metrics (if visible)
+            - Presence of French/Joual language
         5. Return a JSON list of trends.
         """
 
@@ -185,9 +193,9 @@ class ZyeuteBrowserService:
         2. Analyze the main content.
         3. Extract the following metrics: {'all available' if not metrics else ', '.join(metrics)}.
         4. Specifically look for:
-           - Use of French vs English
-           - Quebec cultural references (poutine, hockey, local cities)
-           - Engagement from Quebec users (if visible)
+            - Use of French vs English
+            - Quebec cultural references (poutine, hockey, local cities)
+            - Engagement from Quebec users (if visible)
         5. Return a JSON summary.
         """
 

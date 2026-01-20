@@ -1,3 +1,4 @@
+import "dotenv/config";
 process.on("uncaughtException", (err) => {
   console.error("❌ Uncaught Exception:", err);
 });
@@ -109,20 +110,28 @@ app.use(cors({ origin: true, credentials: true }));
     }
 
     // [CRITICAL] Run Database Migrations before starting the application
-    console.log("📦 [Startup] Running Schema Migrations...");    try {
+    console.log("📦 [Startup] Running Schema Migrations...");
+    try {
       // Assuming your Drizzle migrations are in the './migrations' folder relative to the backend directory
       await migrate(db, { migrationsFolder: "./migrations" });
-      console.log("✅ [Startup] Migrations Complete");    } catch (err: any) {
-    // ERROR 42710 = Duplicate Object (Type/Table already exists)
-    // We ignore this because it means the DB is already set up.
-    if (err.code === '42710' || err?.cause?.code === '42710' || err.message?.includes('already exists')) {
-      console.warn("⚠️ [Startup] Notice: Migration skipped existing objects (Safe to ignore)");
-    } else {
-      console.error("🚨 [Startup] Database Migrations Failed!", err);
-      // Only exit if it's NOT a duplicate error
-      // process.exit(1); 
+      console.log("✅ [Startup] Migrations Complete");
+    } catch (err: any) {
+      // ERROR 42710 = Duplicate Object (Type/Table already exists)
+      // We ignore this because it means the DB is already set up.
+      if (
+        err.code === "42710" ||
+        err?.cause?.code === "42710" ||
+        err.message?.includes("already exists")
+      ) {
+        console.warn(
+          "⚠️ [Startup] Notice: Migration skipped existing objects (Safe to ignore)",
+        );
+      } else {
+        console.error("🚨 [Startup] Database Migrations Failed!", err);
+        // Only exit if it's NOT a duplicate error
+        // process.exit(1);
+      }
     }
-  }
     // [SAFETY NET] Verify Database Schema before starting
     try {
       console.log("🔍 Verifying Database Schema...");

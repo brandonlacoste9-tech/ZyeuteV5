@@ -20,7 +20,7 @@
     "db:deploy": "tsx scripts/db-deploy.ts",
     "db:seed": "tsx scripts/run-seed-migration.ts",
     "db:setup": "tsx scripts/railway-setup-db.ts",
-        "db:backup": "tsx backend/backup-db.ts",
+    "db:backup": "tsx backend/backup-db.ts",
     "verify:vertex": "tsx scripts/verify-vertex-ai.ts",
     "deploy": "tsx scripts/deploy-all.ts",
     "deploy:all": "tsx scripts/deploy-all.ts",

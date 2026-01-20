@@ -14,7 +14,7 @@ import { MainLayout } from "@/components/MainLayout";
 import { HiveProvider } from "@/contexts/HiveContext";
 import { PageTransition } from "@/components/AnimatedRoutes";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { TiGuy } from "@/components/features/TiGuy";
+import { ChatButton } from "@/components/ChatButton";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { GuestModeProvider } from "@/contexts/GuestModeContext";
 import { MapleSpinner } from "@/components/ui/MapleSpinner";
@@ -695,7 +695,7 @@ function App() {
                                                 />
                                               </Routes>
                                             </PageTransition>
-                                            <TiGuy />
+                                            <ChatButton />
                                           </MainLayout>
                                         }
                                       />
@@ -715,7 +715,7 @@ function App() {
           </NotificationProvider>
         </ThemeProvider>
       </FactoryThemeProvider>
-    </ErrorBoundary >
+    </ErrorBoundary>
   );
 }
 
