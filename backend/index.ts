@@ -116,7 +116,7 @@ app.use(cors({ origin: true, credentials: true }));
       console.log("✅ Database Migrations Completed.");
     } catch (migrationError) {
       console.error("🚨 CRITICAL: Database Migrations Failed!", migrationError);
-      process.exit(1);
+      // process.exit(1); // Soft fail to allow app to start and emit logs
     }
 
     // [SAFETY NET] Verify Database Schema before starting
