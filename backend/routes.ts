@@ -506,8 +506,14 @@ export async function registerRoutes(
 
       const posts = await storage.getExplorePosts(page, limit, hiveId);
       res.json({ posts, hiveId });
-    } catch (error) {
-      console.error("Get explore error:", error);
+    } catch (error: any) {
+      console.error("Get explore error:", {
+        message: error.message,
+        code: error.code, // Postgres error code
+        detail: error.detail,
+        table: error.table,
+        column: error.column
+      });
       res.status(500).json({ error: "Failed to get explore posts" });
     }
   });

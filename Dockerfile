@@ -6,10 +6,16 @@ WORKDIR /app
 # Copy package files and .npmrc
 COPY package*.json .npmrc ./
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y dos2unix
+
 # Install ALL dependencies (including optional ones for the build platform)
 RUN npm install
 # Copy source
 COPY . .
+
+# Convert scripts to Unix line endings
+RUN find . -name "*.sh" -exec dos2unix {} +
 
 # Build: Vite frontend + esbuild server bundle
 RUN npm run build
