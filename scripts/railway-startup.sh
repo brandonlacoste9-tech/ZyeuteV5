@@ -1,14 +1,22 @@
 #!/bin/bash
-set -e
+set -x # Debug mode: Print every command
 
 echo "🚀 Starting Deployment Sequence..."
 
-# 1. Run Migrations
-echo "📦 Running Database Migrations..."
-npm run migrate
+echo "📂 Current Directory contents:"
+ls -la
 
-# 2. Start the Application
+echo "📂 Dist Directory contents:"
+ls -la dist/ || echo "❌ Dist folder missing!"
+
+# Migration Step (Safety check)
+echo "📦 Running Database Migrations..."
+# Catch error but don't exit immediately so we can see logs? 
+# No, let's let it crash if it fails, but printed logs will help.
+npm run migrate || { echo "❌ MIGRATION FAILED"; exit 1; }
+
+echo "✅ Migrations completed."
+
+# Start App
 echo "🟢 Starting Application..."
-# Removed 'cross-env' as it is a devDependency. 
-# NODE_ENV is set by Railway or Defaults.
 node dist/index.cjs
