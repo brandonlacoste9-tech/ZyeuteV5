@@ -43,12 +43,11 @@ const { Pool } = pg;
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 60000, // Increased to 60s to allow for Supabase Cold Start
   statement_timeout: 60000,
   ssl:
-    process.env.NODE_ENV === "production"
+    process.env.NODE_ENV === "production" ||
+    process.env.DATABASE_URL?.includes("sslmode=require")
       ? { rejectUnauthorized: false }
       : undefined,
 });
