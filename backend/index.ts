@@ -90,14 +90,12 @@ app.get("/ready", async (_req, res) => {
       `);
       const isAligned = schemaCheck.rows.length > 0;
 
-      res
-        .status(200)
-        .json({
-          status: "healthy",
-          db: "connected",
-          migration: "synced",
-          schema: isAligned ? "aligned" : "drifted",
-        });
+      res.status(200).json({
+        status: "healthy",
+        db: "connected",
+        migration: "synced",
+        schema: isAligned ? "aligned" : "drifted",
+      });
     } finally {
       client.release();
     }
@@ -143,7 +141,7 @@ app.use(cors({ origin: true, credentials: true }));
         "🚨 CRITICAL: Database schema mismatch! Did you run migrations?",
       );
       console.error(err);
-      process.exit(1);
+      // process.exit(1); // DISABLED to allow debugging via logs/api
     }
 
     console.log("🛠️  Step 1: Initializing routes and services...");
