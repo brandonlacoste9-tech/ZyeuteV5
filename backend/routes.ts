@@ -48,6 +48,7 @@ import { muxRouter } from "./routes/mux.js";
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
 import pexelsRoutes from "./routes/pexels.js";
+import sentryDebugRoutes from "./routes/sentry-debug.js";
 // Import tracing utilities
 import {
   traced,
@@ -185,9 +186,10 @@ export async function registerRoutes(
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);
+    app.use("/api/debug-sentry", sentryDebugRoutes);
 
   // [NEW] Admin Observability Dashboard
-  app.use("/api/admin", requireAuth, adminRoutes);
+  50admin", requireAuth, adminRoutes);
 
   // Apply general rate limiting to all other API routes
   // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
