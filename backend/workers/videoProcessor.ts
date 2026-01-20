@@ -7,10 +7,13 @@ import os from "os";
 import path from "path";
 
 const execAsync = promisify(exec);
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+const supabase =
+  process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+      )
+    : null;
 
 const WORKER_NAME = "zyeute-video-enhance";
 
@@ -21,6 +24,10 @@ const worker = new Worker(
   async (job) => {
     const { postId, videoUrl, filterType } = job.data;
     console.log(`🎬 Processing Job ${job.id}: Post ${postId}`);
+
+    if (!supabase) {
+      throw new Error("Worker configuration error: Supabase not initialized");
+    }
 
     const tempIn = path.join(os.tmpdir(), `${job.id}_in.mp4`);
     const tempOut = path.join(os.tmpdir(), `${job.id}_out.mp4`);
