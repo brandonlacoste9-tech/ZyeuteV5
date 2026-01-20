@@ -7,12 +7,14 @@ Uses DeepSeek V3 or Gemini 2.0 Flash for cost-effectiveness
 import os
 import json
 import asyncio
+import traceback
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
-from browser_use import Agent, Browser, Controller
+from browser_use import Agent, Browser, Controller, BrowserConfig
 
 load_dotenv()
+logger.info("🟢 Loading Zyeute Automation Service...")
 
 # Initialize LLM (DeepSeek V3 or Gemini)
 AI_MODEL = os.getenv("AI_MODEL", "deepseek-chat")
@@ -79,9 +81,15 @@ except Exception as e:
 
 class ZyeuteBrowserService:
     def __init__(self):
-        self.browser = Browser()
+        logger.info("🟢 Initializing ZyeuteBrowserService...")
+        logger.info("   -> Configuring Browser (Headless)...")
+        self.config = BrowserConfig(headless=True)
+        logger.info("   -> Starting Browser instance...")
+        self.browser = Browser(config=self.config)
+        logger.info("   -> Initializing Controller...")
         self.controller = Controller()
         self._setup_controller()
+        logger.info("✅ ZyeuteBrowserService initialized.")
 
     def _setup_controller(self):
         """Setup custom browser actions for Zyeuté"""
@@ -133,9 +141,11 @@ class ZyeuteBrowserService:
         agent = Agent(
             task=task, llm=llm, browser=self.browser, controller=self.controller
         )
+        logger.info("🤖 Agent initialized. Starting task execution...")
 
         try:
             history = await agent.run()
+            logger.info("✅ Agent execution completed.")
             result = history.final_result()
 
             # Attempt to parse JSON from result
@@ -155,7 +165,8 @@ class ZyeuteBrowserService:
                             "cultural_score": 0.0,
                         }
                     ]
-            except:
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to parse JSON from result: {e}")
                 trends = [
                     {
                         "title": "Parse Error",
@@ -180,7 +191,12 @@ class ZyeuteBrowserService:
 
         except Exception as e:
             logger.error(f"❌ Trend discovery failed: {e}")
-            return {"success": False, "error": str(e)}
+            logger.error(traceback.format_exc())
+            return {
+                "success": False,
+                "error": str(e),
+                "traceback": traceback.format_exc(),
+            }
 
     async def analyze_competitor(
         self, url: str, metrics: Optional[List[str]] = None
@@ -188,10 +204,11 @@ class ZyeuteBrowserService:
         """Analyze a competitor's page for Quebec compliance"""
         logger.info(f"📊 Analyzing competitor: {url}")
 
+        metrics_str = "all available" if not metrics else ", ".join(metrics)
         task = f"""
         1. Go to {url}
         2. Analyze the main content.
-        3. Extract the following metrics: {'all available' if not metrics else ', '.join(metrics)}.
+        3. Extract the following metrics: {metrics_str}.
         4. Specifically look for:
             - Use of French vs English
             - Quebec cultural references (poutine, hockey, local cities)
@@ -241,13 +258,24 @@ class ZyeuteBrowserService:
         return min(1.0, max(0.0, score))
 
 
-# Instantiate singleton
-browser_service = ZyeuteBrowserService()
+# Instantiate singleton lazily or when needed
+# browser_service = ZyeuteBrowserService()
+# We'll instantiate in the main/api entrypoint to avoid import side-effects
+browser_service = None
+
+
+def get_browser_service():
+    global browser_service
+    if browser_service is None:
+        browser_service = ZyeuteBrowserService()
+    return browser_service
+
 
 if __name__ == "__main__":
     # Simple test
     async def main():
-        result = await browser_service.discover_quebec_trends()
+        service = get_browser_service()
+        result = await service.discover_quebec_trends()
         print(json.dumps(result, indent=2))
 
     asyncio.run(main())
