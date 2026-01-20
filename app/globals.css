@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Quebec Color Palette */
+    --zyeute-blue: #003399;
+    --zyeute-snow: #f8f9fa;
+    --zyeute-alert: #dc3545;
+    --zyeute-hydro: #ffcc00;
+
+    /* Semantic colors */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --primary: 221 100% 30%; /* Quebec Blue */
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 354 70% 54%; /* Alert Red */
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 221 100% 30%; /* Quebec Blue */
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+}
+
+@layer utilities {
+  /* Quebec-specific utilities */
+  .text-quebec-blue {
+    @apply text-zyeute-blue;
+  }
+
+  .bg-quebec-blue {
+    @apply bg-zyeute-blue;
+  }
+
+  .border-quebec-blue {
+    @apply border-zyeute-blue;
+  }
+
+  /* Cultural score colors */
+  .cultural-score-high {
+    @apply bg-green-500 text-white;
+  }
+
+  .cultural-score-medium {
+    @apply bg-zyeute-hydro text-zyeute-blue;
+  }
+
+  .cultural-score-low {
+    @apply bg-orange-500 text-white;
+  }
+
+  .cultural-score-none {
+    @apply bg-zyeute-alert text-white;
+  }
+}
+
+/* Custom scrollbar with Quebec Blue */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-zyeute-snow;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-zyeute-blue/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-zyeute-blue/50;
+}
+
+/* Quebec Blue selection */
+::selection {
+  @apply bg-zyeute-blue text-white;
+}
+
+/* Focus visible states with Quebec Blue */
+:focus-visible {
+  outline: 2px solid var(--zyeute-blue);
+  outline-offset: 2px;
+}

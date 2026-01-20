@@ -1,19 +1,51 @@
 {
-    "workbench.colorCustomizations": {
-        "activityBar.background": "#FFD700",
-        "activityBar.foreground": "#15202b",
-        "activityBar.inactiveForeground": "#15202b99",
-        "activityBarBadge.background": "#15202b",
-        "activityBarBadge.foreground": "#FFD700",
-        "titleBar.activeBackground": "#FFD700",
-        "titleBar.activeForeground": "#15202b",
-        "titleBar.inactiveBackground": "#FFD70099",
-        "titleBar.inactiveForeground": "#15202b99",
-        "statusBar.background": "#FFD700",
-        "statusBar.foreground": "#15202b",
-        "statusBarItem.hoverBackground": "#E6C200",
-        "statusBarItem.remoteBackground": "#FFD700",
-        "statusBarItem.remoteForeground": "#15202b"
-    },
-    "peacock.color": "#FFD700"
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "emmet.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
+  },
+  "cSpell.words": [
+    "Zyeuté",
+    "Joual",
+    "Québec",
+    "Montréal",
+    "Québécois",
+    "chums",
+    "tabarnak",
+    "calisse",
+    "poutine",
+    "tourtière",
+    "zyeute",
+    "Supabase",
+    "DeepSeek",
+    "Gemini",
+    "Antigravity"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/__pycache__": true,
+    "**/.next": true
+  },
+  "python.analysis.typeCheckingMode": "basic",
+  "python.linting.enabled": true,
+  "python.linting.flake8Enabled": true,
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.formatOnSave": true
+  }
 }

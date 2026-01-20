@@ -3,15 +3,13 @@ set -e  # Exit immediately if any command fails
 
 echo "🚀 [Startup] Starting deployment sequence..."
 
-# 1. Run Migrations (only if folder exists)
-if [ -d "prisma" ] || [ -f "schema.prisma" ]; then
-  echo "📦 [Startup] Running Prisma Migrations..."
-  npx prisma migrate deploy || echo "⚠️ Warning: Migrations failed or not needed"
+# 1. Run Migrations
+if [ -d "migrations" ]; then
+  echo "📦 [Startup] Running Migrations..."
+  # Migrations are handled by backend/index.ts using Drizzle
+  # This block is kept for compatibility if explicit commands are needed later
 fi
 
 # 2. Start the Backend
 echo "🔥 [Startup] Starting Node Server..."
-
-# CRITICAL: 'exec' replaces the shell process with Node.
-# This ensures the app is PID 1 and receives signals correctly.
-exec npm run start
+exec node dist/index.js

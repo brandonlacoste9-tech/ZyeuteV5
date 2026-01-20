@@ -1,0 +1,120 @@
+name: Quebec Compliance Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  validate-ui:
+    name: Validate Quebec UI Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for English UI text
+        run: |
+          echo "🔍 Scanning for non-compliant English text..."
+
+          # Check for common English words that should be Joual
+          if grep -rn --include="*.tsx" --include="*.jsx" \
+            -e ">Loading\.\.\.<" \
+            -e ">Submit<" \
+            -e ">Delete<" \
+            -e ">Error<" \
+            -e '"Loading\.\.\."' \
+            -e '"Submit"' \
+            -e '"Delete"' \
+            -e '"Error"' \
+            components/ app/; then
+            echo "❌ Found non-compliant English text!"
+            echo "Replace with Joual equivalents:"
+            echo "  Loading... → Ça charge..."
+            echo "  Submit → Envoyer"
+            echo "  Delete → Sacrer ça aux vidanges"
+            echo "  Error → Oups, y'a un bobo"
+            exit 1
+          fi
+
+          echo "✅ No English UI text found!"
+
+      - name: Check for non-Quebec colors
+        run: |
+          echo "🎨 Checking for non-Quebec colors..."
+
+          # Check for generic Tailwind colors instead of Quebec palette
+          if grep -rn --include="*.tsx" --include="*.jsx" \
+            -e "bg-blue-500" \
+            -e "bg-blue-600" \
+            -e "text-blue-500" \
+            components/ app/ | grep -v "bg-zyeute-blue"; then
+            echo "❌ Found non-Quebec colors!"
+            echo "Use Quebec Blue instead: bg-zyeute-blue"
+            exit 1
+          fi
+
+          echo "✅ Quebec color palette enforced!"
+
+      - name: Run design validation tests
+        run: |
+          echo "🧪 Running Ti-Guy validation tests..."
+          npm run test:trinity || echo "⚠️ Warning: Trinity tests failed (browser service may not be running)"
+        continue-on-error: true
+
+  validate-python:
+    name: Validate Browser Service
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd zyeute-browser-automation
+          pip install -r requirements.txt
+
+      - name: Check Python code quality
+        run: |
+          cd zyeute-browser-automation
+          pip install flake8 black
+
+          echo "🔍 Checking Python code style..."
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+          echo "✅ Python code quality check passed!"
+
+      - name: Verify Quebec context file
+        run: |
+          echo "🇨🇦 Verifying Quebec cultural context..."
+
+          if [ ! -f "zyeute-browser-automation/quebec-context.json" ]; then
+            echo "❌ quebec-context.json not found!"
+            exit 1
+          fi
+
+          # Verify cultural markers exist
+          if ! grep -q "poutine" zyeute-browser-automation/quebec-context.json; then
+            echo "❌ Quebec cultural markers missing!"
+            exit 1
+          fi
+
+          echo "✅ Quebec context verified!"

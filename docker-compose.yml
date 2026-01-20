@@ -1,19 +1,74 @@
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: zyeute_user
-      POSTGRES_PASSWORD: zyeute_password
-      POSTGRES_DB: zyeute_v5
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+# 🐝 Zyeuté Trinity - Complete Stack
+# Brain + Hands + Soul integrated deployment
 
+version: '3.8'
+
+services:
+  # 🧠 THE BRAIN - Zyeuté Main App (Next.js)
+  zyeute-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zyeute-brain
+    ports:
+      - "3000:3000"
+    environment:
+      # Supabase
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # AI/LLM (DeepSeek or Gemini)
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - AI_MODEL=${AI_MODEL:-deepseek-chat}
+      
+      # Internal Services
+      - BROWSER_SERVICE_URL=http://zyeute-hands:8000
+      
+    depends_on:
+      - zyeute-hands
+    networks:
+      - zyeute-network
+    restart: unless-stopped
+
+  # 🤲 THE HANDS - Browser Automation Service (Python)
+  zyeute-hands:
+    build:
+      context: ./zyeute-browser-automation
+      dockerfile: Dockerfile
+    container_name: zyeute-hands
+    ports:
+      - "8000:8000"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - AI_MODEL=${AI_MODEL:-deepseek-chat}
+      - BROWSER_USE_API_KEY=${BROWSER_USE_API_KEY}
+      - USE_BROWSER_CLOUD=${USE_BROWSER_CLOUD:-false}
+      - PORT=8000
+      - QUEBEC_CONTEXT_PATH=/app/quebec-context.json
+    volumes:
+      - ./zyeute-browser-automation/quebec-context.json:/app/quebec-context.json
+    networks:
+      - zyeute-network
+    restart: unless-stopped
+
+  # 📊 (Optional) Redis for caching
   redis:
     image: redis:7-alpine
+    container_name: zyeute-cache
     ports:
       - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - zyeute-network
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  redis-data:
+
+networks:
+  zyeute-network:
+    driver: bridge
