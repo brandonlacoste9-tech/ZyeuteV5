@@ -22,8 +22,10 @@ try {
       timestamp: new Date().toISOString()
     });
     
+    
     console.error("Serving error report to client");
-    res.writeHead(500, {'Content-Type': 'application/json'});
+    // Return 200 to trick Railway into keeping the container alive (Zombie Mode)
+    res.writeHead(200, {'Content-Type': 'application/json'});
     res.end(message);
   });
 
