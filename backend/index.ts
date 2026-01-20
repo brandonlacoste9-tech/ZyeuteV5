@@ -13,7 +13,7 @@ import hiveRouter from "./routes/hive.js";
 import { createServer } from "http";
 import pg from "pg";
 import { Server as SocketIOServer } from "socket.io";
-import { db } from "./storage.js";
+import { db, pool } from "./storage.js";
 import { posts } from "../shared/schema.js";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { pool } from "./storage.js"; // Import pool for migrator
@@ -43,20 +43,7 @@ io.on("connection", (socket) => {
 // Port Management - Strictly follow PORT on Railway
 const port = Number(process.env.PORT) || 3000;
 
-// HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
-// This makes the server accessible to Railway's health check
-const server = httpServer.listen(port, "0.0.0.0", () => {
-  console.log(`✅ Server running on http://0.0.0.0:${port}`);
-  console.log(`Health check available at http://0.0.0.0:${port}/api/health`);
-});
-
-// Graceful shutdown to prevent hanging processes
-process.on("SIGTERM", () => {
-  console.log("SIGTERM signal received: closing HTTP server");
-  server.close(() => {
-    console.log("HTTP server closed");
-  });
-});
+let server: any;
 
 // [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
 app.get("/ready", async (_req, res) => {
@@ -110,6 +97,17 @@ app.use(cors({ origin: true, credentials: true }));
 
 (async () => {
   try {
+    // [CRITICAL] Validate Database Connection First
+    try {
+      console.log("📦 [Startup] Connecting to Database...");
+      const client = await pool.connect();
+      client.release();
+      console.log("✅ [Startup] Database Connected Successfully");
+    } catch (dbErr) {
+      console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
+      process.exit(1);
+    }
+
     // [CRITICAL] Run Database Migrations before starting the application
     console.log("📦 Running Database Migrations...");
     try {
@@ -118,7 +116,7 @@ app.use(cors({ origin: true, credentials: true }));
       console.log("✅ Database Migrations Completed.");
     } catch (migrationError) {
       console.error("🚨 CRITICAL: Database Migrations Failed!", migrationError);
-      // process.exit(1); // DISABLED -> Keep app alive to debug migration error
+      process.exit(1);
     }
 
     // [SAFETY NET] Verify Database Schema before starting
@@ -153,7 +151,23 @@ app.use(cors({ origin: true, credentials: true }));
       await setupVite(httpServer, app);
     }
     console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL!");
+
+    // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
+    // This makes the server accessible to Railway's health check
+    server = httpServer.listen(port, "0.0.0.0", () => {
+      console.log(`✅ Server running on http://0.0.0.0:${port}`);
+      console.log(
+        `Health check available at http://0.0.0.0:${port}/api/health`,
+      );
+    });
   } catch (error) {
-    console.error("❌ ASYNC INIT ERROR:", error);
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
   }
 })();
+
+// Graceful shutdown to prevent hanging processes
+process.on("SIGTERM", () => {
+  console.log("SIGTERM signal received: closing HTTP server");
+  if (server) server.close(() => console.log("HTTP server closed"));
+});
