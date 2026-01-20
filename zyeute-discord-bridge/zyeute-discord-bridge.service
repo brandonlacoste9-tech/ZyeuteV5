@@ -1,0 +1,19 @@
+[Unit]
+Description=Zyeuté Discord Cultural Bridge
+After=network.target
+
+[Service]
+Type=simple
+User=zyeute
+Group=zyeute
+WorkingDirectory=/opt/zyeute-discord-bridge
+EnvironmentFile=/opt/zyeute-discord-bridge/.env
+ExecStart=/opt/zyeute-discord-bridge/venv/bin/python zyeute_discord_bridge.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
