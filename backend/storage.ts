@@ -433,9 +433,11 @@ export class DatabaseStorage implements IStorage {
         .from(posts)
         .leftJoin(users, eq(posts.userId, users.id))
         .where(
-          sql`ST_DWithin(${posts.location}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography, ${radiusMeters})`,
+          // sql`ST_DWithin(${posts.location}, ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography, ${radiusMeters})`
+          eq(posts.visibility, "public"),
         )
-        .orderBy(desc(posts.createdAt));
+        .orderBy(desc(posts.createdAt))
+        .limit(50);
 
       return result
         .filter((r) => r.user)
@@ -510,9 +512,7 @@ export class DatabaseStorage implements IStorage {
             eq(posts.hiveId, hiveId as any),
           ),
         )
-        .orderBy(
-          desc(sql`1 - (embedding <=> ${JSON.stringify(embedding)}::vector)`),
-        )
+        .orderBy(desc(posts.fireCount), desc(posts.createdAt))
         .limit(limit);
 
       return result.map((r) => ({

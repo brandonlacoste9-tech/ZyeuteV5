@@ -11,7 +11,7 @@ import traceback
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
-from browser_use import Agent, Browser, Controller, BrowserConfig
+from browser_use import Agent, Browser, Controller
 
 load_dotenv()
 logger.info("🟢 Loading Zyeute Automation Service...")
@@ -82,10 +82,8 @@ except Exception as e:
 class ZyeuteBrowserService:
     def __init__(self):
         logger.info("🟢 Initializing ZyeuteBrowserService...")
-        logger.info("   -> Configuring Browser (Headless)...")
-        self.config = BrowserConfig(headless=True)
-        logger.info("   -> Starting Browser instance...")
-        self.browser = Browser(config=self.config)
+        logger.info("   -> Starting Browser instance (Headless)...")
+        self.browser = Browser(headless=True)
         logger.info("   -> Initializing Controller...")
         self.controller = Controller()
         self._setup_controller()

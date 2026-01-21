@@ -20,12 +20,8 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
-// Custom Geography type for PostGIS
-export const geography = customType<{ data: string }>({
-  dataType() {
-    return "geography(Point, 4326)";
-  },
-});
+// geography type removed - using text for basic compatibility without PostGIS
+// export const geography = customType<{ data: string }>({ ... });
 
 // Custom Geometry type (for Polygons)
 export const geometry = customType<{ data: string }>({
@@ -134,7 +130,7 @@ export const users = pgTable("user_profiles", {
   subscriptionTier: varchar("subscription_tier", { length: 20 }).default(
     "free",
   ),
-  location: geography("location"),
+  location: text("location"),
   city: text("city"),
   regionId: text("region_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -190,7 +186,7 @@ export const posts = pgTable(
     fireCount: integer("reactions_count").default(0),
     commentCount: integer("comments_count").default(0),
     isHidden: boolean("est_masque").default(false),
-    location: geography("location"),
+    location: text("location"),
     city: text("city"),
     region: text("region"),
     regionId: text("region_id"),

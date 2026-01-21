@@ -1,8 +1,9 @@
--- Enable pgvector extension if not exists
+-- Enable extensions
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- PUBLICATIONS TABLE REPAIRS
-ALTER TABLE "publications" ADD COLUMN IF NOT EXISTS "location" text;
+ALTER TABLE "publications" ADD COLUMN IF NOT EXISTS "location" geography(Point, 4326);
 ALTER TABLE "publications" ADD COLUMN IF NOT EXISTS "city" text;
 ALTER TABLE "publications" ADD COLUMN IF NOT EXISTS "region" text;
 ALTER TABLE "publications" ADD COLUMN IF NOT EXISTS "region_id" text;
@@ -57,7 +58,7 @@ ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "credits" integer DEFAULT 0
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "piasse_balance" integer DEFAULT 0;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "total_karma" integer DEFAULT 0;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "subscription_tier" text DEFAULT 'free';
-ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "location" text;
+ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "location" geography(Point, 4326);
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "city" text;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "region_id" text;
 ALTER TABLE "user_profiles" ADD COLUMN IF NOT EXISTS "ti_guy_comments_enabled" boolean DEFAULT true;
