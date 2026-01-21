@@ -109,15 +109,12 @@ app.use(cors({ origin: true, credentials: true }));
       process.exit(1);
     }
 
-    // [CRITICAL] Run Database Migrations before starting the application
+    // [CRITICAL] Run Database Migrations
     console.log("📦 [Startup] Running Schema Migrations...");
     try {
-      // Assuming your Drizzle migrations are in the './migrations' folder relative to the backend directory
       await migrate(db, { migrationsFolder: "./migrations" });
       console.log("✅ [Startup] Migrations Complete");
     } catch (err: any) {
-      // ERROR 42710 = Duplicate Object (Type/Table already exists)
-      // We ignore this because it means the DB is already set up.
       if (
         err.code === "42710" ||
         err?.cause?.code === "42710" ||
@@ -128,9 +125,15 @@ app.use(cors({ origin: true, credentials: true }));
         );
       } else {
         console.error("🚨 [Startup] Database Migrations Failed!", err);
-        // Only exit if it's NOT a duplicate error
-        // process.exit(1);
       }
+    }
+
+    // [SURGICAL SELF-HEALING] Active Schema Repair
+    try {
+      const { healSchema } = await import("./schemaDoctor.js");
+      await healSchema(pool);
+    } catch (err) {
+      console.error("🚨 [Startup] Schema Healing Failed:", err);
     }
     // [SAFETY NET] Verify Database Schema before starting
     try {

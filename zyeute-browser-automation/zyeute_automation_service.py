@@ -7,11 +7,29 @@ Uses DeepSeek V3 or Gemini 2.0 Flash for cost-effectiveness
 import os
 import json
 import asyncio
+import re
 import traceback
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
 from loguru import logger
+from pydantic import BaseModel, Field
 from browser_use import Agent, Browser, Controller
+
+
+class Trend(BaseModel):
+    title: str = Field(description="Title of the trending topic")
+    description: str = Field(description="Context or description of why it is trending")
+    metrics: Optional[str] = Field(
+        default=None, description="Engagement metrics if available"
+    )
+    language: Optional[str] = Field(
+        default="fr-CA", description="Detected language/culture"
+    )
+
+
+class TrendList(BaseModel):
+    trends: List[Trend]
+
 
 load_dotenv()
 logger.info("🟢 Loading Zyeute Automation Service...")
@@ -49,14 +67,18 @@ try:
     elif hasattr(llm, "__config__"):
         llm.__config__.extra = "allow"
 
-    if not hasattr(llm, "provider"):
-        object.__setattr__(llm, "provider", "openai")
+    # Aggressively set required fields for browser-use telemetry/logging
+    object.__setattr__(llm, "provider", "openai")
+    object.__setattr__(llm, "model_name", AI_MODEL)
+    object.__setattr__(llm, "model", AI_MODEL)
 
-    if not hasattr(llm, "model_name"):
-        object.__setattr__(llm, "model_name", AI_MODEL)
-
-    if not hasattr(llm, "model"):
-        object.__setattr__(llm, "model", AI_MODEL)
+    # Also set as attributes directly if possible
+    try:
+        llm.provider = "openai"
+        llm.model_name = AI_MODEL
+        llm.model = AI_MODEL
+    except:
+        pass
 except Exception as e:
     logger.warning(f"⚠️ Failed to patch LLM object: {e}")
 
@@ -140,61 +162,53 @@ class ZyeuteBrowserService:
             task=task, llm=llm, browser=self.browser, controller=self.controller
         )
         logger.info("🤖 Agent initialized. Starting task execution...")
+        trends = []
 
         try:
             history = await agent.run()
             logger.info("✅ Agent execution completed.")
             result = history.final_result()
 
-            # Attempt to parse JSON from result
-            try:
-                # This assumes the LLM returns a string that contains JSON
-                # In a real scenario, we might need robust parsing or structured output
-                import re
-
-                json_match = re.search(r"\[.*\]", result, re.DOTALL)
-                if json_match:
-                    trends = json.loads(json_match.group(0))
-                else:
-                    trends = [
-                        {
-                            "title": "Raw Result",
-                            "description": result,
-                            "cultural_score": 0.0,
-                        }
-                    ]
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to parse JSON from result: {e}")
-                trends = [
-                    {
-                        "title": "Parse Error",
-                        "description": result,
-                        "cultural_score": 0.0,
-                    }
-                ]
-
-            # Post-process scores
-            for trend in trends:
-                if "cultural_score" not in trend:
-                    trend["cultural_score"] = self.calculate_cultural_score(
-                        trend.get("description", "") + " " + trend.get("title", "")
-                    )
-
-            return {
-                "success": True,
-                "platform": platform,
-                "region": region,
-                "trends": trends,
-            }
-
+            if not result:
+                logger.warning("⚠️ Agent returned no final result.")
+                trends = []
+            else:
+                # Attempt to parse JSON from result string
+                try:
+                    # Find everything between brackets
+                    json_match = re.search(r"(\[.*\])", result, re.DOTALL)
+                    if json_match:
+                        trends = json.loads(json_match.group(1))
+                    else:
+                        logger.warning(
+                            "⚠️ No JSON array found in result, treating as raw content."
+                        )
+                        trends = [{"title": "Extraction Result", "description": result}]
+                except Exception as e:
+                    logger.error(f"⚠️ Failed to parse JSON from result: {e}")
+                    trends = [{"title": "Parse Error", "description": result}]
         except Exception as e:
-            logger.error(f"❌ Trend discovery failed: {e}")
+            logger.error(f"❌ Agent task failed: {e}")
             logger.error(traceback.format_exc())
             return {
                 "success": False,
                 "error": str(e),
                 "traceback": traceback.format_exc(),
             }
+
+        # Post-process scores (applies whether agent.run() succeeded or failed to parse)
+        for trend in trends:
+            if "cultural_score" not in trend:
+                trend["cultural_score"] = self.calculate_cultural_score(
+                    trend.get("description", "") + " " + trend.get("title", "")
+                )
+
+        return {
+            "success": True,
+            "platform": platform,
+            "region": region,
+            "trends": trends,
+        }
 
     async def analyze_competitor(
         self, url: str, metrics: Optional[List[str]] = None
