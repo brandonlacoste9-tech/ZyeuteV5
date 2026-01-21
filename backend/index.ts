@@ -75,6 +75,61 @@ app.get("/ready", async (_req, res) => {
   }
 });
 
+app.get("/momentum-telemetry", async (_req, res) => {
+  try {
+    const client = await pool.connect();
+    try {
+      const eyeTestQuery = `
+        SELECT 
+            LEFT(content, 40) as "Title",
+            quebec_score as "TiGuy_Opinion", 
+            (
+              ((quebec_score + 1) * (LN(COALESCE(reactions_count, 0) * 1 + COALESCE(shares_count, 0) * 3 + COALESCE(piasse_count, 0) * 5 + 1) + 1))
+              / 
+              POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8)
+            ) as "Hive_Reality",
+            reactions_count as "Fires",
+            shares_count as "Shares",
+            piasse_count as "Piasse",
+            ROUND(CAST(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 AS NUMERIC), 1) as "Age_Hours"
+        FROM publications
+        WHERE (est_masque = false OR est_masque IS NULL)
+        ORDER BY "Hive_Reality" DESC
+        LIMIT 10;
+      `;
+      const res1 = await client.query(eyeTestQuery);
+
+      const gravityQuery = `
+        SELECT 
+            LEFT(content, 40) as "Title",
+            (
+              ((quebec_score + 1) * (LN(COALESCE(reactions_count, 0) * 1 + COALESCE(shares_count, 0) * 3 + COALESCE(piasse_count, 0) * 5 + 1) + 1))
+              / 
+              POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8)
+            ) as "Reality",
+            COALESCE(reactions_count, 0) + (COALESCE(shares_count, 0) * 3) + (COALESCE(piasse_count, 0) * 5) as "Total_Engagement",
+            ROUND(CAST(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 AS NUMERIC), 1) as "Age_Hours"
+        FROM publications
+        WHERE created_at < NOW() - INTERVAL '24 hours'
+        ORDER BY "Age_Hours" DESC
+        LIMIT 10;
+      `;
+      const res2 = await client.query(gravityQuery);
+
+      res.json({
+        success: true,
+        eyeTest: res1.rows,
+        gravityCheck: res2.rows,
+      });
+    } finally {
+      client.release();
+    }
+  } catch (err: unknown) {
+    const error = err as Error;
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Trust proxy for proper IP detection behind reverse proxy
 app.set("trust proxy", 1);
 
