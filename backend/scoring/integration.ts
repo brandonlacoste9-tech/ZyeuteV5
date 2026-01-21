@@ -57,17 +57,15 @@ export async function getSmartRecommendationsV3(
       u.display_name,
       u.avatar_url,
       u.region as creator_region,
-      ROUND(
-        (POWER(0.5, EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 / 12) * 100 * 20)
-        +
-        (COALESCE(p.reactions_count, 0) * 3 + COALESCE(p.comments_count, 0) * 1)
-        +
-        (CASE WHEN p.region IS NOT NULL AND p.region != '' THEN 10 ELSE 0 END)
+      (
+        ((p.quebec_score + 1) * (LN(COALESCE(p.reactions_count, 0) * 1 + COALESCE(p.shares_count, 0) * 3 + COALESCE(p.piasse_count, 0) * 5 + 1) + 1))
+        / 
+        POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600 + 2, 1.8)
       ) as momentum_score
     FROM publications p
     JOIN user_profiles u ON p.user_id = u.id
     WHERE p.hive_id = ${hiveId}
-      AND p.is_moderated = false OR p.moderation_approved = true
+      AND (p.is_moderated = false OR p.moderation_approved = true)
     ORDER BY momentum_score DESC
     LIMIT ${limit}
   `);
@@ -79,11 +77,9 @@ export async function batchUpdateViralScores(db: any): Promise<number> {
   const result = await db.execute(sql`
     UPDATE publications
     SET viral_score = ROUND(
-      (POWER(0.5, EXTRACT(EPOCH FROM (NOW() - created_at)) / 3600 / 12) * 100 * 20)
-      +
-      (COALESCE(reactions_count, 0) * 3 + COALESCE(comments_count, 0) * 1)
-      +
-      (CASE WHEN region IS NOT NULL AND region != '' THEN 10 ELSE 0 END)
+      ((quebec_score + 1) * (LN(COALESCE(reactions_count, 0) * 1 + COALESCE(shares_count, 0) * 3 + COALESCE(piasse_count, 0) * 5 + 1) + 1))
+      / 
+      POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8) * 1000
     )
     WHERE created_at > NOW() - INTERVAL '7 days'
   `);

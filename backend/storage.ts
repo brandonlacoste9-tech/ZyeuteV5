@@ -37,6 +37,7 @@ import {
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
+import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
 const { Pool } = pg;
 
@@ -490,14 +491,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSmartRecommendations(
-    embedding: number[],
+    _embedding: number[],
     limit: number = 20,
     hiveId: string = "quebec",
   ): Promise<(Post & { user: User })[]> {
     return traceDatabase("SELECT", "smart_recommendations", async (span) => {
       span.setAttributes({ "db.limit": limit });
+      const startTime = Date.now();
 
-      const result = await db
+      // Fetch candidates for re-ranking
+      const candidates = await db
         .select({
           post: posts,
           user: users,
@@ -508,14 +511,86 @@ export class DatabaseStorage implements IStorage {
           and(
             eq(posts.isHidden, false),
             isNull(posts.deletedAt),
-            sql`embedding IS NOT NULL`,
             eq(posts.hiveId, hiveId as any),
           ),
         )
-        .orderBy(desc(posts.fireCount), desc(posts.createdAt))
-        .limit(limit);
+        .orderBy(desc(posts.createdAt))
+        .limit(100);
 
-      return result.map((r) => ({
+      const now = Date.now();
+      const ranked = candidates
+        .map((r) => ({
+          ...r,
+          momentum: calculateCulturalMomentum(
+            {
+              ...r.post,
+              fireCount: r.post.fireCount || 0,
+              sharesCount: (r.post as any).sharesCount || 0,
+              piasseCount: (r.post as any).piasseCount || 0,
+            },
+            (now - r.post.createdAt.getTime()) / 36e5,
+          ),
+        }))
+        .sort((a, b) => b.momentum - a.momentum);
+
+      const duration = Date.now() - startTime;
+      if (duration > 200) {
+        console.warn(`[SENTRY] Slow Smart Recommendations: ${duration}ms`);
+      }
+
+      return ranked.slice(0, limit).map((r) => ({
+        ...r.post,
+        user: r.user,
+      }));
+    });
+  }
+
+  async getExplorePosts(
+    _page: number,
+    limit: number,
+    hiveId?: string,
+  ): Promise<(Post & { user: User })[]> {
+    return traceDatabase("EXPLORE", "posts", async () => {
+      const startTime = Date.now();
+      const candidates = await db
+        .select({
+          post: posts,
+          user: users,
+        })
+        .from(posts)
+        .innerJoin(users, eq(posts.userId, users.id))
+        .where(
+          and(
+            eq(posts.isHidden, false),
+            isNull(posts.deletedAt),
+            eq(posts.hiveId, (hiveId || "quebec") as any),
+          ),
+        )
+        .orderBy(desc(posts.createdAt))
+        .limit(100);
+
+      const now = Date.now();
+      const ranked = candidates
+        .map((r) => ({
+          ...r,
+          momentum: calculateCulturalMomentum(
+            {
+              ...r.post,
+              fireCount: r.post.fireCount || 0,
+              sharesCount: (r.post as any).sharesCount || 0,
+              piasseCount: (r.post as any).piasseCount || 0,
+            },
+            (now - r.post.createdAt.getTime()) / 36e5,
+          ),
+        }))
+        .sort((a, b) => b.momentum - a.momentum);
+
+      const duration = Date.now() - startTime;
+      if (duration > 200) {
+        console.warn(`[SENTRY] Slow Explore Ranking: ${duration}ms`);
+      }
+
+      return ranked.slice(0, limit).map((r) => ({
         ...r.post,
         user: r.user,
       }));

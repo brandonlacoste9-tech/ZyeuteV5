@@ -208,6 +208,9 @@ export const posts = pgTable(
       .array()
       .default(sql`'{}'::text[]`),
     aiGenerated: boolean("ai_generated").default(false),
+    quebecScore: integer("quebec_score").default(0), // Ti-Guy's cultural analysis signal
+    sharesCount: integer("shares_count").default(0),
+    piasseCount: integer("piasse_count").default(0),
     viralScore: integer("viral_score").default(0), // Le Buzz Predictor
     safetyFlags: jsonb("safety_flags").default({}), // Safety Patrol details
     isModerated: boolean("is_moderated").default(false),
