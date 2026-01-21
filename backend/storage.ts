@@ -657,22 +657,36 @@ export class DatabaseStorage implements IStorage {
         .delete(postReactions)
         .where(eq(postReactions.id, existing[0].id));
 
-      const post = await db
-        .select()
-        .from(posts)
+      const res = await db
+        .update(posts)
+        .set({ fireCount: sql`${posts.fireCount} - 1` })
         .where(eq(posts.id, postId))
-        .limit(1);
-      return { added: false, newCount: post[0]?.fireCount || 0 };
+        .returning();
+
+      return { added: false, newCount: res[0]?.fireCount || 0 };
     } else {
       // Add reaction
       await db.insert(postReactions).values({ postId, userId });
 
-      const post = await db
-        .select()
-        .from(posts)
+      const res = await db
+        .update(posts)
+        .set({ fireCount: sql`${posts.fireCount} + 1` })
         .where(eq(posts.id, postId))
-        .limit(1);
-      return { added: true, newCount: post[0]?.fireCount || 0 };
+        .returning();
+
+      // [MOMENTUM] Record fire in cache for velocity tracking
+      try {
+        import("./scoring/integration.js").then((mod) => {
+          mod
+            .getScoringEngine()
+            .recordFire(postId)
+            .catch(() => {});
+        });
+      } catch (e) {
+        console.warn("⚠️ [Scoring] Could not record momentum fire:", e);
+      }
+
+      return { added: true, newCount: res[0]?.fireCount || 0 };
     }
   }
 

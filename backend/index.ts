@@ -151,7 +151,17 @@ app.use(cors({ origin: true, credentials: true }));
       // process.exit(1); // DISABLED to allow debugging via logs/api
     }
 
-    console.log("🛠️  Step 1: Initializing routes and services...");
+    console.log("🛠️  Step 1: Initializing Scoring Engine & Routes...");
+    try {
+      const { initScoringEngine, createExploreRouteV2 } =
+        await import("./scoring/integration.js");
+      await initScoringEngine();
+      createExploreRouteV2(app, db);
+      console.log("✅ Momentum Engine & Shadow Route Ready");
+    } catch (err) {
+      console.error("🚨 [Scoring] Engine setup failed:", err);
+    }
+
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
 
@@ -183,7 +193,13 @@ app.use(cors({ origin: true, credentials: true }));
 })();
 
 // Graceful shutdown to prevent hanging processes
-process.on("SIGTERM", () => {
+process.on("SIGTERM", async () => {
   console.log("SIGTERM signal received: closing HTTP server");
+  try {
+    const { shutdownScoringEngine } = await import("./scoring/integration.js");
+    await shutdownScoringEngine();
+  } catch (err) {
+    console.error("🚨 [Scoring] Error during shutdown:", err);
+  }
   if (server) server.close(() => console.log("HTTP server closed"));
 });
