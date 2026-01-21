@@ -162,6 +162,8 @@ app.use(cors({ origin: true, credentials: true }));
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
 
+    const { default: debugRouter } = await import("./routes/debug.js");
+    app.use("/api/debug", debugRouter);
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
 

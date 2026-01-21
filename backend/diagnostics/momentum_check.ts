@@ -1,11 +1,16 @@
-import { Router } from "express";
-import pool from "../database-pool.js";
+import "dotenv/config";
+import pg from "pg";
+const { Pool } = pg;
 
-const debugRouter = Router();
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
-debugRouter.get("/momentum", async (_req, res) => {
+async function runDiagnostics() {
   const client = await pool.connect();
   try {
+    console.log("\n--- DIAGNOSTIC 1: THE EYE TEST (Ranking vs Reality) ---");
     const eyeTestQuery = `
       SELECT 
           LEFT(content, 40) as "Title",
@@ -20,12 +25,22 @@ debugRouter.get("/momentum", async (_req, res) => {
           piasse_count as "Piasse",
           ROUND(CAST(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 AS NUMERIC), 1) as "Age_Hours"
       FROM publications
-      WHERE (est_masque = false OR est_masque IS NULL)
+      WHERE is_hidden = false OR is_hidden IS NULL
       ORDER BY "Hive_Reality" DESC
       LIMIT 10;
     `;
     const res1 = await client.query(eyeTestQuery);
+    console.table(
+      res1.rows.map((r) => ({
+        ...r,
+        Soul_Lift: (parseFloat(r.Hive_Reality) - r.TiGuy_Opinion).toFixed(2),
+        Hive_Reality: parseFloat(r.Hive_Reality).toFixed(2),
+      })),
+    );
 
+    console.log(
+      "\n--- DIAGNOSTIC 2: THE GRAVITY CHECK (Evergreens & Zombies) ---",
+    );
     const gravityQuery = `
       SELECT 
           LEFT(content, 40) as "Title",
@@ -42,18 +57,18 @@ debugRouter.get("/momentum", async (_req, res) => {
       LIMIT 10;
     `;
     const res2 = await client.query(gravityQuery);
-
-    res.json({
-      success: true,
-      eyeTest: res1.rows,
-      gravityCheck: res2.rows,
-    });
-  } catch (err: unknown) {
-    const error = err as Error;
-    res.status(500).json({ success: false, error: error.message });
+    console.table(
+      res2.rows.map((r) => ({
+        ...r,
+        Reality: parseFloat(r.Reality).toFixed(4),
+      })),
+    );
+  } catch (err) {
+    console.error("Diagnostic error:", err);
   } finally {
     client.release();
+    await pool.end();
   }
-});
+}
 
-export default debugRouter;
+runDiagnostics();
