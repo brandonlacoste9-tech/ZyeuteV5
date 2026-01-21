@@ -179,17 +179,17 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Surgical Bypass - Launch Edition
   app.use("/api/upload", surgicalUploadRouter);
-  
+
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
   app.use("/api", muxRouter);
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);
-    app.use("/api/debug-sentry", sentryDebugRoutes);
+  app.use("/api/debug-sentry", sentryDebugRoutes);
 
   // [NEW] Admin Observability Dashboard
-  50admin", requireAuth, adminRoutes);
+  app.use("/api/admin", requireAuth, adminRoutes);
 
   // Apply general rate limiting to all other API routes
   // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
@@ -287,7 +287,8 @@ export async function registerRoutes(
       let user;
 
       // Allow lookup by UUID if the identifier looks like one
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(identifier)) {
         user = await storage.getUser(identifier);
       }
@@ -514,7 +515,7 @@ export async function registerRoutes(
         code: error.code, // Postgres error code
         detail: error.detail,
         table: error.table,
-        column: error.column
+        column: error.column,
       });
       res.status(500).json({ error: "Failed to get explore posts" });
     }
@@ -626,7 +627,8 @@ export async function registerRoutes(
       let user;
 
       // Allow lookup by UUID if the identifier looks like one
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (uuidRegex.test(identifier)) {
         user = await storage.getUser(identifier);
       }
