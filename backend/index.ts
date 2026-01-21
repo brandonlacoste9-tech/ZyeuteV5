@@ -212,7 +212,12 @@ app.use(cors({ origin: true, credentials: true }));
         await import("./scoring/integration.js");
       await initScoringEngine();
       createExploreRouteV2(app, db);
-      console.log("✅ Momentum Engine & Shadow Route Ready");
+
+      // [NEW] Layer 3.2: Register Evolution Engine
+      const { createEvolutionRouter } = await import("./scoring/evolution.js");
+      app.use("/api/evolution", createEvolutionRouter(db));
+
+      console.log("✅ Momentum Engine, Shadow Route & Evolution Engine Ready");
     } catch (err) {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
