@@ -405,21 +405,44 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     // [SMART PLAY] If API failed or returned 0, we MUST have content. Pivot to Pexels.
     if (!apiSuccess || validPosts.length === 0) {
       feedLogger.info("Empty or failed DB feed, triggering Pexels fallback...");
-      try {
-        const pexelsData = await getPexelsCurated(15, 1);
-        if (pexelsData && pexelsData.videos?.length) {
-          const pexelsPosts = transformPexelsToPosts(
-            [],
-            pexelsData.videos || [],
-          );
-          setPosts(pexelsPosts);
-          setHasMore(true);
-        } else {
-          feedLogger.error("Pexels also returned nothing. Showing empty state.");
-          setPosts([]);
+      
+      let pexelsAttempts = 0;
+      const maxPexelsAttempts = 3;
+      
+      while (pexelsAttempts < maxPexelsAttempts) {
+        try {
+          const pexelsData = await getPexelsCurated(15, 1);
+          if (pexelsData && pexelsData.videos?.length) {
+            const pexelsPosts = transformPexelsToPosts(
+              [],
+              pexelsData.videos || [],
+            );
+            setPosts(pexelsPosts);
+            setHasMore(true);
+            break; // Success, exit loop
+          } else {
+            feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
+            pexelsAttempts++;
+            
+            // Wait before retrying (exponential backoff)
+            if (pexelsAttempts < maxPexelsAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * pexelsAttempts));
+            }
+          }
+        } catch (pexelsError) {
+          feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
+          pexelsAttempts++;
+          
+          // Wait before retrying (exponential backoff)
+          if (pexelsAttempts < maxPexelsAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * pexelsAttempts));
+          }
         }
-      } catch (pexelsError) {
-        feedLogger.error("Pexels fallback also failed:", pexelsError);
+      }
+      
+      // If all Pexels attempts failed, show empty state
+      if (pexelsAttempts >= maxPexelsAttempts) {
+        feedLogger.error("All Pexels attempts failed. Showing empty state.");
         setPosts([]);
       }
     } else {

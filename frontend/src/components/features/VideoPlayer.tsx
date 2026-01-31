@@ -252,14 +252,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
+    // Enhanced error logging for debugging
     videoPlayerLogger.error("Video playback error:", {
       code: error?.code,
       message: error?.message,
       src: src?.substring(0, 100),
+      videoSource: videoSource?.type,
+      timestamp: new Date().toISOString(),
     });
+
+    // Add more descriptive error based on error code
+    const errorMessage = error?.message || "";
+    let userMessage = "Vidéo non disponible";
+    
+    // Enhanced error messages based on common issues
+    if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
+      userMessage = "Problème de connexion - Réessayer";
+    } else if (errorMessage.includes("decode") || errorMessage.includes("format")) {
+      userMessage = "Format non supporté - Réessayer";
+    } else if (errorMessage.includes("network") || errorMessage.includes("timeout")) {
+      userMessage = "Connexion lente - Réessayer";
+    }
+
     setHasError(true);
     setIsLoading(false);
-  }, [mseUrl, src]);
+  }, [mseUrl, src, videoSource]);
 
   // Metrics collection
   const handlePlaying = useCallback(() => {
@@ -311,14 +328,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     // Set a timeout to prevent infinite loading
-    // If video doesn't load within 15 seconds, show error
+    // Increased from 15s to 30s for better Pexels video loading
     loadingTimeoutRef.current = setTimeout(() => {
       videoPlayerLogger.warn(
         `Video loading timeout for ${src.substring(0, 50)}...`,
       );
-      setHasError(true);
-      setIsLoading(false);
-    }, 15000);
+      
+      // Try to auto-retry once before showing error
+      if (videoRef.current && src) {
+        videoPlayerLogger.info('Attempting auto-retry for failed video');
+        videoRef.current.load();
+        
+        // Give it one more chance with extended timeout
+        loadingTimeoutRef.current = setTimeout(() => {
+          videoPlayerLogger.error('Video failed to load after retry');
+          setHasError(true);
+          setIsLoading(false);
+        }, 10000); // 10s retry timeout
+      } else {
+        setHasError(true);
+        setIsLoading(false);
+      }
+    }, 30000); // Increased from 15s to 30s
 
     return () => {
       if (loadingTimeoutRef.current) {
@@ -551,18 +582,32 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="text-center p-4">
           <div className="text-4xl mb-2">⚠️</div>
           <p className="text-white/60 text-sm mb-3">Vidéo non disponible</p>
-          <button
-            onClick={() => {
-              setHasError(false);
-              setIsLoading(true);
-              if (videoRef.current) {
-                videoRef.current.load();
-              }
-            }}
-            className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors text-sm"
-          >
-            Réessayer
-          </button>
+          <p className="text-white/40 text-xs mb-4">
+            Le contenu met un peu plus de temps à charger
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => {
+                setHasError(false);
+                setIsLoading(true);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors text-sm"
+            >
+              Réessayer
+            </button>
+            <button
+              onClick={() => {
+                // Try to refresh the entire feed by reloading
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-stone-600/20 text-stone-300 rounded-lg hover:bg-stone-600/30 transition-colors text-sm"
+            >
+              Rafraîchir
+            </button>
+          </div>
         </div>
       </div>
     );
