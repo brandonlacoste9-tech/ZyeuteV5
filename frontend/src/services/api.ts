@@ -12,9 +12,10 @@ import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
 // [CONFIG] Live Railway Backend URL
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? '' 
-  : 'https://zyeutev5-production.up.railway.app';
+const API_BASE_URL =
+  window.location.hostname === "localhost"
+    ? ""
+    : "https://zyeutev5-production.up.railway.app";
 
 // Base API call helper
 async function apiCall<T>(
@@ -38,7 +39,7 @@ async function apiCall<T>(
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
-    
+
     const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
     const response = await fetch(apiUrl, {
@@ -50,18 +51,30 @@ async function apiCall<T>(
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      // If 500 or 503, return a specific error that can be swallowed by resilient endpoints
+      const code =
+        (data && data.code) ||
+        (response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED");
       if (response.status >= 500) {
-        apiLogger.error(`Server error ${response.status} at ${endpoint}`);
-        return { data: null, error: "Server Unavailable" };
+        apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
+          code,
+        });
+        return {
+          data: null,
+          error: (data && data.error) || "Server Unavailable",
+          code,
+        };
       }
-      return { data: null, error: (data && data.error) || "Request failed" };
+      return {
+        data: null,
+        error: (data && data.error) || "Request failed",
+        code,
+      };
     }
 
     return { data, error: null };
   } catch (error) {
     apiLogger.error(`API call failed: ${endpoint}`, error);
-    return { data: null, error: "Network error" };
+    return { data: null, error: "Network error", code: "NETWORK_ERROR" };
   }
 }
 
@@ -233,12 +246,12 @@ export async function createMuxUpload(): Promise<{
   uploadUrl: string;
   uploadId: string;
 } | null> {
-  const { data, error } = await apiCall<{ uploadUrl: string; uploadId: string }>(
-    "/mux/create-upload",
-    {
-      method: "POST",
-    },
-  );
+  const { data, error } = await apiCall<{
+    uploadUrl: string;
+    uploadId: string;
+  }>("/mux/create-upload", {
+    method: "POST",
+  });
 
   if (error || !data) return null;
   return data;
@@ -455,7 +468,7 @@ export async function generateImage(
 
   if (error || !data) return null;
 
-// Validate with Zod
+  // Validate with Zod
   const result = AIImageResponseSchema.safeParse(data);
   return result.success ? result.data : null;
 }
@@ -525,24 +538,33 @@ function isVideoUrl(url?: string): boolean {
 
 // ============ SURGICAL UPLOAD BYPASS ============
 
-export async function surgicalUpload(file: File, caption?: string): Promise<{ success: boolean; post?: Post; error?: string }> {
+export async function surgicalUpload(
+  file: File,
+  caption?: string,
+): Promise<{ success: boolean; post?: Post; error?: string }> {
   try {
     const formData = new FormData();
     formData.append("video", file);
     if (caption) formData.append("caption", caption);
-    
+
     // Add hive context
     formData.append("hiveId", "quebec");
 
-    const { data, error } = await apiCall<{ success: boolean; post: Post }>("/upload/simple", {
-      method: "POST",
-      body: formData,
-      // Note: we don't set Content-Type header manually for FormData, 
-      // fetch will automatically set it with the boundary.
-    });
+    const { data, error } = await apiCall<{ success: boolean; post: Post }>(
+      "/upload/simple",
+      {
+        method: "POST",
+        body: formData,
+        // Note: we don't set Content-Type header manually for FormData,
+        // fetch will automatically set it with the boundary.
+      },
+    );
 
     if (error || !data) {
-      return { success: false, error: error?.message || "Erreur de téléversement" };
+      return {
+        success: false,
+        error: error?.message || "Erreur de téléversement",
+      };
     }
 
     return { success: true, post: data.post };
@@ -593,7 +615,16 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     return null;
   }
 
-  const mediaUrl = p.media_url || p.mediaUrl || p.original_url;
+  const rawMedia = p.media_url || p.mediaUrl;
+  const rawOriginal = p.original_url || p.originalUrl;
+  const rawEnhanced = p.enhanced_url || p.enhancedUrl;
+  const processingReady =
+    (p.processing_status || p.processingStatus) === "ready" ||
+    (p.processing_status || p.processingStatus) === "completed";
+
+  // Best playable URL: enhanced (if ready) > media > original
+  const mediaUrl =
+    (processingReady && rawEnhanced) || rawMedia || rawOriginal || "";
 
   // Auto-detect type if not provided
   let type: "photo" | "video" = p.type;
@@ -605,16 +636,22 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     id: p.id,
     user_id: p.user_id || p.userId,
     media_url: mediaUrl,
-    thumbnail_url: p.thumbnail_url || p.thumbnailUrl, // Add thumbnail support
+    thumbnail_url: p.thumbnail_url || p.thumbnailUrl,
     caption: p.caption,
     fire_count: p.reactions_count || p.fire_count || 0,
     comment_count: p.comments_count || p.comment_count || 0,
-    gift_count: p.gift_count || 0, // Ensure gift_count is mapped
+    gift_count: p.gift_count || 0,
     user: p.user ? mapBackendUser(p.user) : undefined,
     created_at: p.created_at || p.createdAt,
     type: type || "photo",
     region: p.region_id || p.region,
     city: p.city,
+
+    // Video-specific (for SingleVideoView / feed)
+    enhanced_url: rawEnhanced || undefined,
+    original_url: rawOriginal || undefined,
+    processing_status: p.processing_status || p.processingStatus,
+    mux_playback_id: p.mux_playback_id || p.muxPlaybackId,
 
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,

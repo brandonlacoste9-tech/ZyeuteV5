@@ -1,11 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import path from "path";
+import { validatePostType } from "../shared/utils/validatePostType";
 
 dotenv.config();
 
 const supabaseUrl =
-  process.env.SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  "https://vuanulvyqkfefmjcikfk.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseKey) {
@@ -54,9 +56,20 @@ async function seedStock() {
   console.log("🚀 Injecting professional stock videos...");
 
   for (const video of STOCK_VIDEOS) {
+    // 🛡️ GUARDRAIL: Validate type before insert
+    const validatedType = validatePostType(
+      video.media_url,
+      video.type as "video" | "photo",
+    );
+    if (validatedType !== video.type) {
+      console.warn(
+        `🛡️ Type corrected: "${video.type}" → "${validatedType}" for ${video.caption.substring(0, 30)}...`,
+      );
+    }
+
     const { data, error } = await supabase
       .from("publications")
-      .insert([video])
+      .insert([{ ...video, type: validatedType }])
       .select();
 
     if (error) {

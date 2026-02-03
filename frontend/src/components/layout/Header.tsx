@@ -1,5 +1,5 @@
 /**
- * Header component with gold gradient and navigation
+ * Header component with gold gradient, hamburger menu, and navigation
  */
 
 import React from "react";
@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useNotifications } from "../../contexts/NotificationContext";
 import { Logo } from "../ui/Logo";
+import { HamburgerMenu } from "./HamburgerMenu";
 
 export interface HeaderProps {
   showSearch?: boolean;
@@ -35,8 +36,11 @@ export const Header: React.FC<HeaderProps> = ({
       )}
     >
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Left: Logo or Back button */}
-        <div className="flex items-center gap-4">
+        {/* Left: Hamburger Menu + Logo or Back button */}
+        <div className="flex items-center gap-2">
+          {/* Hamburger Menu - Always visible */}
+          {!showBack && <HamburgerMenu />}
+
           {showBack ? (
             <button
               onClick={() => navigate(-1)}

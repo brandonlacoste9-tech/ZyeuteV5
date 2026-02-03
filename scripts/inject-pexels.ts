@@ -1,7 +1,7 @@
-
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import { validatePostType } from "../shared/utils/validatePostType";
 
 dotenv.config();
 
@@ -58,10 +58,13 @@ async function seedPexels() {
       }
 
       for (const photo of data.photos) {
+        // 🛡️ GUARDRAIL: Validate type before insert
+        const validatedType = validatePostType(photo.src.large2x, "photo");
+
         const newPost = {
           caption: `${photo.alt || query} 📸 #Pexels #${query.replace(" ", "")}`,
           media_url: photo.src.large2x, // High quality for feed
-          type: "photo", // Fixed: 'image' -> 'photo' to match DB constraint
+          type: validatedType, // 🛡️ Validated type
           hive_id: "quebec",
           user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524", // Guest user
           content: `${photo.alt || query} 📸 #Pexels #${query.replace(" ", "")}`,

@@ -1,9 +1,11 @@
 import "dotenv/config";
 process.on("uncaughtException", (err) => {
   console.error("❌ Uncaught Exception:", err);
+  process.exit(1);
 });
-process.on("unhandledRejection", (reason) => {
-  console.error("❌ Unhandled Rejection:", reason);
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection:", reason, promise);
+  process.exit(1);
 });
 import express from "express";
 import cors from "cors";
@@ -17,7 +19,6 @@ import { Server as SocketIOServer } from "socket.io";
 import { db, pool } from "./storage.js";
 import { posts } from "../shared/schema.js";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { pool } from "./storage.js"; // Import pool for migrator
 
 // DB Pool is imported from ./storage.js
 // const { Pool } = pg;
@@ -146,13 +147,20 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 
-// [Removing CORS origins block for simplicity/speed during demo prep]
-app.use(cors({ origin: true, credentials: true }));
+// CORS: set CORS_ORIGIN in production to your frontend URL (e.g. https://app.zyeute.com)
+const corsOrigin = process.env.CORS_ORIGIN || true;
+app.use(cors({ origin: corsOrigin, credentials: true }));
 
 // ... rest of middleware ...
 
 (async () => {
   try {
+    if (!process.env.DATABASE_URL) {
+      console.error(
+        "🔥 [Startup] DATABASE_URL is not set. Set it in .env or your environment.",
+      );
+      process.exit(1);
+    }
     // [CRITICAL] Validate Database Connection First
     try {
       console.log("📦 [Startup] Connecting to Database...");

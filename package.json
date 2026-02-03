@@ -8,6 +8,8 @@
     "build:vercel": "vite build",
     "start": "node dist/index.cjs",
     "check": "tsc",
+    "check:env": "tsx scripts/check-env.ts",
+    "setup:external": "node scripts/setup-external-tools.js",
     "lint": "tsc --noEmit && eslint .",
     "test": "vitest run",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

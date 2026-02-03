@@ -17,6 +17,7 @@ import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
 import { useVideoVision } from "@/hooks/useVideoVision";
+import { validatePostType } from "@/utils/validatePostType";
 
 interface SingleVideoViewProps {
   post: Post;
@@ -317,7 +318,21 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     }, []);
 
     // Deep Enhance: Select best video source
-    const isVideo = post.type === "video";
+    // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
+    const mediaUrl = post.media_url || post.enhanced_url || post.original_url;
+    const validatedType = validatePostType(
+      mediaUrl,
+      post.type as "video" | "photo",
+    );
+    const isVideo = validatedType === "video";
+
+    // Log if type was corrected
+    if (validatedType !== post.type) {
+      console.warn(
+        `🛡️ [SingleVideoView] Type corrected: "${post.type}" → "${validatedType}" for post ${post.id}`,
+      );
+    }
+
     let videoSrc = "";
 
     if (isVideo) {
@@ -337,6 +352,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {
             postId: post.id,
             type: post.type,
+            validatedType,
             enhanced_url: post.enhanced_url,
             media_url: post.media_url,
             original_url: post.original_url,

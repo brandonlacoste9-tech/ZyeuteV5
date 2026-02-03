@@ -89,6 +89,12 @@ const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
 const HiveTap = lazy(() => import("@/pages/HiveTap"));
 const SwarmMap = lazy(() => import("@/pages/SwarmMap"));
 
+// New Menu Pages (Hamburger Menu)
+const Messages = lazy(() => import("@/pages/Messages"));
+const ChatHistory = lazy(() => import("@/pages/ChatHistory"));
+const Saved = lazy(() => import("@/pages/Saved"));
+const Activity = lazy(() => import("@/pages/Activity"));
+
 // Settings Pages
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -683,6 +689,102 @@ function App() {
                                                   element={
                                                     <ProtectedRoute>
                                                       <HiveTap />
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+
+                                                {/* Hamburger Menu Routes */}
+                                                <Route
+                                                  path="/messages"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <Messages />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/messages/:conversationId"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <Messages />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/chat-history"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <ChatHistory />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/saved"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <Saved />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/activity"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <Activity />
+                                                      </Suspense>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/trending"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <RouteErrorBoundary>
+                                                        <Explore />
+                                                      </RouteErrorBoundary>
+                                                    </ProtectedRoute>
+                                                  }
+                                                />
+                                                <Route
+                                                  path="/ti-guy"
+                                                  element={
+                                                    <ProtectedRoute>
+                                                      <Suspense
+                                                        fallback={
+                                                          <LazyLoadFallback />
+                                                        }
+                                                      >
+                                                        <AIStudio />
+                                                      </Suspense>
                                                     </ProtectedRoute>
                                                   }
                                                 />

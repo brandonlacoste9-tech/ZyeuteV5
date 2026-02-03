@@ -49,3 +49,9 @@ antigravity-kit/
 google-credentials.json
 google-credentials.json
 ZyeuteV5/
+
+# Local tooling / external repos (cloned via scripts, not committed)
+external/
+tools/
+video-diag-output.txt
+.claude/

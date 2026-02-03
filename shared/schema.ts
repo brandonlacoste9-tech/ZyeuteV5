@@ -733,13 +733,13 @@ export const parentalControls = pgTable("parental_controls", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Bee Spawns (Swarm AR)
+// Bee Spawns (Swarm AR) - location as text (WKT or "lat,lng") for compatibility without PostGIS
 export const beeSpawns = pgTable("bee_spawns", {
   id: uuid("id").primaryKey().defaultRandom(),
   hiveId: hiveEnum("hive_id").default("quebec"),
   type: text("type").notNull(), // worker, drone, queen
   rewardAmount: integer("reward_amount").notNull(), // Piasses
-  location: geography("location").notNull(),
+  location: text("location").notNull(),
   spawnedAt: timestamp("spawned_at").defaultNow(),
   expiresAt: timestamp("expires_at"),
   capturedBy: uuid("captured_by").references(() => users.id),

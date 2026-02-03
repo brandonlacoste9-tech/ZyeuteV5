@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.next
+*.log
+.vercel
+.cache
+backend/diagnostics
+test_evolution.ts
+momentum_check.ts
+momentum_check_v2.ts
+frontend/node_modules
+frontend/dist

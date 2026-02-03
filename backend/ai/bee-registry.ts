@@ -3,7 +3,11 @@
  * Central registry of all bees
  */
 
-import type { BeeDefinition, BeeCapability, BeeCore } from "../../shared/types/ai";
+import type {
+  BeeDefinition,
+  BeeCapability,
+  BeeCore,
+} from "../../shared/types/ai";
 
 export const BEE_REGISTRY: Record<string, BeeDefinition> = {
   // ======== Ti-Guy Chat (Worker) ========
@@ -129,6 +133,101 @@ export const BEE_REGISTRY: Record<string, BeeDefinition> = {
     description: "Security and threat monitoring",
     model: "deepseek",
     endpoint: "colony_tasks",
+  },
+
+  // ======== Ti-Guy Enhanced Capabilities ========
+  "browser-control": {
+    id: "browser-control",
+    name: "Browser Control Bee",
+    core: "worker",
+    capabilities: ["browser", "automation", "research"],
+    description:
+      "Web browser automation - navigate, search, extract, screenshot",
+    model: "playwright",
+  },
+
+  "image-generator": {
+    id: "image-generator",
+    name: "Image Generator Bee",
+    core: "worker",
+    capabilities: ["image", "creative"],
+    description: "AI image generation with Quebec cultural awareness",
+    model: "flux",
+  },
+
+  "web-researcher": {
+    id: "web-researcher",
+    name: "Web Researcher Bee",
+    core: "architect",
+    capabilities: ["research", "browser"],
+    description:
+      "Deep web research with trend analysis and competitor monitoring",
+    model: "deepseek",
+  },
+
+  "content-creator": {
+    id: "content-creator",
+    name: "Content Creator Bee",
+    core: "worker",
+    capabilities: ["creative", "caption", "image"],
+    description: "Full content creation pipeline - text, images, and posts",
+    model: "deepseek",
+  },
+
+  // ======== Video & Media Bees ========
+  "video-generator": {
+    id: "video-generator",
+    name: "Video Generator Bee",
+    core: "worker",
+    capabilities: ["video", "creative"],
+    description: "AI video generation - text-to-video and image-to-video",
+    model: "kling",
+  },
+
+  "voice-bee": {
+    id: "voice-bee",
+    name: "Voice Bee",
+    core: "worker",
+    capabilities: ["voice", "audio"],
+    description: "Text-to-speech and speech-to-text with Quebec accent",
+    model: "elevenlabs",
+  },
+
+  // ======== Quebec Specialist Bees ========
+  "hockey-bee": {
+    id: "hockey-bee",
+    name: "Hockey Bee",
+    core: "worker",
+    capabilities: ["sports", "info"],
+    description: "Canadiens de Montréal expert - stats, games, facts",
+    model: "api",
+  },
+
+  "weather-bee": {
+    id: "weather-bee",
+    name: "Weather Bee",
+    core: "worker",
+    capabilities: ["weather", "info"],
+    description: "Quebec weather information and forecasts",
+    model: "api",
+  },
+
+  "food-bee": {
+    id: "food-bee",
+    name: "Food Bee",
+    core: "worker",
+    capabilities: ["food", "recommendations"],
+    description: "Quebec food and restaurant recommendations",
+    model: "local",
+  },
+
+  "culture-bee": {
+    id: "culture-bee",
+    name: "Culture Bee",
+    core: "architect",
+    capabilities: ["culture", "info", "entertainment"],
+    description: "Quebec festivals, music, expressions, and culture",
+    model: "local",
   },
 };
 

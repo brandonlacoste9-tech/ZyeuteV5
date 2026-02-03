@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-explicit-any */
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
 
@@ -49,6 +50,8 @@ import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
 import pexelsRoutes from "./routes/pexels.js";
 import sentryDebugRoutes from "./routes/sentry-debug.js";
+import tiguyActionsRoutes from "./routes/tiguy-actions.js";
+import { validatePostType } from "../shared/utils/validatePostType.js";
 // Import tracing utilities
 import {
   traced,
@@ -208,6 +211,9 @@ export async function registerRoutes(
 
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
+
+  // ============ TI-GUY ENHANCED ACTIONS (Browser, Image Gen, etc.) ============
+  app.use("/api/tiguy", tiguyActionsRoutes);
 
   // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
   // enhanceRoutes moved to end of file
@@ -395,7 +401,7 @@ export async function registerRoutes(
       // Initial version: Use a fixed embedding for testing or search-based
       // In a real scenario, we'd fetch the user's "interest profile" embedding
       // or embed the search query if one exists.
-      let embedding = req.query.embedding
+      const embedding = req.query.embedding
         ? JSON.parse(req.query.embedding as string)
         : null;
 
@@ -517,7 +523,11 @@ export async function registerRoutes(
         table: error.table,
         column: error.column,
       });
-      res.status(500).json({ error: "Failed to get explore posts" });
+      res.status(500).json({
+        error: "Failed to get explore posts",
+        code: "EXPLORE_ERROR",
+        message: error?.message || "Explore failed",
+      });
     }
   });
 
@@ -706,8 +716,15 @@ export async function registerRoutes(
         ? new Date(Date.now() + 24 * 60 * 60 * 1000)
         : undefined; // 24 hours
 
+      // 🛡️ GUARDRAIL: Validate post type based on media URL
+      const validatedType = validatePostType(
+        parsed.data.mediaUrl,
+        (parsed.data as any).type || "photo",
+      );
+
       const post = await storage.createPost({
         ...parsed.data,
+        type: validatedType, // 🛡️ Use validated type
         isModerated: true,
         moderationApproved: modResult.status === "approved",
         isHidden: modResult.status !== "approved",

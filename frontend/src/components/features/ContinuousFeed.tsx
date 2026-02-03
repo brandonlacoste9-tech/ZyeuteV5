@@ -224,6 +224,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [isLoading, setIsLoading] = useState(!savedState?.posts?.length);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   // Sync ref with state
   useEffect(() => {
@@ -312,19 +313,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         } as Post & { user: User });
       });
 
-      // Transform videos
+      // Transform videos (skip entries with no playable video file)
       videos.forEach((video) => {
-        // Select best quality video file (prefer HD, then highest resolution)
-        let videoUrl = video.image; // Fallback to thumbnail
+        let videoUrl: string | null = null;
         if (video.video_files && video.video_files.length > 0) {
-          // Prefer HD quality videos
           const hdVideos = video.video_files.filter((f) => f.quality === "hd");
           if (hdVideos.length > 0) {
-            // Sort by resolution (width * height) descending
             hdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
             videoUrl = hdVideos[0].link;
           } else {
-            // Fallback to SD quality, prefer higher resolution
             const sdVideos = video.video_files.filter(
               (f) => f.quality === "sd",
             );
@@ -332,26 +329,28 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               sdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
               videoUrl = sdVideos[0].link;
             } else {
-              // Last resort: use first available file
               videoUrl = video.video_files[0].link;
             }
           }
         }
+        if (!videoUrl) return; // Skip videos with no playable file (avoid image-as-video)
         transformed.push({
           id: `pexels-video-${video.id}`,
-          user_id: `pexels-${video.user?.id || 'unknown'}`,
+          user_id: `pexels-${video.user?.id || "unknown"}`,
           media_url: videoUrl,
           thumbnail_url: video.image,
-          caption: `Moment capturé par ${video.user?.name || 'Créateur Pexels'} 🍁`,
+          caption: `Moment capturé par ${video.user?.name || "Créateur Pexels"} 🍁`,
           type: "video" as const,
           fire_count: Math.floor(Math.random() * 150),
           comment_count: Math.floor(Math.random() * 20),
           created_at: new Date().toISOString(),
           user: {
             ...pexelsUser,
-            id: `pexels-${video.user?.id || 'unknown'}`,
-            username: (video.user?.name || 'pexels').toLowerCase().replace(/\s/g, "_"),
-            display_name: video.user?.name || 'Créateur Québec',
+            id: `pexels-${video.user?.id || "unknown"}`,
+            username: (video.user?.name || "pexels")
+              .toLowerCase()
+              .replace(/\s/g, "_"),
+            display_name: video.user?.name || "Créateur Québec",
           },
         } as Post & { user: User });
       });
@@ -374,6 +373,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
+    setFetchError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
     let apiSuccess = false;
@@ -381,7 +381,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
-      feedLogger.info(`fetchVideoFeed: API returned ${data?.length || 0} posts`);
+      feedLogger.info(
+        `fetchVideoFeed: API returned ${data?.length || 0} posts`,
+      );
 
       if (data && Array.isArray(data)) {
         validPosts = data.filter((p) => {
@@ -405,10 +407,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     // [SMART PLAY] If API failed or returned 0, we MUST have content. Pivot to Pexels.
     if (!apiSuccess || validPosts.length === 0) {
       feedLogger.info("Empty or failed DB feed, triggering Pexels fallback...");
-      
       let pexelsAttempts = 0;
       const maxPexelsAttempts = 3;
-      
+
       while (pexelsAttempts < maxPexelsAttempts) {
         try {
           const pexelsData = await getPexelsCurated(15, 1);
@@ -419,31 +420,27 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             );
             setPosts(pexelsPosts);
             setHasMore(true);
-            break; // Success, exit loop
+            break;
           } else {
             feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
             pexelsAttempts++;
-            
-            // Wait before retrying (exponential backoff)
             if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * pexelsAttempts));
+              await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
             }
           }
         } catch (pexelsError) {
           feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
           pexelsAttempts++;
-          
-          // Wait before retrying (exponential backoff)
           if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * pexelsAttempts));
+            await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
           }
         }
       }
-      
-      // If all Pexels attempts failed, show empty state
+
       if (pexelsAttempts >= maxPexelsAttempts) {
         feedLogger.error("All Pexels attempts failed. Showing empty state.");
         setPosts([]);
+        setFetchError(true);
       }
     } else {
       // We have DB posts, we can still mix in Pexels or just show DB
@@ -496,7 +493,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     const timer = setTimeout(() => {
       if (isLoading && posts.length === 0) {
-        feedLogger.warn("⏱️ DB response slow (>2s). Forcing Pexels fallback for instant content.");
+        feedLogger.warn(
+          "⏱️ DB response slow (>2s). Forcing Pexels fallback for instant content.",
+        );
         fetchVideoFeed(); // trigger fetch which has fallback logic
       }
     }, 2000);
@@ -513,7 +512,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       hasInitializedRef.current = true;
 
       if ("requestIdleCallback" in window) {
-        callbackId = (window as any).requestIdleCallback(() => fetchVideoFeed());
+        callbackId = (window as any).requestIdleCallback(() =>
+          fetchVideoFeed(),
+        );
       } else {
         callbackId = setTimeout(() => fetchVideoFeed(), 1);
       }
@@ -556,8 +557,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         "Prefetching heavy chunks (Mux, Camera) in background...",
       );
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@/components/features/CameraView").catch(() => { });
-      import("./MuxVideoPlayer").catch(() => { });
+      import("@/components/features/CameraView").catch(() => {});
+      import("./MuxVideoPlayer").catch(() => {});
     };
 
     let idleId: any = null;
@@ -753,16 +754,40 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           className,
         )}
       >
-        <div className="text-4xl mb-4">📱</div>
-        <p className="text-stone-400 mb-4">
-          Aucun contenu disponible pour le moment.
+        <div className="text-4xl mb-4">
+          {!isOnline ? "📡" : fetchError ? "⚠️" : "📱"}
+        </div>
+        <p className="text-stone-400 mb-2">
+          {!isOnline
+            ? "Tu es hors ligne. Reconnecte-toi pour voir le fil."
+            : fetchError
+              ? "Impossible de charger le fil."
+              : "Aucun contenu disponible pour le moment."}
         </p>
+        {(!isOnline || fetchError) && (
+          <button
+            type="button"
+            onClick={() => {
+              setFetchError(false);
+              hasInitializedRef.current = false;
+              fetchVideoFeed();
+            }}
+            className="mt-4 px-6 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors font-medium"
+          >
+            Réessayer
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div className={cn("w-full h-full leather-dark feed-root", className)}>
+      {!isOnline && posts.length > 0 && (
+        <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-center py-2 text-sm font-medium">
+          Tu es hors ligne. Les actions seront synchronisées à la reconnexion.
+        </div>
+      )}
       <ZeroGravityHUD />
       <AutoSizer>
         {({ height, width }) => (

@@ -10,12 +10,15 @@ import { Button } from "../Button";
 import { cn } from "../../lib/utils";
 import tiGuyEmblem from "@assets/TI-GUY_NEW_SHARP_1765507001190.jpg";
 import { TiGuyChatResponseSchema } from "../../schemas/ai";
+import tiguyActionsService from "../../services/tiguyActionsService";
 
 interface Message {
   id: string;
   text: string;
   sender: "user" | "tiguy";
   timestamp: Date;
+  imageUrl?: string; // For image generation results
+  actionType?: string; // Track what action generated this message
 }
 
 const TI_GUY_RESPONSES: Record<string, string[]> = {
@@ -64,6 +67,14 @@ const QUICK_ACTIONS = [
   { label: "Upload a photo", key: "upload" },
   { label: "What are the lights?", key: "fire" },
   { label: "Become a VIP?", key: "premium" },
+];
+
+// New enhanced action buttons
+const ENHANCED_ACTIONS = [
+  { label: "🎨 Génère une image", key: "image", action: "image" },
+  { label: "🔍 Cherche sur le web", key: "search", action: "search" },
+  { label: "💡 Idées d'images", key: "ideas", action: "ideas" },
+  { label: "😎 Crée mon avatar", key: "avatar", action: "avatar" },
 ];
 
 export const TiGuy: React.FC = () => {
@@ -129,8 +140,8 @@ export const TiGuy: React.FC = () => {
     }
   }, [isOpen, messages.length, addTiGuyMessage]);
 
-  // Handle user message - now uses DeepSeek AI
-  const handleSendMessage = async (text?: string) => {
+  // Handle user message - now uses DeepSeek AI with enhanced actions
+  const handleSendMessage = async (text?: string, forceAction?: string) => {
     const messageText = text || inputText.trim();
     if (!messageText) return;
 
@@ -154,42 +165,68 @@ export const TiGuy: React.FC = () => {
     }, 200);
 
     try {
-      // Call DeepSeek AI via backend - serialize messages properly
-      const serializedHistory = messages.slice(-10).map((msg) => ({
-        text: msg.text,
-        sender: msg.sender,
-      }));
+      // Check if this is an enhanced action request
+      const actionType =
+        forceAction || tiguyActionsService.detectActionType(messageText);
 
-      const response = await fetch("/api/ai/tiguy-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          message: messageText,
-          conversationHistory: serializedHistory,
-        }),
-      });
+      if (actionType) {
+        // Handle enhanced actions (image gen, browser, etc.)
+        const actionResult = await tiguyActionsService.smartAction(
+          messageText,
+          actionType,
+        );
 
-      const data = await response.json();
+        clearInterval(progressInterval);
+        setProgress(100);
 
-      // Validate AI response
-      const validatedData = TiGuyChatResponseSchema.safeParse(data);
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text: actionResult.response,
+          sender: "tiguy",
+          timestamp: new Date(),
+          imageUrl: actionResult.imageUrl,
+          actionType: actionResult.action,
+        };
 
-      clearInterval(progressInterval);
-      setProgress(100);
+        setMessages((prev) => [...prev, newMessage]);
+      } else {
+        // Standard chat - Call DeepSeek AI via backend
+        const serializedHistory = messages.slice(-10).map((msg) => ({
+          text: msg.text,
+          sender: msg.sender,
+        }));
 
-      const aiResponse = validatedData.success
-        ? validatedData.data.response
-        : data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫";
+        const response = await fetch("/api/ai/tiguy-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            message: messageText,
+            conversationHistory: serializedHistory,
+          }),
+        });
 
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: aiResponse,
-        sender: "tiguy",
-        timestamp: new Date(),
-      };
+        const data = await response.json();
 
-      setMessages((prev) => [...prev, newMessage]);
+        // Validate AI response
+        const validatedData = TiGuyChatResponseSchema.safeParse(data);
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        const aiResponse = validatedData.success
+          ? validatedData.data.response
+          : data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫";
+
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text: aiResponse,
+          sender: "tiguy",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, newMessage]);
+      }
     } catch (error) {
       clearInterval(progressInterval);
       console.error("Ti-Guy API error:", error);
@@ -212,6 +249,72 @@ export const TiGuy: React.FC = () => {
   // Handle quick action
   const handleQuickAction = (key: string, label: string) => {
     handleSendMessage(label);
+  };
+
+  // Handle enhanced action (image gen, search, etc.)
+  const handleEnhancedAction = async (
+    actionKey: string,
+    actionType: string,
+  ) => {
+    if (actionKey === "ideas") {
+      // Get image ideas
+      setIsTyping(true);
+      setGenerating(true);
+      setProgress(50);
+
+      try {
+        const ideas = await tiguyActionsService.getImageIdeas();
+        setProgress(100);
+
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text:
+            ideas.response +
+            "\n\n" +
+            ideas.ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n"),
+          sender: "tiguy",
+          timestamp: new Date(),
+          actionType: "ideas",
+        };
+        setMessages((prev) => [...prev, newMessage]);
+      } catch (error) {
+        console.error("Ideas error:", error);
+      } finally {
+        setIsTyping(false);
+        setGenerating(false);
+        setTimeout(() => setProgress(0), 500);
+      }
+    } else if (actionKey === "avatar") {
+      // Prompt user for avatar description
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Décris-moi ton avatar! Par exemple: 'un castor cool avec des lunettes de soleil' ou 'une fille avec des cheveux bleus style anime' 🎨🦫",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "avatar-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "image") {
+      // Prompt user for image prompt
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Qu'est-ce que tu veux que je dessine? Décris-moi ton image! 🎨",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "image-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "search") {
+      // Prompt user for search query
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Qu'est-ce que tu veux que je cherche sur le web? 🔍",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "search-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    }
   };
 
   return (
@@ -349,6 +452,29 @@ export const TiGuy: React.FC = () => {
                   }
                 >
                   {message.text}
+                  {/* Display generated image if present */}
+                  {message.imageUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={message.imageUrl}
+                        alt="Generated by Ti-Guy"
+                        className="rounded-lg max-w-full h-auto"
+                        style={{
+                          border: "2px solid #B38600",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                        }}
+                      />
+                      <a
+                        href={message.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs mt-1 block hover:underline"
+                        style={{ color: "#B38600" }}
+                      >
+                        📥 Télécharger l'image
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -443,7 +569,7 @@ export const TiGuy: React.FC = () => {
                 borderTop: "1px solid #4a3b22",
               }}
             >
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {QUICK_ACTIONS.map((action) => (
                   <button
                     key={action.key}
@@ -454,6 +580,26 @@ export const TiGuy: React.FC = () => {
                       border: "1px solid #B38600",
                       color: "#B38600",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+              {/* Enhanced AI Actions */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-[#4a3b22]">
+                {ENHANCED_ACTIONS.map((action) => (
+                  <button
+                    key={action.key}
+                    onClick={() =>
+                      handleEnhancedAction(action.key, action.action)
+                    }
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #B38600 0%, #FFD966 100%)",
+                      color: "#1a1512",
+                      boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
                     }}
                   >
                     {action.label}

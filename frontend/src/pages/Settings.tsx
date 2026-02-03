@@ -35,7 +35,12 @@ export const Settings: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const { borderColor, setBorderColor, defaultGold } = useBorderColor();
   const { tap, success, selection, impact } = useHaptics();
-  const { isGuest, logout: authLogout, user: authUser, isLoading: authLoading } = useAuth();
+  const {
+    isGuest,
+    logout: authLogout,
+    user: authUser,
+    isLoading: authLoading,
+  } = useAuth();
 
   // Fetch current user
   React.useEffect(() => {
@@ -80,7 +85,9 @@ export const Settings: React.FC = () => {
 
         if (!currentUser) {
           // This shouldn't happen due to ProtectedRoute, but as safeguard
-          settingsLogger.warn("[Settings] No user found despite being in protected route");
+          settingsLogger.warn(
+            "[Settings] No user found despite being in protected route",
+          );
           navigate("/login");
           return;
         }
@@ -495,7 +502,7 @@ export const Settings: React.FC = () => {
   const handleSettingClick = (item: SettingItem) => {
     tap();
 
-    // Routes that exist
+    // Routes that exist (ensure these stay in sync with App.tsx routing)
     const existingRoutes = [
       "/settings/tags",
       "/settings/comments",
@@ -514,6 +521,7 @@ export const Settings: React.FC = () => {
       "/settings/profile",
       "/settings/privacy",
       "/settings/notifications",
+      "/parental",
       "/premium",
     ];
 

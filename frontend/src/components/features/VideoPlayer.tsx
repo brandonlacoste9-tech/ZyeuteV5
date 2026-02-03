@@ -1,8 +1,15 @@
+/* eslint-disable react-hooks/refs */
 /**
  * VideoPlayer - Advanced video player with TikTok-style controls
  */
 
-import React, { useRef, useState, useEffect, useCallback, Suspense } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  Suspense,
+} from "react";
 import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
 import { VideoSource } from "@/hooks/usePrefetchVideo";
@@ -10,7 +17,9 @@ import { videoCache } from "@/lib/videoWarmCache";
 import { useHaptics } from "@/hooks/useHaptics";
 
 const MuxPlayer = React.lazy(() => import("@mux/mux-player-react"));
-const StreamingDebugOverlay = React.lazy(() => import("./StreamingDebugOverlay"));
+const StreamingDebugOverlay = React.lazy(
+  () => import("./StreamingDebugOverlay"),
+);
 
 const videoPlayerLogger = logger.withContext("VideoPlayer");
 
@@ -241,42 +250,42 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [videoSource, mseRetryCount]);
 
   // Handle video source errors gracefully
-  const handleError = useCallback((e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const video = e.currentTarget;
-    const error = video.error;
+  const handleError = useCallback(
+    (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+      const video = e.currentTarget;
+      const error = video.error;
 
-    // Soft Fallback: If MSE fails, try raw URL once before giving up
-    if (mseUrl) {
-      videoPlayerLogger.warn("MSE playback failed, falling back to raw URL");
-      setMseUrl(null);
-      return;
-    }
+      // Enhanced error logging for diagnostics
+      console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
+        code: error?.code,
+        message: error?.message,
+        networkState: video.networkState,
+        readyState: video.readyState,
+        src: src?.substring(0, 100),
+        currentSrc: video.currentSrc?.substring(0, 100),
+        mseActive: !!mseUrl,
+      });
 
-    // Enhanced error logging for debugging
-    videoPlayerLogger.error("Video playback error:", {
-      code: error?.code,
-      message: error?.message,
-      src: src?.substring(0, 100),
-      videoSource: videoSource?.type,
-      timestamp: new Date().toISOString(),
-    });
+      // Soft Fallback: If MSE fails, try raw URL once before giving up
+      if (mseUrl) {
+        videoPlayerLogger.warn("MSE playback failed, falling back to raw URL");
+        setMseUrl(null);
+        return;
+      }
 
-    // Add more descriptive error based on error code
-    const errorMessage = error?.message || "";
-    let userMessage = "Vidéo non disponible";
-    
-    // Enhanced error messages based on common issues
-    if (errorMessage.includes("CORS") || errorMessage.includes("cross-origin")) {
-      userMessage = "Problème de connexion - Réessayer";
-    } else if (errorMessage.includes("decode") || errorMessage.includes("format")) {
-      userMessage = "Format non supporté - Réessayer";
-    } else if (errorMessage.includes("network") || errorMessage.includes("timeout")) {
-      userMessage = "Connexion lente - Réessayer";
-    }
+      videoPlayerLogger.error("Video playback error:", {
+        code: error?.code,
+        message: error?.message,
+        src: src?.substring(0, 100),
+        videoSource: videoSource?.type,
+        timestamp: new Date().toISOString(),
+      });
 
-    setHasError(true);
-    setIsLoading(false);
-  }, [mseUrl, src, videoSource]);
+      setHasError(true);
+      setIsLoading(false);
+    },
+    [mseUrl, src, videoSource],
+  );
 
   // Metrics collection
   const handlePlaying = useCallback(() => {
@@ -305,9 +314,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
     }
+    console.log("[VideoPlayer] ✅ VIDEO CAN PLAY - Ready for playback", {
+      src: src?.substring(0, 60),
+    });
     setIsLoading(false);
     setHasError(false);
-  }, []);
+  }, [src]);
 
   // Handle loading started
   const handleLoadStart = useCallback(() => {
@@ -419,17 +431,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, []);
 
   // Volume control
-  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!videoRef.current) return;
-    const vol = parseFloat(e.target.value);
-    videoRef.current.volume = vol;
-    setVolume(vol);
-    if (vol === 0) {
-      setIsMuted(true);
-    } else {
-      setIsMuted(false);
-    }
-  }, []);
+  const handleVolumeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!videoRef.current) return;
+      const vol = parseFloat(e.target.value);
+      videoRef.current.volume = vol;
+      setVolume(vol);
+      if (vol === 0) {
+        setIsMuted(true);
+      } else {
+        setIsMuted(false);
+      }
+    },
+    [],
+  );
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(async () => {
@@ -503,9 +518,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Validate video source URL
+  // Validate video source URL (must be a playable video, not an image)
   const isValidVideoUrl = (url: string | undefined): boolean => {
     if (!url || typeof url !== "string") return false;
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|avif|bmp|svg)(\?|$)/i;
+    if (imageExtensions.test(url)) return false;
     try {
       new URL(url);
       return true;
@@ -516,6 +533,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Mux Player Integration - Return early if Mux ID is present
   if (muxPlaybackId) {
+    videoPlayerLogger.info("[VideoPlayer] Using MUX path:", {
+      playbackId: muxPlaybackId,
+      autoPlay,
+      muted,
+    });
     return (
       <div
         className={cn(
@@ -551,6 +573,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </div>
     );
   }
+
+  // Native HTML5 path logging
+  videoPlayerLogger.info("[VideoPlayer] Using NATIVE HTML5 path:", {
+    src: src?.substring(0, 80),
+    effectiveSrc: effectiveSrc?.substring(0, 80),
+    autoPlay,
+    muted,
+    hasMseUrl: !!mseUrl,
+    hasVideoSource: !!videoSource,
+  });
 
   // If no valid source URL, show placeholder
   if (!isValidVideoUrl(src)) {
@@ -625,6 +657,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onClick={togglePlay}
     >
       {/* Streaming Debug Overlay */}
+      // eslint-disable-next-line react-hooks/refs
       {isDebugEnabled && debug && (
         <Suspense fallback={null}>
           <StreamingDebugOverlay
@@ -634,8 +667,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             tier={debug.tier as any}
             playheadByte={
               videoSource?.type === "partial-chunks" &&
-                videoSource.totalSize &&
-                duration
+              videoSource.totalSize &&
+              duration
                 ? (currentTime / duration) * videoSource.totalSize
                 : 0
             }
@@ -652,7 +685,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         </Suspense>
       )}
-
       {/* Video Element */}
       {/* Preload prioritized poster */}
       {priority && poster && (
@@ -661,7 +693,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           alt=""
           className="hidden"
           fetchPriority="high"
-          onError={() => { }} // Ignore errors on preload
+          onError={() => {}} // Ignore errors on preload
         />
       )}
       <video
@@ -682,7 +714,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onPlaying={handlePlaying}
         onWaiting={handleWaiting}
       />
-
       {/* Loading State */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -710,7 +741,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         </div>
       )}
-
       {/* Play/Pause Overlay */}
       {!isPlaying && !isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -731,7 +761,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </button>
         </div>
       )}
-
       {/* Controls Overlay */}
       <div
         className={cn(

@@ -22,13 +22,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isFeedPage = location.pathname === "/feed";
 
   const goldEdgeGlow: React.CSSProperties = {
-    // ... same styles ...
+    // Use the customizable borderColor from settings for the edge lighting
+    // We use 8‑digit hex for alpha (e.g. #FFBF0080)
     boxShadow: `
-      0 0 20px rgba(255, 191, 0, 0.5),
-      0 0 40px rgba(255, 191, 0, 0.3),
-      inset 0 0 30px rgba(255, 191, 0, 0.15)
+      0 0 20px ${borderColor}80,
+      0 0 40px ${borderColor}40,
+      inset 0 0 30px ${borderColor}26
     `,
-    border: "2px solid rgba(255, 191, 0, 0.6)",
+    border: `2px solid ${borderColor}99`,
     transition: "box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out",
   };
 
@@ -58,7 +59,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         {/* Scrollable Content Area */}
         {/* For Feed page, we want NO layout scroll, so react-window handles it entirely */}
-        <div className={`relative z-10 flex-1 ${isFeedPage ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide'} pb-16`}>
+        <div
+          className={`relative z-10 flex-1 ${isFeedPage ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"} pb-16`}
+        >
           {children}
         </div>
 

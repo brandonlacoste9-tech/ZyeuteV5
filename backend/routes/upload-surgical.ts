@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
 import { verifyAuthToken } from "../supabase-auth.js";
 import crypto from "crypto";
+import { inferMediaType } from "../../shared/utils/validatePostType.js";
 
 export const surgicalUploadRouter = express.Router();
 
@@ -39,11 +40,9 @@ surgicalUploadRouter.post(
 
       if (!supabase) {
         console.error("❌ Upload refused: Supabase client is not initialized.");
-        return res
-          .status(503)
-          .json({
-            error: "Storage service unavailable due to missing configuration",
-          });
+        return res.status(503).json({
+          error: "Storage service unavailable due to missing configuration",
+        });
       }
 
       // 1. Authenticate
@@ -87,19 +86,26 @@ surgicalUploadRouter.post(
         data: { publicUrl },
       } = supabase.storage.from("zyeute-videos").getPublicUrl(fileName);
 
-      // 4. Create Database Record
+      // 4. 🛡️ GUARDRAIL: Infer media type from URL/mimetype
+      const inferredType = inferMediaType(publicUrl);
+      console.log(
+        `🛡️ [Guardrail] Inferred type "${inferredType}" for ${originalname} (mime: ${mimetype})`,
+      );
+
+      // 5. Create Database Record with validated type
       const post = await storage.createPost({
         userId,
         content:
           req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`,
         caption: req.body.caption || originalname,
         mediaUrl: publicUrl,
+        type: inferredType, // 🛡️ Use validated type
         processingStatus: "completed",
         hiveId: req.body.hiveId || "quebec",
         visibility: "public",
       });
 
-      // 5. [GAMIFICATION] Nectar Bonus Strike
+      // 6. [GAMIFICATION] Nectar Bonus Strike
       try {
         const userPosts = await storage.getPostsByUser(userId);
         if (userPosts.length === 1) {

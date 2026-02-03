@@ -1,30 +1,33 @@
+/**
+ * One-off script to test DB connection. Do NOT commit real passwords.
+ * Usage: TEST_DB_PASSWORD=yourpassword node test-passwords.js
+ * Or use DATABASE_URL from .env (e.g. with dotenv).
+ */
 
-const pg = require('pg');
+const pg = require("pg");
 const { Pool } = pg;
 
-const passwords = [
-  'tvjgdx3qhntdTMU7',
-  'tvjgdx3qhidTdMU7'
-];
+const ref = "vuanulvyqkfefmjcikfk";
+const host = "aws-0-us-east-1.pooler.supabase.com";
+const password = process.env.TEST_DB_PASSWORD || process.env.DATABASE_URL?.match(/:([^@]+)@/)?.[1];
 
-const ref = 'vuanulvyqkfefmjcikfk';
-const host = 'aws-0-us-east-1.pooler.supabase.com';
+if (!password) {
+  console.error("Set TEST_DB_PASSWORD or DATABASE_URL (with password) in the environment.");
+  process.exit(1);
+}
 
 async function test() {
-  for (const pwd of passwords) {
-    console.log(`Testing password: ${pwd}`);
-    const url = `postgres://postgres.${ref}:${pwd}@${host}:6543/postgres?pgbouncer=true`;
-    const pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
-    try {
-      const client = await pool.connect();
-      console.log(`✅ SUCCESS with ${pwd}`);
-      client.release();
-      break;
-    } catch (err) {
-      console.log(`❌ FAILED with ${pwd}: ${err.message}`);
-    } finally {
-      await pool.end();
-    }
+  const url = `postgres://postgres.${ref}:${password}@${host}:6543/postgres?pgbouncer=true`;
+  const pool = new Pool({ connectionString: url, ssl: { rejectUnauthorized: false } });
+  try {
+    const client = await pool.connect();
+    console.log("✅ SUCCESS");
+    client.release();
+  } catch (err) {
+    console.error("❌ FAILED:", err.message);
+    process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 

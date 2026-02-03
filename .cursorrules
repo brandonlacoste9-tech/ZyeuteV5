@@ -46,3 +46,13 @@
 - Use simple `lazy()` loading for non-critical routes.
 - Optimize images: use WebP format, include size data.
 - Optimize Web Vitals (LCP, CLS, FID).
+
+## 6. External tools & skills (agent use)
+- External repos live under `external/` (see `docs/AGENT_USE_OF_EXTERNAL_TOOLS.md`). Use them when relevant:
+  - **Browser automation / E2E**: read and use `external/browser-use`.
+  - **Agent skills** (evaluation, UI/UX, writing, workflows): read `external/antigravity-awesome-skills/skills/` and `docs/`.
+  - **Planning with files**: `external/planning-with-files`.
+  - **Antigravity manager/template**: `external/antigravity-manager`, `external/antigravity-workspace-template`.
+  - **UI/UX Pro Max** (upstream): `external/ui-ux-pro-max-skill-external` or in-repo `ui-ux-pro-max-skill/`.
+  - **In-app copilot**: `external/copilotkit` for integration patterns.
+- To populate or update: run `scripts/setup-external-tools.ps1` (Windows) or `scripts/setup-external-tools.sh`.
