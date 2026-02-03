@@ -199,7 +199,8 @@
     ]
   },
   "overrides": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "fast-xml-parser": "^5.3.4"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8",
