@@ -50,9 +50,14 @@ let isSystemReady = false;
 // [NEW] Startup Liveness Middleware
 // Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
-  // Always allow health checks
-  if (req.path === "/api/health" || req.path === "/api/debug") {
-    return next();
+  // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
+  if (req.path === "/api/health") {
+    return res.status(200).json({ status: "ok", stage: "middleware_override" });
+  }
+  
+  // Debug route also overrides
+  if (req.path === "/api/debug") {
+    return res.status(200).json({ status: "debug_ok", systemReady: isSystemReady });
   }
   
   // If system works, proceed
