@@ -325,6 +325,14 @@ const PostBase = z.object({
   max_views: z.number().default(1),
   expires_at: z.string().nullable().optional(),
   burned_at: z.string().nullable().optional(),
+
+  // Video AI Enhancement (optional on all posts; only populated for video)
+  original_url: z.string().optional(),
+  enhanced_url: z.string().optional(),
+  processing_status: z
+    .enum(["ready", "pending", "processing", "completed", "failed"])
+    .optional(),
+  visual_filter: z.string().optional(),
 });
 
 const PhotoPost = PostBase.extend({
@@ -333,13 +341,6 @@ const PhotoPost = PostBase.extend({
 
 const VideoPost = PostBase.extend({
   type: z.literal("video"),
-  // Deep Enhance Fields
-  original_url: z.string().optional(),
-  enhanced_url: z.string().optional(),
-  processing_status: z
-    .enum(["ready", "pending", "processing", "completed", "failed"])
-    .optional(),
-  visual_filter: z.string().optional(),
 });
 
 // Discriminated Union

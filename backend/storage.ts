@@ -381,38 +381,7 @@ export class DatabaseStorage implements IStorage {
       }));
   }
 
-  async getExplorePosts(
-    page: number,
-    limit: number,
-    hiveId: string = "quebec",
-  ): Promise<(Post & { user: User })[]> {
-    const offset = page * limit;
-
-    const result = await db
-      .select({
-        post: posts,
-        user: users,
-      })
-      .from(posts)
-      .leftJoin(users, eq(posts.userId, users.id))
-      .where(
-        and(
-          or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-          eq(posts.visibility, "public"),
-          eq(posts.hiveId, hiveId as any),
-        ),
-      )
-      .orderBy(desc(posts.fireCount), desc(posts.createdAt))
-      .limit(limit)
-      .offset(offset);
-
-    return result
-      .filter((r) => r.user)
-      .map((r) => ({
-        ...r.post,
-        user: r.user!,
-      }));
-  }
+  // getExplorePosts implementation moved to line 548 (uses traceDatabase)
 
   async getNearbyPosts(
     lat: number,

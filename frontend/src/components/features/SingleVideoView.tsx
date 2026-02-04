@@ -18,6 +18,9 @@ import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
 import { useVideoVision } from "@/hooks/useVideoVision";
 import { validatePostType } from "@/utils/validatePostType";
+import { RemixModal } from "./RemixModal";
+import { getRemixInfo } from "@/services/api";
+import { Music } from "lucide-react";
 
 interface SingleVideoViewProps {
   post: Post;
@@ -68,6 +71,21 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       post.ai_description || null,
     );
     const [hasAnalyzed, setHasAnalyzed] = useState(false);
+
+    // Remix State (TikTok-style)
+    const [showRemixModal, setShowRemixModal] = useState(false);
+    const [remixCount, setRemixCount] = useState((post as any).remixCount || 0);
+
+    // Load remix count
+    useEffect(() => {
+      if (post.type === "video" && isActive) {
+        getRemixInfo(post.id).then((info) => {
+          if (info) {
+            setRemixCount(info.remixCount);
+          }
+        });
+      }
+    }, [post.id, post.type, isActive]);
 
     // Trigger Vision Analysis if missing
     useEffect(() => {
@@ -666,6 +684,35 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               </span>
             </button>
 
+            {/* Remix Button (TikTok-style) */}
+            {post.type === "video" && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRemixModal(true);
+                  tap();
+                }}
+                className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
+              >
+                <svg
+                  className="w-8 h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
+                  {remixCount > 0 ? remixCount : ""}
+                </span>
+              </button>
+            )}
+
             {/* Share Button */}
             <button
               onClick={(e) => {
@@ -689,7 +736,29 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               </svg>
             </button>
           </div>
+
+          {/* Sound Attribution (TikTok-style) */}
+          {(post as any).soundId && (
+            <div className="absolute bottom-4 left-4 right-20 z-10">
+              <div className="flex items-center gap-2 text-white text-sm">
+                <Music className="w-4 h-4" />
+                <span className="truncate">
+                  {(post as any).soundTitle || "Son original"}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Remix Modal */}
+        {showRemixModal && (
+          <RemixModal
+            postId={post.id}
+            postMediaUrl={post.media_url || ""}
+            isOpen={showRemixModal}
+            onClose={() => setShowRemixModal(false)}
+          />
+        )}
       </div>
     );
   },

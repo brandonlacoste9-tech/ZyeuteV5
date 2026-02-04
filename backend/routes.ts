@@ -48,9 +48,15 @@ import healthRoutes from "./routes/health.js";
 import { muxRouter } from "./routes/mux.js";
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
+import flaggingRoutes from "./routes/user-flagging.js";
+import remixRoutes from "./routes/remix.js";
+import soundRoutes from "./routes/sounds.js";
 import pexelsRoutes from "./routes/pexels.js";
 import sentryDebugRoutes from "./routes/sentry-debug.js";
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
+import dialogflowTiguyRoutes from "./routes/dialogflow-tiguy.js";
+import dialogflowWebhookRoutes from "./routes/dialogflow-webhook.js";
+import maxApiRoutes from "./routes/max-api.js";
 import { validatePostType } from "../shared/utils/validatePostType.js";
 // Import tracing utilities
 import {
@@ -123,7 +129,7 @@ let stripe: Stripe | null = null;
 
 if (STRIPE_SECRET_KEY) {
   stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-12-15.clover",
+    apiVersion: "2026-01-28.clover",
   });
 } else {
   console.warn(
@@ -214,6 +220,14 @@ export async function registerRoutes(
 
   // ============ TI-GUY ENHANCED ACTIONS (Browser, Image Gen, etc.) ============
   app.use("/api/tiguy", tiguyActionsRoutes);
+
+  // ============ DIALOGFLOW CX TI-GUY VOICE (Uses Dialogflow CX Credits $813.16) ============
+  app.use("/api/dialogflow", dialogflowTiguyRoutes);
+  // Dialogflow CX Webhook (receives webhook calls from Dialogflow CX)
+  app.use("/api/dialogflow", dialogflowWebhookRoutes);
+
+  // ============ MAX API (WhatsApp Production Manager) ============
+  app.use("/api/max", maxApiRoutes);
 
   // ============ DEEP ENHANCE ROUTES (Moved to end to prevent middleware blocking) ============
   // enhanceRoutes moved to end of file
@@ -701,10 +715,116 @@ export async function registerRoutes(
           role: "banned",
           bio: "COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
         });
+
+        // 🛡️ SECURITY: Automatically scan and flag related users
+        try {
+          const { scanAndFlagRelatedUsers } =
+            await import("./services/userFlaggingSystem.js");
+          console.log(
+            `🛡️ [Security] Scanning users related to banned user ${req.userId}...`,
+          );
+          const flags = await scanAndFlagRelatedUsers(req.userId!);
+          console.log(`🛡️ [Security] Flagged ${flags.length} related users`);
+        } catch (scanError: any) {
+          console.error(
+            `⚠️ [Security] Error scanning related users: ${scanError.message}`,
+          );
+          // Don't fail the ban if scanning fails
+        }
+
         return res.status(403).json({
           error:
             "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
         });
+      }
+
+      // 🛡️ SECURITY: Moderate video content if mediaUrl is a video
+      let videoModerationApproved = true;
+      if (parsed.data.mediaUrl) {
+        const validatedType = validatePostType(
+          parsed.data.mediaUrl,
+          (parsed.data as any).type || "photo",
+        );
+
+        if (validatedType === "video") {
+          try {
+            const { moderateVideoFromUrl } =
+              await import("./services/videoModeration.js");
+            console.log(`🛡️ [Security] Moderating video content from URL...`);
+            const videoModResult = await moderateVideoFromUrl(
+              parsed.data.mediaUrl,
+              moderationContent,
+            );
+
+            if (!videoModResult.approved) {
+              // Log moderation violation
+              await storage.createModerationLog({
+                userId: req.userId!,
+                action: videoModResult.is_minor_danger ? "ban" : "reject",
+                reason: videoModResult.reason,
+                details: `Video rejected: ${videoModResult.reasons.join(", ")} | Severity: ${videoModResult.severity}`,
+                score:
+                  videoModResult.severity === "critical"
+                    ? 10
+                    : videoModResult.severity === "high"
+                      ? 5
+                      : 2,
+              });
+
+              // Ban user if critical violation (child safety)
+              if (videoModResult.is_minor_danger) {
+                console.error(
+                  `🚨 Child Safety Violation in Video: Banning user ${req.userId}`,
+                );
+                await storage.updateUser(req.userId!, {
+                  role: "banned",
+                  bio: "COMPTE DÉSACTIVÉ : Zyeuté applique une politique de tolérance zéro concernant toute forme de leurre, grooming ou interaction inappropriée impliquant des mineurs.",
+                });
+
+                // 🛡️ SECURITY: Automatically scan and flag related users
+                try {
+                  const { scanAndFlagRelatedUsers } =
+                    await import("./services/userFlaggingSystem.js");
+                  console.log(
+                    `🛡️ [Security] Scanning users related to banned user ${req.userId}...`,
+                  );
+                  const flags = await scanAndFlagRelatedUsers(req.userId!);
+                  console.log(
+                    `🛡️ [Security] Flagged ${flags.length} related users`,
+                  );
+                } catch (scanError: any) {
+                  console.error(
+                    `⚠️ [Security] Error scanning related users: ${scanError.message}`,
+                  );
+                  // Don't fail the ban if scanning fails
+                }
+
+                return res.status(403).json({
+                  error:
+                    "Votre compte a été banni pour violation grave des règles de sécurité (Tolérance Zéro).",
+                });
+              }
+
+              // Reject video post
+              return res.status(403).json({
+                error: `Vidéo rejetée: ${videoModResult.reason}`,
+                moderation: {
+                  approved: false,
+                  severity: videoModResult.severity,
+                  reasons: videoModResult.reasons,
+                },
+              });
+            }
+
+            videoModerationApproved = videoModResult.approved;
+            console.log(`✅ [Security] Video approved by moderation`);
+          } catch (videoModError: any) {
+            console.error(
+              `⚠️ [Security] Video moderation error: ${videoModError.message}`,
+            );
+            // Fail-safe: allow but flag for review
+          }
+        }
       }
 
       // Handle ephemeral posts (Fantasma Mode)
@@ -726,8 +846,9 @@ export async function registerRoutes(
         ...parsed.data,
         type: validatedType, // 🛡️ Use validated type
         isModerated: true,
-        moderationApproved: modResult.status === "approved",
-        isHidden: modResult.status !== "approved",
+        moderationApproved:
+          modResult.status === "approved" && videoModerationApproved,
+        isHidden: modResult.status !== "approved" || !videoModerationApproved,
         isEphemeral,
         maxViews,
         expiresAt,
@@ -2460,13 +2581,11 @@ export async function registerRoutes(
     }
   });
 
-  // ============ BOOTSTRAP AI / SWARM ROUTES ============
-  // Hybrid AI System: DeepSeek + Fal.ai + Vertex Knowledge Base
-  // [FIXED] Removed duplicate /api/ai route registration - already registered at line 201
-  // app.use("/api/ai", aiRoutes); // Already registered at line 201
-  // NOTE: /api/ai route is already registered at line 201 - duplicate removed to prevent PathError
-  // app.use("/api/ai", aiRoutes); // ❌ DUPLICATE - Commented out to prevent PathError
+  // ============ MODERATION & PRESENCE ============
   app.use("/api/moderation", requireAuth, moderationRoutes);
+  app.use("/api/admin/flagging", flaggingRoutes);
+  app.use("/api/remix", remixRoutes);
+  app.use("/api/sounds", soundRoutes);
   app.use("/api/presence", presenceRouter);
 
   // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes

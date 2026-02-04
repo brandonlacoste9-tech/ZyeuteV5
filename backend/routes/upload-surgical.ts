@@ -5,6 +5,7 @@ import multer from "multer";
 import { verifyAuthToken } from "../supabase-auth.js";
 import crypto from "crypto";
 import { inferMediaType } from "../../shared/utils/validatePostType.js";
+import { moderateVideo } from "../services/videoModeration.js";
 
 export const surgicalUploadRouter = express.Router();
 
@@ -99,13 +100,13 @@ surgicalUploadRouter.post(
           req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`,
         caption: req.body.caption || originalname,
         mediaUrl: publicUrl,
-        type: inferredType, // 🛡️ Use validated type
+        mediaMetadata: { type: inferredType }, // 🛡️ Store validated type in metadata
         processingStatus: "completed",
         hiveId: req.body.hiveId || "quebec",
         visibility: "public",
       });
 
-      // 6. [GAMIFICATION] Nectar Bonus Strike
+      // 7. [GAMIFICATION] Nectar Bonus Strike
       try {
         const userPosts = await storage.getPostsByUser(userId);
         if (userPosts.length === 1) {

@@ -310,6 +310,132 @@ export async function addComment(
   return data.comment;
 }
 
+// ============ REMIX FUNCTIONS (TikTok-style) ============
+
+export interface RemixInfo {
+  remixCount: number;
+  recentRemixes: any[];
+}
+
+export async function getRemixInfo(postId: string): Promise<RemixInfo | null> {
+  const { data, error } = await apiCall<RemixInfo>(`/remix/${postId}`);
+  if (error || !data) return null;
+  return data;
+}
+
+export async function createRemix(
+  originalPostId: string,
+  remixType: "duet" | "stitch" | "react",
+  mediaUrl: string,
+  caption?: string,
+): Promise<{ post: Post | null; error: string | null }> {
+  const { data, error } = await apiCall<{ post: Post; message: string }>(
+    `/remix/${originalPostId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ remixType, mediaUrl, caption }),
+    },
+  );
+
+  if (error) return { post: null, error };
+  return { post: data?.post || null, error: null };
+}
+
+export async function getRemixes(
+  postId: string,
+  page: number = 0,
+  limit: number = 20,
+): Promise<{ remixes: Post[]; page: number; limit: number } | null> {
+  const { data, error } = await apiCall<{
+    remixes: Post[];
+    page: number;
+    limit: number;
+  }>(`/remix/${postId}/remixes?page=${page}&limit=${limit}`);
+
+  if (error || !data) return null;
+  return data;
+}
+
+// ============ SOUND FUNCTIONS (TikTok-style) ============
+
+export interface Sound {
+  id: string;
+  title: string;
+  artist?: string;
+  audioUrl: string;
+  coverImageUrl?: string;
+  duration?: number;
+  category?: string;
+  useCount: number;
+  isOriginal: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export async function getSounds(options?: {
+  category?: string;
+  search?: string;
+  trending?: boolean;
+  limit?: number;
+  page?: number;
+}): Promise<{ sounds: Sound[]; page: number; limit: number } | null> {
+  const params = new URLSearchParams();
+  if (options?.category) params.append("category", options.category);
+  if (options?.search) params.append("search", options.search);
+  if (options?.trending) params.append("trending", "true");
+  if (options?.limit) params.append("limit", options.limit.toString());
+  if (options?.page) params.append("page", options.page.toString());
+
+  const { data, error } = await apiCall<{
+    sounds: Sound[];
+    page: number;
+    limit: number;
+  }>(`/sounds?${params.toString()}`);
+
+  if (error || !data) return null;
+  return data;
+}
+
+export async function getTrendingSounds(
+  limit: number = 20,
+): Promise<{ sounds: Sound[] } | null> {
+  const { data, error } = await apiCall<{ sounds: Sound[] }>(
+    `/sounds/trending?limit=${limit}`,
+  );
+
+  if (error || !data) return null;
+  return data;
+}
+
+export async function getSound(soundId: string): Promise<{
+  sound: Sound;
+  useCount: number;
+} | null> {
+  const { data, error } = await apiCall<{ sound: Sound; useCount: number }>(
+    `/sounds/${soundId}`,
+  );
+
+  if (error || !data) return null;
+  return data;
+}
+
+export async function createSound(sound: {
+  title: string;
+  artist?: string;
+  audioUrl: string;
+  coverImageUrl?: string;
+  category?: string;
+  isOriginal?: boolean;
+}): Promise<Sound | null> {
+  const { data, error } = await apiCall<{ sound: Sound }>("/sounds", {
+    method: "POST",
+    body: JSON.stringify(sound),
+  });
+
+  if (error || !data) return null;
+  return data.sound;
+}
+
 export async function deleteComment(commentId: string): Promise<boolean> {
   const { error } = await apiCall(`/comments/${commentId}`, {
     method: "DELETE",
