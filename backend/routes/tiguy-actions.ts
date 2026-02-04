@@ -191,7 +191,7 @@ router.post("/image/generate", async (req, res) => {
     if (!validation.success) {
       return res.status(400).json({
         error: "Invalid request",
-        details: validation.error.errors,
+        details: validation.error.issues || [],
         response:
           "Ta demande est pas claire! Dis-moi c'que tu veux comme image! 🎨",
       });
@@ -695,7 +695,7 @@ router.get("/hockey/facts", (req, res) => {
  * Get weather for a Quebec city
  */
 router.get("/weather/:city?", async (req, res) => {
-  const city = req.params.city || "Montreal";
+  const city = (req.params as { city?: string }).city || "Montreal";
   const result = await weatherBee.getWeather(city);
   res.json(result);
 });
@@ -875,7 +875,7 @@ router.post("/voice/speak", async (req, res) => {
  */
 router.get("/voice/pronunciation/:word?", (req, res) => {
   const guide = voiceBee.getPronunciationGuide();
-  const word = req.params.word?.toLowerCase();
+  const word = (req.params as { word?: string }).word?.toLowerCase();
 
   if (word && guide[word]) {
     res.json({

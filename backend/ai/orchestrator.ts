@@ -99,7 +99,13 @@ export const searchTrendsTool = {
       .default("google"),
     region: z.enum(["montreal", "quebec-city", "all"]).optional(),
   }),
-  execute: async ({ platform, region = "all" }) => {
+  execute: async ({
+    platform,
+    region = "all",
+  }: {
+    platform: string;
+    region?: string;
+  }) => {
     console.log(
       `🕵️ Searching Quebec trends on ${platform} (region: ${region})`,
     );
@@ -146,6 +152,9 @@ export const analyzeCompetitorTool = {
   execute: async ({
     url,
     metrics = ["followers", "engagement", "language", "cultural_score"],
+  }: {
+    url: string;
+    metrics?: string[];
   }) => {
     console.log(`📊 Analyzing competitor: ${url}`);
     try {
@@ -187,7 +196,13 @@ export const validateDesignTool = {
       .enum(["button", "alert", "form", "card", "navigation"])
       .optional(),
   }),
-  execute: async ({ component_code, component_type }) => {
+  execute: async ({
+    component_code,
+    component_type,
+  }: {
+    component_code: string;
+    component_type?: string;
+  }) => {
     console.log(
       `🎨 Validating design: ${component_type || "unknown component"}`,
     );

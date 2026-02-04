@@ -226,6 +226,18 @@ export const posts = pgTable(
     burnedAt: timestamp("burned_at"), // The "Scar" - remains after content deletion
     deletedAt: timestamp("deleted_at"),
     isVaulted: boolean("is_vaulted").default(false), // For "Vault" swipe gesture
+    // TikTok-style Remix features (Duet/Stitch)
+    remixType: varchar("remix_type", { length: 20 }), // 'duet', 'stitch', 'react', null
+    originalPostId: uuid("original_post_id").references(
+      (): AnyPgColumn => posts.id,
+      {
+        onDelete: "set null",
+      },
+    ), // For remixed content
+    remixCount: integer("remix_count").default(0), // Number of remixes of this video
+    // Sound/Music Library
+    soundId: uuid("sound_id"), // Reference to sounds table
+    soundStartTime: integer("sound_start_time"), // Start time in seconds for sound
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -835,6 +847,33 @@ export type ModerationLog = typeof moderationLogs.$inferSelect;
 
 export type ParentalControl = typeof parentalControls.$inferSelect;
 
+// Sounds Table (TikTok-style Music Library)
+export const sounds = pgTable(
+  "sounds",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: varchar("title", { length: 255 }).notNull(),
+    artist: varchar("artist", { length: 255 }),
+    audioUrl: text("audio_url").notNull(),
+    coverImageUrl: text("cover_image_url"),
+    duration: integer("duration"), // Duration in seconds
+    category: varchar("category", { length: 50 }), // 'trending', 'music', 'comedy', 'original', etc.
+    useCount: integer("use_count").default(0), // How many videos use this sound
+    isOriginal: boolean("is_original").default(false), // User-created sound
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    useCountIdx: index("sounds_use_count_idx").on(table.useCount),
+    categoryIdx: index("sounds_category_idx").on(table.category),
+    createdAtIdx: index("sounds_created_at_idx").on(table.createdAt),
+  }),
+);
+
+export const insertSoundSchema = createInsertSchema(sounds);
+
 export const tournaments = pgTable("tournaments", {
   id: uuid("id").defaultRandom().primaryKey(),
   title: text("title").notNull(),
@@ -920,3 +959,5 @@ export type AuditLog = any;
 export type Message = any;
 export type Conversation = any;
 export type Participant = any;
+export type Sound = typeof sounds.$inferSelect;
+export type InsertSound = z.infer<typeof insertSoundSchema>;

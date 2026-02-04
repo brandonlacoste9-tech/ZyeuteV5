@@ -4,16 +4,23 @@
  */
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
-import { getCurrentUser, createPost } from "../services/api";
+import {
+  getCurrentUser,
+  createPost,
+  createRemix,
+  getSound,
+  type Sound,
+} from "../services/api";
 import { supabase } from "../lib/supabase";
 import { extractHashtags, generateId } from "../lib/utils";
 import { QUEBEC_REGIONS } from "../lib/quebecFeatures";
 import { toast } from "../components/Toast";
 import { logger } from "../lib/logger";
 import { CameraView } from "@/components/features/CameraView";
+import { SoundPicker } from "@/components/sounds/SoundPicker";
 import {
   IoCamera,
   IoImages,
@@ -116,9 +123,8 @@ export const Upload: React.FC = () => {
       if (isVideo) {
         // --- VIDEO FLOW (MUX) ---
         // 1. Generate client-side thumbnail
-        const { generateVideoThumbnail } = await import(
-          "../utils/videoThumbnail"
-        );
+        const { generateVideoThumbnail } =
+          await import("../utils/videoThumbnail");
         const thumbDataUrl = await generateVideoThumbnail(file);
         const thumbBlob = dataURIToBlob(thumbDataUrl);
 
@@ -175,20 +181,52 @@ export const Upload: React.FC = () => {
         mediaUrl = publicUrl;
       }
 
-      // 5. Create Post Record
-      const post = await createPost({
-        type: isVideo ? "video" : "photo",
-        mediaUrl,
-        thumbnailUrl,
-        muxUploadId,
-        caption: caption.trim(),
-        hashtags: extractHashtags(caption),
-        region: region || undefined,
-        visualFilter: visualFilter === "none" ? undefined : visualFilter,
-        isEphemeral: isEphemeral,
-      });
+      // 5. Create Post Record (or Remix if remix context)
+      let post;
+
+      if (remixPostId && remixType && isVideo) {
+        // Create remix
+        const remixResult = await createRemix(
+          remixPostId,
+          remixType,
+          mediaUrl,
+          caption.trim(),
+        );
+
+        if (!remixResult.post) {
+          throw new Error(remixResult.error || "Failed to create remix");
+        }
+        post = remixResult.post;
+      } else {
+        // Create regular post
+        post = await createPost({
+          type: isVideo ? "video" : "photo",
+          mediaUrl,
+          thumbnailUrl,
+          muxUploadId,
+          caption: caption.trim(),
+          hashtags: extractHashtags(caption),
+          region: region || undefined,
+          visualFilter: visualFilter === "none" ? undefined : visualFilter,
+          isEphemeral: isEphemeral,
+          soundId: selectedSound?.id,
+          soundStartTime: 0, // Default start time
+        } as any);
+      }
 
       if (!post) throw new Error("Failed to create post");
+
+      // Mark sound as used if selected
+      if (selectedSound?.id) {
+        try {
+          await fetch(`/api/sounds/${selectedSound.id}/use`, {
+            method: "POST",
+            credentials: "include",
+          });
+        } catch (error) {
+          console.error("Failed to mark sound as used:", error);
+        }
+      }
 
       toast.success(
         isVideo
@@ -292,17 +330,19 @@ export const Upload: React.FC = () => {
                   <button
                     key={filter.id}
                     onClick={() => setVisualFilter(filter.id)}
-                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${visualFilter === filter.id
-                      ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
-                      : "border-leather-700 bg-black/40"
-                      }`}
+                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      visualFilter === filter.id
+                        ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
+                        : "border-leather-700 bg-black/40"
+                    }`}
                   >
                     <span className="text-2xl">{filter.emoji}</span>
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-tighter ${visualFilter === filter.id
-                        ? "text-gold-400"
-                        : "text-leather-400"
-                        }`}
+                      className={`text-[10px] font-bold uppercase tracking-tighter ${
+                        visualFilter === filter.id
+                          ? "text-gold-400"
+                          : "text-leather-400"
+                      }`}
                     >
                       {filter.name}
                     </span>
@@ -348,7 +388,7 @@ export const Upload: React.FC = () => {
                       ];
                       const randomCaption =
                         suggestions[
-                        Math.floor(Math.random() * suggestions.length)
+                          Math.floor(Math.random() * suggestions.length)
                         ];
                       setCaption((prev) =>
                         prev ? `${prev} ${randomCaption}` : randomCaption,
@@ -488,6 +528,19 @@ export const Upload: React.FC = () => {
           </ul>
         </div>
       </main>
+
+      {/* Sound Picker Modal */}
+      {showSoundPicker && (
+        <SoundPicker
+          isOpen={showSoundPicker}
+          onClose={() => setShowSoundPicker(false)}
+          onSelect={(sound) => {
+            setSelectedSound(sound);
+            setShowSoundPicker(false);
+          }}
+          selectedSoundId={selectedSound?.id}
+        />
+      )}
 
       <BottomNav />
     </div>

@@ -13,7 +13,20 @@ export type BeeCapability =
   | "moderation"
   | "analytics"
   | "budget"
-  | "compose";
+  | "compose"
+  | "browser"
+  | "automation"
+  | "research"
+  | "creative"
+  | "voice"
+  | "audio"
+  | "sports"
+  | "info"
+  | "weather"
+  | "food"
+  | "recommendations"
+  | "culture"
+  | "entertainment";
 
 export interface BeeDefinition {
   id: string;
@@ -21,7 +34,17 @@ export interface BeeDefinition {
   core: BeeCore;
   capabilities: BeeCapability[];
   description: string;
-  model: "deepseek" | "mistral" | "flux" | "hunyuan_image" | "hunyuan_video";
+  model:
+    | "deepseek"
+    | "mistral"
+    | "flux"
+    | "hunyuan_image"
+    | "hunyuan_video"
+    | "playwright"
+    | "kling"
+    | "elevenlabs"
+    | "api"
+    | "local";
   endpoint?: string; // For Python Colony bees
 }
 

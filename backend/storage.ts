@@ -381,6 +381,8 @@ export class DatabaseStorage implements IStorage {
       }));
   }
 
+  // getExplorePosts implementation moved to line 548 (uses traceDatabase)
+
   async getNearbyPosts(
     lat: number,
     lon: number,

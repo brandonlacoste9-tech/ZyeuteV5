@@ -8,8 +8,16 @@ router.get("/", async (req, res) => {
     "🚀 Sentry Test Error: Zyeute V5 is reporting for duty!",
   );
   try {
-    const Sentry = await import("@sentry/node");
-    Sentry.captureException(err);
+    // Optional Sentry import - only capture if available
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Optional dependency, may not be installed
+      const Sentry = await import("@sentry/node");
+      Sentry.captureException(err);
+    } catch (sentryError) {
+      // Sentry not installed or not configured - log to console instead
+      console.error("Sentry not available:", sentryError);
+    }
     res.status(500).json({
       success: false,
       message: "Test error triggered and sent to Sentry.",

@@ -58,7 +58,10 @@ export class BrowserControlBee {
         throw new Error(`Failed to start session: ${response.statusText}`);
 
       const data = await response.json();
-      this.sessionId = data.sessionId;
+      this.sessionId = data.sessionId || null;
+      if (!this.sessionId) {
+        throw new Error("Session ID not returned from browser service");
+      }
       return this.sessionId;
     } catch (error) {
       console.error("🦫 Ti-Guy: Oups, le browser veut pas partir!", error);

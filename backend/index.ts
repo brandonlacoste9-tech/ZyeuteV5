@@ -159,6 +159,9 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
       console.error(
         "🔥 [Startup] DATABASE_URL is not set. Set it in .env or your environment.",
       );
+      console.error(
+        "🔥 [Startup] EXITING: Missing DATABASE_URL environment variable",
+      );
       process.exit(1);
     }
     // [CRITICAL] Validate Database Connection First
@@ -167,8 +170,14 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
       const client = await pool.connect();
       client.release();
       console.log("✅ [Startup] Database Connected Successfully");
-    } catch (dbErr) {
+    } catch (dbErr: any) {
       console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
+      console.error(
+        `🔥 [Startup] EXITING: Database connection failed - ${dbErr.message || dbErr.code || "Unknown error"}`,
+      );
+      console.error(
+        `🔥 [Startup] DATABASE_URL format: ${process.env.DATABASE_URL?.substring(0, 30)}...`,
+      );
       process.exit(1);
     }
 
@@ -183,11 +192,20 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
         err?.cause?.code === "42710" ||
         err.message?.includes("already exists")
       ) {
+        console.log(
+          "⚠️ [Startup] Migration warning (already exists):",
+          err.message,
+        );
         console.warn(
           "⚠️ [Startup] Notice: Migration skipped existing objects (Safe to ignore)",
         );
       } else {
         console.error("🚨 [Startup] Database Migrations Failed!", err);
+        console.error(
+          `🔥 [Startup] EXITING: Migration failed - ${err.message || err.code || "Unknown error"}`,
+        );
+        console.error(`🔥 [Startup] Migration error details:`, err);
+        process.exit(1);
       }
     }
 

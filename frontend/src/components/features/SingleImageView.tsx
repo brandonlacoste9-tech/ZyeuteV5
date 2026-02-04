@@ -56,7 +56,9 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
     // AI Generation State
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+    const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(
+      null,
+    );
 
     // Derive counts from props OR real-time updates
     const fireCount = engagement.fireCount ?? post.fire_count;
@@ -101,7 +103,10 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
       setIsGenerating(true);
       try {
-        const result = await generateVideo(post.caption || "Animate this aesthetic scene naturally", post.media_url);
+        const result = await generateVideo(
+          post.caption || "Animate this aesthetic scene naturally",
+          post.media_url,
+        );
         if (result?.videoUrl) {
           setGeneratedVideoUrl(result.videoUrl);
         }
@@ -112,7 +117,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
       }
     };
 
-    const imageSrc = post.media_url || (post as any).original_url || "";
+    const imageSrc = post.media_url || post.original_url || "";
 
     return (
       <div
@@ -132,10 +137,25 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               className="w-full h-full object-contain"
             />
             <button
-              onClick={(e) => { e.stopPropagation(); setGeneratedVideoUrl(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setGeneratedVideoUrl(null);
+              }}
               className="absolute top-20 left-4 text-white bg-black/40 backdrop-blur-md rounded-full p-2 hover:bg-white/20 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
         )}
@@ -297,16 +317,19 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
           {/* Action Buttons (Right Side) */}
           <div className="absolute right-4 bottom-20 flex flex-col items-center gap-6">
-
             {/* AI Generator Button */}
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isGenerating ? 'animate-pulse opacity-80' : 'text-white hover:text-purple-400'}`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isGenerating ? "animate-pulse opacity-80" : "text-white hover:text-purple-400"}`}
             >
-              <div className={`text-3xl filter drop-shadow-lg ${isGenerating ? 'animate-spin' : ''}`}>✨</div>
+              <div
+                className={`text-3xl filter drop-shadow-lg ${isGenerating ? "animate-spin" : ""}`}
+              >
+                ✨
+              </div>
               <span className="font-bold text-xs font-mono text-white drop-shadow-lg uppercase">
-                {isGenerating ? '...' : 'AI'}
+                {isGenerating ? "..." : "AI"}
               </span>
             </button>
 
@@ -316,14 +339,16 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
-                }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${
+                isLiked ? "scale-110" : ""
+              }`}
             >
               <div
-                className={`text-4xl transition-all ${isLiked
-                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                  : "grayscale opacity-80"
-                  }`}
+                className={`text-4xl transition-all ${
+                  isLiked
+                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                    : "grayscale opacity-80"
+                }`}
               >
                 🔥
               </div>

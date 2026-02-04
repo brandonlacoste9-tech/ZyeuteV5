@@ -34,8 +34,8 @@ cp .env.fly.example .env.fly
 
 # Set secrets on Fly.io (never commit these!)
 fly secrets set \
-  OPENAI_API_KEY=sk-... \
-  ANTHROPIC_API_KEY=sk-ant-... \
+  OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE \
+  ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY_HERE \
   DATABASE_URL=postgres://... \
   REDIS_URL=redis://...
 ```
@@ -135,6 +135,7 @@ The following require CLI/terminal and should be delegated:
 ## Next Actions
 
 **For Terminal/CLI Team:**
+
 1. Run `fly launch --region yul`
 2. Configure secrets with `fly secrets set`
 3. Deploy with `fly deploy`

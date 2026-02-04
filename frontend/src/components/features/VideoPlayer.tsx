@@ -78,6 +78,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { tap, impact } = useHaptics();
 
+  // TikTok-style speed controls
+  const [playbackRate, setPlaybackRate] = useState(1.0);
+  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
   // Check for debug mode
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -345,15 +350,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoPlayerLogger.warn(
         `Video loading timeout for ${src.substring(0, 50)}...`,
       );
-      
+
       // Try to auto-retry once before showing error
       if (videoRef.current && src) {
-        videoPlayerLogger.info('Attempting auto-retry for failed video');
+        videoPlayerLogger.info("Attempting auto-retry for failed video");
         videoRef.current.load();
-        
+
         // Give it one more chance with extended timeout
         loadingTimeoutRef.current = setTimeout(() => {
-          videoPlayerLogger.error('Video failed to load after retry');
+          videoPlayerLogger.error("Video failed to load after retry");
           setHasError(true);
           setIsLoading(false);
         }, 10000); // 10s retry timeout
@@ -396,6 +401,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     videoRef.current.muted = muted;
     setIsMuted(muted);
   }, [muted]);
+
+  // Apply playback speed (TikTok-style)
+  useEffect(() => {
+    if (!videoRef.current) return;
+    videoRef.current.playbackRate = playbackRate;
+  }, [playbackRate]);
+
+  // Handle speed change
+  const handleSpeedChange = useCallback(
+    (speed: number) => {
+      setPlaybackRate(speed);
+      setShowSpeedMenu(false);
+      tap();
+    },
+    [tap],
+  );
 
   // Play/Pause toggle
   const togglePlay = useCallback(() => {
@@ -653,7 +674,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
       style={style}
       onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
+      onMouseLeave={() => {
+        setShowControls(false);
+        setShowSpeedMenu(false);
+      }}
       onClick={togglePlay}
     >
       {/* Streaming Debug Overlay */}

@@ -22,6 +22,20 @@ services:
         sync: false
       - key: PYTHON_KERNEL_URL
         value: https://zyeute-kernel.modal.run
+      - key: GOOGLE_CLOUD_PROJECT
+        value: spatial-garden-483401-g8
+      - key: GOOGLE_CLOUD_REGION
+        value: us-central1
+      - key: VERTEX_LOCATION
+        value: us-central1
+      - key: DIALOGFLOW_CX_AGENT_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: VITE_COLONY_API_URL
+        sync: false
+      - key: PORT
+        value: "10000"
 
 databases:
   - name: zyeute-db
