@@ -12,4 +12,4 @@ fi
 
 # 2. Start the Backend
 echo "🔥 [Startup] Starting Node Server..."
-exec node dist/index.js
+exec node dist/index.cjs
