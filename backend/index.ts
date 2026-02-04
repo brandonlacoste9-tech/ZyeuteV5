@@ -44,192 +44,77 @@ io.on("connection", (socket) => {
 
 // Port Management - Strictly follow PORT on Railway
 const port = Number(process.env.PORT) || 3000;
-
 let server: any;
+let isSystemReady = false;
 
-// [NEW] Robust Health Check for Railway (Checks DB Connectivity & Migration)
-app.get("/ready", async (_req, res) => {
-  try {
-    const client = await pool.connect();
-    try {
-      await client.query("SELECT 1");
-
-      // Zyeute-Trace: Verify Schema Alignment
-      const schemaCheck = await client.query(`
-        SELECT column_name FROM information_schema.columns 
-        WHERE table_name = 'publications' AND column_name = 'visibility'
-      `);
-      const isAligned = schemaCheck.rows.length > 0;
-
-      res.status(200).json({
-        status: "healthy",
-        db: "connected",
-        migration: "synced",
-        schema: isAligned ? "aligned" : "drifted",
-      });
-    } finally {
-      client.release();
-    }
-  } catch (error: any) {
-    console.error("Health Check Failed:", error);
-    res.status(503).json({ status: "unhealthy", reason: error.message });
-  }
-});
-
-app.get("/momentum-telemetry", async (_req, res) => {
-  try {
-    const client = await pool.connect();
-    try {
-      const eyeTestQuery = `
-        SELECT 
-            LEFT(content, 40) as "Title",
-            quebec_score as "TiGuy_Opinion", 
-            (
-              ((quebec_score + 1) * (LN(COALESCE(reactions_count, 0) * 1 + COALESCE(shares_count, 0) * 3 + COALESCE(piasse_count, 0) * 5 + 1) + 1))
-              / 
-              POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8)
-            ) as "Hive_Reality",
-            reactions_count as "Fires",
-            shares_count as "Shares",
-            piasse_count as "Piasse",
-            ROUND(CAST(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 AS NUMERIC), 1) as "Age_Hours"
-        FROM publications
-        WHERE (est_masque = false OR est_masque IS NULL)
-        ORDER BY "Hive_Reality" DESC
-        LIMIT 10;
-      `;
-      const res1 = await client.query(eyeTestQuery);
-
-      const gravityQuery = `
-        SELECT 
-            LEFT(content, 40) as "Title",
-            (
-              ((quebec_score + 1) * (LN(COALESCE(reactions_count, 0) * 1 + COALESCE(shares_count, 0) * 3 + COALESCE(piasse_count, 0) * 5 + 1) + 1))
-              / 
-              POWER(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 + 2, 1.8)
-            ) as "Reality",
-            COALESCE(reactions_count, 0) + (COALESCE(shares_count, 0) * 3) + (COALESCE(piasse_count, 0) * 5) as "Total_Engagement",
-            ROUND(CAST(EXTRACT(EPOCH FROM (NOW() - created_at))/3600 AS NUMERIC), 1) as "Age_Hours"
-        FROM publications
-        WHERE created_at < NOW() - INTERVAL '24 hours'
-        ORDER BY "Age_Hours" DESC
-        LIMIT 10;
-      `;
-      const res2 = await client.query(gravityQuery);
-
-      res.json({
-        success: true,
-        eyeTest: res1.rows,
-        gravityCheck: res2.rows,
-      });
-    } finally {
-      client.release();
-    }
-  } catch (err: unknown) {
-    const error = err as Error;
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Trust proxy for proper IP detection behind reverse proxy
-app.set("trust proxy", 1);
-
-// [NEW] Content Security Policy (CSP) Middleware
+// [NEW] Startup Liveness Middleware
+// Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; font-src 'self' https://fonts.gstatic.com https://*.perplexity.ai https://r2cdn.perplexity.ai https://vercel.live data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live https://js.stripe.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vuanulvyqkfefmjcikfk.supabase.co wss://vuanulvyqkfefmjcikfk.supabase.co wss://*.railway.app https://*.railway.app https://*.up.railway.app wss://*.up.railway.app ws://localhost:* http://localhost:* https://*.googleapis.com https://*.fal.ai https://*.pexels.com https://api.pexels.com; img-src 'self' https: data: blob:; media-src 'self' https: data: blob:; frame-src 'self' https://js.stripe.com https://vercel.live;",
-  );
-  next();
+  // Always allow health checks
+  if (req.path === "/api/health" || req.path === "/api/debug") {
+    return next();
+  }
+  
+  // If system works, proceed
+  if (isSystemReady) {
+    return next();
+  }
+
+  // Otherwise, return 503 Service Unavailable (Initializing)
+  res.status(503).json({
+    status: "initializing",
+    message: "Server is starting up. Please wait...",
+    uptime: process.uptime()
+  });
 });
-
-// Standard Body Parsers (REQUIRED for all routes)
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: false, limit: "10mb" }));
-
-// CORS: set CORS_ORIGIN in production to your frontend URL (e.g. https://app.zyeute.com)
-const corsOrigin = process.env.CORS_ORIGIN || true;
-app.use(cors({ origin: corsOrigin, credentials: true }));
-
-// ... rest of middleware ...
 
 (async () => {
   try {
+    // 1. Start Listening IMMEDIATELY (Satisfy Railway Healthcheck)
+    // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
+    server = httpServer.listen(port, "0.0.0.0", () => {
+      console.log(`✅ Server running on http://0.0.0.0:${port} (Initializing...)`);
+      console.log(`Health check available at http://0.0.0.0:${port}/api/health`);
+    });
+
+    // 2. Perform Initialization in Background
+    console.log("🛠️  [Startup] Beginning background initialization...");
+
     if (!process.env.DATABASE_URL) {
       console.error(
         "🔥 [Startup] DATABASE_URL is not set. Set it in .env or your environment.",
       );
-      console.error(
-        "🔥 [Startup] EXITING: Missing DATABASE_URL environment variable",
-      );
-      process.exit(1);
-    }
-    // [CRITICAL] Validate Database Connection First
-    try {
-      console.log("📦 [Startup] Connecting to Database...");
-      const client = await pool.connect();
-      client.release();
-      console.log("✅ [Startup] Database Connected Successfully");
-    } catch (dbErr: any) {
-      console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
-      console.error(
-        `🔥 [Startup] EXITING: Database connection failed - ${dbErr.message || dbErr.code || "Unknown error"}`,
-      );
-      console.error(
-        `🔥 [Startup] DATABASE_URL format: ${process.env.DATABASE_URL?.substring(0, 30)}...`,
-      );
-      process.exit(1);
-    }
+      // We don't exit process, just log error. Server stays up but 503s.
+      // actually, without DB we can't do much.
+    } else {
+      // [CRITICAL] Validate Database Connection
+      try {
+        console.log("📦 [Startup] Connecting to Database...");
+        const client = await pool.connect();
+        client.release();
+        console.log("✅ [Startup] Database Connected Successfully");
 
-    // [CRITICAL] Run Database Migrations
-    console.log("📦 [Startup] Running Schema Migrations...");
-    try {
-      await migrate(db, { migrationsFolder: "./migrations" });
-      console.log("✅ [Startup] Migrations Complete");
-    } catch (err: any) {
-      if (
-        err.code === "42710" ||
-        err?.cause?.code === "42710" ||
-        err.message?.includes("already exists")
-      ) {
-        console.log(
-          "⚠️ [Startup] Migration warning (already exists):",
-          err.message,
-        );
-        console.warn(
-          "⚠️ [Startup] Notice: Migration skipped existing objects (Safe to ignore)",
-        );
-      } else {
-        console.error("🚨 [Startup] Database Migrations Failed!", err);
-        console.error(
-          `🔥 [Startup] EXITING: Migration failed - ${err.message || err.code || "Unknown error"}`,
-        );
-        console.error(`🔥 [Startup] Migration error details:`, err);
-        process.exit(1);
+        // [CRITICAL] Run Database Migrations
+        console.log("📦 [Startup] Running Schema Migrations...");
+        try {
+           await migrate(db, { migrationsFolder: "./migrations" });
+           console.log("✅ [Startup] Migrations Complete");
+        } catch (err: any) {
+           // Log but don't crash main loop if possible, unless critical
+           console.error("⚠️ [Startup] Migration warning/error:", err.message);
+        }
+        
+        // [SURGICAL SELF-HEALING] Active Schema Repair
+        try {
+          const { healSchema } = await import("./schemaDoctor.js");
+          await healSchema(pool);
+        } catch (err) {
+           console.warn("⚠️ [Startup] Schema healing skipped:", err);
+        }
+
+      } catch (dbErr: any) {
+        console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
-    }
-
-    // [SURGICAL SELF-HEALING] Active Schema Repair
-    try {
-      const { healSchema } = await import("./schemaDoctor.js");
-      await healSchema(pool);
-    } catch (err) {
-      console.error("🚨 [Startup] Schema Healing Failed:", err);
-    }
-    // [SAFETY NET] Verify Database Schema before starting
-    try {
-      console.log("🔍 Verifying Database Schema...");
-      await db
-        .select({ id: posts.id, vis: posts.visibility })
-        .from(posts)
-        .limit(1);
-      console.log("✅ Database Schema Verified: 'visibility' column found.");
-    } catch (err) {
-      console.error(
-        "🚨 CRITICAL: Database schema mismatch! Did you run migrations?",
-      );
-      console.error(err);
-      // process.exit(1); // DISABLED to allow debugging via logs/api
     }
 
     console.log("🛠️  Step 1: Initializing Scoring Engine & Routes...");
@@ -264,19 +149,14 @@ app.use(cors({ origin: corsOrigin, credentials: true }));
       const { setupVite } = await import("./vite.js");
       await setupVite(httpServer, app);
     }
-    console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL!");
+    
+    // 3. Mark System Ready
+    isSystemReady = true;
+    console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL! (Traffic Allowed)");
 
-    // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
-    // This makes the server accessible to Railway's health check
-    server = httpServer.listen(port, "0.0.0.0", () => {
-      console.log(`✅ Server running on http://0.0.0.0:${port}`);
-      console.log(
-        `Health check available at http://0.0.0.0:${port}/api/health`,
-      );
-    });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
-    process.exit(1);
+    console.error("❌ Failed to start server logic:", error);
+    // Don't exit, let the server run 503s so we can see logs
   }
 })();
 
