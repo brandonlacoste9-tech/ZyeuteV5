@@ -52,7 +52,11 @@ let isSystemReady = false;
 app.use((req, res, next) => {
   // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
   if (req.path === "/api/health") {
-    return res.status(200).json({ status: "ok", stage: "middleware_override" });
+    return res.status(200).json({ 
+      status: "ok", 
+      stage: isSystemReady ? "ready" : "initializing",
+      uptime: process.uptime()
+    });
   }
   
   // Debug route also overrides
