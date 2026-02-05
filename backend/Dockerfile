@@ -24,7 +24,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install ALL dependencies (including devDeps for TypeScript build)
-RUN npm ci
+# --legacy-peer-deps: express-async-errors declares express@4; we use express@5 (native async)
+RUN npm ci --legacy-peer-deps
 
 # ---------- Stage 3: Build ----------
 FROM base AS build
