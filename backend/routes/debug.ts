@@ -56,4 +56,27 @@ debugRouter.get("/momentum", async (_req, res) => {
   }
 });
 
+// GET /api/debug/feed-db – run explore query and return success or the raw DB error (for fixing "nothing coming through")
+debugRouter.get("/feed-db", async (_req, res) => {
+  try {
+    const { storage } = await import("../storage.js");
+    const posts = await storage.getExplorePosts(0, 1, "quebec");
+    res.json({
+      ok: true,
+      count: posts?.length ?? 0,
+      hint: "If count is 0, DB is empty; run seed or use Pexels. If you got an error before, the table might be missing – run migrations.",
+    });
+  } catch (err: unknown) {
+    const e = err as { message?: string; code?: string; detail?: string; table?: string };
+    res.json({
+      ok: false,
+      error: e.message || "Unknown error",
+      code: e.code,
+      detail: e.detail,
+      table: e.table,
+      hint: 'If table is "publications", run migrations. If your DB has "posts" instead, you may need to rename or add a view.',
+    });
+  }
+});
+
 export default debugRouter;

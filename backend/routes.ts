@@ -521,27 +521,23 @@ export async function registerRoutes(
   });
 
   // Get explore posts (public, popular) with Hive filtering
+  // On DB error we return 200 + [] so the frontend can fall back to Pexels instead of showing a hard error
   app.get("/api/explore", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 0;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const hiveId = (req.query.hive as string) || "quebec";
     try {
-      const page = parseInt(req.query.page as string) || 0;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const hiveId = (req.query.hive as string) || "quebec";
-
       const posts = await storage.getExplorePosts(page, limit, hiveId);
       res.json({ posts, hiveId });
     } catch (error: any) {
       console.error("Get explore error:", {
         message: error.message,
-        code: error.code, // Postgres error code
+        code: error.code,
         detail: error.detail,
         table: error.table,
         column: error.column,
       });
-      res.status(500).json({
-        error: "Failed to get explore posts",
-        code: "EXPLORE_ERROR",
-        message: error?.message || "Explore failed",
-      });
+      res.status(200).json({ posts: [], hiveId });
     }
   });
 
