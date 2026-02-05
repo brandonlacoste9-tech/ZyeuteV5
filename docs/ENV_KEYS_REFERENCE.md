@@ -101,3 +101,13 @@ The header shows the Québec Or symbol (Fleur-de-lis with lion, QUÉBEC OR, mapl
 **`frontend/public/quebec-or-symbol.png`**
 
 Copy your symbol image there; it appears next to the Zyeuté logo on larger screens. If the file is missing, the symbol is hidden.
+
+---
+
+## “No videos” in the feed (Vercel + Railway)
+
+The **feed** loads from the **Railway backend** (not Vercel). When the DB has no posts, the app falls back to **Pexels** via the backend.
+
+- **Set `PEXELS_API_KEY` on Railway** (Project → Variables). Without it, the Pexels fallback fails and the feed stays empty.
+- Ensure **DATABASE_URL** on Railway is correct so explore posts can load when you have content.
+- Frontend calls `https://zyeutev5-production.up.railway.app` when not on localhost; CORS must allow your Vercel domain if you use a custom domain.

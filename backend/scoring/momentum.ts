@@ -325,11 +325,13 @@ export class MomentumBlender {
   constructor(config: Partial<ScoringConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.decay = new DecayEngine(this.config.decayHalfLife);
+    // Strip surrounding quotes from REDIS_URL (Railway/env may have "rediss://...")
+    const rawRedisUrl = process.env.REDIS_URL?.trim()?.replace(/^["']+|["']+$/g, "");
     const hasRedis =
-      (process.env.REDIS_URL && process.env.REDIS_URL.trim()) ||
+      (rawRedisUrl && rawRedisUrl.length > 0) ||
       (process.env.REDIS_HOST && process.env.REDIS_HOST.trim());
     const redisUrl = hasRedis
-      ? process.env.REDIS_URL?.trim() ||
+      ? rawRedisUrl ||
         `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
       : undefined;
     this.cache = new EngagementCache(

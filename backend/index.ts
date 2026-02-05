@@ -28,6 +28,18 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 // const pool = new Pool({...}) -> Removed to avoid collision
 
 const app = express();
+
+// CORS: allow frontend (Vercel / localhost) to call this backend
+app.use(
+  cors({
+    origin: true, // reflect request origin so Vercel + localhost both work
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+app.use(express.json());
+
 const httpServer = createServer(app);
 
 // Initialize Socket.IO for Real-Time Features

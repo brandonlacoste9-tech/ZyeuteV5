@@ -803,6 +803,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               ? "Impossible de charger le fil."
               : "Aucun contenu disponible pour le moment."}
         </p>
+        {fetchError && (
+          <p className="text-stone-500 text-sm mb-2 max-w-sm">
+            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY (Railway).
+          </p>
+        )}
         {(!isOnline || fetchError) && (
           <button
             type="button"
