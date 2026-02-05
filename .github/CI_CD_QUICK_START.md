@@ -83,6 +83,25 @@ CODECOV_TOKEN         # For test coverage reports
 SLACK_WEBHOOK_URL     # For deployment notifications
 ```
 
+### Docker Hub (Zyeute images)
+
+To build and push images to Docker Hub as **brandontech** (workflow: `Docker Build & Push`):
+
+```
+DOCKERHUB_USERNAME    # Your Docker Hub username (brandontech)
+DOCKERHUB_TOKEN       # Docker Hub Personal Access Token (PAT)
+```
+
+**Get Docker Hub PAT**: [Docker Hub → Account → Security → Access Tokens](https://hub.docker.com/settings/security)
+
+**Images built**:
+- `brandontech/zyeute-backend:latest` (and tagged with SHA)
+- `brandontech/zyeute-colony-worker:latest` (and tagged with SHA)
+
+**Workflow triggers**:
+- Automatic: When pushing to `main` and changes are made to `backend/`, `colony.dockerfile`, or root `package.json`/`package-lock.json`
+- Manual: Go to Actions → Docker Build & Push → Run workflow
+
 ## 📊 Test Suite Overview
 
 ```
