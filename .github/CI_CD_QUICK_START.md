@@ -83,6 +83,17 @@ CODECOV_TOKEN         # For test coverage reports
 SLACK_WEBHOOK_URL     # For deployment notifications
 ```
 
+### Docker Hub (Zyeute images)
+
+To build and push images to Docker Hub as **brandontech** (workflow: `Docker Build & Push`):
+
+```
+DOCKERHUB_USERNAME    # e.g. brandontech
+DOCKERHUB_TOKEN       # Docker Hub PAT (Settings → Security → Access Tokens)
+```
+
+Images: `brandontech/zyeute-backend`, `brandontech/zyeute-colony-worker`. Triggered on push to `main` when backend/ or Dockerfiles change, or via **Actions → Docker Build & Push → Run workflow**.
+
 ## 📊 Test Suite Overview
 
 ```

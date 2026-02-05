@@ -81,9 +81,9 @@ USER appuser
 # Expose port (Fly.io will map this internally)
 EXPOSE 8080
 
-# Health check
+# Health check (app serves /api/health; PORT may be overridden by Railway)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const p=process.env.PORT||8080; require('http').get('http://127.0.0.1:'+p+'/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
 
 # Start the server (compiled from TypeScript)
 CMD ["node", "dist/index.js"]
