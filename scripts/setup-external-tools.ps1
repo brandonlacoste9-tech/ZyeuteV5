@@ -1,5 +1,6 @@
 # Clone all external tools & skills into external/ (Windows).
 # Run: .\scripts\setup-external-tools.ps1
+# Zyeute lean: also creates docs/planning and checks for local Ollama (AGENT_MODE=Hybrid).
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -25,6 +26,23 @@ foreach ($r in $repos) {
     Write-Host "Cloning $($r.url) -> $($r.dir)"
     git clone --depth 1 $r.url $r.dir
   }
+}
+
+Set-Location $root
+
+# Planning dir (task_plan, brand prompt live in docs/planning/)
+$planningDir = Join-Path $root "docs" "planning"
+if (-not (Test-Path $planningDir)) {
+  New-Item -ItemType Directory -Path $planningDir -Force | Out-Null
+  Write-Host "Created docs/planning/"
+}
+
+# Optional: if Ollama is running, suggest AGENT_MODE=Hybrid to save GenAI App Builder credit
+try {
+  $null = Test-NetConnection -ComputerName localhost -Port 11434 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+  Write-Host "Ollama detected on port 11434. Set AGENT_MODE=Hybrid in .env to use local LLM for small tasks (saves credit)." -ForegroundColor Cyan
+} catch {
+  # ignore
 }
 
 Write-Host "Done. External tools are in external/"
