@@ -88,6 +88,7 @@ SLACK_WEBHOOK_URL     # For deployment notifications
 To build and push images to Docker Hub as **brandontech** (workflow: `Docker Build & Push`):
 
 ```
+<<<<<<< copilot/docker-login-implementation
 DOCKERHUB_USERNAME    # Your Docker Hub username (brandontech)
 DOCKERHUB_TOKEN       # Docker Hub Personal Access Token (PAT)
 ```
@@ -101,6 +102,13 @@ DOCKERHUB_TOKEN       # Docker Hub Personal Access Token (PAT)
 **Workflow triggers**:
 - Automatic: When pushing to `main` and changes are made to `backend/`, `colony.dockerfile`, or root `package.json`/`package-lock.json`
 - Manual: Go to Actions → Docker Build & Push → Run workflow
+=======
+DOCKERHUB_USERNAME    # e.g. brandontech
+DOCKERHUB_TOKEN       # Docker Hub PAT (Settings → Security → Access Tokens)
+```
+
+Images: `brandontech/zyeute-backend`, `brandontech/zyeute-colony-worker`. Triggered on push to `main` when backend/ or Dockerfiles change, or via **Actions → Docker Build & Push → Run workflow**.
+>>>>>>> main
 
 ## 📊 Test Suite Overview
 
