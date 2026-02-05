@@ -379,20 +379,18 @@ export async function getFlaggedUsers(
     .orderBy(desc(moderationLogs.createdAt));
 
   // Convert logs to flags (simplified)
-  return logs.map((log) => ({
-    userId: log.userId,
-    flagType: "automated",
-    severity:
-      log.score >= 8
-        ? "critical"
-        : log.score >= 5
-          ? "high"
-          : log.score >= 3
-            ? "medium"
-            : "low",
-    reason: log.reason || "",
-    evidence: log.details ? [log.details] : [],
-    riskScore: log.score * 10,
-    flaggedAt: log.createdAt || new Date(),
-  }));
+  const score = (s: number | null | undefined) => s ?? 0;
+  return logs.map((log) => {
+    const s = score(log.score);
+    return {
+      userId: log.userId,
+      flagType: "automated",
+      severity:
+        s >= 8 ? "critical" : s >= 5 ? "high" : s >= 3 ? "medium" : "low",
+      reason: log.reason || "",
+      evidence: log.details ? [log.details] : [],
+      riskScore: s * 10,
+      flaggedAt: log.createdAt || new Date(),
+    };
+  });
 }
