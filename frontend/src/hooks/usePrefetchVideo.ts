@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { videoCache } from "@/lib/videoWarmCache";
 import { logger } from "@/lib/logger";
+import { mediaTelemetry } from "@/lib/mediaTelemetry";
 
 const prefetchLogger = logger.withContext("usePrefetchVideo");
 
@@ -93,6 +94,7 @@ export function usePrefetchVideo(
   useEffect(() => {
     const cached = getCacheState();
     if (cached.type === "blob") {
+      mediaTelemetry.recordCacheHit(url);
       setSource(cached);
       return;
     }
@@ -105,6 +107,8 @@ export function usePrefetchVideo(
       setDebugInfo({ requests: 0, concurrency: 1 });
       return;
     }
+
+    if (cached.type === "url") mediaTelemetry.recordCacheMiss(url);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;

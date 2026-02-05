@@ -14,6 +14,7 @@ import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
 import { VideoSource } from "@/hooks/usePrefetchVideo";
 import { videoCache } from "@/lib/videoWarmCache";
+import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
 
 const MuxPlayer = React.lazy(() => import("@mux/mux-player-react"));
@@ -72,9 +73,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [volume, setVolume] = useState(1);
   const [showControls, setShowControls] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  type Readiness = "idle" | "loading" | "ready" | "error";
+  const [readiness, setReadiness] = useState<Readiness>("loading");
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
+  const [muxError, setMuxError] = useState(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { tap, impact } = useHaptics();
 
@@ -90,6 +92,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const storageParam = localStorage.getItem("debug") === "true";
     setIsDebugEnabled(debugParam || storageParam);
   }, []);
+
+  // Reset Mux error state when playback ID changes (e.g. scroll to new video)
+  useEffect(() => {
+    if (muxPlaybackId) setMuxError(false);
+  }, [muxPlaybackId]);
 
   // MSE State
   const mseRef = useRef<MediaSource | null>(null);
@@ -180,7 +187,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     mseRef.current = mediaSource;
 
     const processQueue = () => {
+      const ms = mseRef.current;
       const sb = sourceBufferRef.current;
+      // Validate MediaSource still open before any append (avoids "SourceBuffer removed" / invalid state)
+      if (!ms || ms.readyState !== "open") return;
       if (!sb || sb.updating || pendingChunksRef.current.length === 0) return;
 
       const data = pendingChunksRef.current.shift();
@@ -190,11 +200,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         } catch (e: any) {
           if (e.name === "QuotaExceededError") {
             videoPlayerLogger.warn(
-              "MSE Quota Exceeded. Clearing cache buffer...",
+              "MSE Quota Exceeded. Clearing played buffer to reduce memory...",
             );
-            // Attempt to clear some buffer if possible, or just ignore this chunk for now
-            // SourceBuffer.remove() could be used here but it's complex.
-            // For now, we signal a retry or fallback.
+            // Clear played content: keep ~30s behind playhead for seek stability
+            const video = videoRef.current;
+            if (video && sb.buffered.length > 0 && !sb.updating) {
+              const start = 0;
+              const end = Math.max(0, video.currentTime - 30);
+              if (end > start) {
+                try {
+                  sb.remove(start, end);
+                } catch (removeErr: any) {
+                  videoPlayerLogger.warn("MSE remove failed:", removeErr?.message);
+                }
+              }
+            }
+            // Chunk stays in queue; updateend will call processQueue again
+            pendingChunksRef.current.unshift(data);
           }
           videoPlayerLogger.error("MSE Append Error:", e);
         }
@@ -207,6 +229,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         const mimeType =
           videoSource.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+        if (videoSource.mimeType && !mimeType.toLowerCase().includes("avc1")) {
+          videoPlayerLogger.warn(
+            "Non-H.264 codec in MSE path may cause decoder switches mid-feed:",
+            mimeType,
+          );
+        }
         if (!MediaSource.isTypeSupported(mimeType)) {
           videoPlayerLogger.warn(
             `MSE Type not supported: ${mimeType}. Falling back to URL.`,
@@ -217,14 +245,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         const sb = mediaSource.addSourceBuffer(mimeType);
         sourceBufferRef.current = sb;
+        // 'sequence' mode: browser assigns timestamps so segments have no gaps. Use for concat/range fetches with possible discontinuities.
+        try {
+          sb.mode = "sequence";
+        } catch {
+          // Some environments may not support changing mode; default 'segments' is fine for strict MP4.
+        }
 
         sb.addEventListener("updateend", () => {
+          // Guard: queued updateend can fire after rapid source change / MediaSource close—must check before any SB/MS use.
+          if (mediaSource.readyState !== "open") return;
+          // SourceBuffer.remove() is async: we only run processQueue/endOfStream after updateend (when sb.updating is false).
           processQueue();
           if (
             videoSource.totalSize &&
             (sb as any)._lastByte >= videoSource.totalSize - 1
           ) {
-            if (mediaSource.readyState === "open" && !sb.updating) {
+            if (!sb.updating) {
               mediaSource.endOfStream();
             }
           }
@@ -240,7 +277,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (mseRetryCount < 1) {
           setMseRetryCount((c) => c + 1);
         } else {
-          setHasError(true);
+          setReadiness("error");
         }
       }
     };
@@ -250,6 +287,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       mediaSource.removeEventListener("sourceopen", handleSourceOpen);
       pendingChunksRef.current = [];
+      sourceBufferRef.current = null;
+      mseRef.current = null;
+      // Revoke blob URL after a tick so any in-flight operations can complete
       setTimeout(() => URL.revokeObjectURL(url), 100);
     };
   }, [videoSource, mseRetryCount]);
@@ -274,6 +314,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Soft Fallback: If MSE fails, try raw URL once before giving up
       if (mseUrl) {
         videoPlayerLogger.warn("MSE playback failed, falling back to raw URL");
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
         setMseUrl(null);
         return;
       }
@@ -286,8 +330,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         timestamp: new Date().toISOString(),
       });
 
-      setHasError(true);
-      setIsLoading(false);
+      setReadiness("error");
     },
     [mseUrl, src, videoSource],
   );
@@ -300,6 +343,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoPlayerLogger.debug(
         `TTFF for ${src.slice(-10)}: ${metricsRef.current.timeToFirstFrame}ms`,
       );
+      mediaTelemetry.recordTimeToFirstFrame(src, metricsRef.current.timeToFirstFrame);
     }
     if (metricsRef.current.lastStallStart) {
       metricsRef.current.totalStalledTime +=
@@ -314,59 +358,53 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, []);
 
   const handleCanPlay = useCallback(() => {
-    // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
     }
+    const ms = metricsRef.current.startTime
+      ? Date.now() - metricsRef.current.startTime
+      : 0;
+    if (ms > 0) mediaTelemetry.recordBufferReady(src, ms);
     console.log("[VideoPlayer] ✅ VIDEO CAN PLAY - Ready for playback", {
       src: src?.substring(0, 60),
     });
-    setIsLoading(false);
-    setHasError(false);
+    setReadiness("ready");
   }, [src]);
 
   // Handle loading started
   const handleLoadStart = useCallback(() => {
-    setIsLoading(true);
+    setReadiness("loading");
     metricsRef.current.startTime = Date.now();
   }, []);
 
-  // Reset states when source changes
+  // Reset states when source changes (state machine: -> loading)
   useEffect(() => {
-    setHasError(false);
-    setIsLoading(true);
+    setReadiness("loading");
     setDuration(0);
     setCurrentTime(0);
 
-    // Clear any existing timeout
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
 
-    // Set a timeout to prevent infinite loading
-    // Increased from 15s to 30s for better Pexels video loading
     loadingTimeoutRef.current = setTimeout(() => {
       videoPlayerLogger.warn(
         `Video loading timeout for ${src.substring(0, 50)}...`,
       );
 
-      // Try to auto-retry once before showing error
       if (videoRef.current && src) {
         videoPlayerLogger.info("Attempting auto-retry for failed video");
         videoRef.current.load();
 
-        // Give it one more chance with extended timeout
         loadingTimeoutRef.current = setTimeout(() => {
           videoPlayerLogger.error("Video failed to load after retry");
-          setHasError(true);
-          setIsLoading(false);
-        }, 10000); // 10s retry timeout
+          setReadiness("error");
+        }, 10000);
       } else {
-        setHasError(true);
-        setIsLoading(false);
+        setReadiness("error");
       }
-    }, 30000); // Increased from 15s to 30s
+    }, 30000);
 
     return () => {
       if (loadingTimeoutRef.current) {
@@ -418,7 +456,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     [tap],
   );
 
-  // Play/Pause toggle
+  // Play/Pause toggle (handle play() promise to avoid unhandled rejection)
   const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
 
@@ -428,7 +466,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onPause?.();
       tap();
     } else {
-      videoRef.current.play();
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          videoPlayerLogger.warn("Play failed (e.g. policy or interrupted):", err);
+          setIsPlaying(false);
+        });
+      }
       setIsPlaying(true);
       onPlay?.();
       tap();
@@ -552,13 +596,35 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  // Mux Player Integration - Return early if Mux ID is present
+  // Mux Player Integration - Return early if Mux ID is present (with error handling)
   if (muxPlaybackId) {
     videoPlayerLogger.info("[VideoPlayer] Using MUX path:", {
       playbackId: muxPlaybackId,
       autoPlay,
       muted,
     });
+    if (muxError) {
+      return (
+        <div
+          className={cn(
+            "relative flex items-center justify-center bg-zinc-900",
+            className,
+          )}
+          style={style}
+        >
+          <div className="text-center p-4">
+            <div className="text-4xl mb-2">⚠️</div>
+            <p className="text-white/60 text-sm mb-3">Vidéo non disponible</p>
+            <button
+              onClick={() => setMuxError(false)}
+              className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 text-sm"
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div
         className={cn(
@@ -589,6 +655,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onEnded={onEnded}
             onPlay={onPlay}
             onPause={onPause}
+            onError={(e: any) => {
+              videoPlayerLogger.error("[VideoPlayer] Mux playback error:", e);
+              setMuxError(true);
+            }}
           />
         </Suspense>
       </div>
@@ -623,8 +693,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // If there's a loading error, show error state with retry option
-  if (hasError) {
+  if (readiness === "error") {
     return (
       <div
         className={cn(
@@ -641,8 +710,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="flex gap-2 justify-center">
             <button
               onClick={() => {
-                setHasError(false);
-                setIsLoading(true);
+                setReadiness("loading");
                 if (videoRef.current) {
                   videoRef.current.load();
                 }
@@ -681,7 +749,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       onClick={togglePlay}
     >
       {/* Streaming Debug Overlay */}
-      // eslint-disable-next-line react-hooks/refs
       {isDebugEnabled && debug && (
         <Suspense fallback={null}>
           <StreamingDebugOverlay
@@ -730,6 +797,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         loop={loop} // Explicit attribute for continuous playback
         crossOrigin="anonymous"
         preload={preload}
+        fetchPriority={priority ? "high" : "low"} // Next/active: prioritize over thumbnails (Chrome 102+)
         className="w-full h-full object-cover"
         style={videoStyle}
         onError={handleError}
@@ -739,7 +807,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onWaiting={handleWaiting}
       />
       {/* Loading State */}
-      {isLoading && (
+      {readiness === "loading" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
           <div className="text-center">
             <svg
@@ -766,7 +834,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
       {/* Play/Pause Overlay */}
-      {!isPlaying && !isLoading && (
+      {!isPlaying && readiness !== "loading" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <button
             onClick={(e) => {

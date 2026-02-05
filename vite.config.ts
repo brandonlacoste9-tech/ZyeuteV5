@@ -17,14 +17,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "frontend", "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
-      "@reduxjs/toolkit": path.resolve(
-        __dirname,
-        "node_modules/@reduxjs/toolkit/dist/cjs/index.js",
-      ),
-      "react-hook-form": path.resolve(
-        __dirname,
-        "node_modules/react-hook-form/dist/index.cjs.js",
-      ),
+      // Let Vite resolve @reduxjs/toolkit and react-hook-form via package exports
     },
   },
   css: {

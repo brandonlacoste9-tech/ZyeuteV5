@@ -122,10 +122,13 @@ export const Upload: React.FC = () => {
 
       if (isVideo) {
         // --- VIDEO FLOW (MUX) ---
-        // 1. Generate client-side thumbnail
+        // 1. Generate client-side thumbnail (with timeout telemetry)
         const { generateVideoThumbnail } =
           await import("../utils/videoThumbnail");
-        const thumbDataUrl = await generateVideoThumbnail(file);
+        const { mediaTelemetry } = await import("../lib/mediaTelemetry");
+        const thumbDataUrl = await generateVideoThumbnail(file, {
+          onTimeout: () => mediaTelemetry.recordThumbnailTimeout("upload"),
+        });
         const thumbBlob = dataURIToBlob(thumbDataUrl);
 
         // 2. Upload thumbnail to Supabase

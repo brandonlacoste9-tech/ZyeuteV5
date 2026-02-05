@@ -35,7 +35,9 @@ export function useVideoActivation(
 
   const visibilityRatio = entry?.intersectionRatio || 0;
   const isActuallyVisible = visibilityRatio > 0;
-  const isFocused = visibilityRatio > 0.6; // Stricter focus
+  // 50% viewability: trigger play when half the video is visible (TikTok-style)
+  const VIEWABILITY_PLAY_THRESHOLD = 0.5;
+  const isFocused = visibilityRatio >= VIEWABILITY_PLAY_THRESHOLD;
 
   // Engagement Tracker
   useEffect(() => {

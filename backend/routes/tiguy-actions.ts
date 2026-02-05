@@ -691,11 +691,15 @@ router.get("/hockey/facts", (req, res) => {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * GET /api/tiguy/weather/:city
- * Get weather for a Quebec city
+ * GET /api/tiguy/weather or /api/tiguy/weather/:city
+ * Get weather for a Quebec city (default: Montreal)
  */
-router.get("/weather/:city?", async (req, res) => {
-  const city = (req.params as { city?: string }).city || "Montreal";
+router.get("/weather", async (req, res) => {
+  const result = await weatherBee.getWeather("Montreal");
+  res.json(result);
+});
+router.get("/weather/:city", async (req, res) => {
+  const city = (req.params as { city: string }).city;
   const result = await weatherBee.getWeather(city);
   res.json(result);
 });
@@ -870,13 +874,24 @@ router.post("/voice/speak", async (req, res) => {
 });
 
 /**
- * GET /api/tiguy/voice/pronunciation/:word
- * Get pronunciation guide
+ * GET /api/tiguy/voice/pronunciation or /api/tiguy/voice/pronunciation/:word
+ * Get pronunciation guide (full or for one word)
  */
-router.get("/voice/pronunciation/:word?", (req, res) => {
+router.get("/voice/pronunciation", (req, res) => {
   const guide = voiceBee.getPronunciationGuide();
-  const word = (req.params as { word?: string }).word?.toLowerCase();
-
+  res.json({
+    success: true,
+    response:
+      "📖 **Guide de prononciation québécoise:**\n\n" +
+      Object.entries(guide)
+        .map(([w, p]) => `- **${w}**: ${p}`)
+        .join("\n"),
+    guide,
+  });
+});
+router.get("/voice/pronunciation/:word", (req, res) => {
+  const guide = voiceBee.getPronunciationGuide();
+  const word = (req.params as { word: string }).word?.toLowerCase();
   if (word && guide[word]) {
     res.json({
       success: true,

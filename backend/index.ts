@@ -1,11 +1,14 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+// Load .env then .env.local (Vercel CLI: vercel env pull .env.local)
+dotenv.config();
+dotenv.config({ path: ".env.local", override: true });
+// Log but do NOT exit — keep server up so one bad error doesn't kill the process.
+// Use a process manager (e.g. Railway, PM2) to restart if needed.
 process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
-  process.exit(1);
+  console.error("❌ Uncaught Exception (server staying up):", err);
 });
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection:", reason, promise);
-  process.exit(1);
+  console.error("❌ Unhandled Rejection (server staying up):", reason, promise);
 });
 import express from "express";
 import cors from "cors";
@@ -83,7 +86,8 @@ app.use((req, res, next) => {
     // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
     server = httpServer.listen(port, "0.0.0.0", () => {
       console.log(`✅ Server running on http://0.0.0.0:${port} (Initializing...)`);
-      console.log(`Health check available at http://0.0.0.0:${port}/api/health`);
+      console.log(`   Open in browser: http://127.0.0.1:${port}  (or http://localhost:${port})`);
+      console.log(`   Health: http://127.0.0.1:${port}/api/health`);
     });
 
     // 2. Perform Initialization in Background
@@ -162,6 +166,7 @@ app.use((req, res, next) => {
     // 3. Mark System Ready
     isSystemReady = true;
     console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL! (Traffic Allowed)");
+    console.log(`   → Open app: http://127.0.0.1:${port}`);
 
   } catch (error) {
     console.error("❌ Failed to start server logic:", error);

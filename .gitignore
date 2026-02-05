@@ -58,3 +58,4 @@ external/
 tools/
 video-diag-output.txt
 .claude/
+.env*.local
