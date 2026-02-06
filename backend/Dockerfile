@@ -64,8 +64,8 @@ COPY --from=deps /app/node_modules /app/node_modules
 # Copy built backend dist
 COPY --from=build /app/backend/dist ./dist
 
-# Copy backend package.json (from build stage so context can be repo root or backend/)
-COPY --from=build /app/backend/package.json ./
+# Copy root package.json (monorepo - backend doesn't have its own package.json)
+COPY --from=build /app/package.json ./
 
 # Copy Python Colony Bridge (if exists)
 COPY --from=build /app/backend/ai ./ai
