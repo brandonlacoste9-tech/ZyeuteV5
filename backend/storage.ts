@@ -38,7 +38,7 @@ import {
   type Transaction,
   type InsertTransaction,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNull, or, gte, lte, alias } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
@@ -1221,13 +1221,19 @@ export class DatabaseStorage implements IStorage {
     limit: number = 50,
   ): Promise<(Transaction & { sender?: User; receiver?: User })[]> {
     return traceDatabase("SELECT", "transactions", async () => {
+      // Create aliases for sender and receiver
+      const sender = alias(users, "sender");
+      const receiver = alias(users, "receiver");
+
       const results = await db
         .select({
           transaction: transactions,
-          sender: users,
+          sender: sender,
+          receiver: receiver,
         })
         .from(transactions)
-        .leftJoin(users, eq(transactions.senderId, users.id))
+        .leftJoin(sender, eq(transactions.senderId, sender.id))
+        .leftJoin(receiver, eq(transactions.receiverId, receiver.id))
         .where(
           or(
             eq(transactions.senderId, userId),
@@ -1237,28 +1243,11 @@ export class DatabaseStorage implements IStorage {
         .orderBy(desc(transactions.createdAt))
         .limit(limit);
 
-      // Fetch receiver information for each transaction
-      const transactionsWithUsers = await Promise.all(
-        results.map(async (row) => {
-          let receiver: User | undefined = undefined;
-          if (row.transaction.receiverId) {
-            const receiverResults = await db
-              .select()
-              .from(users)
-              .where(eq(users.id, row.transaction.receiverId))
-              .limit(1);
-            receiver = receiverResults[0];
-          }
-
-          return {
-            ...row.transaction,
-            sender: row.sender || undefined,
-            receiver,
-          };
-        }),
-      );
-
-      return transactionsWithUsers;
+      return results.map((row) => ({
+        ...row.transaction,
+        sender: row.sender || undefined,
+        receiver: row.receiver || undefined,
+      }));
     });
   }
 
