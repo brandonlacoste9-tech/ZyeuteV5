@@ -24,6 +24,16 @@ const StreamingDebugOverlay = React.lazy(
 
 const videoPlayerLogger = logger.withContext("VideoPlayer");
 
+// Extend HTML attributes to support fetchPriority (Chrome 102+)
+declare module "react" {
+  interface ImgHTMLAttributes<T> extends HTMLAttributes<T> {
+    fetchPriority?: "high" | "low" | "auto";
+  }
+  interface VideoHTMLAttributes<T> extends HTMLAttributes<T> {
+    fetchPriority?: "high" | "low" | "auto";
+  }
+}
+
 export interface VideoPlayerProps {
   src: string;
   poster?: string;

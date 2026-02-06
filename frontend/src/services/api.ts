@@ -21,7 +21,7 @@ const API_BASE_URL =
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
-): Promise<{ data: T | null; error: string | null }> {
+): Promise<{ data: T | null; error: string | null; code?: string | number }> {
   try {
     // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
     // Get current session token
@@ -689,7 +689,7 @@ export async function surgicalUpload(
     if (error || !data) {
       return {
         success: false,
-        error: error?.message || "Erreur de téléversement",
+        error: error || "Erreur de téléversement",
       };
     }
 
