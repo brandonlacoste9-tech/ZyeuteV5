@@ -133,8 +133,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Next video (n+1): aggressively buffer so it's ready on swipe
-            index === currentIndex + 1 && !isFastScrolling
+            // Adjacent videos (n±1): aggressively buffer for instant swipe
+            isPredictive && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -856,12 +856,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
             <List<RowData>
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory scroll-smooth"
+              className="no-scrollbar snap-y snap-mandatory"
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
               itemData={itemData}
-              overscanCount={isFast ? 3 : 1}
+              overscanCount={isFast ? 3 : 2}
               onItemsRendered={onRowsRendered}
               children={(props: FeedRowProps) => <FeedRow {...props} />}
             />
