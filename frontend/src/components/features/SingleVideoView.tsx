@@ -361,9 +361,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       );
     }
 
+    // Use validated type OR original type for video source selection
+    // Both must agree for the player to receive a src
+    const shouldLoadVideo = isVideo || post.type === "video";
+
     let videoSrc = "";
 
-    if (isVideo) {
+    if (shouldLoadVideo) {
       // Priority order: enhanced_url > media_url > original_url
       if (post.processing_status === "ready" && post.enhanced_url) {
         videoSrc = post.enhanced_url;
@@ -387,16 +391,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             processing_status: post.processing_status,
           },
         );
-      } else {
-        // Log valid video source for debugging
-        console.debug("[SingleVideoView] Video source selected:", {
-          postId: post.id,
-          source: videoSrc.substring(0, 50) + "...",
-          type:
-            post.processing_status === "ready" && post.enhanced_url
-              ? "enhanced"
-              : "original",
-        });
       }
     }
 
@@ -461,7 +455,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {post.type === "video" ? (
             <VideoPlayer
               src={videoSrc}
-              poster={post.thumbnail_url || post.media_url}
+              poster={post.thumbnail_url || undefined}
               autoPlay={isActive}
               muted={isMuted}
               loop

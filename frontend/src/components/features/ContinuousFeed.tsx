@@ -133,8 +133,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Next video (n+1): aggressively buffer so it's ready on swipe
-            index === currentIndex + 1 && !isFastScrolling
+            // Adjacent videos (n±1): aggressively buffer for instant swipe
+            isPredictive && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -433,17 +433,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             setHasMore(true);
             break;
           } else {
-            feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
+            feedLogger.warn(
+              `Pexels attempt ${pexelsAttempts + 1} returned empty`,
+            );
             pexelsAttempts++;
             if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * pexelsAttempts),
+              );
             }
           }
         } catch (pexelsError) {
-          feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
+          feedLogger.error(
+            `Pexels attempt ${pexelsAttempts + 1} failed:`,
+            pexelsError,
+          );
           pexelsAttempts++;
           if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * pexelsAttempts),
+            );
           }
         }
       }
@@ -568,7 +577,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (i >= 0 && i < posts.length) {
         const p = posts[i];
         if (p?.type === "video") {
-          const url = (p as Post).enhanced_url || (p as Post).media_url || (p as Post).original_url;
+          const url =
+            (p as Post).enhanced_url ||
+            (p as Post).media_url ||
+            (p as Post).original_url;
           if (url) retainUrls.push(url);
         }
       }
@@ -805,7 +817,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         </p>
         {fetchError && (
           <p className="text-stone-500 text-sm mb-2 max-w-sm">
-            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY (Railway).
+            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY
+            (Railway).
           </p>
         )}
         {(!isOnline || fetchError) && (
@@ -843,14 +856,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
             <List<RowData>
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory scroll-smooth"
+              className="no-scrollbar snap-y snap-mandatory"
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
               itemData={itemData}
-              overscanCount={isFast ? 3 : 1}
+              overscanCount={isFast ? 3 : 2}
               onItemsRendered={onRowsRendered}
-              children={FeedRow}
+              children={(props: FeedRowProps) => <FeedRow {...props} />}
             />
           </>
         )}
