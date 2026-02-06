@@ -198,9 +198,25 @@ export async function getExplorePosts(
 }
 
 export async function getPostById(postId: string): Promise<Post | null> {
+  apiLogger.info(`Fetching post ${postId}...`);
+
   const { data, error } = await apiCall<{ post: Post }>(`/posts/${postId}`);
-  if (error || !data) return null;
-  return mapBackendPost(data.post);
+
+  if (error || !data) {
+    apiLogger.error(`Failed to fetch post ${postId}:`, error);
+    return null;
+  }
+
+  const mapped = mapBackendPost(data.post);
+
+  if (mapped && !mapped.media_url) {
+    apiLogger.warn(`Post ${postId} loaded but media_url is missing`, {
+      thumbnail_url: mapped.thumbnail_url,
+      type: mapped.type,
+    });
+  }
+
+  return mapped;
 }
 
 export async function getUserPosts(userId: string): Promise<Post[]> {
