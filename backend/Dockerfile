@@ -39,6 +39,9 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy entire monorepo for build context
 COPY . .
 
+# Build frontend first (vite build -> /app/dist/public)
+RUN npm run build:vercel
+
 # Build backend with esbuild (matches package.json; root tsconfig has noEmit)
 RUN npx esbuild backend/index.ts \
   --bundle --platform=node --target=node20 --format=cjs \
@@ -63,6 +66,9 @@ COPY --from=deps /app/node_modules /app/node_modules
 
 # Copy built backend dist
 COPY --from=build /app/backend/dist ./dist
+
+# Copy frontend build (vite output -> backend expects it at dist/public)
+COPY --from=build /app/dist/public ./dist/public
 
 # Copy root package.json (monorepo - backend doesn't have its own package.json)
 COPY --from=build /app/package.json ./
