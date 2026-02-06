@@ -51,7 +51,10 @@ async function runMigration() {
 
     console.log("");
     console.log("🚀 Test the API:");
-    console.log("   https://zyeutev5-production.up.railway.app/api/posts/feed");
+    console.log("   https://zyeutev5-production.up.railway.app/api/feed");
+    console.log(
+      "   https://zyeutev5-production.up.railway.app/api/feed/infinite",
+    );
   } catch (error: any) {
     console.error("❌ Migration failed:", error.message);
     console.error(error);
