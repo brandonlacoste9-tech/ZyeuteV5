@@ -21,6 +21,7 @@ import { PostDetailSkeleton } from "@/components/ui/Skeleton";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { Image } from "@/components/Image";
 import { InteractiveText } from "@/components/InteractiveText";
+import VideoDebugOverlay from "@/components/video/VideoDebugOverlay";
 
 const postDetailLogger = logger.withContext("PostDetail");
 
@@ -330,17 +331,27 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
 
   if (post.type === "video") {
     return (
-      <VideoPlayer
-        src={post.media_url}
-        poster={post.media_url}
-        autoPlay={true}
-        muted={false}
-        loop={true}
-        className="w-full h-full"
-        priority={true}
-        preload="auto"
-        videoSource={source}
-      />
+      <div className="relative w-full h-full bg-black">
+        <VideoPlayer
+          src={post.media_url}
+          poster={post.thumbnail_url || undefined}
+          autoPlay={true}
+          muted={false}
+          loop={true}
+          className="w-full h-full"
+          priority={true}
+          preload="auto"
+          videoSource={source}
+        />
+
+        {/* Debug overlay: set isVisible={false} when done debugging */}
+        <VideoDebugOverlay
+          isVisible={false}
+          videoId={post.id}
+          mediaUrl={post.media_url}
+          thumbnailUrl={post.thumbnail_url}
+        />
+      </div>
     );
   }
 
