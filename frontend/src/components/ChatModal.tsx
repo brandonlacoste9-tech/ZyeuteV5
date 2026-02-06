@@ -27,6 +27,7 @@ import type { ChatMessage } from "@/types/chat";
 import { toast } from "@/components/Toast";
 import { cn } from "@/lib/utils";
 import { getTiGuyWelcomeMessage } from "@/utils/tiGuyResponses";
+import { ChatMenuDropdown } from "@/components/ChatMenuDropdown";
 
 interface ChatModalProps {
   onClose: () => void;
@@ -80,6 +81,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -203,7 +205,10 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
         >
           {/* Left: Hamburger Menu */}
           <button
-            onClick={() => toast.info("Menu bientôt disponible")}
+            onClick={() => {
+              tap();
+              setIsMenuOpen(true);
+            }}
             className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
             style={{ color: "#d4af37" }}
           >
@@ -491,6 +496,24 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             </button>
           </form>
         </div>
+
+        {/* MENU DROPDOWN */}
+        <ChatMenuDropdown
+          isOpen={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          onChatSelect={(chatId) => {
+            toast.info(`Opening chat: ${chatId}`);
+            setIsMenuOpen(false);
+          }}
+          onDMSelect={(dmId) => {
+            toast.info(`Opening DM: ${dmId}`);
+            setIsMenuOpen(false);
+          }}
+          onImageSelect={(imageId) => {
+            toast.info(`Opening image: ${imageId}`);
+            setIsMenuOpen(false);
+          }}
+        />
       </div>
     </div>,
     document.body,
