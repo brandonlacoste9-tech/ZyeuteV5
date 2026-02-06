@@ -1,6 +1,7 @@
 # ========================================
 # Zyeuté V5 Backend - Fly.io Dockerfile (Railway Compatible)
 # Express + TypeScript + Python Colony Bridge
+# Updated: 2026-02-05 - Force fresh build (esbuild)
 # ========================================
 
 # ---------- Stage 1: Base ----------
@@ -38,10 +39,12 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy entire monorepo for build context
 COPY . .
 
-# Build TypeScript backend
-# Assumes backend has its own tsconfig.json
-WORKDIR /app/backend
-RUN npx tsc
+# Build backend with esbuild (matches package.json; root tsconfig has noEmit)
+RUN npx esbuild backend/index.ts \
+  --bundle --platform=node --target=node20 --format=cjs \
+  --outfile=backend/dist/index.cjs \
+  --external:sharp --external:pg --external:vite --external:./vite.js \
+  --define:process.env.NODE_ENV=\"production\"
 
 # ---------- Stage 4: Production Runtime ----------
 FROM base AS runtime
@@ -86,5 +89,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "const p=process.env.PORT||8080; require('http').get('http://127.0.0.1:'+p+'/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
 
-# Start the server (compiled from TypeScript)
-CMD ["node", "dist/index.js"]
+# Start the server (esbuild bundle)
+CMD ["node", "dist/index.cjs"]
