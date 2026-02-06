@@ -1,18 +1,26 @@
 /**
  * ChatModal.tsx
  * SOVEREIGN LEATHER & GOLD - Louis Vuitton x Québec Aesthetic
- * Luxury chat interface with deep brown leather, gold Fleur-de-lis, and regal typography
+ * Matches exact mockup: Zyeuté branding, bubbles, toolbar, mic button
  */
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   IoCloseOutline,
-  IoSend,
   IoMenuOutline,
-  IoImageOutline,
-  IoSwapHorizontalOutline,
+  IoHappyOutline,
+  IoAttachOutline,
+  IoCameraOutline,
+  IoMicOutline,
+  IoSparklesOutline,
+  IoImagesOutline,
+  IoDocumentOutline,
+  IoSettingsOutline,
+  IoEllipsisHorizontalOutline,
+  IoCheckmarkDoneOutline,
 } from "react-icons/io5";
+import { RiAlertFill } from "react-icons/ri";
 import { useHaptics } from "@/hooks/useHaptics";
 import { tiguyService } from "@/services/tiguyService";
 import type { ChatMessage } from "@/types/chat";
@@ -25,51 +33,45 @@ interface ChatModalProps {
 }
 
 // Fleur-de-lis SVG pattern for background
-const FLEUR_DE_LIS_PATTERN = `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.15'%3E%3Cpath d='M30 5c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L20 12l-1.46-3.46C17.56 7.63 17 6.38 17 5c0-2.76-2.24-5-5-5S7 2.24 7 5c0 1.38.56 2.63 1.46 3.54L10 15l5.54 1.46C17.38 17.56 18.62 18 20 18s2.62-.44 4.46-1.54L30 15l1.54-6.46C33.38 7.56 34.62 7 36 7c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L28 12l-1.46-3.46C25.56 7.63 25 6.38 25 5c0-2.76-2.24-5-5-5s-5 2.24-5 5c0 1.38.56 2.63 1.46 3.54L18 12l5.54 1.46C25.38 14.56 26.62 15 28 15s2.62-.44 4.46-1.54L38 12l1.54-6.46C41.38 4.56 42.62 4 44 4c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
+const FLEUR_DE_LIS_PATTERN = `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.08'%3E%3Cpath d='M40 20c-1.5-5-5-8-9-8s-7.5 3-9 8l3 7-3-7c-1.5-5-5-8-9-8s-7.5 3-9 8c0 4 2 7 5 9l8 3-8-3c-3-2-5-5-5-9 0-5 3-7.5 8-9s8 3 9 8l5 12 5-12c1-5 4-8 9-8s8 4 8 9c0 4-2 7-5 9l-8 3 8-3c3-2 5-5 5-9 0-5-3-7.5-8-9s-8 3-9 8l-3 7 3-7z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`;
 
-// Tiny Gold Beaver Icon SVG
-const BeaverSealIcon = ({ className }: { className?: string }) => (
+// Large Fleur-de-lis Header Emblem
+const FleurDeLisEmblem = () => (
   <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
+    width="64"
+    height="64"
+    viewBox="0 0 100 120"
     xmlns="http://www.w3.org/2000/svg"
+    className="drop-shadow-[0_0_15px_rgba(212,175,55,0.8)]"
   >
-    <path
-      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-      fill="#d4af37"
-      stroke="#d4af37"
-      strokeWidth="1.5"
-    />
-    {/* Simplified beaver shape */}
-    <circle cx="12" cy="10" r="3" fill="#d4af37" opacity="0.8" />
-    <ellipse cx="10" cy="8" rx="1" ry="1.5" fill="#b8860b" />
-    <ellipse cx="14" cy="8" rx="1" ry="1.5" fill="#b8860b" />
-    <path
-      d="M8 14 Q12 16 16 14"
-      stroke="#d4af37"
-      strokeWidth="2"
-      fill="none"
-      strokeLinecap="round"
-    />
+    <defs>
+      <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" style={{ stopColor: "#f4e5c3", stopOpacity: 1 }} />
+        <stop offset="50%" style={{ stopColor: "#d4af37", stopOpacity: 1 }} />
+        <stop offset="100%" style={{ stopColor: "#b8860b", stopOpacity: 1 }} />
+      </linearGradient>
+    </defs>
+    <g fill="url(#goldGrad)" stroke="#8b6914" strokeWidth="2">
+      {/* Center petal */}
+      <path d="M50 10 Q45 25 45 40 L45 70 Q45 80 50 85 Q55 80 55 70 L55 40 Q55 25 50 10 Z" />
+      {/* Left petal */}
+      <path d="M30 30 Q20 35 15 45 Q12 55 18 62 Q25 65 32 60 L45 50 Q40 40 30 30 Z" />
+      {/* Right petal */}
+      <path d="M70 30 Q80 35 85 45 Q88 55 82 62 Q75 65 68 60 L55 50 Q60 40 70 30 Z" />
+      {/* Bottom curls */}
+      <path d="M35 85 Q30 90 25 95 Q20 100 20 105 Q20 110 25 110 Q30 110 35 105 Z" />
+      <path d="M65 85 Q70 90 75 95 Q80 100 80 105 Q80 110 75 110 Q70 110 65 105 Z" />
+      {/* Center decoration */}
+      <circle
+        cx="50"
+        cy="55"
+        r="8"
+        fill="#f4e5c3"
+        stroke="#8b6914"
+        strokeWidth="1.5"
+      />
+    </g>
   </svg>
-);
-
-// Piasse Gold Coin Component
-const PiasseCoin = ({ pulsing = true }: { pulsing?: boolean }) => (
-  <div
-    className={cn(
-      "w-8 h-8 rounded-full flex items-center justify-center border-2 border-[#d4af37] shadow-lg",
-      pulsing && "animate-pulse"
-    )}
-    style={{
-      background:
-        "radial-gradient(circle, #d4af37 0%, #b8860b 50%, #8b6914 100%)",
-      boxShadow: "0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 10px rgba(0,0,0,0.3)",
-    }}
-  >
-    <span className="text-[10px] font-bold text-black">₱</span>
-  </div>
 );
 
 export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
@@ -78,7 +80,6 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [showDMMenu, setShowDMMenu] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,34 +115,32 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
     setMessages((prev) => [...prev, newMessage]);
   };
 
-  const handleSendMessage = async (e?: React.FormEvent | string) => {
-    if (e && typeof e !== "string") e.preventDefault();
-    const text = typeof e === "string" ? e : inputText.trim();
-
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const text = inputText.trim();
     if (!text || isTyping) return;
 
     tap();
-
-    if (typeof e !== "string") {
-      addMessage({ sender: "user", text: text });
-      setInputText("");
-    } else {
-      addMessage({ sender: "user", text: text });
-    }
-
+    addMessage({ sender: "user", text });
+    setInputText("");
     setIsTyping(true);
 
     try {
       const response = await tiguyService.sendMessage(text);
-      // Handle both { response: string } and direct string responses
-      const responseText = typeof response === "string" ? response : response.response || response.message || "Je n'ai pas de réponse pour ça, tsé?";
+      const responseText =
+        typeof response === "string"
+          ? response
+          : response.response ||
+            response.message ||
+            "Je n'ai pas de réponse pour ça, tsé?";
       addMessage({ sender: "tiGuy", text: responseText });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
       toast.error("Erreur de connexion. Réessaie!");
       addMessage({
         sender: "tiGuy",
-        text: "Oups, j'ai eu un p'tit problème de connexion là! 🦫 Réessaie dans une minute, tsé?",
+        text: "[clawdbot] ⚠️ Agent failed before reply: Unknown model, ollama/gemma2:2b.\nLogs: clawdbot logs --follow",
+        isError: true,
       });
     } finally {
       setIsTyping(false);
@@ -151,13 +150,24 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = () => {
       const imageUrl = reader.result as string;
-      addMessage({ sender: "user", text: "📎 Fichier attaché", image: imageUrl });
+      addMessage({
+        sender: "user",
+        text: "📎 Fichier attaché",
+        image: imageUrl,
+      });
     };
     reader.readAsDataURL(file);
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("fr-CA", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   if (!isVisible) return null;
@@ -167,53 +177,70 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={handleClose}
     >
+      {/* PHONE FRAME */}
       <div
         className={cn(
-          "relative w-full max-w-md h-[90vh] max-h-[800px] rounded-lg overflow-hidden shadow-2xl transform transition-all duration-300",
-          isVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          "relative w-full max-w-md h-[90vh] max-h-[800px] rounded-[32px] overflow-hidden shadow-2xl transform transition-all duration-300",
+          isVisible ? "scale-100 opacity-100" : "scale-95 opacity-0",
         )}
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#3d2b1f", // Deep Leather Brown
+          background: "#2b1f17", // Deep charcoal leather
           backgroundImage: FLEUR_DE_LIS_PATTERN,
-          border: "3px solid #d4af37", // Gold border
+          border: "4px solid #d4af37",
           boxShadow:
-            "0 0 40px rgba(0,0,0,0.9), 0 0 20px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(0,0,0,0.3)",
+            "0 0 50px rgba(212, 175, 55, 0.6), 0 0 100px rgba(212, 175, 55, 0.3), inset 0 0 30px rgba(0,0,0,0.5)",
         }}
       >
-        {/* SOVEREIGN HEADER */}
+        {/* HEADER */}
         <div
-          className="flex items-center justify-between px-4 py-3 border-b-2 border-[#d4af37]/30"
+          className="flex items-center justify-between px-4 py-3 border-b-2 border-[#d4af37]/40"
           style={{
             background:
-              "linear-gradient(180deg, rgba(61, 43, 31, 0.95) 0%, rgba(45, 32, 22, 0.95) 100%)",
+              "linear-gradient(180deg, rgba(43, 31, 23, 0.98) 0%, rgba(35, 25, 18, 0.98) 100%)",
             backdropFilter: "blur(10px)",
           }}
         >
-          {/* Left: Hamburger Menu + Piasse Coin */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowDMMenu(!showDMMenu)}
-              className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
-              style={{ color: "#d4af37" }}
-            >
-              <IoMenuOutline className="w-6 h-6" />
-            </button>
-            <PiasseCoin pulsing={true} />
-          </div>
-
-          {/* Center: TI-GUY in Bold Serif */}
-          <h2
-            className="text-2xl font-bold tracking-wider"
-            style={{
-              fontFamily: "'Playfair Display', 'Georgia', serif",
-              color: "#d4af37",
-              textShadow: "0 2px 8px rgba(212, 175, 55, 0.5), 0 0 20px rgba(212, 175, 55, 0.3)",
-              letterSpacing: "0.1em",
-            }}
+          {/* Left: Hamburger Menu */}
+          <button
+            onClick={() => toast.info("Menu bientôt disponible")}
+            className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
+            style={{ color: "#d4af37" }}
           >
-            TI-GUY
-          </h2>
+            <IoMenuOutline className="w-7 h-7" />
+          </button>
+
+          {/* Center: Fleur-de-lis + Zyeuté */}
+          <div className="flex flex-col items-center gap-1">
+            <FleurDeLisEmblem />
+            <div className="flex items-center gap-2">
+              <div
+                className="h-px w-8"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, #d4af37, transparent)",
+                }}
+              />
+              <h2
+                className="text-xl font-bold tracking-[0.2em]"
+                style={{
+                  fontFamily: "'Playfair Display', 'Georgia', serif",
+                  color: "#d4af37",
+                  textShadow:
+                    "0 2px 8px rgba(212, 175, 55, 0.6), 0 0 20px rgba(212, 175, 55, 0.4)",
+                }}
+              >
+                Zyeuté
+              </h2>
+              <div
+                className="h-px w-8"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, #d4af37, transparent)",
+                }}
+              />
+            </div>
+          </div>
 
           {/* Right: Close Button */}
           <button
@@ -221,42 +248,49 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
             style={{ color: "#d4af37" }}
           >
-            <IoCloseOutline className="w-6 h-6" />
+            <IoCloseOutline className="w-7 h-7" />
           </button>
         </div>
 
-        {/* MESSAGES - NO BUBBLES, DIRECT ON LEATHER */}
+        {/* MESSAGES AREA */}
         <div
-          className="flex-1 overflow-y-auto p-4 space-y-4"
+          className="flex-1 overflow-y-auto p-4 space-y-3"
           style={{
-            background: "#3d2b1f",
+            background: "#2b1f17",
             backgroundImage: FLEUR_DE_LIS_PATTERN,
+            maxHeight: "calc(100% - 220px)",
           }}
         >
           {messages.map((message) => (
             <div
               key={message.id}
               className={cn(
-                "flex items-start gap-3",
-                message.sender === "user" ? "flex-row-reverse" : "flex-row"
+                "flex flex-col",
+                message.sender === "user" ? "items-end" : "items-start",
               )}
             >
-              {/* Tiny Gold Beaver for Ti-Guy messages */}
-              {message.sender === "tiGuy" && (
-                <div className="flex-shrink-0 mt-1">
-                  <BeaverSealIcon className="w-6 h-6 drop-shadow-[0_0_5px_rgba(212,175,55,0.8)]" />
-                </div>
-              )}
-
-              {/* Message Text - BOLD GOLD INK, NO BUBBLE */}
+              {/* MESSAGE BUBBLE */}
               <div
                 className={cn(
-                  "flex-1",
-                  message.sender === "tiGuy" && "border-l-2 pl-3",
-                  message.sender === "user" && "border-r-2 pr-3 text-right"
+                  "max-w-[80%] rounded-2xl px-4 py-3 shadow-lg",
+                  message.sender === "user" && "rounded-br-sm",
+                  message.sender === "tiGuy" && "rounded-bl-sm",
                 )}
                 style={{
-                  borderColor: message.sender === "tiGuy" ? "#d4af37" : "transparent",
+                  background:
+                    message.sender === "user"
+                      ? message.isError
+                        ? "rgba(50, 35, 25, 0.95)" // Dark for errors
+                        : "rgba(60, 45, 35, 0.85)" // Light gold fill
+                      : "rgba(25, 18, 12, 0.95)", // Dark for bot
+                  border:
+                    message.sender === "user"
+                      ? "2px solid #d4af37"
+                      : "2px solid #5a4a3a",
+                  boxShadow:
+                    message.sender === "user"
+                      ? "0 2px 8px rgba(212, 175, 55, 0.3), inset 0 1px 3px rgba(255, 255, 255, 0.1)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.4)",
                 }}
               >
                 {message.image && (
@@ -267,53 +301,66 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                   />
                 )}
                 <p
-                  className="leading-relaxed"
+                  className="leading-relaxed whitespace-pre-wrap"
                   style={{
-                    fontSize: "20px",
-                    fontWeight: 700,
-                    color: message.sender === "tiGuy" ? "#d4af37" : "#f5f5dc",
-                    textShadow:
-                      message.sender === "tiGuy"
-                        ? "0 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(212, 175, 55, 0.3)"
-                        : "0 2px 4px rgba(0,0,0,0.8)",
+                    fontSize: "15px",
+                    fontWeight: 500,
+                    color: message.sender === "user" ? "#f5f5dc" : "#d4af37",
                     fontFamily: "'Inter', sans-serif",
                   }}
                 >
                   {message.text}
                 </p>
               </div>
+
+              {/* TIMESTAMP + STATUS */}
+              <div className="flex items-center gap-1 mt-1 px-2">
+                <span
+                  className="text-xs"
+                  style={{
+                    color: "rgba(212, 175, 55, 0.6)",
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                >
+                  {formatTime(message.timestamp)}
+                </span>
+                {message.sender === "user" && !message.isError && (
+                  <IoCheckmarkDoneOutline
+                    className="w-4 h-4"
+                    style={{ color: "#d4af37" }}
+                  />
+                )}
+                {message.isError && (
+                  <RiAlertFill
+                    className="w-4 h-4"
+                    style={{ color: "#ff6b6b" }}
+                  />
+                )}
+              </div>
             </div>
           ))}
 
-          {/* Typing Indicator */}
+          {/* TYPING INDICATOR */}
           {isTyping && (
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-1">
-                <BeaverSealIcon className="w-6 h-6 drop-shadow-[0_0_5px_rgba(212,175,55,0.8)] animate-pulse" />
-              </div>
-              <div className="flex-1 border-l-2 pl-3" style={{ borderColor: "#d4af37" }}>
+            <div className="flex items-start">
+              <div
+                className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-3"
+                style={{
+                  background: "rgba(25, 18, 12, 0.95)",
+                  border: "2px solid #5a4a3a",
+                }}
+              >
                 <div className="flex gap-1">
-                  <span
-                    className="w-2 h-2 rounded-full animate-bounce"
-                    style={{
-                      backgroundColor: "#d4af37",
-                      animationDelay: "0ms",
-                    }}
-                  />
-                  <span
-                    className="w-2 h-2 rounded-full animate-bounce"
-                    style={{
-                      backgroundColor: "#d4af37",
-                      animationDelay: "150ms",
-                    }}
-                  />
-                  <span
-                    className="w-2 h-2 rounded-full animate-bounce"
-                    style={{
-                      backgroundColor: "#d4af37",
-                      animationDelay: "300ms",
-                    }}
-                  />
+                  {[0, 150, 300].map((delay) => (
+                    <span
+                      key={delay}
+                      className="w-2 h-2 rounded-full animate-bounce"
+                      style={{
+                        backgroundColor: "#d4af37",
+                        animationDelay: `${delay}ms`,
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -322,12 +369,39 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* SOVEREIGN INPUT - GOLD-BORDERED LEATHER STRIP */}
+        {/* TOOLBAR ROW */}
         <div
-          className="p-4 border-t-2"
+          className="flex items-center justify-around px-6 py-3 border-t border-[#d4af37]/20"
+          style={{
+            background: "rgba(35, 25, 18, 0.95)",
+          }}
+        >
+          {[
+            { Icon: IoSparklesOutline, label: "Effets" },
+            { Icon: IoHappyOutline, label: "Emoji" },
+            { Icon: IoImagesOutline, label: "Galerie" },
+            { Icon: IoDocumentOutline, label: "Document" },
+            { Icon: IoSettingsOutline, label: "Paramètres" },
+            { Icon: IoEllipsisHorizontalOutline, label: "Plus" },
+          ].map(({ Icon, label }) => (
+            <button
+              key={label}
+              onClick={() => toast.info(`${label} bientôt disponible`)}
+              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
+              style={{ color: "#d4af37" }}
+              title={label}
+            >
+              <Icon className="w-6 h-6" />
+            </button>
+          ))}
+        </div>
+
+        {/* INPUT BAR */}
+        <div
+          className="px-4 py-3 border-t-2"
           style={{
             background:
-              "linear-gradient(180deg, rgba(45, 32, 22, 0.95) 0%, rgba(61, 43, 31, 0.95) 100%)",
+              "linear-gradient(180deg, rgba(35, 25, 18, 0.98) 0%, rgba(43, 31, 23, 0.98) 100%)",
             borderColor: "#d4af37",
             boxShadow: "0 -5px 20px rgba(0,0,0,0.5)",
           }}
@@ -335,80 +409,90 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
           <form
             onSubmit={handleSendMessage}
             className="flex items-center gap-3"
-            style={{
-              border: "2px solid #d4af37",
-              borderRadius: "12px",
-              padding: "12px",
-              background: "rgba(61, 43, 31, 0.8)",
-              boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(212, 175, 55, 0.2)",
-            }}
           >
-            {/* Left: Character Switch + File Attach */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
-                style={{ color: "#d4af37" }}
-                title="Changer de personnage"
-              >
-                <IoSwapHorizontalOutline className="w-5 h-5" />
-              </button>
+            {/* Left Icons */}
+            <button
+              type="button"
+              onClick={() => toast.info("Emoji bientôt disponible")}
+              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
+              style={{ color: "#d4af37" }}
+            >
+              <IoHappyOutline className="w-6 h-6" />
+            </button>
+
+            {/* Input Field */}
+            <div
+              className="flex-1 flex items-center gap-2 px-4 py-3 rounded-full"
+              style={{
+                background: "rgba(43, 31, 23, 0.8)",
+                border: "2px solid #d4af37",
+                boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5)",
+              }}
+            >
               <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
+                ref={inputRef}
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Message"
+                className="flex-1 bg-transparent outline-none"
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 500,
+                  color: "#f5f5dc",
+                  fontFamily: "'Inter', sans-serif",
+                }}
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
-                style={{ color: "#d4af37" }}
-                title="Joindre un fichier"
-              >
-                <IoImageOutline className="w-5 h-5" />
-              </button>
             </div>
 
-            {/* Center: Input Field */}
+            {/* Right Icons */}
             <input
-              ref={inputRef}
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Jase avec moi..."
-              className="flex-1 bg-transparent outline-none"
-              style={{
-                fontSize: "16px",
-                fontWeight: 500,
-                color: "#d4af37",
-                fontFamily: "'Inter', sans-serif",
-              }}
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
             />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
+              style={{ color: "#d4af37" }}
+            >
+              <IoAttachOutline className="w-6 h-6" />
+            </button>
+            <button
+              type="button"
+              onClick={() => toast.info("Caméra bientôt disponible")}
+              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
+              style={{ color: "#d4af37" }}
+            >
+              <IoCameraOutline className="w-6 h-6" />
+            </button>
 
-            {/* Right: Send Button */}
+            {/* MIC BUTTON (Primary Submit) */}
             <button
               type="submit"
               disabled={!inputText.trim() || isTyping}
-              className="p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110"
+              className="p-4 rounded-full transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
               style={{
                 background:
                   inputText.trim() && !isTyping
-                    ? "linear-gradient(135deg, #d4af37 0%, #b8860b 100%)"
+                    ? "radial-gradient(circle, #f4e5c3 0%, #d4af37 50%, #b8860b 100%)"
                     : "rgba(212, 175, 55, 0.3)",
                 boxShadow:
                   inputText.trim() && !isTyping
-                    ? "0 0 15px rgba(212, 175, 55, 0.5)"
+                    ? "0 0 20px rgba(212, 175, 55, 0.8), 0 0 40px rgba(212, 175, 55, 0.4)"
                     : "none",
+                border: "2px solid #8b6914",
               }}
             >
-              <IoSend className="w-5 h-5" style={{ color: "#000" }} />
+              <IoMicOutline className="w-7 h-7" style={{ color: "#000" }} />
             </button>
           </form>
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
