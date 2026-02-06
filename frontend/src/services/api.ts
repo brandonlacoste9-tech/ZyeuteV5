@@ -11,11 +11,11 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
-// [CONFIG] Live Railway Backend URL
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? ""
-    : "https://zyeutev5-production.up.railway.app";
+// [CONFIG] API Base URL
+// Use relative URLs so requests route through the hosting platform's proxy:
+// - Local dev: Vite proxy (/api → localhost:5000)
+// - Vercel: vercel.json rewrite (/api → Railway backend)
+const API_BASE_URL = "";
 
 // Base API call helper
 async function apiCall<T>(

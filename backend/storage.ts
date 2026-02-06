@@ -38,7 +38,18 @@ import {
   type Transaction,
   type InsertTransaction,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or, gte, lte, alias } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  sql,
+  inArray,
+  isNull,
+  or,
+  gte,
+  lte,
+  aliasedTable,
+} from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
@@ -1222,8 +1233,8 @@ export class DatabaseStorage implements IStorage {
   ): Promise<(Transaction & { sender?: User; receiver?: User })[]> {
     return traceDatabase("SELECT", "transactions", async () => {
       // Create aliases for sender and receiver
-      const sender = alias(users, "sender");
-      const receiver = alias(users, "receiver");
+      const sender = aliasedTable(users, "sender");
+      const receiver = aliasedTable(users, "receiver");
 
       const results = await db
         .select({

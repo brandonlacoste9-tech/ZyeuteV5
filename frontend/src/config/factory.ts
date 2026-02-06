@@ -68,16 +68,16 @@ const QUEBEC_CONFIG: AppConfig = {
     ],
   },
   theme: {
-    primary: "#0EA5E9", // Sky Blue
-    secondary: "#0F172A", // Slate 900
-    accent: "#38BDF8", // Sky 400
-    background: "#020617", // Slate 950
-    cardBackground: "#1E293B", // Slate 800
-    textMain: "#F8FAFC",
-    textMuted: "#94A3B8",
-    edgeLighting: "#0EA5E9",
-    glowColor: "rgba(14, 165, 233, 0.4)",
-    stitchingColor: "rgba(56, 189, 248, 0.3)",
+    primary: "#FFBF00", // Gold
+    secondary: "#1a1512", // Dark Leather
+    accent: "#FFD966", // Gold Accent
+    background: "#0d0c0b", // Dark Leather Background
+    cardBackground: "#241d19", // Leather Card
+    textMain: "#FFFFFF",
+    textMuted: "#a18e87", // Muted Leather
+    edgeLighting: "#FFBF00", // Gold Edge
+    glowColor: "rgba(255, 191, 0, 0.4)", // Gold Glow
+    stitchingColor: "rgba(218, 165, 32, 0.7)", // Gold Stitching
     fontFamily: "'Inter', sans-serif",
   },
   features: {
