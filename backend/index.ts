@@ -1,7 +1,14 @@
 import dotenv from "dotenv";
-// Load .env then .env.local (Vercel CLI: vercel env pull .env.local)
-dotenv.config();
-dotenv.config({ path: ".env.local", override: true });
+// Load .env ONLY in development (Railway provides env vars directly in production)
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+  dotenv.config({ path: ".env.local", override: true });
+  console.log("🔧 [Dev] Loaded .env files");
+} else {
+  console.log(
+    "🚂 [Production] Using Railway environment variables (skipping .env)",
+  );
+}
 // Log but do NOT exit — keep server up so one bad error doesn't kill the process.
 // Use a process manager (e.g. Railway, PM2) to restart if needed.
 process.on("uncaughtException", (err) => {
@@ -67,18 +74,20 @@ let isSystemReady = false;
 app.use((req, res, next) => {
   // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
   if (req.path === "/api/health") {
-    return res.status(200).json({ 
-      status: "ok", 
+    return res.status(200).json({
+      status: "ok",
       stage: isSystemReady ? "ready" : "initializing",
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   }
-  
+
   // Debug route also overrides
   if (req.path === "/api/debug") {
-    return res.status(200).json({ status: "debug_ok", systemReady: isSystemReady });
+    return res
+      .status(200)
+      .json({ status: "debug_ok", systemReady: isSystemReady });
   }
-  
+
   // If system works, proceed
   if (isSystemReady) {
     return next();
@@ -88,7 +97,7 @@ app.use((req, res, next) => {
   res.status(503).json({
     status: "initializing",
     message: "Server is starting up. Please wait...",
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
 
@@ -97,8 +106,12 @@ app.use((req, res, next) => {
     // 1. Start Listening IMMEDIATELY (Satisfy Railway Healthcheck)
     // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
     server = httpServer.listen(port, "0.0.0.0", () => {
-      console.log(`✅ Server running on http://0.0.0.0:${port} (Initializing...)`);
-      console.log(`   Open in browser: http://127.0.0.1:${port}  (or http://localhost:${port})`);
+      console.log(
+        `✅ Server running on http://0.0.0.0:${port} (Initializing...)`,
+      );
+      console.log(
+        `   Open in browser: http://127.0.0.1:${port}  (or http://localhost:${port})`,
+      );
       console.log(`   Health: http://127.0.0.1:${port}/api/health`);
     });
 
@@ -122,21 +135,20 @@ app.use((req, res, next) => {
         // [CRITICAL] Run Database Migrations
         console.log("📦 [Startup] Running Schema Migrations...");
         try {
-           await migrate(db, { migrationsFolder: "./migrations" });
-           console.log("✅ [Startup] Migrations Complete");
+          await migrate(db, { migrationsFolder: "./migrations" });
+          console.log("✅ [Startup] Migrations Complete");
         } catch (err: any) {
-           // Log but don't crash main loop if possible, unless critical
-           console.error("⚠️ [Startup] Migration warning/error:", err.message);
+          // Log but don't crash main loop if possible, unless critical
+          console.error("⚠️ [Startup] Migration warning/error:", err.message);
         }
-        
+
         // [SURGICAL SELF-HEALING] Active Schema Repair
         try {
           const { healSchema } = await import("./schemaDoctor.js");
           await healSchema(pool);
         } catch (err) {
-           console.warn("⚠️ [Startup] Schema healing skipped:", err);
+          console.warn("⚠️ [Startup] Schema healing skipped:", err);
         }
-
       } catch (dbErr: any) {
         console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
@@ -174,12 +186,11 @@ app.use((req, res, next) => {
       const { setupVite } = await import("./vite.js");
       await setupVite(httpServer, app);
     }
-    
+
     // 3. Mark System Ready
     isSystemReady = true;
     console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL! (Traffic Allowed)");
     console.log(`   → Open app: http://127.0.0.1:${port}`);
-
   } catch (error) {
     console.error("❌ Failed to start server logic:", error);
     // Don't exit, let the server run 503s so we can see logs
