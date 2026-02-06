@@ -7,19 +7,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Music, TrendingUp, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
-import { getSounds, getTrendingSounds, type Sound as ApiSound } from "@/services/api";
-
-export interface Sound {
-  id: string;
-  title: string;
-  artist?: string;
-  audioUrl: string;
-  coverImageUrl?: string;
-  duration?: number;
-  category?: string;
-  useCount: number;
-  isOriginal: boolean;
-}
+import { getSounds, getTrendingSounds, type Sound } from "@/services/api";
 
 interface SoundPickerProps {
   isOpen: boolean;
