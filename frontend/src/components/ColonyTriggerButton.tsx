@@ -35,7 +35,7 @@ export const ColonyTriggerButton: React.FC = () => {
 
   const handleSendTask = async () => {
     if (!command.trim()) {
-      toast.error("Please enter a command");
+      toast.error("Rentre une commande, voyons");
       return;
     }
 
@@ -58,7 +58,7 @@ export const ColonyTriggerButton: React.FC = () => {
       // }
     } catch (error) {
       console.error("Error sending task:", error);
-      toast.error("Error sending task");
+      toast.error("Erreur lors de l'envoi de la tâche");
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export const ColonyTriggerButton: React.FC = () => {
           onClick={handleSendTask}
           disabled={loading || !command.trim()}
           className="w-full px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-black"
-          aria-label="Send task to Colony Worker Bee"
+          aria-label="Envoyer la tâche à la Colonie"
         >
           {loading ? "Sending..." : "🐝 Send Task to Worker Bee"}
         </button>

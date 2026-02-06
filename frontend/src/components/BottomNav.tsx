@@ -6,19 +6,20 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useTranslation } from "@/i18n";
 import { cn } from "../lib/utils";
 
 interface NavItem {
   to: string;
   icon: React.ReactNode;
   activeIcon: React.ReactNode;
-  label: string;
+  labelKey: string;
 }
 
 const navItems: NavItem[] = [
   {
     to: "/",
-    label: "Accueil",
+    labelKey: "nav.home",
     icon: (
       <svg
         className="w-6 h-6"
@@ -42,7 +43,7 @@ const navItems: NavItem[] = [
   },
   {
     to: "/explore",
-    label: "Découvrir",
+    labelKey: "nav.discover",
     icon: (
       <svg
         className="w-6 h-6"
@@ -66,7 +67,7 @@ const navItems: NavItem[] = [
   },
   {
     to: "/upload",
-    label: "Créer",
+    labelKey: "nav.create",
     icon: (
       <div className="relative">
         <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
@@ -84,7 +85,7 @@ const navItems: NavItem[] = [
   },
   {
     to: "/notifications",
-    label: "Notifs",
+    labelKey: "nav.notifications_short",
     icon: (
       <svg
         className="w-6 h-6"
@@ -108,7 +109,7 @@ const navItems: NavItem[] = [
   },
   {
     to: "/profile/me",
-    label: "Profil",
+    labelKey: "nav.profile",
     icon: (
       <svg
         className="w-6 h-6"
@@ -135,6 +136,7 @@ const navItems: NavItem[] = [
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { tap } = useHaptics();
+  const { t } = useTranslation();
 
   // Helper to check if a path is active (handles profile routes)
   const isActivePath = (path: string): boolean => {
@@ -264,7 +266,7 @@ export const BottomNav: React.FC = () => {
                             : "none",
                         }}
                       >
-                        {item.label}
+                        {t(item.labelKey)}
                       </span>
                     </>
                   );

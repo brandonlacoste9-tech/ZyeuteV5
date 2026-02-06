@@ -4,6 +4,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Avatar } from "../Avatar";
 import { Button } from "../Button";
 import { formatNumber } from "../../lib/utils";
@@ -25,6 +26,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   isFollowing = false,
   className,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className={cn("glass-card rounded-2xl p-6", className)}>
       {/* Avatar and basic info */}
@@ -73,7 +76,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           <div className="text-2xl font-bold text-gold-400">
             {formatNumber(user.posts_count || 0)}
           </div>
-          <div className="text-xs text-white/60">Posts</div>
+          <div className="text-xs text-white/60">{t("lbl_posts")}</div>
         </Link>
 
         <Link
@@ -83,14 +86,14 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           <div className="text-2xl font-bold text-gold-400">
             {formatNumber(user.followers_count || 0)}
           </div>
-          <div className="text-xs text-white/60">Abonnés</div>
+          <div className="text-xs text-white/60">{t("lbl_followers")}</div>
         </Link>
 
         <div className="hover:bg-white/5 rounded-lg p-2 transition-colors cursor-default">
           <div className="text-2xl font-bold text-orange-500">
             {formatNumber(user.fire_score || 0)}
           </div>
-          <div className="text-xs text-white/60">Feux</div>
+          <div className="text-xs text-white/60">{t("btn_like")}</div>
         </div>
       </div>
 
@@ -103,7 +106,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             className="w-full"
             onClick={onFollowClick}
           >
-            {isFollowing ? "Suivi" : "Suivre"}
+            {isFollowing ? t("btn_following") : t("btn_follow")}
           </Button>
         </div>
       )}
@@ -120,6 +123,8 @@ export const ProfileCardCompact: React.FC<{
   isFollowing?: boolean;
   className?: string;
 }> = ({ user, onFollowClick, isFollowing, className }) => {
+  const { t } = useTranslation();
+
   return (
     <div className={cn("flex items-center justify-between p-3", className)}>
       <Link
@@ -146,7 +151,7 @@ export const ProfileCardCompact: React.FC<{
           size="sm"
           onClick={onFollowClick}
         >
-          {isFollowing ? "Suivi" : "Suivre"}
+          {isFollowing ? t("btn_following") : t("btn_follow")}
         </Button>
       )}
     </div>

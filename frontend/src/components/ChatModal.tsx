@@ -349,7 +349,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                 type="button"
                 className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
                 style={{ color: "#d4af37" }}
-                title="Switch Character"
+                title="Changer de personnage"
               >
                 <IoSwapHorizontalOutline className="w-5 h-5" />
               </button>
@@ -365,7 +365,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
                 onClick={() => fileInputRef.current?.click()}
                 className="p-2 rounded-lg transition-all hover:bg-[#d4af37]/20"
                 style={{ color: "#d4af37" }}
-                title="Attach File"
+                title="Joindre un fichier"
               >
                 <IoImageOutline className="w-5 h-5" />
               </button>
