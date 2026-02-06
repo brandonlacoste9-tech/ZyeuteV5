@@ -34,6 +34,9 @@ import {
   type ParentalControl,
   type InsertParentalControl,
   aiGenerationCosts,
+  transactions,
+  type Transaction,
+  type InsertTransaction,
 } from "../shared/schema.js";
 import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
@@ -202,6 +205,10 @@ export interface IStorage {
   refundPiasses(userId: string, amount: number, reason: string): Promise<void>;
   awardKarma(userId: string, amount: number, reason: string): Promise<void>;
   creditPiasses(userId: string, amount: number): Promise<boolean>;
+  getUserTransactions(
+    userId: string,
+    limit?: number,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]>;
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
@@ -1206,6 +1213,52 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
       return !!result[0];
+    });
+  }
+
+  async getUserTransactions(
+    userId: string,
+    limit: number = 50,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]> {
+    return traceDatabase("SELECT", "transactions", async () => {
+      const results = await db
+        .select({
+          transaction: transactions,
+          sender: users,
+        })
+        .from(transactions)
+        .leftJoin(users, eq(transactions.senderId, users.id))
+        .where(
+          or(
+            eq(transactions.senderId, userId),
+            eq(transactions.receiverId, userId),
+          ),
+        )
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit);
+
+      // Fetch receiver information for each transaction
+      const transactionsWithUsers = await Promise.all(
+        results.map(async (row) => {
+          let receiver: User | undefined = undefined;
+          if (row.transaction.receiverId) {
+            const receiverResults = await db
+              .select()
+              .from(users)
+              .where(eq(users.id, row.transaction.receiverId))
+              .limit(1);
+            receiver = receiverResults[0];
+          }
+
+          return {
+            ...row.transaction,
+            sender: row.sender || undefined,
+            receiver,
+          };
+        }),
+      );
+
+      return transactionsWithUsers;
     });
   }
 
