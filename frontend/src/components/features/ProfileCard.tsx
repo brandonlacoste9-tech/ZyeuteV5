@@ -4,7 +4,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "@/i18n";
 import { Avatar } from "../Avatar";
 import { Button } from "../Button";
 import { formatNumber } from "../../lib/utils";
