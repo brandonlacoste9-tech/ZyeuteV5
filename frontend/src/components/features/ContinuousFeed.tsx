@@ -15,7 +15,7 @@ import React, {
 } from "react";
 import { List, ListImperativeAPI } from "react-window";
 
-// react-window 2.x types - RowData is passed via rowProps
+// react-window 2.x types - RowData is passed via rowProps (spread flat)
 interface RowData {
   posts: Array<Post & { user: User }>;
   currentIndex: number;
@@ -30,8 +30,16 @@ interface RowData {
   isPageVisible: boolean;
 }
 
-// Relax type check for react-window compatibility
-type FeedRowProps = any;
+// react-window 2.x spreads rowProps flat onto the row component
+interface FeedRowProps extends RowData {
+  ariaAttributes: {
+    "aria-posinset": number;
+    "aria-setsize": number;
+    role: "listitem";
+  };
+  index: number;
+  style: React.CSSProperties;
+}
 
 import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
@@ -70,20 +78,20 @@ interface ContinuousFeedProps {
 }
 
 const FeedRow = memo(
-  ({ index, style, data }: FeedRowProps): ReactElement | null => {
-    const {
-      posts,
-      currentIndex,
-      handleFireToggle,
-      handleComment,
-      handleShare,
-      isFastScrolling,
-      isMediumScrolling,
-      isSlowScrolling,
-      isSystemOverloaded,
-      isPageVisible = true,
-    } = data;
-
+  ({
+    index,
+    style,
+    posts,
+    currentIndex,
+    handleFireToggle,
+    handleComment,
+    handleShare,
+    isFastScrolling,
+    isMediumScrolling,
+    isSlowScrolling,
+    isSystemOverloaded,
+    isPageVisible = true,
+  }: FeedRowProps): ReactElement | null => {
     const post = posts[index];
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
@@ -159,35 +167,31 @@ const FeedRow = memo(
     if (prevProps.index !== nextProps.index) return false;
     if (prevProps.style !== nextProps.style) return false;
 
-    // Compare data objects
-    const prevData = prevProps.data;
-    const nextData = nextProps.data;
-
     // 1. If the post data itself changed, we must re-render
-    if (prevData.posts !== nextData.posts) return false;
+    if (prevProps.posts !== nextProps.posts) return false;
 
     // 2. If global scroll speed changed, we re-render to adjust quality
     if (
-      prevData.isFastScrolling !== nextData.isFastScrolling ||
-      prevData.isMediumScrolling !== nextData.isMediumScrolling ||
-      prevData.isSlowScrolling !== nextData.isSlowScrolling ||
-      prevData.isSystemOverloaded !== nextData.isSystemOverloaded
+      prevProps.isFastScrolling !== nextProps.isFastScrolling ||
+      prevProps.isMediumScrolling !== nextProps.isMediumScrolling ||
+      prevProps.isSlowScrolling !== nextProps.isSlowScrolling ||
+      prevProps.isSystemOverloaded !== nextProps.isSystemOverloaded
     )
       return false;
 
     // 3. ZERO-GRAVITY CALCULATION:
     // Only re-render if this specific row's relationship to the "current" index changed.
-    const prevIsPriority = prevProps.index === prevData.currentIndex;
-    const nextIsPriority = nextProps.index === nextData.currentIndex;
+    const prevIsPriority = prevProps.index === prevProps.currentIndex;
+    const nextIsPriority = nextProps.index === nextProps.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
     const prevIsPredictive =
-      Math.abs(prevProps.index - prevData.currentIndex) === 1;
+      Math.abs(prevProps.index - prevProps.currentIndex) === 1;
     const nextIsPredictive =
-      Math.abs(nextProps.index - nextData.currentIndex) === 1;
+      Math.abs(nextProps.index - nextProps.currentIndex) === 1;
     if (prevIsPredictive !== nextIsPredictive) return false;
 
-    if (prevData.isPageVisible !== nextData.isPageVisible) return false;
+    if (prevProps.isPageVisible !== nextProps.isPageVisible) return false;
 
     return true; // Everything else is identical; skip render.
   },
@@ -553,19 +557,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [fetchVideoFeed, savedState, posts.length]);
 
-  // Restore scroll position via ref
+  // Restore scroll position via ref (react-window 2.x API)
   useEffect(() => {
     if (savedState?.currentIndex && listRef.current) {
-      // Robustly check for method name (react-window vs custom)
-      if (typeof listRef.current.scrollToItem === "function") {
-        // "start" alignment ensures the video snaps to top properly
-        listRef.current.scrollToItem(savedState.currentIndex, "start");
-      } else if (typeof listRef.current.scrollToRow === "function") {
-        listRef.current.scrollToRow({
-          index: savedState.currentIndex,
-          align: "start",
-        });
-      }
+      listRef.current.scrollToRow({
+        index: savedState.currentIndex,
+        align: "start",
+      });
     }
   }, [savedState]);
 
@@ -679,17 +677,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [currentIndex, page, posts, isFast, isMedium, isSlow, isSystemOverloaded]);
 
-  // Handle rows rendered (new API name in 2.x)
+  // Handle rows rendered (react-window 2.x API)
   const onRowsRendered = useCallback(
-    ({
-      visibleStartIndex,
-      visibleStopIndex,
-    }: {
-      visibleStartIndex: number;
-      visibleStopIndex: number;
-    }) => {
-      const startIndex = visibleStartIndex;
-      const stopIndex = visibleStopIndex;
+    (
+      visibleRows: { startIndex: number; stopIndex: number },
+      _allRows: { startIndex: number; stopIndex: number },
+    ) => {
+      const { startIndex, stopIndex } = visibleRows;
 
       // We assume the top-most visible item is the "current" one in a snap-scroll context
       const newIndex = startIndex;
@@ -860,10 +854,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
-              itemData={itemData}
+              rowProps={itemData}
+              rowComponent={FeedRow}
               overscanCount={isFast ? 3 : 2}
-              onItemsRendered={onRowsRendered}
-              children={(props: FeedRowProps) => <FeedRow {...props} />}
+              onRowsRendered={onRowsRendered}
             />
           </>
         )}
