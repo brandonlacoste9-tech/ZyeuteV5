@@ -2397,6 +2397,49 @@ export async function registerRoutes(
     }
   });
 
+  // Get user's transaction history
+  app.get("/api/users/me/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const transactions = await storage.getUserTransactions(userId, limit);
+
+      res.json({
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          amount: t.amount,
+          creditType: t.creditType,
+          type: t.type,
+          status: t.status,
+          feeAmount: t.feeAmount,
+          taxAmount: t.taxAmount,
+          metadata: t.metadata,
+          hiveId: t.hiveId,
+          sender: t.sender
+            ? {
+                id: t.sender.id,
+                username: t.sender.username,
+                displayName: t.sender.displayName,
+                avatarUrl: t.sender.avatarUrl,
+              }
+            : null,
+          receiver: t.receiver
+            ? {
+                id: t.receiver.id,
+                username: t.receiver.username,
+                displayName: t.receiver.displayName,
+                avatarUrl: t.receiver.avatarUrl,
+              }
+            : null,
+          createdAt: t.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get user transactions error:", error);
+      res.status(500).json({ error: "Failed to get transactions" });
+    }
+  });
+
   // [TI-SCRIPT] Dictionary Lookup Route
   app.get("/api/dictionary/lookup/:word", async (req, res) => {
     try {

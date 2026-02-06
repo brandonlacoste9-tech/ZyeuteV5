@@ -34,8 +34,11 @@ import {
   type ParentalControl,
   type InsertParentalControl,
   aiGenerationCosts,
+  transactions,
+  type Transaction,
+  type InsertTransaction,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, isNull, or, gte, lte, alias } from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
@@ -202,6 +205,10 @@ export interface IStorage {
   refundPiasses(userId: string, amount: number, reason: string): Promise<void>;
   awardKarma(userId: string, amount: number, reason: string): Promise<void>;
   creditPiasses(userId: string, amount: number): Promise<boolean>;
+  getUserTransactions(
+    userId: string,
+    limit?: number,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]>;
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
@@ -1206,6 +1213,41 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
       return !!result[0];
+    });
+  }
+
+  async getUserTransactions(
+    userId: string,
+    limit: number = 50,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]> {
+    return traceDatabase("SELECT", "transactions", async () => {
+      // Create aliases for sender and receiver
+      const sender = alias(users, "sender");
+      const receiver = alias(users, "receiver");
+
+      const results = await db
+        .select({
+          transaction: transactions,
+          sender: sender,
+          receiver: receiver,
+        })
+        .from(transactions)
+        .leftJoin(sender, eq(transactions.senderId, sender.id))
+        .leftJoin(receiver, eq(transactions.receiverId, receiver.id))
+        .where(
+          or(
+            eq(transactions.senderId, userId),
+            eq(transactions.receiverId, userId),
+          ),
+        )
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit);
+
+      return results.map((row) => ({
+        ...row.transaction,
+        sender: row.sender || undefined,
+        receiver: row.receiver || undefined,
+      }));
     });
   }
 
