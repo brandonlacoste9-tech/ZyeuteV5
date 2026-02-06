@@ -67,7 +67,7 @@ export const HiveProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         currentHive,
         switchHive,
-        availableHives: (HIVES as any) ? Object.values(HIVES) : [],
+        availableHives: HIVES ? Object.values(HIVES) : [],
       }}
     >
       {children}
