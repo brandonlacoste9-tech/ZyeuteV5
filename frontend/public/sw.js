@@ -1,4 +1,6 @@
 // Service Worker for Zyeuté PWA
+const CACHE_NAME = 'zyeute-v6';
+const OLD_CACHES = ['zyeute-v1', 'zyeute-v2', 'zyeute-v3', 'zyeute-v4', 'zyeute-v5'];
 const CACHE_NAME = 'zyeute-v5';
 const OLD_CACHES = ['zyeute-v1', 'zyeute-v2', 'zyeute-v3', 'zyeute-v4'];
 
@@ -15,7 +17,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME || OLD_CACHES.includes(name))
+          .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
     })

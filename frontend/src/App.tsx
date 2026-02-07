@@ -162,7 +162,19 @@ const GlobalAuthLoader: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { isLoading } = useAuth();
-  if (isLoading)
+  const [forceShow, setForceShow] = React.useState(false);
+
+  // Nuclear failsafe: if auth is STILL loading after 4s, render the app anyway
+  React.useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => {
+      console.warn("⚠️ GlobalAuthLoader: Force-rendering after 4s timeout");
+      setForceShow(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  if (isLoading && !forceShow)
     return (
       <LoadingScreen message={`Chargement de ${AppConfig.identity.name}...`} />
     );
