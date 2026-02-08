@@ -1,83 +1,16 @@
 
 > build
-> vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --packages=external
+> vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --external:sharp --external:pg --external:vite --external:./vite.js --define:process.env.NODE_ENV=\"production\"
 
-[36mvite v7.3.0 [32mbuilding client environment for production...[36m[39m
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
 transforming...
-[32mΓ£ô[39m 3892 modules transformed.
-rendering chunks...
-[plugin vite:reporter] 
-(!) C:/Users/north/zyeute-v3-1/frontend/src/lib/videoWarmCache.ts is dynamically imported by C:/Users/north/zyeute-v3-1/frontend/src/components/features/VideoPlayer.tsx but also statically imported by C:/Users/north/zyeute-v3-1/frontend/src/components/features/StreamingDebugOverlay.tsx, C:/Users/north/zyeute-v3-1/frontend/src/hooks/usePrefetchVideo.ts, dynamic import will not move module into another chunk.
-
-[meta-images] no Replit deployment domain found, skipping meta tag updates
-computing gzip size...
-[2m../dist/public/[22m[32mindex.html                                          [39m[1m[2m  3.36 kB[22m[1m[22m[2m Γöé gzip:   1.29 kB[22m
-[2m../dist/public/[22m[32massets/TI-GUY_NEW_SHARP_1765507001190-DqLLf9ve.jpg  [39m[1m[2m243.50 kB[22m[1m[22m
-[2m../dist/public/[22m[35massets/index-D2c3PtVV.css                           [39m[1m[2m172.42 kB[22m[1m[22m[2m Γöé gzip:  23.02 kB[22m
-[2m../dist/public/[22m[36massets/input-5UIxFSaa.js                            [39m[1m[2m  0.58 kB[22m[1m[22m[2m Γöé gzip:   0.37 kB[22m
-[2m../dist/public/[22m[36massets/GoLive-D5t018Rp.js                           [39m[1m[2m  0.61 kB[22m[1m[22m[2m Γöé gzip:   0.39 kB[22m
-[2m../dist/public/[22m[36massets/WatchLive-DydubeAM.js                        [39m[1m[2m  0.72 kB[22m[1m[22m[2m Γöé gzip:   0.43 kB[22m
-[2m../dist/public/[22m[36massets/stripeService-DlKv1DIz.js                    [39m[1m[2m  1.63 kB[22m[1m[22m[2m Γöé gzip:   0.96 kB[22m
-[2m../dist/public/[22m[36massets/useSettingsPreferences-BiamtRLO.js           [39m[1m[2m  2.11 kB[22m[1m[22m[2m Γöé gzip:   1.12 kB[22m
-[2m../dist/public/[22m[36massets/RegionSettings-Bg8giW04.js                   [39m[1m[2m  2.14 kB[22m[1m[22m[2m Γöé gzip:   1.06 kB[22m
-[2m../dist/public/[22m[36massets/FavoritesSettings-DgSJ7hEW.js                [39m[1m[2m  2.31 kB[22m[1m[22m[2m Γöé gzip:   0.86 kB[22m
-[2m../dist/public/[22m[36massets/ArcadeHub-C-uMvJMd.js                        [39m[1m[2m  2.34 kB[22m[1m[22m[2m Γöé gzip:   1.16 kB[22m
-[2m../dist/public/[22m[36massets/AudioSettings-CwxStH3P.js                    [39m[1m[2m  3.00 kB[22m[1m[22m[2m Γöé gzip:   0.92 kB[22m
-[2m../dist/public/[22m[36massets/MediaSettings-DmjfySVO.js                    [39m[1m[2m  3.01 kB[22m[1m[22m[2m Γöé gzip:   0.92 kB[22m
-[2m../dist/public/[22m[36massets/TagsSettings-C9ZXNq9W.js                     [39m[1m[2m  3.16 kB[22m[1m[22m[2m Γöé gzip:   1.12 kB[22m
-[2m../dist/public/[22m[36massets/ContentPreferencesSettings-BY_Y0RN6.js       [39m[1m[2m  3.23 kB[22m[1m[22m[2m Γöé gzip:   1.12 kB[22m
-[2m../dist/public/[22m[36massets/LanguageSettings-BiHTTaiX.js                 [39m[1m[2m  3.25 kB[22m[1m[22m[2m Γöé gzip:   1.24 kB[22m
-[2m../dist/public/[22m[36massets/Artiste-BtPH0I9s.js                          [39m[1m[2m  3.25 kB[22m[1m[22m[2m Γöé gzip:   1.55 kB[22m
-[2m../dist/public/[22m[36massets/PoutineLobby-B8VoLyLa.js                     [39m[1m[2m  3.38 kB[22m[1m[22m[2m Γöé gzip:   1.53 kB[22m
-[2m../dist/public/[22m[36massets/StorageSettings-CRoJLoIN.js                  [39m[1m[2m  3.38 kB[22m[1m[22m[2m Γöé gzip:   1.17 kB[22m
-[2m../dist/public/[22m[36massets/EmailCampaigns-C5913-zt.js                   [39m[1m[2m  3.41 kB[22m[1m[22m[2m Γöé gzip:   1.33 kB[22m
-[2m../dist/public/[22m[36massets/AppSettings-mWqq1m4Q.js                      [39m[1m[2m  3.52 kB[22m[1m[22m[2m Γöé gzip:   1.04 kB[22m
-[2m../dist/public/[22m[36massets/PrivacySettings-7g_b40YS.js                  [39m[1m[2m  3.58 kB[22m[1m[22m[2m Γöé gzip:   1.11 kB[22m
-[2m../dist/public/[22m[36massets/SharingSettings-Db3To2f_.js                  [39m[1m[2m  3.76 kB[22m[1m[22m[2m Γöé gzip:   0.93 kB[22m
-[2m../dist/public/[22m[36massets/Dashboard-xe0f-I5-.js                        [39m[1m[2m  3.78 kB[22m[1m[22m[2m Γöé gzip:   1.01 kB[22m
-[2m../dist/public/[22m[36massets/RestrictedAccountsSettings-BwwgAnP7.js       [39m[1m[2m  3.87 kB[22m[1m[22m[2m Γöé gzip:   1.55 kB[22m
-[2m../dist/public/[22m[36massets/Studio-BAUBpbwA.js                           [39m[1m[2m  4.01 kB[22m[1m[22m[2m Γöé gzip:   1.72 kB[22m
-[2m../dist/public/[22m[36massets/Notifications-DetRBsgl.js                    [39m[1m[2m  4.17 kB[22m[1m[22m[2m Γöé gzip:   1.67 kB[22m
-[2m../dist/public/[22m[36massets/CameraView-C5d_Ep8K.js                       [39m[1m[2m  4.73 kB[22m[1m[22m[2m Γöé gzip:   1.94 kB[22m
-[2m../dist/public/[22m[36massets/Challenges-CEKqiXaE.js                       [39m[1m[2m  4.96 kB[22m[1m[22m[2m Γöé gzip:   1.98 kB[22m
-[2m../dist/public/[22m[36massets/CommentsSettings-BEH-fjRu.js                 [39m[1m[2m  4.99 kB[22m[1m[22m[2m Γöé gzip:   1.23 kB[22m
-[2m../dist/public/[22m[36massets/MutedAccountsSettings-CYHFomE0.js            [39m[1m[2m  5.01 kB[22m[1m[22m[2m Γöé gzip:   1.68 kB[22m
-[2m../dist/public/[22m[36massets/StoryCreator-bJS8aZlS.js                     [39m[1m[2m  5.19 kB[22m[1m[22m[2m Γöé gzip:   2.05 kB[22m
-[2m../dist/public/[22m[36massets/index-B4pqzam8.js                            [39m[1m[2m  5.36 kB[22m[1m[22m[2m Γöé gzip:   2.09 kB[22m
-[2m../dist/public/[22m[36massets/Player-CnA9jUv0.js                           [39m[1m[2m  5.49 kB[22m[1m[22m[2m Γöé gzip:   2.23 kB[22m
-[2m../dist/public/[22m[36massets/ProfileEditSettings-BQnqxD19.js              [39m[1m[2m  5.60 kB[22m[1m[22m[2m Γöé gzip:   2.09 kB[22m
-[2m../dist/public/[22m[36massets/HiveCommand-bkQlNpDa.js                      [39m[1m[2m  5.60 kB[22m[1m[22m[2m Γöé gzip:   1.61 kB[22m
-[2m../dist/public/[22m[36massets/NotificationSettings-BkvQn1_i.js             [39m[1m[2m  5.97 kB[22m[1m[22m[2m Γöé gzip:   1.15 kB[22m
-[2m../dist/public/[22m[36massets/VoiceSettingsPage-B2kwX_x0.js                [39m[1m[2m  6.56 kB[22m[1m[22m[2m Γöé gzip:   2.24 kB[22m
-[2m../dist/public/[22m[36massets/Marketplace-e2N_lMg8.js                      [39m[1m[2m  7.23 kB[22m[1m[22m[2m Γöé gzip:   2.53 kB[22m
-[2m../dist/public/[22m[36massets/Analytics-S7zsVe_9.js                        [39m[1m[2m  7.73 kB[22m[1m[22m[2m Γöé gzip:   2.53 kB[22m
-[2m../dist/public/[22m[36massets/ui-icons-Dt9-okkQ.js                         [39m[1m[2m  8.35 kB[22m[1m[22m[2m Γöé gzip:   3.46 kB[22m
-[2m../dist/public/[22m[36massets/HiveTap-NpW37WbQ.js                          [39m[1m[2m  8.61 kB[22m[1m[22m[2m Γöé gzip:   2.48 kB[22m
-[2m../dist/public/[22m[36massets/AIStudio-Ct9PpGCa.js                         [39m[1m[2m  9.57 kB[22m[1m[22m[2m Γöé gzip:   3.07 kB[22m
-[2m../dist/public/[22m[36massets/Achievements-BrREgO_4.js                     [39m[1m[2m  9.81 kB[22m[1m[22m[2m Γöé gzip:   2.94 kB[22m
-[2m../dist/public/[22m[36massets/Upload-l-Fo3C22.js                           [39m[1m[2m  9.84 kB[22m[1m[22m[2m Γöé gzip:   3.34 kB[22m
-[2m../dist/public/[22m[36massets/Moderation-hFRO-iWp.js                       [39m[1m[2m 10.43 kB[22m[1m[22m[2m Γöé gzip:   3.01 kB[22m
-[2m../dist/public/[22m[36massets/PoutineStackGame-QaCueK-C.js                 [39m[1m[2m 10.46 kB[22m[1m[22m[2m Γöé gzip:   4.05 kB[22m
-[2m../dist/public/[22m[36massets/LiveDiscover-A2efeWmx.js                     [39m[1m[2m 10.74 kB[22m[1m[22m[2m Γöé gzip:   3.24 kB[22m
-[2m../dist/public/[22m[36massets/Observability-BORhbpkn.js                    [39m[1m[2m 11.29 kB[22m[1m[22m[2m Γöé gzip:   4.11 kB[22m
-[2m../dist/public/[22m[36massets/SkinSelector-CPMdFQkx.js                     [39m[1m[2m 11.83 kB[22m[1m[22m[2m Γöé gzip:   4.12 kB[22m
-[2m../dist/public/[22m[36massets/TermsOfService-DEMKGHki.js                   [39m[1m[2m 11.86 kB[22m[1m[22m[2m Γöé gzip:   3.17 kB[22m
-[2m../dist/public/[22m[36massets/Premium-EkoQ9aur.js                          [39m[1m[2m 11.97 kB[22m[1m[22m[2m Γöé gzip:   3.43 kB[22m
-[2m../dist/public/[22m[36massets/CreatorRevenue-ywkWgn90.js                   [39m[1m[2m 13.68 kB[22m[1m[22m[2m Γöé gzip:   3.51 kB[22m
-[2m../dist/public/[22m[36massets/PrivacyPolicy-Cm9hOEAf.js                    [39m[1m[2m 14.83 kB[22m[1m[22m[2m Γöé gzip:   3.55 kB[22m
-[2m../dist/public/[22m[36massets/CommunityGuidelines-ChuNVIVt.js              [39m[1m[2m 16.42 kB[22m[1m[22m[2m Γöé gzip:   3.90 kB[22m
-[2m../dist/public/[22m[36massets/Settings-BPrR0rmp.js                         [39m[1m[2m 20.27 kB[22m[1m[22m[2m Γöé gzip:   5.14 kB[22m
-[2m../dist/public/[22m[36massets/PostDetail-zLUHmEcH.js                       [39m[1m[2m 20.59 kB[22m[1m[22m[2m Γöé gzip:   8.09 kB[22m
-[2m../dist/public/[22m[36massets/LaZyeute-CiTUd5_g.js                         [39m[1m[2m 31.41 kB[22m[1m[22m[2m Γöé gzip:  10.22 kB[22m
-[2m../dist/public/[22m[36massets/utils-ybMk35xC.js                            [39m[1m[2m 35.42 kB[22m[1m[22m[2m Γöé gzip:  11.52 kB[22m
-[2m../dist/public/[22m[36massets/ui-radix-WinUMO4Q.js                         [39m[1m[2m 40.62 kB[22m[1m[22m[2m Γöé gzip:  12.25 kB[22m
-[2m../dist/public/[22m[36massets/react-vendor-ZksEKMP0.js                     [39m[1m[2m 47.92 kB[22m[1m[22m[2m Γöé gzip:  17.11 kB[22m
-[2m../dist/public/[22m[36massets/forms-BWD9u0A-.js                            [39m[1m[2m 55.32 kB[22m[1m[22m[2m Γöé gzip:  12.69 kB[22m
-[2m../dist/public/[22m[36massets/supabase-BabgVrFC.js                         [39m[1m[2m168.10 kB[22m[1m[22m[2m Γöé gzip:  43.74 kB[22m
-[2m../dist/public/[22m[36massets/ParentalDashboard-Bbp0HUX_.js                [39m[1m[2m372.58 kB[22m[1m[22m[2m Γöé gzip: 110.89 kB[22m
-[2m../dist/public/[22m[36massets/index-CAfuNe7m.js                            [39m[1m[2m635.60 kB[22m[1m[22m[2m Γöé gzip: 198.30 kB[22m
-[32mΓ£ô built in 45.59s[39m
-
-  dist\index.cjs  320.4kb
-
-Done in 107ms
+[32mΓ£ô[39m 3361 modules transformed.
+Γ£ù Build failed in 11.41s
+error during build:
+[commonjs--resolver] Could not load C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\@reduxjs\toolkit\dist\cjs\index.js: ENOENT: no such file or directory, open 'C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\@reduxjs\toolkit\dist\cjs\index.js'
+    at async open (node:internal/fs/promises:642:25)
+    at async Object.readFile (node:internal/fs/promises:1279:14)
+    at async Object.handler (file:///C:/Users/north/ZyeuteV5/node_modules/vite/dist/node/chunks/config.js:33169:21)
+    at async PluginDriver.hookFirstAndGetPlugin (file:///C:/Users/north/ZyeuteV5/node_modules/rollup/dist/es/shared/node-entry.js:22404:28)
+    at async file:///C:/Users/north/ZyeuteV5/node_modules/rollup/dist/es/shared/node-entry.js:21404:33
+    at async Queue.work (file:///C:/Users/north/ZyeuteV5/node_modules/rollup/dist/es/shared/node-entry.js:22632:32)

@@ -570,9 +570,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <Suspense fallback={<div className="w-full h-full bg-black" />}>
           <MuxPlayer
             playbackId={muxPlaybackId}
-            metadataVideoTitle="Zyeuté Exclusive"
+            metadata={{
+              videoTitle: "Zyeuté Exclusive",
+            }}
             streamType="on-demand"
-            accentColor="#FF00FF"
+            accentColor="#FFB800"
+            envKey="m5a8o9td2kq7765je565khl96"
             autoPlay={autoPlay}
             muted={muted}
             loop={loop}

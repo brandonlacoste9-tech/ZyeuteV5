@@ -1,0 +1,39 @@
+
+> dev
+> cross-env NODE_ENV=development tsx backend/index.ts
+
+Γä╣∩╕Å  OpenTelemetry tracing disabled (not on Vercel, set ENABLE_OTEL=true to enable)
+ΓÜá∩╕Å GEMINI_API_KEY not found. Switching to Local Ollama Bridge.
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ≡ƒæÑ sync secrets across teammates & machines: https://dotenvx.com/ops
+ΓÜá∩╕Å [Synapse] Warning: DATABASE_URL missing. The Hive Mind will be unable to remember.
+[INFO] [Redis] Not configured (REDIS_URL or REDIS_HOST not set) - Running in degraded mode
+ΓÜá∩╕Å RESEND_API_KEY not found - email functionality will be disabled
+ΓÜá∩╕Å Supabase environment variables missing. JWT Auth will fail.
+   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY.
+Γ¥î MUX CREDENTIALS MISSING! Video uploads will fail.
+   Required environment variables:
+   - MUX_TOKEN_ID: Γ¥î MISSING
+   - MUX_TOKEN_SECRET: Γ¥î MISSING
+ΓÜá∩╕Å Supabase Credentials missing in Upload Router. Uploads will fail.
+ΓÜá∩╕Å PEXELS_API_KEY is missing. Pexels integration will fail.
+≡ƒª½ Ti-Guy: FAL_KEY pas configur├⌐ - g├⌐n├⌐ration d'images d├⌐sactiv├⌐e
+≡ƒª½ Ti-Guy: FAL_KEY pas configur├⌐ - g├⌐n├⌐ration vid├⌐o d├⌐sactiv├⌐e
+C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\path-to-regexp\src\index.ts:289
+      throw new PathError(
+            ^
+
+PathError [TypeError]: Unexpected ? at index 14, expected end: /weather/:city?; visit https://git.new/pathToRegexpError for info
+    at consumeUntil (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\path-to-regexp\src\index.ts:289:13)
+    at parse (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\path-to-regexp\src\index.ts:298:24)
+    at pathToRegexp (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\path-to-regexp\src\index.ts:480:54)
+    at Object.match (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\path-to-regexp\src\index.ts:438:28)
+    at matcher (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\router\lib\layer.js:86:23)
+    at new Layer (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\router\lib\layer.js:93:62)
+    at router.route (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\router\index.js:428:17)
+    at Router.<computed> [as get] (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\router\index.js:447:24)
+    at express (C:\Users\north\ZyeuteV5\ZyeuteV5-2\backend\routes\tiguy-actions.ts:697:8)
+    at Object.<anonymous> (C:\Users\north\ZyeuteV5\ZyeuteV5-2\backend\routes\tiguy-actions.ts:988:16) {
+  originalPath: '/weather/:city?'
+}
+
+Node.js v24.11.0

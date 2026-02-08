@@ -52,18 +52,20 @@ let isSystemReady = false;
 app.use((req, res, next) => {
   // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
   if (req.path === "/api/health") {
-    return res.status(200).json({ 
-      status: "ok", 
+    return res.status(200).json({
+      status: "ok",
       stage: isSystemReady ? "ready" : "initializing",
-      uptime: process.uptime()
+      uptime: process.uptime(),
     });
   }
-  
+
   // Debug route also overrides
   if (req.path === "/api/debug") {
-    return res.status(200).json({ status: "debug_ok", systemReady: isSystemReady });
+    return res
+      .status(200)
+      .json({ status: "debug_ok", systemReady: isSystemReady });
   }
-  
+
   // If system works, proceed
   if (isSystemReady) {
     return next();
@@ -73,7 +75,7 @@ app.use((req, res, next) => {
   res.status(503).json({
     status: "initializing",
     message: "Server is starting up. Please wait...",
-    uptime: process.uptime()
+    uptime: process.uptime(),
   });
 });
 
@@ -82,8 +84,12 @@ app.use((req, res, next) => {
     // 1. Start Listening IMMEDIATELY (Satisfy Railway Healthcheck)
     // HOST MUST BE "0.0.0.0" - DO NOT USE "localhost"
     server = httpServer.listen(port, "0.0.0.0", () => {
-      console.log(`✅ Server running on http://0.0.0.0:${port} (Initializing...)`);
-      console.log(`Health check available at http://0.0.0.0:${port}/api/health`);
+      console.log(
+        `✅ Server running on http://0.0.0.0:${port} (Initializing...)`,
+      );
+      console.log(
+        `Health check available at http://0.0.0.0:${port}/api/health`,
+      );
     });
 
     // 2. Perform Initialization in Background
@@ -106,21 +112,20 @@ app.use((req, res, next) => {
         // [CRITICAL] Run Database Migrations
         console.log("📦 [Startup] Running Schema Migrations...");
         try {
-           await migrate(db, { migrationsFolder: "./migrations" });
-           console.log("✅ [Startup] Migrations Complete");
+          await migrate(db, { migrationsFolder: "./migrations" });
+          console.log("✅ [Startup] Migrations Complete");
         } catch (err: any) {
-           // Log but don't crash main loop if possible, unless critical
-           console.error("⚠️ [Startup] Migration warning/error:", err.message);
+          // Log but don't crash main loop if possible, unless critical
+          console.error("⚠️ [Startup] Migration warning/error:", err.message);
         }
-        
+
         // [SURGICAL SELF-HEALING] Active Schema Repair
         try {
           const { healSchema } = await import("./schemaDoctor.js");
           await healSchema(pool);
         } catch (err) {
-           console.warn("⚠️ [Startup] Schema healing skipped:", err);
+          console.warn("⚠️ [Startup] Schema healing skipped:", err);
         }
-
       } catch (dbErr: any) {
         console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
@@ -155,14 +160,16 @@ app.use((req, res, next) => {
       serveStatic(app);
     } else {
       console.log("🛠️  Step 3: Setting up Vite (Development)...");
-      const { setupVite } = await import("./vite.js");
-      await setupVite(httpServer, app);
+      // const { setupVite } = await import("./vite.js");
+      // await setupVite(httpServer, app);
+      console.log(
+        "⚠️ Skipping integrated Vite server. Please run 'npx vite' for frontend.",
+      );
     }
-    
+
     // 3. Mark System Ready
     isSystemReady = true;
     console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL! (Traffic Allowed)");
-
   } catch (error) {
     console.error("❌ Failed to start server logic:", error);
     // Don't exit, let the server run 503s so we can see logs

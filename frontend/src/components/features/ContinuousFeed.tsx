@@ -66,19 +66,19 @@ interface ContinuousFeedProps {
 }
 
 const FeedRow = memo(
-  ({ index, style, data }: FeedRowProps): ReactElement | null => {
-    const {
-      posts,
-      currentIndex,
-      handleFireToggle,
-      handleComment,
-      handleShare,
-      isFastScrolling,
-      isMediumScrolling,
-      isSlowScrolling,
-      isSystemOverloaded,
-    } = data;
-
+  ({
+    index,
+    style,
+    posts,
+    currentIndex,
+    handleFireToggle,
+    handleComment,
+    handleShare,
+    isFastScrolling,
+    isMediumScrolling,
+    isSlowScrolling,
+    isSystemOverloaded,
+  }: FeedRowProps & RowData): ReactElement | null => {
     const post = posts[index];
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
@@ -142,7 +142,7 @@ const FeedRow = memo(
       </div>
     );
   },
-  (prevProps: FeedRowProps, nextProps: FeedRowProps) => {
+  (prevProps: FeedRowProps & RowData, nextProps: FeedRowProps & RowData) => {
     // Only re-render if:
     // 1. Data changed (deep check specific fields)
     // 2. Active index changed (affects priority)
@@ -151,32 +151,28 @@ const FeedRow = memo(
     if (prevProps.index !== nextProps.index) return false;
     if (prevProps.style !== nextProps.style) return false;
 
-    // Compare data objects
-    const prevData = prevProps.data;
-    const nextData = nextProps.data;
-
     // 1. If the post data itself changed, we must re-render
-    if (prevData.posts !== nextData.posts) return false;
+    if (prevProps.posts !== nextProps.posts) return false;
 
     // 2. If global scroll speed changed, we re-render to adjust quality
     if (
-      prevData.isFastScrolling !== nextData.isFastScrolling ||
-      prevData.isMediumScrolling !== nextData.isMediumScrolling ||
-      prevData.isSlowScrolling !== nextData.isSlowScrolling ||
-      prevData.isSystemOverloaded !== nextData.isSystemOverloaded
+      prevProps.isFastScrolling !== nextProps.isFastScrolling ||
+      prevProps.isMediumScrolling !== nextProps.isMediumScrolling ||
+      prevProps.isSlowScrolling !== nextProps.isSlowScrolling ||
+      prevProps.isSystemOverloaded !== nextProps.isSystemOverloaded
     )
       return false;
 
     // 3. ZERO-GRAVITY CALCULATION:
     // Only re-render if this specific row's relationship to the "current" index changed.
-    const prevIsPriority = prevProps.index === prevData.currentIndex;
-    const nextIsPriority = nextProps.index === nextData.currentIndex;
+    const prevIsPriority = prevProps.index === prevProps.currentIndex;
+    const nextIsPriority = nextProps.index === nextProps.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
     const prevIsPredictive =
-      Math.abs(prevProps.index - prevData.currentIndex) === 1;
+      Math.abs(prevProps.index - prevProps.currentIndex) === 1;
     const nextIsPredictive =
-      Math.abs(nextProps.index - nextData.currentIndex) === 1;
+      Math.abs(nextProps.index - nextProps.currentIndex) === 1;
     if (prevIsPredictive !== nextIsPredictive) return false;
 
     return true; // Everything else is identical; skip render.
@@ -422,17 +418,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             setHasMore(true);
             break;
           } else {
-            feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
+            feedLogger.warn(
+              `Pexels attempt ${pexelsAttempts + 1} returned empty`,
+            );
             pexelsAttempts++;
             if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * pexelsAttempts),
+              );
             }
           }
         } catch (pexelsError) {
-          feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
+          feedLogger.error(
+            `Pexels attempt ${pexelsAttempts + 1} failed:`,
+            pexelsError,
+          );
           pexelsAttempts++;
           if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * pexelsAttempts),
+            );
           }
         }
       }
@@ -803,10 +808,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
-              itemData={itemData}
+              rowProps={itemData}
               overscanCount={isFast ? 3 : 1}
-              onItemsRendered={onRowsRendered}
-              children={FeedRow}
+              onRowsRendered={onRowsRendered}
+              rowComponent={FeedRow}
             />
           </>
         )}

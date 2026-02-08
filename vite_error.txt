@@ -1,0 +1,13 @@
+failed to load config from C:\Users\north\ZyeuteV5\ZyeuteV5-2\vite.config.ts
+error when starting dev server:
+Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at Object.<anonymous> (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\@tailwindcss\oxide\index.js:559:11)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)
+    at node:internal/modules/cjs/loader:1893:10
+    at _require.extensions.<computed> [as .js] (file:///C:/Users/north/ZyeuteV5/ZyeuteV5-2/node_modules/vite/dist/node/chunks/config.js:35920:9)
+    at Module.load (node:internal/modules/cjs/loader:1480:32)
+    at Module._load (node:internal/modules/cjs/loader:1299:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at node:internal/modules/esm/translators:309:5
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:234:7)

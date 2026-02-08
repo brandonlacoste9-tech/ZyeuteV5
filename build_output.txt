@@ -1,0 +1,19 @@
+
+> build
+> vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --external:sharp --external:pg --external:vite --external:./vite.js --define:process.env.NODE_ENV=\"production\"
+
+failed to load config from C:\Users\north\ZyeuteV5\ZyeuteV5-2\vite.config.ts
+error during build:
+Error: Cannot find module '../lightningcss.win32-x64-msvc.node'
+Require stack:
+- C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\@tailwindcss\node\node_modules\lightningcss\node\index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\north\ZyeuteV5\ZyeuteV5-2\node_modules\@tailwindcss\node\node_modules\lightningcss\node\index.js:22:22)
+    at Module._compile (node:internal/modules/cjs/loader:1760:14)

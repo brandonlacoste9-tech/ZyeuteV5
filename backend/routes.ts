@@ -533,14 +533,15 @@ export async function registerRoutes(
       console.error("Get explore error:", {
         message: error.message,
         code: error.code, // Postgres error code
-        detail: error.detail,
-        table: error.table,
-        column: error.column,
       });
-      res.status(500).json({
-        error: "Failed to get explore posts",
-        code: "EXPLORE_ERROR",
-        message: error?.message || "Explore failed",
+
+      // Graceful degradation: If DB is down, return empty list instead of crashing
+      // This allows the frontend to show "No posts" or offline state instead of a raw error
+      res.json({
+        posts: [],
+        hiveId,
+        isOfflineMode: true,
+        error: "Database unavailable - returning empty feed",
       });
     }
   });

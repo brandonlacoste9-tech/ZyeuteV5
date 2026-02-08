@@ -1,6 +1,5 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
@@ -8,7 +7,7 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 const __dirname = process.cwd();
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), metaImagesPlugin()],
+  plugins: [react(), metaImagesPlugin()],
   optimizeDeps: {
     include: ["react-window", "react-virtualized-auto-sizer"],
   },
@@ -17,14 +16,6 @@ export default defineConfig({
       "@": path.resolve(__dirname, "frontend", "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
-      "@reduxjs/toolkit": path.resolve(
-        __dirname,
-        "node_modules/@reduxjs/toolkit/dist/cjs/index.js",
-      ),
-      "react-hook-form": path.resolve(
-        __dirname,
-        "node_modules/react-hook-form/dist/index.cjs.js",
-      ),
     },
   },
   css: {
@@ -101,7 +92,7 @@ export default defineConfig({
     // Proxy API requests to the backend
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: "http://localhost:3000",
         changeOrigin: true,
         secure: false,
       },

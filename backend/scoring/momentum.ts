@@ -317,9 +317,15 @@ export class MomentumBlender {
   constructor(config: Partial<ScoringConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.decay = new DecayEngine(this.config.decayHalfLife);
-    const redisUrl =
-      process.env.REDIS_URL ||
-      `redis://${process.env.REDIS_HOST || "localhost"}:${process.env.REDIS_PORT || 6379}`;
+
+    // Only create Redis URL if explicitly configured
+    let redisUrl: string | undefined;
+    if (process.env.REDIS_URL) {
+      redisUrl = process.env.REDIS_URL;
+    } else if (process.env.REDIS_HOST) {
+      redisUrl = `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`;
+    }
+
     this.cache = new EngagementCache(
       redisUrl,
       this.config.redisPrefix,
