@@ -166,6 +166,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
+    "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.14",
     "@tanstack/react-query-devtools": "^5.91.3",
     "@testing-library/dom": "^10.4.0",
