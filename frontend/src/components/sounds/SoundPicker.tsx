@@ -7,19 +7,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Music, TrendingUp, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
-import { apiCall } from "@/services/api";
-
-export interface Sound {
-  id: string;
-  title: string;
-  artist?: string;
-  audioUrl: string;
-  coverImageUrl?: string;
-  duration?: number;
-  category?: string;
-  useCount: number;
-  isOriginal: boolean;
-}
+import { getSounds, getTrendingSounds, type Sound } from "@/services/api";
 
 interface SoundPickerProps {
   isOpen: boolean;
@@ -64,11 +52,9 @@ export const SoundPicker: React.FC<SoundPickerProps> = ({
   const loadTrendingSounds = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await apiCall<{ sounds: Sound[] }>(
-        "/sounds/trending?limit=20",
-      );
-      if (!error && data?.sounds) {
-        setTrendingSounds(data.sounds);
+      const result = await getTrendingSounds(20);
+      if (result?.sounds) {
+        setTrendingSounds(result.sounds);
       }
     } catch (error) {
       console.error("Error loading trending sounds:", error);
@@ -80,11 +66,9 @@ export const SoundPicker: React.FC<SoundPickerProps> = ({
   const loadSounds = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await apiCall<{ sounds: Sound[] }>(
-        "/sounds?limit=50",
-      );
-      if (!error && data?.sounds) {
-        setSounds(data.sounds);
+      const result = await getSounds({ limit: 50 });
+      if (result?.sounds) {
+        setSounds(result.sounds);
       }
     } catch (error) {
       console.error("Error loading sounds:", error);
@@ -97,11 +81,9 @@ export const SoundPicker: React.FC<SoundPickerProps> = ({
     if (!searchQuery.trim()) return;
     setIsLoading(true);
     try {
-      const { data, error } = await apiCall<{ sounds: Sound[] }>(
-        `/sounds?search=${encodeURIComponent(searchQuery)}&limit=30`,
-      );
-      if (!error && data?.sounds) {
-        setSounds(data.sounds);
+      const result = await getSounds({ search: searchQuery, limit: 30 });
+      if (result?.sounds) {
+        setSounds(result.sounds);
       }
     } catch (error) {
       console.error("Error searching sounds:", error);

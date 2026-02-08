@@ -522,27 +522,23 @@ export async function registerRoutes(
   });
 
   // Get explore posts (public, popular) with Hive filtering
+  // On DB error we return 200 + [] so the frontend can fall back to Pexels instead of showing a hard error
   app.get("/api/explore", async (req, res) => {
+    const page = parseInt(req.query.page as string) || 0;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const hiveId = (req.query.hive as string) || "quebec";
     try {
-      const page = parseInt(req.query.page as string) || 0;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const hiveId = (req.query.hive as string) || "quebec";
-
       const posts = await storage.getExplorePosts(page, limit, hiveId);
       res.json({ posts, hiveId });
     } catch (error: any) {
       console.error("Get explore error:", {
         message: error.message,
-        code: error.code, // Postgres error code
+        code: error.code,
         detail: error.detail,
         table: error.table,
         column: error.column,
       });
-      res.status(500).json({
-        error: "Failed to get explore posts",
-        code: "EXPLORE_ERROR",
-        message: error?.message || "Explore failed",
-      });
+      res.status(200).json({ posts: [], hiveId });
     }
   });
 
@@ -2399,6 +2395,49 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Get user gifts error:", error);
       res.status(500).json({ error: "Failed to get gifts" });
+    }
+  });
+
+  // Get user's transaction history
+  app.get("/api/users/me/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const transactions = await storage.getUserTransactions(userId, limit);
+
+      res.json({
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          amount: t.amount,
+          creditType: t.creditType,
+          type: t.type,
+          status: t.status,
+          feeAmount: t.feeAmount,
+          taxAmount: t.taxAmount,
+          metadata: t.metadata,
+          hiveId: t.hiveId,
+          sender: t.sender
+            ? {
+                id: t.sender.id,
+                username: t.sender.username,
+                displayName: t.sender.displayName,
+                avatarUrl: t.sender.avatarUrl,
+              }
+            : null,
+          receiver: t.receiver
+            ? {
+                id: t.receiver.id,
+                username: t.receiver.username,
+                displayName: t.receiver.displayName,
+                avatarUrl: t.receiver.avatarUrl,
+              }
+            : null,
+          createdAt: t.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get user transactions error:", error);
+      res.status(500).json({ error: "Failed to get transactions" });
     }
   });
 

@@ -22,6 +22,10 @@ npm run test:coverage
 
 # Interactive test UI
 npm run test:ui
+
+# Build Docker images locally (for testing)
+docker build -f backend/Dockerfile -t brandontech/zyeute-backend:local .
+docker build -f infrastructure/colony/Dockerfile -t brandontech/zyeute-colony-worker:local infrastructure/colony
 ```
 
 ## 🎯 What Happens on PR
@@ -64,6 +68,24 @@ After merging to `main`:
 
 **Total Time**: ~5 minutes to production 🎉
 
+## 🐳 Docker Image Builds
+
+When code is merged to `main`, Docker images are automatically built and pushed to Docker Hub:
+
+1. **Backend Image**
+   - Built from `backend/Dockerfile`
+   - Tagged as `brandontech/zyeute-backend:latest`
+   - Also tagged with commit SHA: `brandontech/zyeute-backend:main-<sha>`
+
+2. **Colony Worker Image**
+   - Built from `infrastructure/colony/Dockerfile`
+   - Tagged as `brandontech/zyeute-colony-worker:latest`
+   - Also tagged with commit SHA: `brandontech/zyeute-colony-worker:main-<sha>`
+
+**Manual Trigger**: You can also manually trigger the Docker build workflow from the GitHub Actions tab.
+
+**Build Time**: ~3-5 minutes for both images 🐳
+
 ## 🔐 One-Time Setup (5 min)
 
 ### Required Secrets
@@ -76,12 +98,46 @@ VERCEL_ORG_ID         # In Vercel project settings
 VERCEL_PROJECT_ID     # In Vercel project settings
 ```
 
+### Docker Hub Secrets (for Docker image builds)
+
+```
+DOCKERHUB_USERNAME    # Your Docker Hub username
+DOCKERHUB_TOKEN       # Get from https://hub.docker.com/settings/security (Access Token)
+```
+
 ### Optional Secrets
 
 ```
 CODECOV_TOKEN         # For test coverage reports
 SLACK_WEBHOOK_URL     # For deployment notifications
 ```
+
+### Docker Hub (Zyeute images)
+
+To build and push images to Docker Hub as **brandontech** (workflow: `Docker Build & Push`):
+
+```
+<<<<<<< copilot/docker-login-implementation
+DOCKERHUB_USERNAME    # Your Docker Hub username (brandontech)
+DOCKERHUB_TOKEN       # Docker Hub Personal Access Token (PAT)
+```
+
+**Get Docker Hub PAT**: [Docker Hub → Account → Security → Access Tokens](https://hub.docker.com/settings/security)
+
+**Images built**:
+- `brandontech/zyeute-backend:latest` (and tagged with SHA)
+- `brandontech/zyeute-colony-worker:latest` (and tagged with SHA)
+
+**Workflow triggers**:
+- Automatic: When pushing to `main` and changes are made to `backend/`, `colony.dockerfile`, or root `package.json`/`package-lock.json`
+- Manual: Go to Actions → Docker Build & Push → Run workflow
+=======
+DOCKERHUB_USERNAME    # e.g. brandontech
+DOCKERHUB_TOKEN       # Docker Hub PAT (Settings → Security → Access Tokens)
+```
+
+Images: `brandontech/zyeute-backend`, `brandontech/zyeute-colony-worker`. Triggered on push to `main` when backend/ or Dockerfiles change, or via **Actions → Docker Build & Push → Run workflow**.
+>>>>>>> main
 
 ## 📊 Test Suite Overview
 
@@ -154,6 +210,31 @@ npm run check
 3. Review deployment logs in workflow
 4. Ensure build succeeds locally: `npm run build`
 
+### Docker Build Failing?
+1. **Check Docker Hub credentials**:
+   - Verify `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` secrets are set
+   - Ensure token has write permissions
+   - Get new token from: https://hub.docker.com/settings/security
+
+2. **Test Docker builds locally**:
+   ```bash
+   # Test backend build
+   docker build -f backend/Dockerfile -t test-backend .
+   
+   # Test colony worker build
+   docker build -f infrastructure/colony/Dockerfile -t test-colony infrastructure/colony
+   ```
+
+3. **Common Docker issues**:
+   - Build context errors: Ensure Dockerfiles have correct paths
+   - Missing dependencies: Check if all required files are in context
+   - Cache issues: Workflow uses GitHub Actions cache, which auto-clears
+
+4. **View workflow logs**:
+   - Go to Actions tab → "Docker Build and Push" workflow
+   - Click on failed run to see detailed build logs
+   - Check each step for specific error messages
+
 ## 📚 Full Documentation
 
 - **[CI_CD_SETUP.md](../CI_CD_SETUP.md)** - Complete setup guide
@@ -215,6 +296,12 @@ In your PR, you'll see:
    ```bash
    npm test -- --clearCache
    ```
+
+6. **Manually trigger Docker builds**:
+   - Go to Actions tab → "Docker Build and Push"
+   - Click "Run workflow" button
+   - Select branch (usually `main`)
+   - Click "Run workflow" to start
 
 ## 🎯 Quick Reference
 

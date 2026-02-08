@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Clone all external tools & skills into external/ so the agent and build can use them.
 # Run once: ./scripts/setup-external-tools.sh   or   bash scripts/setup-external-tools.sh
+# Zyeute lean: also creates docs/planning and checks for local Ollama (AGENT_MODE=Hybrid).
 
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,4 +29,10 @@ for entry in "${repos[@]}"; do
   fi
 done
 
+cd "$ROOT"
+mkdir -p "$ROOT/docs/planning"
+# Optional: if Ollama is running, suggest AGENT_MODE=Hybrid
+if command -v nc &>/dev/null && nc -z localhost 11434 2>/dev/null; then
+  echo "Ollama detected on port 11434. Set AGENT_MODE=Hybrid in .env to use local LLM for small tasks (saves credit)."
+fi
 echo "Done. External tools are in external/"

@@ -44,6 +44,7 @@ const VISUAL_FILTERS = [
 
 export const Upload: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [file, setFile] = React.useState<File | null>(null);
   const [preview, setPreview] = React.useState<string | null>(null);
   const [caption, setCaption] = React.useState("");
@@ -53,6 +54,18 @@ export const Upload: React.FC = () => {
   const [isEphemeral, setIsEphemeral] = React.useState(false); // View-Once / Burn Mode
   const [isUploading, setIsUploading] = React.useState(false);
   const [showCamera, setShowCamera] = React.useState(false);
+
+  // Remix functionality (from URL params)
+  const [remixPostId] = React.useState<string | null>(
+    searchParams.get("remixPostId")
+  );
+  const [remixType] = React.useState<"duet" | "stitch" | "react" | null>(
+    searchParams.get("remixType") as "duet" | "stitch" | "react" | null
+  );
+
+  // Sound picker state
+  const [selectedSound, setSelectedSound] = React.useState<Sound | null>(null);
+  const [showSoundPicker, setShowSoundPicker] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -122,10 +135,13 @@ export const Upload: React.FC = () => {
 
       if (isVideo) {
         // --- VIDEO FLOW (MUX) ---
-        // 1. Generate client-side thumbnail
+        // 1. Generate client-side thumbnail (with timeout telemetry)
         const { generateVideoThumbnail } =
           await import("../utils/videoThumbnail");
-        const thumbDataUrl = await generateVideoThumbnail(file);
+        const { mediaTelemetry } = await import("../lib/mediaTelemetry");
+        const thumbDataUrl = await generateVideoThumbnail(file, {
+          onTimeout: () => mediaTelemetry.recordThumbnailTimeout("upload"),
+        });
         const thumbBlob = dataURIToBlob(thumbDataUrl);
 
         // 2. Upload thumbnail to Supabase

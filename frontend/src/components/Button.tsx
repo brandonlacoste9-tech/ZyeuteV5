@@ -100,7 +100,7 @@ export const PlayButton: React.FC<{ onClick?: () => void; size?: number }> = ({
   <button
     onClick={onClick}
     className="absolute inset-0 flex items-center justify-center group focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-inset"
-    aria-label="Play video"
+    aria-label="Jouer la vidéo"
   >
     <div
       className="bg-gold-gradient rounded-full shadow-2xl group-hover:scale-110 transition-transform duration-300 flex items-center justify-center"
@@ -126,8 +126,8 @@ export const FireButton: React.FC<{
   onClick?: () => void;
 }> = ({ level, active = false, onClick }) => {
   const fires = "🔥".repeat(level);
-  const actionText = active ? "Remove praise" : "Praise this post";
-  const ariaLabel = `Give ${level} fire${level > 1 ? "s" : ""} - ${actionText}`;
+  const actionText = active ? "Retirer la félicitation" : "Féliciter ce post";
+  const ariaLabel = `Donner ${level} feu${level > 1 ? "x" : ""} - ${actionText}`;
 
   return (
     <button

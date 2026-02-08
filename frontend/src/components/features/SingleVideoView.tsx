@@ -29,6 +29,7 @@ interface SingleVideoViewProps {
   onFireToggle?: (postId: string, currentFire: number) => void;
   onComment?: (postId: string) => void;
   onShare?: (postId: string) => void;
+  onFollow?: (userId: string) => void;
   priority?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: import("@/hooks/usePrefetchVideo").VideoSource;
@@ -48,6 +49,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     onFireToggle,
     onComment,
     onShare,
+    onFollow,
     priority = false,
     preload = "metadata",
     videoSource,
@@ -138,6 +140,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const { viewerCount, engagement } = usePresence(post.id);
     const [isLiked, setIsLiked] = useState(false);
     const [showFireAnimation, setShowFireAnimation] = useState(false);
+    const [isFollowing, setIsFollowing] = useState(false);
 
     // Derive counts from props OR real-time updates
     const fireCount = engagement.fireCount ?? post.fire_count;
@@ -207,6 +210,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const handleShare = () => {
       onShare?.(post.id);
       tap();
+    };
+
+    const handleFollow = () => {
+      setIsFollowing(!isFollowing);
+      onFollow?.(user.id);
+      tap();
+      impact();
     };
 
     // Horizontal swipe handlers
@@ -351,9 +361,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       );
     }
 
+    // Use validated type OR original type for video source selection
+    // Both must agree for the player to receive a src
+    const shouldLoadVideo = isVideo || post.type === "video";
+
     let videoSrc = "";
 
-    if (isVideo) {
+    if (shouldLoadVideo) {
       // Priority order: enhanced_url > media_url > original_url
       if (post.processing_status === "ready" && post.enhanced_url) {
         videoSrc = post.enhanced_url;
@@ -377,16 +391,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             processing_status: post.processing_status,
           },
         );
-      } else {
-        // Log valid video source for debugging
-        console.debug("[SingleVideoView] Video source selected:", {
-          postId: post.id,
-          source: videoSrc.substring(0, 50) + "...",
-          type:
-            post.processing_status === "ready" && post.enhanced_url
-              ? "enhanced"
-              : "original",
-        });
       }
     }
 
@@ -451,7 +455,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {post.type === "video" ? (
             <VideoPlayer
               src={videoSrc}
-              poster={post.thumbnail_url || post.media_url}
+              poster={post.thumbnail_url || undefined}
               autoPlay={isActive}
               muted={isMuted}
               loop
@@ -519,6 +523,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
 
+        {/* Québec Or emblem — top right of video screen, small */}
+        <img
+          src="/quebec-emblem.png"
+          alt="Québec Or"
+          className="absolute top-4 right-4 h-7 w-auto object-contain opacity-90 z-20 pointer-events-none"
+          width={28}
+          height={28}
+          loading="lazy"
+        />
+
         {/* Deep Enhance Status Badge (Top Right) */}
         <div className="absolute top-16 right-4 z-20 flex flex-col gap-2 items-end">
           <EphemeralBadge post={post} className="static bg-red-600/90" />
@@ -534,7 +548,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {post.type === "video" && post.processing_status === "processing" && (
             <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
               <span className="animate-spin">⚙️</span>
-              <span>Enhancing...</span>
+              <span>Amélioration...</span>
             </div>
           )}
         </div>
@@ -655,6 +669,36 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               </div>
               <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
                 {fireCount}
+              </span>
+            </button>
+
+            {/* Follow Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleFollow();
+              }}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${
+                isFollowing ? "scale-105" : ""
+              }`}
+            >
+              <div
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
+                  isFollowing
+                    ? "border-gold-500 bg-gold-500/20"
+                    : "border-white/80 bg-black/20 hover:border-gold-400"
+                }`}
+              >
+                <span
+                  className={`text-2xl font-bold ${
+                    isFollowing ? "text-gold-500" : "text-white"
+                  }`}
+                >
+                  {isFollowing ? "✓" : "+"}
+                </span>
+              </div>
+              <span className="font-bold text-xs text-white drop-shadow-lg">
+                {isFollowing ? "Abonné" : "Suivre"}
               </span>
             </button>
 

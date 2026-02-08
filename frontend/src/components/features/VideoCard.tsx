@@ -15,6 +15,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { toast } from "../Toast";
 import { cn } from "../../lib/utils";
 import { InteractiveText } from "../InteractiveText";
+import { useTranslation } from "@/i18n";
 
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
@@ -49,6 +50,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
 }) => {
   const navigate = useNavigate();
   const { tap } = useHaptics();
+  const { t } = useTranslation();
 
   // Real-time Presence & Engagement
   const { viewerCount, engagement } = usePresence(post.id);
@@ -60,7 +62,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
   if (!effectiveUser) {
     return (
       <div className="leather-card p-4 text-center text-stone-500 text-xs">
-        Contenu indisponible
+        {t("error_content_unavailable")}
       </div>
     );
   }
@@ -138,11 +140,11 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
           onClick={(e) => {
             e.stopPropagation();
             tap();
-            toast.info("Options du menu - Bientôt disponible! 🔜");
+            toast.info(t("toast_save_error"));
           }}
           className="text-stone-500 hover:text-gold-500 transition-colors p-2 rounded-full hover:bg-gold-500/5"
           aria-label="More options"
-          title="Bientôt disponible"
+          title={t("toast_save_error")}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
@@ -211,8 +213,20 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z" />
             </svg>
-            <span>Video</span>
+            <span>Vidéo</span>
           </div>
+        )}
+
+        {/* Québec Or emblem — top right of video screen, small */}
+        {post.type === "video" && (
+          <img
+            src="/quebec-emblem.png"
+            alt="Québec Or"
+            className="absolute top-2 right-2 h-6 w-auto object-contain opacity-80 z-10 pointer-events-none"
+            width={24}
+            height={24}
+            loading="lazy"
+          />
         )}
 
         {/* Gold accent lines */}
@@ -345,11 +359,11 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               tap();
-              toast.info("Sauvegarde - Bientôt disponible! 🔜");
+              toast.info(t("toast_save_error"));
             }}
             className="text-stone-400 hover:text-gold-500 transition-colors opacity-60 cursor-not-allowed"
-            aria-label="Sauvegarder"
-            title="Bientôt disponible"
+            aria-label={t("btn_save")}
+            title={t("toast_save_error")}
             disabled
           >
             <svg

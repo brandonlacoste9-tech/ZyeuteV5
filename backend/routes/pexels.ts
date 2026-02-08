@@ -4,6 +4,7 @@ import { PexelsService } from "../services/pexels-service.js"; // Ensure .js ext
 const router = Router();
 
 // GET /api/pexels/curated
+// On error we return 200 + empty videos so the frontend can show empty state instead of "Impossible de charger"
 router.get("/curated", async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -12,7 +13,13 @@ router.get("/curated", async (req, res) => {
     const data = await PexelsService.getCuratedVideos(perPage, page);
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: "Failed to fetch curated videos" });
+    console.error("[Pexels] Curated failed:", error);
+    res.status(200).json({
+      page: 1,
+      per_page: 15,
+      total_results: 0,
+      videos: [],
+    });
   }
 });
 

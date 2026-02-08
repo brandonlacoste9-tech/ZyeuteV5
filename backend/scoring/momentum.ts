@@ -118,6 +118,14 @@ export class EngagementCache {
         maxRetriesPerRequest: 3,
         lazyConnect: true,
       });
+      let lastErrorLog = 0;
+      this.redis.on("error", (err: Error) => {
+        const now = Date.now();
+        if (now - lastErrorLog > 30_000) {
+          console.error("[EngagementCache] Redis error:", err.message);
+          lastErrorLog = now;
+        }
+      });
     }
   }
 
@@ -317,9 +325,15 @@ export class MomentumBlender {
   constructor(config: Partial<ScoringConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.decay = new DecayEngine(this.config.decayHalfLife);
-    const redisUrl =
-      process.env.REDIS_URL ||
-      `redis://${process.env.REDIS_HOST || "localhost"}:${process.env.REDIS_PORT || 6379}`;
+    // Strip surrounding quotes from REDIS_URL (Railway/env may have "rediss://...")
+    const rawRedisUrl = process.env.REDIS_URL?.trim()?.replace(/^["']+|["']+$/g, "");
+    const hasRedis =
+      (rawRedisUrl && rawRedisUrl.length > 0) ||
+      (process.env.REDIS_HOST && process.env.REDIS_HOST.trim());
+    const redisUrl = hasRedis
+      ? rawRedisUrl ||
+        `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`
+      : undefined;
     this.cache = new EngagementCache(
       redisUrl,
       this.config.redisPrefix,

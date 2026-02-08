@@ -12,6 +12,7 @@ const __dirname = process.cwd();
 const viteLogger = createLogger();
 
 export async function setupVite(server: Server, app: Express) {
+  console.log("   [Vite] Creating dev server (may take 30–60s on first run)...");
   const serverOptions = {
     middlewareMode: true,
     hmr: { server, path: "/vite-hmr" },
@@ -33,6 +34,7 @@ export async function setupVite(server: Server, app: Express) {
   });
 
   app.use(vite.middlewares);
+  console.log("   [Vite] Dev server ready.");
 
   // FIX: Removed "*" to satisfy Express 5
   app.use(async (req, res, next) => {

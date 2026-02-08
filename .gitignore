@@ -10,6 +10,9 @@ vite.config.ts.*
 !.env.production.template
 !.env.vercel.example
 
+# Duplicate/backup project directories
+ZyeuteV5-*/
+
 # MCP (local agent tooling config; may contain secrets)
 .mcp.json
 
@@ -58,3 +61,4 @@ external/
 tools/
 video-diag-output.txt
 .claude/
+.env*.local

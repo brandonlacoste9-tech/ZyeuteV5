@@ -1,6 +1,7 @@
 # ========================================
 # Zyeuté V5 Backend - Fly.io Dockerfile (Railway Compatible)
 # Express + TypeScript + Python Colony Bridge
+# Updated: 2026-02-05 - Force fresh build (esbuild)
 # ========================================
 
 # ---------- Stage 1: Base ----------
@@ -24,7 +25,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install ALL dependencies (including devDeps for TypeScript build)
-RUN npm ci
+# --legacy-peer-deps: express-async-errors declares express@4; we use express@5 (native async)
+RUN npm ci --legacy-peer-deps
 
 # ---------- Stage 3: Build ----------
 FROM base AS build
@@ -37,10 +39,15 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy entire monorepo for build context
 COPY . .
 
-# Build TypeScript backend
-# Assumes backend has its own tsconfig.json
-WORKDIR /app/backend
-RUN npx tsc
+# Build frontend first (vite build -> /app/dist/public)
+RUN npm run build:vercel
+
+# Build backend with esbuild (matches package.json; root tsconfig has noEmit)
+RUN npx esbuild backend/index.ts \
+  --bundle --platform=node --target=node20 --format=cjs \
+  --outfile=backend/dist/index.cjs \
+  --external:sharp --external:pg --external:vite --external:./vite.js \
+  --define:process.env.NODE_ENV=\"production\"
 
 # ---------- Stage 4: Production Runtime ----------
 FROM base AS runtime
@@ -60,8 +67,11 @@ COPY --from=deps /app/node_modules /app/node_modules
 # Copy built backend dist
 COPY --from=build /app/backend/dist ./dist
 
-# Copy backend package.json
-COPY backend/package.json ./
+# Copy frontend build (vite output -> backend expects it at dist/public)
+COPY --from=build /app/dist/public ./dist/public
+
+# Copy root package.json (monorepo - backend doesn't have its own package.json)
+COPY --from=build /app/package.json ./
 
 # Copy Python Colony Bridge (if exists)
 COPY --from=build /app/backend/ai ./ai
@@ -81,9 +91,9 @@ USER appuser
 # Expose port (Fly.io will map this internally)
 EXPOSE 8080
 
-# Health check
+# Health check (app serves /api/health; PORT may be overridden by Railway)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "const p=process.env.PORT||8080; require('http').get('http://127.0.0.1:'+p+'/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"
 
-# Start the server (compiled from TypeScript)
-CMD ["node", "dist/index.js"]
+# Start the server (esbuild bundle)
+CMD ["node", "dist/index.cjs"]

@@ -6,7 +6,7 @@
 import { Router } from "express";
 import { storage } from "../storage.js";
 import { db } from "../storage.js";
-import { sounds, posts } from "../../shared/schema.js";
+import { sounds, posts, type Sound } from "../../shared/schema.js";
 import { eq, desc, sql, like, or } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { verifyAuthToken } from "../supabase-auth.js";
@@ -33,27 +33,41 @@ router.get("/", async (req, res) => {
     const page = parseInt(req.query.page as string) || 0;
     const offset = page * limit;
 
-    let query = db.select().from(sounds);
-
-    // Apply filters
+    let soundList: Sound[];
     if (trending) {
-      // Order by use count (most used = trending)
-      query = query.orderBy(desc(sounds.useCount), desc(sounds.createdAt));
+      soundList = await db
+        .select()
+        .from(sounds)
+        .orderBy(desc(sounds.useCount), desc(sounds.createdAt))
+        .limit(limit)
+        .offset(offset);
     } else if (category) {
-      query = query.where(eq(sounds.category, category));
+      soundList = await db
+        .select()
+        .from(sounds)
+        .where(eq(sounds.category, category))
+        .limit(limit)
+        .offset(offset);
     } else if (search) {
-      query = query.where(
-        or(
-          like(sounds.title, `%${search}%`),
-          like(sounds.artist || "", `%${search}%`),
-        ),
-      );
+      soundList = await db
+        .select()
+        .from(sounds)
+        .where(
+          or(
+            like(sounds.title, `%${search}%`),
+            like(sounds.artist || "", `%${search}%`),
+          ),
+        )
+        .limit(limit)
+        .offset(offset);
     } else {
-      // Default: newest first
-      query = query.orderBy(desc(sounds.createdAt));
+      soundList = await db
+        .select()
+        .from(sounds)
+        .orderBy(desc(sounds.createdAt))
+        .limit(limit)
+        .offset(offset);
     }
-
-    const soundList = await query.limit(limit).offset(offset);
 
     res.json({
       success: true,

@@ -26,6 +26,8 @@ interface RowData {
   isMediumScrolling: boolean;
   isSlowScrolling: boolean;
   isSystemOverloaded: boolean;
+  /** When false, active video is paused (tab hidden) */
+  isPageVisible: boolean;
 }
 
 // Relax type check for react-window compatibility
@@ -56,6 +58,8 @@ import { FeedPostSkeleton } from "@/components/ui/Skeleton";
 import { useScrollVelocity } from "@/hooks/useScrollVelocity";
 import { useVideoActivation } from "@/hooks/useVideoActivation";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
+import { usePageVisibility } from "@/hooks/usePageVisibility";
+import { videoCache } from "@/lib/videoWarmCache";
 
 // ... imports ...
 
@@ -77,6 +81,7 @@ const FeedRow = memo(
       isMediumScrolling,
       isSlowScrolling,
       isSystemOverloaded,
+      isPageVisible = true,
     } = data;
 
     const post = posts[index];
@@ -122,17 +127,20 @@ const FeedRow = memo(
         <UnifiedMediaCard
           post={post}
           user={post.user}
-          isActive={shouldPlay}
+          isActive={shouldPlay && isPageVisible}
           onFireToggle={handleFireToggle}
           onComment={handleComment}
           onShare={handleShare}
           priority={isPriority}
           preload={
-            effectivePreloadTier >= 2
+            // Adjacent videos (n±1): aggressively buffer for instant swipe
+            isPredictive && !isFastScrolling
               ? "auto"
-              : effectivePreloadTier === 1
-                ? "metadata"
-                : "none"
+              : effectivePreloadTier >= 2
+                ? "auto"
+                : effectivePreloadTier === 1
+                  ? "metadata"
+                  : "none"
           }
           videoSource={source}
           isCached={isCached}
@@ -179,6 +187,8 @@ const FeedRow = memo(
       Math.abs(nextProps.index - nextData.currentIndex) === 1;
     if (prevIsPredictive !== nextIsPredictive) return false;
 
+    if (prevData.isPageVisible !== nextData.isPageVisible) return false;
+
     return true; // Everything else is identical; skip render.
   },
 );
@@ -205,6 +215,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Scroll Velocity Tracking
   const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
   const [isSystemOverloaded, setIsSystemOverloaded] = useState(false);
+  const isPageVisible = usePageVisibility();
 
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
@@ -422,17 +433,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             setHasMore(true);
             break;
           } else {
-            feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
+            feedLogger.warn(
+              `Pexels attempt ${pexelsAttempts + 1} returned empty`,
+            );
             pexelsAttempts++;
             if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+              await new Promise((resolve) =>
+                setTimeout(resolve, 1000 * pexelsAttempts),
+              );
             }
           }
         } catch (pexelsError) {
-          feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
+          feedLogger.error(
+            `Pexels attempt ${pexelsAttempts + 1} failed:`,
+            pexelsError,
+          );
           pexelsAttempts++;
           if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
+            await new Promise((resolve) =>
+              setTimeout(resolve, 1000 * pexelsAttempts),
+            );
           }
         }
       }
@@ -548,6 +568,35 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
     }
   }, [savedState]);
+
+  // Sliding-window memory: evict blob/chunk data outside active ±1 (debounced to avoid evicting during rapid scroll/updates)
+  const evictTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const retainUrls: string[] = [];
+    for (const i of [currentIndex - 1, currentIndex, currentIndex + 1]) {
+      if (i >= 0 && i < posts.length) {
+        const p = posts[i];
+        if (p?.type === "video") {
+          const url =
+            (p as Post).enhanced_url ||
+            (p as Post).media_url ||
+            (p as Post).original_url;
+          if (url) retainUrls.push(url);
+        }
+      }
+    }
+    if (evictTimeoutRef.current) clearTimeout(evictTimeoutRef.current);
+    evictTimeoutRef.current = setTimeout(() => {
+      evictTimeoutRef.current = null;
+      videoCache.evictUrlsNotIn(retainUrls);
+    }, 300);
+    return () => {
+      if (evictTimeoutRef.current) {
+        clearTimeout(evictTimeoutRef.current);
+        evictTimeoutRef.current = null;
+      }
+    };
+  }, [currentIndex, posts]);
 
   // Smart Prefetching: Load heavy chunks (Mux, Camera) when main thread is idle
   // This ensures they are ready in the browser cache when the user needs them
@@ -724,6 +773,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isMediumScrolling: isMedium,
       isSlowScrolling: isSlow,
       isSystemOverloaded,
+      isPageVisible,
     }),
     [
       posts,
@@ -735,6 +785,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isMedium,
       isSlow,
       isSystemOverloaded,
+      isPageVisible,
     ],
   );
 
@@ -764,6 +815,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               ? "Impossible de charger le fil."
               : "Aucun contenu disponible pour le moment."}
         </p>
+        {fetchError && (
+          <p className="text-stone-500 text-sm mb-2 max-w-sm">
+            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY
+            (Railway).
+          </p>
+        )}
         {(!isOnline || fetchError) && (
           <button
             type="button"
@@ -799,14 +856,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
             <List<RowData>
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory scroll-smooth"
+              className="no-scrollbar snap-y snap-mandatory"
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
               itemData={itemData}
-              overscanCount={isFast ? 3 : 1}
+              overscanCount={isFast ? 3 : 2}
               onItemsRendered={onRowsRendered}
-              children={FeedRow}
+              children={(props: FeedRowProps) => <FeedRow {...props} />}
             />
           </>
         )}

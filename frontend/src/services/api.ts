@@ -11,17 +11,17 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
-// [CONFIG] Live Railway Backend URL
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? ""
-    : "https://zyeutev5-production.up.railway.app";
+// [CONFIG] API Base URL
+// Use relative URLs so requests route through the hosting platform's proxy:
+// - Local dev: Vite proxy (/api → localhost:5000)
+// - Vercel: vercel.json rewrite (/api → Railway backend)
+const API_BASE_URL = "";
 
 // Base API call helper
 async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
-): Promise<{ data: T | null; error: string | null }> {
+): Promise<{ data: T | null; error: string | null; code?: string | number }> {
   try {
     // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
     // Get current session token
@@ -198,9 +198,25 @@ export async function getExplorePosts(
 }
 
 export async function getPostById(postId: string): Promise<Post | null> {
+  apiLogger.info(`Fetching post ${postId}...`);
+
   const { data, error } = await apiCall<{ post: Post }>(`/posts/${postId}`);
-  if (error || !data) return null;
-  return mapBackendPost(data.post);
+
+  if (error || !data) {
+    apiLogger.error(`Failed to fetch post ${postId}:`, error);
+    return null;
+  }
+
+  const mapped = mapBackendPost(data.post);
+
+  if (mapped && !mapped.media_url) {
+    apiLogger.warn(`Post ${postId} loaded but media_url is missing`, {
+      thumbnail_url: mapped.thumbnail_url,
+      type: mapped.type,
+    });
+  }
+
+  return mapped;
 }
 
 export async function getUserPosts(userId: string): Promise<Post[]> {
@@ -689,7 +705,7 @@ export async function surgicalUpload(
     if (error || !data) {
       return {
         success: false,
-        error: error?.message || "Erreur de téléversement",
+        error: error || "Erreur de téléversement",
       };
     }
 

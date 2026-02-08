@@ -10,4 +10,5 @@ export interface ChatMessage {
   text: string;
   timestamp: Date;
   image?: string;
+  isError?: boolean;
 }

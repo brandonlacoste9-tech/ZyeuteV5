@@ -161,6 +161,9 @@ export async function analyzeUserRelationships(
 
     // 5. Calculate risk score based on banned/flagged related users
     const relatedUserIds = relationships.map((r) => r.relatedUserId);
+    let bannedConnections = 0;
+    let flaggedConnections = 0;
+    let highSeverityConnections = 0;
 
     if (relatedUserIds.length > 0) {
       const relatedUsersData = await db
@@ -180,10 +183,6 @@ export async function analyzeUserRelationships(
         .orderBy(desc(moderationLogs.createdAt));
 
       // Calculate risk based on banned/flagged connections
-      let bannedConnections = 0;
-      let flaggedConnections = 0;
-      let highSeverityConnections = 0;
-
       for (const userData of relatedUsersData) {
         if (userData.role === "banned") {
           bannedConnections++;
@@ -200,14 +199,16 @@ export async function analyzeUserRelationships(
         }
       }
 
+      const logScore = (s: number | null | undefined) => s ?? 0;
       for (const log of relatedModerationLogs) {
-        if (log.score >= 8) {
+        const s = logScore(log.score);
+        if (s >= 8) {
           highSeverityConnections++;
           flaggedReasons.push(
-            `Connected to user with high-severity violation (score: ${log.score})`,
+            `Connected to user with high-severity violation (score: ${s})`,
           );
           riskScore += 15;
-        } else if (log.score >= 5) {
+        } else if (s >= 5) {
           flaggedConnections++;
           riskScore += 5;
         }
@@ -224,13 +225,14 @@ export async function analyzeUserRelationships(
         const relationship = relationships.find(
           (r) => r.relatedUserId === log.userId,
         );
+        const s = logScore(log.score);
         if (relationship) {
           relationship.strength = Math.min(
             100,
-            relationship.strength + log.score * 5,
+            relationship.strength + s * 5,
           );
           relationship.evidence.push(
-            `Related user has ${log.action} violation (score: ${log.score})`,
+            `Related user has ${log.action} violation (score: ${s})`,
           );
         }
       }

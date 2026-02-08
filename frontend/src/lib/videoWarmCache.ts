@@ -259,6 +259,21 @@ class VideoWarmCache {
       this.remove(url);
     }
   }
+
+  /**
+   * Sliding-window eviction: remove entries whose URL is not in retainUrls.
+   * Call when currentIndex changes so only active ±1 window keeps blob/chunk data.
+   * Revokes blob URLs immediately to free memory for infinite scroll.
+   */
+  evictUrlsNotIn(retainUrls: string[]) {
+    const retainSet = new Set(retainUrls.filter(Boolean));
+    for (const url of this.cache.keys()) {
+      if (!retainSet.has(url)) {
+        this.stats.evictionCount++;
+        this.remove(url);
+      }
+    }
+  }
 }
 
 export const videoCache = new VideoWarmCache();

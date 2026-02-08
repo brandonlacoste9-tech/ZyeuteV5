@@ -17,11 +17,12 @@ import { logger } from "./utils/logger.js";
  */
 function parseRedisUrl(url: string) {
   try {
-    let fullUrl = url;
+    // Strip surrounding quotes (Railway/env often paste "rediss://...")
+    let fullUrl = url.trim().replace(/^["']+|["']+$/g, "");
 
     // Robustness: Handle common copy-paste error where env var includes "REDIS_URL=" prefix
     if (fullUrl.startsWith("REDIS_URL=")) {
-      fullUrl = fullUrl.replace("REDIS_URL=", "").replace(/^["']|["']$/g, "");
+      fullUrl = fullUrl.replace("REDIS_URL=", "").trim().replace(/^["']+|["']+$/g, "");
     }
 
     if (!fullUrl.startsWith("redis://") && !fullUrl.startsWith("rediss://")) {

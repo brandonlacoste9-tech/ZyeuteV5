@@ -6,7 +6,7 @@
 import { storage } from "../storage.js";
 import { db } from "../storage.js";
 import { users, moderationLogs } from "../../shared/schema.js";
-import { eq, sql, desc } from "drizzle-orm";
+import { and, eq, sql, desc } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { scanAndFlagRelatedUsers } from "./userFlaggingSystem.js";
 import { analyzeUserRelationships } from "./userRelationshipAnalyzer.js";

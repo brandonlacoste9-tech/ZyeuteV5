@@ -35,13 +35,13 @@ const VIDEO_HOSTS = [
   "youtube.com",
   "mixkit.co",
   "gtv-videos-bucket",
+  "videos.pexels.com",
 ];
 
 // Known image hosting platforms
 const IMAGE_HOSTS = [
   "unsplash.com",
   "images.unsplash.com",
-  "pexels.com",
   "images.pexels.com",
   "pixabay.com",
   "imgur.com",
@@ -60,24 +60,19 @@ export function validatePostType(
 
   const lowerUrl = url.toLowerCase();
 
-  // Check for known image hosts FIRST
-  const isKnownImageHost = IMAGE_HOSTS.some((host) => lowerUrl.includes(host));
-  if (isKnownImageHost) {
-    return "photo";
-  }
-
-  // Check for known video hosts
-  const isKnownVideoHost = VIDEO_HOSTS.some((host) => lowerUrl.includes(host));
-  if (isKnownVideoHost) {
-    return "video";
-  }
-
-  // Check file extensions
+  // Check file extensions FIRST (most reliable indicator)
   const hasVideoExt = VIDEO_EXTENSIONS.some((ext) => lowerUrl.includes(ext));
   const hasImageExt = IMAGE_EXTENSIONS.some((ext) => lowerUrl.includes(ext));
 
   if (hasVideoExt && !hasImageExt) return "video";
   if (hasImageExt && !hasVideoExt) return "photo";
+
+  // Fall back to host-based detection for ambiguous URLs
+  const isKnownVideoHost = VIDEO_HOSTS.some((host) => lowerUrl.includes(host));
+  if (isKnownVideoHost) return "video";
+
+  const isKnownImageHost = IMAGE_HOSTS.some((host) => lowerUrl.includes(host));
+  if (isKnownImageHost) return "photo";
 
   return reportedType;
 }

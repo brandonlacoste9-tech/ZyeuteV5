@@ -8,12 +8,13 @@ interface ScrollVelocityReturn {
   handleScroll: (scrollTop: number) => void;
 }
 
-const FAST_THRESHOLD = 2.0;
+// ~2000 px/s = fast scroll (prevents premature prefetch/play during overshoot)
+const FAST_THRESHOLD = 2.0; // px/ms
 const MEDIUM_THRESHOLD = 0.5;
 
 /**
- * Hook to track scroll velocity manually (e.g., for react-window)
- * or generically.
+ * Hook to track scroll velocity manually (e.g., for react-window).
+ * Velocity in px/ms; isFast when > 2 px/ms (~2000 px/s).
  */
 export function useScrollVelocity(): ScrollVelocityReturn {
   const [velocity, setVelocity] = useState(0);

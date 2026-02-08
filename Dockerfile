@@ -45,11 +45,12 @@ RUN chmod +x scripts/railway-startup.sh
 
 # Expose port (Railway sets PORT env var automatically)
 EXPOSE 3000
-EXPOSE 5000
+# Expose port (Railway sets PORT env var automatically)
+EXPOSE 3000
 
 # Railway will set PORT env var automatically
-# Backend defaults to 5000 but will use PORT if set
-ENV PORT=5000
+# Default to 3000 if not set
+# ENV PORT=3000
 
 # Run the startup script (can also be managed via railway.json startCommand)
 CMD ["bash", "scripts/railway-startup.sh"]

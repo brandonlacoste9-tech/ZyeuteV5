@@ -454,8 +454,21 @@
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 
   /* Hide scrollbar */
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide, .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
+
+  /* TikTok-style feed: GPU-composited slides for buttery smooth scrolling */
+  .feed-root {
+    overscroll-behavior: none; /* Prevent pull-to-refresh interference */
+    -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
+    touch-action: pan-y; /* Only allow vertical touch gestures */
+  }
+  .feed-root [data-video-index] {
+    will-change: transform;
+    transform: translateZ(0); /* Promote to GPU layer */
+    backface-visibility: hidden;
+    contain: layout style paint; /* CSS containment for perf */
+  }
 
   /* Mobile Responsiveness Utilities */
   /* Prevent text cutoff */
@@ -718,10 +731,9 @@
   }
 }
 
-.animate-fade-in { animation: fade-in 0.5s ease-out; }
-.animate-fade-in-up { 
-  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  opacity: 0; /* Start hidden, animation will make it visible */
+.animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ============ COMET ANIMATIONS ============ */
