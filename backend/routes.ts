@@ -129,6 +129,7 @@ let stripe: Stripe | null = null;
 
 if (STRIPE_SECRET_KEY) {
   stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: "2025-12-15.acacia" as Stripe.LatestApiVersion,
     apiVersion: "2026-01-28.clover",
   });
 } else {
