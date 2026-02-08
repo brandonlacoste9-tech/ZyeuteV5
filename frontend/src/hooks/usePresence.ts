@@ -29,7 +29,7 @@ export function usePresence(publicationId: string) {
 
     channel
       .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
+        const state = channel.presenceState() || {};
         // Number of unique keys in presence state
         setViewerCount(Object.keys(state).length);
       })

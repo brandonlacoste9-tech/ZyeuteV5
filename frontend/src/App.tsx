@@ -138,7 +138,7 @@ const TermsOfService = lazy(() => import("@/pages/legal/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("@/pages/legal/PrivacyPolicy"));
 
 const LazyLoadFallback: React.FC = () => (
-  <div className="min-h-screen bg-black flex items-center justify-center">
+  <div className="min-h-screen leather-dark flex items-center justify-center">
     <div className="text-center flex flex-col items-center">
       <MapleSpinner size="lg" className="mb-4" />
       <p className="text-stone-400 font-medium">Chargement...</p>

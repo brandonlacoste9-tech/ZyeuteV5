@@ -20,11 +20,6 @@ export default defineConfig({
       // Let Vite resolve @reduxjs/toolkit and react-hook-form via package exports
     },
   },
-  css: {
-    postcss: {
-      plugins: [],
-    },
-  },
   root: path.resolve(__dirname, "frontend"),
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
