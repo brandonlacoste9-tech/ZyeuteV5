@@ -390,6 +390,14 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
 
+    // [FALLBACK] If the feed is empty (e.g., new user with no follows), return explore posts
+    if (result.length === 0) {
+      console.log(`[STORAGE] Feed empty for user ${userId}, falling back to explore`);
+      return this.getExplorePosts(page, limit, hiveId).then(posts => 
+        posts.map(p => ({ ...p, isFired: false }))
+      );
+    }
+
     return result
       .filter((r) => r.user)
       .map((r) => ({

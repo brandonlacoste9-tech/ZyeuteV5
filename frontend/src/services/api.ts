@@ -258,19 +258,12 @@ export async function createPost(postData: {
   return mapBackendPost(data.post);
 }
 
+// [DEPRECATED] Mux upload logic removed for Sovereign Stack
 export async function createMuxUpload(): Promise<{
   uploadUrl: string;
   uploadId: string;
 } | null> {
-  const { data, error } = await apiCall<{
-    uploadUrl: string;
-    uploadId: string;
-  }>("/mux/create-upload", {
-    method: "POST",
-  });
-
-  if (error || !data) return null;
-  return data;
+  return null;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
@@ -821,85 +814,4 @@ function mapBackendStory(story: Record<string, any>): Story {
   } as Story;
 }
 
-// ============ PEXELS FUNCTIONS ============
-
-export interface PexelsVideoFile {
-  id: number;
-  quality: string;
-  file_type: string;
-  width: number;
-  height: number;
-  link: string;
-}
-
-export interface PexelsVideo {
-  id: number;
-  width: number;
-  height: number;
-  url: string;
-  image: string;
-  duration: number;
-  user: {
-    id: number;
-    name: string;
-    url: string;
-  };
-  video_files: PexelsVideoFile[];
-}
-
-export interface PexelsPhoto {
-  id: number;
-  width: number;
-  height: number;
-  url: string;
-  photographer: string;
-  photographer_url: string;
-  photographer_id: number;
-  avg_color: string;
-  src: {
-    original: string;
-    large2x: string;
-    large: string;
-    medium: string;
-    small: string;
-    portrait: string;
-    landscape: string;
-    tiny: string;
-  };
-  liked: boolean;
-  alt: string;
-}
-
-export interface PexelsResponse {
-  page: number;
-  per_page: number;
-  total_results: number;
-  videos?: PexelsVideo[];
-  photos?: PexelsPhoto[];
-  url?: string;
-  title?: string;
-  description?: string;
-}
-
-export async function getPexelsCurated(
-  limit: number = 10,
-  page: number = 1,
-): Promise<PexelsResponse | null> {
-  const { data, error } = await apiCall<PexelsResponse>(
-    `/pexels/curated?per_page=${limit}&page=${page}`,
-  );
-  if (error || !data) return null;
-  return data;
-}
-
-export async function getPexelsCollection(
-  id: string,
-  limit: number = 10,
-  page: number = 1,
-): Promise<PexelsResponse | null> {
-  const { data, error } = await apiCall<PexelsResponse>(
-    `/pexels/collection/${id}?per_page=${limit}&page=${page}`,
-  );
-  if (error || !data) return null;
-  return data;
-}
+// [SOVEREIGN] Pexels API removed.

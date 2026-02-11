@@ -45,7 +45,7 @@ import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import healthRoutes from "./routes/health.js";
-import { muxRouter } from "./routes/mux.js";
+
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
 import flaggingRoutes from "./routes/user-flagging.js";
@@ -191,7 +191,6 @@ export async function registerRoutes(
 
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
-  app.use("/api", muxRouter);
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);

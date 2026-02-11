@@ -413,9 +413,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Swipe Direction Indicator */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
-              swipeDirection === "left" ? "animate-pulse" : ""
-            }`}
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
+              }`}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -434,19 +433,19 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   </>
                 )
               ) : // LEGACY MODE: Advanced Features
-              swipeDirection === "left" ? (
-                <>
-                  <div className="text-6xl mb-2">🔨</div>
-                  <p className="text-gold-400 font-bold text-lg">
-                    Régénération...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-6xl mb-2">🔒</div>
-                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                </>
-              )}
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🔨</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Régénération...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔒</div>
+                    <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                  </>
+                )}
             </div>
           </div>
         )}
@@ -493,11 +492,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
             {/* Persistent mute icon */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                showMuteIndicator
-                  ? "bg-white/90 scale-125"
-                  : "bg-black/40 backdrop-blur-sm"
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${showMuteIndicator
+                ? "bg-white/90 scale-125"
+                : "bg-black/40 backdrop-blur-sm"
+                }`}
             >
               {isMuted ? (
                 <svg
@@ -646,139 +644,101 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             </div>
           )}
 
-          {/* Action Buttons (Right Side) */}
-          <div className="absolute right-4 bottom-20 flex flex-col items-center gap-6">
-            {/* Fire Button */}
+          {/* Action Buttons (Right Side) - Phantom Glass Container */}
+          <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4 py-4 px-2 rounded-full bg-white/5 backdrop-blur-md border border-white/10 shadow-[0_0_20px_rgba(0,0,0,0.3)]">
+
+            {/* User Avatar with Gold Orbit */}
+            <div className="relative mb-2">
+              <Link to={`/profile/${user.username}`} onClick={tap}>
+                <div className="relative group">
+                  <div className="absolute inset-[-4px] rounded-full border border-[#D4AF37] opacity-60 animate-[spin_8s_linear_infinite] pointer-events-none"></div>
+                  <Avatar
+                    src={user.avatar_url}
+                    size="md"
+                    className="border-2 border-white/20"
+                    userId={user.id}
+                  />
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[#D4AF37] text-black text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-lg cursor-pointer">
+                    {isFollowing ? "✓" : "+"}
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            {/* Magma Fire Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked ? "scale-110" : ""
-              }`}
+              className="group flex flex-col items-center gap-1 transition-all press-scale"
             >
               <div
-                className={`text-4xl transition-all ${
-                  isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                    : "grayscale opacity-80"
-                }`}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${isLiked
+                  ? "bg-gradient-to-br from-red-600 to-orange-500 scale-110 shadow-[0_0_15px_rgba(255,80,0,0.6)] animate-pulse-once"
+                  : "bg-black/20 hover:bg-white/10"
+                  }`}
               >
-                🔥
+                <div
+                  className={`text-2xl transition-all ${isLiked ? "text-white" : "text-white/90"
+                    }`}
+                >
+                  🔥
+                </div>
               </div>
-              <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
+              <span className="font-bold text-xs font-mono text-white/90 drop-shadow-md">
                 {fireCount}
               </span>
             </button>
 
-            {/* Follow Button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleFollow();
-              }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isFollowing ? "scale-105" : ""
-              }`}
-            >
-              <div
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
-                  isFollowing
-                    ? "border-gold-500 bg-gold-500/20"
-                    : "border-white/80 bg-black/20 hover:border-gold-400"
-                }`}
-              >
-                <span
-                  className={`text-2xl font-bold ${
-                    isFollowing ? "text-gold-500" : "text-white"
-                  }`}
-                >
-                  {isFollowing ? "✓" : "+"}
-                </span>
-              </div>
-              <span className="font-bold text-xs text-white drop-shadow-lg">
-                {isFollowing ? "Abonné" : "Suivre"}
-              </span>
-            </button>
-
-            {/* Comment Button */}
+            {/* Comment Button (Glass Style) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleComment();
               }}
-              className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
+              className="flex flex-col items-center gap-1 group press-scale"
             >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
+              <div className="w-10 h-10 rounded-full bg-black/20 group-hover:bg-white/10 flex items-center justify-center transition-colors">
+                <svg
+                  className="w-6 h-6 text-white drop-shadow-md"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    fillRule="evenodd"
+                    clipRule="evenodd"
+                    d="M20.656 17.008a9.993 9.993 0 10-3.59 3.615L22 22l-1.344-4.992z"
+                  />
+                </svg>
+              </div>
+              <span className="font-bold text-xs font-mono text-white/90 drop-shadow-md">
                 {commentCount}
               </span>
             </button>
 
-            {/* Remix Button (TikTok-style) */}
-            {post.type === "video" && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowRemixModal(true);
-                  tap();
-                }}
-                className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
-              >
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
-                  {remixCount > 0 ? remixCount : ""}
-                </span>
-              </button>
-            )}
-
-            {/* Share Button */}
+            {/* Share Button (Glass Style) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handleShare();
               }}
-              className="text-white hover:text-gold-400 transition-colors press-scale"
+              className="flex flex-col items-center gap-1 group press-scale"
             >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
+              <div className="w-10 h-10 rounded-full bg-black/20 group-hover:bg-white/10 flex items-center justify-center transition-colors">
+                <svg className="w-6 h-6 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" /></svg>
+              </div>
+              <span className="font-bold text-xs text-white/90">Partager</span>
             </button>
+
+            {/* Remix Button (Conditional) */}
+            {post.type === "video" && (
+              <button onClick={(e) => { e.stopPropagation(); setShowRemixModal(true); tap(); }} className="flex flex-col items-center gap-1 group press-scale mt-2">
+                <div className="w-10 h-10 rounded-full bg-black/20 group-hover:bg-white/10 flex items-center justify-center border border-white/10">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Sound Attribution (TikTok-style) */}

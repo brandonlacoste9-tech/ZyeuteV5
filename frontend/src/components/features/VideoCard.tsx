@@ -21,7 +21,7 @@ import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "../../types";
 
-const MuxVideoPlayer = React.lazy(() => import("./MuxVideoPlayer"));
+
 
 interface VideoCardProps {
   post: Post;
@@ -160,28 +160,14 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
-          (post as any).muxPlaybackId || (post as any).mux_playback_id ? (
-            <Suspense fallback={<div className="w-full h-full bg-black" />}>
-              <MuxVideoPlayer
-                playbackId={
-                  (post as any).muxPlaybackId || (post as any).mux_playback_id || ""
-                }
-                poster={post.thumbnail_url || post.media_url}
-                autoPlay={autoPlay}
-                muted={muted}
-                loop
-              />
-            </Suspense>
-          ) : (
-            <VideoPlayer
-              src={post.media_url}
-              poster={post.thumbnail_url || post.media_url}
-              autoPlay={autoPlay}
-              muted={muted}
-              loop
-              priority={priority}
-            />
-          )
+          <VideoPlayer
+            src={post.media_url}
+            poster={post.thumbnail_url || post.media_url}
+            autoPlay={autoPlay}
+            muted={muted}
+            loop
+            priority={priority}
+          />
         ) : (
           <div className="relative w-full h-full group/media">
             <img

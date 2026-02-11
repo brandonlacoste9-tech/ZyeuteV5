@@ -68,10 +68,13 @@ Tone:
 
 When responding, use this JSON structure:
 {
-  "action_type": "generate_feed_item" | "onboarding" | "error" | "generate_image" | "microcopy" | "chat_response",
-  "target_model": "V3-FEED" | "V3-TI-GUY" | "V3-MOD" | "V3-MEM" | "FAL",
+  "action_type": "generate_feed_item" | "onboarding" | "error" | "generate_image" | "microcopy" | "chat_response" | "browse_web",
+  "target_model": "V3-FEED" | "V3-TI-GUY" | "V3-MOD" | "V3-MEM" | "FAL" | "BROWSER",
   "notes": "brief description of what the target model should do",
-  "context": { ... any relevant context or user state ... },
+  "context": { 
+     "query": "search query for BROWSER",
+     "url": "optional specific url to read"
+  },
   "fal_preset": "flux-2-flex" | "auraflow" | "flux-schnell" | "flux-realism" (only for FAL)
 }
 
@@ -184,10 +187,17 @@ export interface V3CoreAction {
     | "error"
     | "generate_image"
     | "microcopy"
-    | "chat_response";
-  target_model: "V3-FEED" | "V3-TI-GUY" | "V3-MOD" | "V3-MEM" | "FAL";
+    | "chat_response"
+    | "browse_web";
+  target_model:
+    | "V3-FEED"
+    | "V3-TI-GUY"
+    | "V3-MOD"
+    | "V3-MEM"
+    | "FAL"
+    | "BROWSER";
   notes: string;
-  context?: Record<string, unknown>;
+  context?: Record<string, any>;
   fal_preset?: "flux-2-flex" | "auraflow" | "flux-schnell" | "flux-realism";
 }
 
@@ -612,15 +622,68 @@ export async function v3Flow(
       }
 
       case "FAL": {
-        // Return image generation instructions
-        return {
-          type: "image",
-          content: coreDecision.notes,
-          metadata: {
-            preset: coreDecision.fal_preset || "flux-schnell",
-            context: coreDecision.context,
-          },
-        };
+        // Call FAL Tool
+        try {
+          const { ImageGenTool } = await import("./ai/tools/image_gen.js");
+          const imageUrl = await ImageGenTool.generate(
+            coreDecision.notes,
+            coreDecision.fal_preset || "flux-schnell",
+          );
+
+          const tiGuyResponse = await v3TiGuyChat(
+            `J'ai généré l'image que tu m'as demandée: ${coreDecision.notes}. Voici le lien: ${imageUrl}`,
+          );
+
+          return {
+            type: "image",
+            content: tiGuyResponse,
+            metadata: {
+              image_url: imageUrl,
+              prompt: coreDecision.notes,
+            },
+          };
+        } catch (error) {
+          console.error("FAL Tool failed:", error);
+          return {
+            type: "error",
+            content:
+              "Oups, j'ai pas pu générer l'image. Mon pinceau est cassé! 🎨",
+          };
+        }
+      }
+
+      case "BROWSER": {
+        // Call Browser Tool
+        try {
+          const { BrowserTool } = await import("./ai/tools/browser.js");
+          const query = coreDecision.context?.query || userAction;
+          const searchResults = await BrowserTool.search(query);
+
+          // Summarize results
+          const contextSummary = searchResults
+            .map((r) => `${r.title}: ${r.snippet} (${r.url})`)
+            .join("\n\n");
+
+          const response = await v3TiGuyChat(
+            `Fais-moi un résumé de ça en joual pour l'utilisateur: \n\n${contextSummary}`,
+            undefined,
+            undefined,
+            context?.userId as string,
+          );
+
+          return {
+            type: "text",
+            content: response,
+            metadata: { search_results: searchResults },
+          };
+        } catch (error) {
+          console.error("Browser Tool failed:", error);
+          return {
+            type: "error",
+            content:
+              "J'ai essayé de checker sur le web, mais ma connexion est slack. Réessaie! 🌐",
+          };
+        }
       }
 
       default: {

@@ -17,7 +17,8 @@ import { videoCache } from "@/lib/videoWarmCache";
 import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
 
-const MuxPlayer = React.lazy(() => import("@mux/mux-player-react"));
+import ZyeuteVideoPlayer from "../media/ZyeuteVideoPlayer";
+
 const StreamingDebugOverlay = React.lazy(
   () => import("./StreamingDebugOverlay"),
 );
@@ -643,34 +644,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
         style={style}
       >
-        <Suspense fallback={<div className="w-full h-full bg-black" />}>
-          <MuxPlayer
-            playbackId={muxPlaybackId}
-            metadataVideoTitle="Zyeuté Exclusive"
-            streamType="on-demand"
-            accentColor="#FF00FF"
-            autoPlay={autoPlay}
-            muted={muted}
-            loop={loop}
-            className="w-full h-full object-cover"
-            style={
-              {
-                height: "100%",
-                width: "100%",
-                "--media-object-fit": "cover",
-                "--media-control-background": "transparent",
-                ...videoStyle,
-              } as any
-            }
-            onEnded={onEnded}
-            onPlay={onPlay}
-            onPause={onPause}
-            onError={(e: any) => {
-              videoPlayerLogger.error("[VideoPlayer] Mux playback error:", e);
-              setMuxError(true);
-            }}
-          />
-        </Suspense>
+        <ZyeuteVideoPlayer
+          src={src}
+          poster={poster}
+          autoPlay={autoPlay}
+        />
       </div>
     );
   }

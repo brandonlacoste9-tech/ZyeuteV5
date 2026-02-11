@@ -39,9 +39,6 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
-  getPexelsCurated,
-  type PexelsPhoto,
-  type PexelsVideo,
 } from "@/services/api";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -272,102 +269,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState, posts.length]);
 
-  // Transform Pexels items to Post format
+  // [DEPRECATED] Pexels transformation logic removed for Sovereign Stack
   const transformPexelsToPosts = useCallback(
-    (
-      photos: PexelsPhoto[],
-      videos: PexelsVideo[],
-    ): Array<Post & { user: User }> => {
-      const transformed: Array<Post & { user: User }> = [];
-      const pexelsUser: User = {
-        id: "pexels",
-        username: "pexels_canada",
-        display_name: "Créateur Québec ⚜️", // Localized identity
-        avatar_url: "/attached_assets/logo_zyeute_gold.png", // Use local asset if possible
-        bio: "Contenu propulsé par Pexels pour Zyeuté",
-        city: "Montréal",
-        region: "Québec",
-        is_verified: true, // Pexels is a verified source for us
-        coins: 0,
-        fire_score: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        followers_count: 5000,
-        following_count: 0,
-        posts_count: 100,
-        is_following: false,
-        role: "citoyen" as const,
-        custom_permissions: {},
-        tiGuyCommentsEnabled: true,
-        last_daily_bonus: null,
-      } as User;
-
-      // Transform photos
-      photos.forEach((photo) => {
-        transformed.push({
-          id: `pexels-photo-${photo.id}`,
-          user_id: `pexels-${photo.photographer_id}`,
-          media_url: photo.src.original,
-          thumbnail_url: photo.src.medium,
-          caption: photo.alt || `Photo par ${photo.photographer} ⚜️`,
-          type: "photo" as const,
-          fire_count: Math.floor(Math.random() * 100), // Local flavor: start with some fires
-          comment_count: 0,
-          created_at: new Date().toISOString(),
-          user: {
-            ...pexelsUser,
-            id: `pexels-${photo.photographer_id}`,
-            username: photo.photographer.toLowerCase().replace(/\s/g, "_"),
-            display_name: photo.photographer,
-            avatar_url: photo.src.tiny,
-          },
-        } as Post & { user: User });
-      });
-
-      // Transform videos (skip entries with no playable video file)
-      videos.forEach((video) => {
-        let videoUrl: string | null = null;
-        if (video.video_files && video.video_files.length > 0) {
-          const hdVideos = video.video_files.filter((f) => f.quality === "hd");
-          if (hdVideos.length > 0) {
-            hdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
-            videoUrl = hdVideos[0].link;
-          } else {
-            const sdVideos = video.video_files.filter(
-              (f) => f.quality === "sd",
-            );
-            if (sdVideos.length > 0) {
-              sdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
-              videoUrl = sdVideos[0].link;
-            } else {
-              videoUrl = video.video_files[0].link;
-            }
-          }
-        }
-        if (!videoUrl) return; // Skip videos with no playable file (avoid image-as-video)
-        transformed.push({
-          id: `pexels-video-${video.id}`,
-          user_id: `pexels-${video.user?.id || "unknown"}`,
-          media_url: videoUrl,
-          thumbnail_url: video.image,
-          caption: `Moment capturé par ${video.user?.name || "Créateur Pexels"} 🍁`,
-          type: "video" as const,
-          fire_count: Math.floor(Math.random() * 150),
-          comment_count: Math.floor(Math.random() * 20),
-          created_at: new Date().toISOString(),
-          user: {
-            ...pexelsUser,
-            id: `pexels-${video.user?.id || "unknown"}`,
-            username: (video.user?.name || "pexels")
-              .toLowerCase()
-              .replace(/\s/g, "_"),
-            display_name: video.user?.name || "Créateur Québec",
-          },
-        } as Post & { user: User });
-      });
-
-      return transformed;
-    },
+    () => [],
     [],
   );
 
@@ -415,60 +319,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       apiSuccess = false;
     }
 
-    // [SMART PLAY] If API failed or returned 0, we MUST have content. Pivot to Pexels.
-    if (!apiSuccess || validPosts.length === 0) {
-      feedLogger.info("Empty or failed DB feed, triggering Pexels fallback...");
-      let pexelsAttempts = 0;
-      const maxPexelsAttempts = 3;
+    // [SOVEREIGN] If API failed or returned 0, we show empty state (NO Pexels)
+    setPosts(validPosts);
+    setHasMore(validPosts.length === 10);
+    if (validPosts.length === 0) setFetchError(true);
 
-      while (pexelsAttempts < maxPexelsAttempts) {
-        try {
-          const pexelsData = await getPexelsCurated(15, 1);
-          if (pexelsData && pexelsData.videos?.length) {
-            const pexelsPosts = transformPexelsToPosts(
-              [],
-              pexelsData.videos || [],
-            );
-            setPosts(pexelsPosts);
-            setHasMore(true);
-            break;
-          } else {
-            feedLogger.warn(
-              `Pexels attempt ${pexelsAttempts + 1} returned empty`,
-            );
-            pexelsAttempts++;
-            if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise((resolve) =>
-                setTimeout(resolve, 1000 * pexelsAttempts),
-              );
-            }
-          }
-        } catch (pexelsError) {
-          feedLogger.error(
-            `Pexels attempt ${pexelsAttempts + 1} failed:`,
-            pexelsError,
-          );
-          pexelsAttempts++;
-          if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise((resolve) =>
-              setTimeout(resolve, 1000 * pexelsAttempts),
-            );
-          }
-        }
-      }
-
-      if (pexelsAttempts >= maxPexelsAttempts) {
-        feedLogger.error("All Pexels attempts failed. Showing empty state.");
-        setPosts([]);
-        setFetchError(true);
-      }
-    } else {
-      // We have DB posts, we can still mix in Pexels or just show DB
-      setPosts(validPosts);
-      setHasMore(validPosts.length === 10);
-    }
-
-    setHasMore(validPosts.length === 10 || false);
     setPage(0);
     setIsLoading(false);
   }, [savedState, transformPexelsToPosts]);
@@ -514,9 +369,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     const timer = setTimeout(() => {
       if (isLoading && posts.length === 0) {
         feedLogger.warn(
-          "⏱️ DB response slow (>2s). Forcing Pexels fallback for instant content.",
+          "⏱️ DB response slow (>2s).",
         );
-        fetchVideoFeed(); // trigger fetch which has fallback logic
+        // [SOVEREIGN] No fallback fetch
       }
     }, 2000);
 
@@ -606,8 +461,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         "Prefetching heavy chunks (Mux, Camera) in background...",
       );
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@/components/features/CameraView").catch(() => {});
-      import("./MuxVideoPlayer").catch(() => {});
+      import("@/components/features/CameraView").catch(() => { });
+      // [SOVEREIGN] Mux removed
     };
 
     let idleId: any = null;
@@ -718,7 +573,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     async (postId: string, _currentFire: number) => {
       feedLogger.debug("Fire toggle for post:", postId);
 
-      if (postId.startsWith("pexels-")) return;
 
       if (!isOnline) {
         // Queue action if offline
@@ -801,39 +655,25 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     return (
       <div
         className={cn(
-          "w-full h-full flex flex-col items-center justify-center bg-zinc-900 p-8 text-center",
+          "w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-8 text-center",
           className,
         )}
       >
-        <div className="text-4xl mb-4">
-          {!isOnline ? "📡" : fetchError ? "⚠️" : "📱"}
-        </div>
-        <p className="text-stone-400 mb-2">
-          {!isOnline
-            ? "Tu es hors ligne. Reconnecte-toi pour voir le fil."
-            : fetchError
-              ? "Impossible de charger le fil."
-              : "Aucun contenu disponible pour le moment."}
+        <div className="text-6xl mb-6 animate-pulse">🎥</div>
+        <h2 className="text-2xl font-bold text-white mb-2">Bienvenue sur Zyeuté</h2>
+        <p className="text-white/60 mb-8 max-w-xs mx-auto">
+          Le fil est vide. Sois le premier à partager un moment unique avec le Québec.
         </p>
-        {fetchError && (
-          <p className="text-stone-500 text-sm mb-2 max-w-sm">
-            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY
-            (Railway).
-          </p>
-        )}
-        {(!isOnline || fetchError) && (
-          <button
-            type="button"
-            onClick={() => {
-              setFetchError(false);
-              hasInitializedRef.current = false;
-              fetchVideoFeed();
-            }}
-            className="mt-4 px-6 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors font-medium"
-          >
-            Réessayer
-          </button>
-        )}
+
+        <button
+          onClick={() => {
+            // Navigate to upload or trigger refresh
+            fetchVideoFeed();
+          }}
+          className="px-8 py-3 bg-[#D4AF37] text-black font-bold rounded-full hover:bg-[#C5A028] transition-transform active:scale-95 shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+        >
+          Rafraîchir
+        </button>
       </div>
     );
   }
