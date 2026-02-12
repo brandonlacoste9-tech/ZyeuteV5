@@ -369,7 +369,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     if (shouldLoadVideo) {
       // Priority order: enhanced_url > media_url > original_url
-      if (post.processing_status === "ready" && post.enhanced_url) {
+      if ((post.processing_status === "ready" || post.processing_status === "completed") && post.enhanced_url) {
         videoSrc = post.enhanced_url;
       } else if (post.media_url) {
         videoSrc = post.media_url;
@@ -536,7 +536,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <EphemeralBadge post={post} className="static bg-red-600/90" />
 
           {post.type === "video" &&
-            post.processing_status === "ready" &&
+            (post.processing_status === "ready" || post.processing_status === "completed") &&
             post.enhanced_url && (
               <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                 <span>✨</span>
