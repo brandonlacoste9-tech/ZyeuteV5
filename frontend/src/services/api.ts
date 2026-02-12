@@ -250,7 +250,7 @@ export async function createPost(postData: {
     body: JSON.stringify({
       ...postData,
       // Ensure processing status is set for videos
-      processing_status: postData.type === "video" ? "pending" : "ready",
+      processing_status: "completed",
     }),
   });
 

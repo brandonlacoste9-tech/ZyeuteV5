@@ -840,6 +840,7 @@ export async function registerRoutes(
       const post = await storage.createPost({
         ...parsed.data,
         type: validatedType, // 🛡️ Use validated type
+        processingStatus: "completed",
         isModerated: true,
         moderationApproved:
           modResult.status === "approved" && videoModerationApproved,
