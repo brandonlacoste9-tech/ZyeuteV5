@@ -13,7 +13,7 @@ import React, {
   memo,
   ReactElement,
 } from "react";
-import { List, ListImperativeAPI } from "react-window";
+import { List } from "react-window";
 
 // react-window 2.x types - RowData is passed via rowProps
 interface RowData {
@@ -717,16 +717,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               DEBUG: {width}x{height} | {posts.length} posts
             </div> */}
 
-            <List<RowData>
+            <List
               listRef={listRef}
               className="no-scrollbar snap-y snap-mandatory"
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
-              itemData={itemData}
+              rowProps={{ data: itemData }}
               overscanCount={isFast ? 3 : 2}
-              onItemsRendered={onRowsRendered}
-              children={(props: FeedRowProps) => <FeedRow {...props} />}
+              onRowsRendered={onRowsRendered}
+              rowComponent={FeedRow}
             />
           </>
         )}

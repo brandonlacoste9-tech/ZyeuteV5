@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { List, FixedSizeList } from "react-window";
+import { List } from "react-window";
 
 // Import design tokens or rely on Tailwind classes
 // Using inline styles/classes to demo the Luxury Theme
@@ -210,15 +210,13 @@ export default function Sandbox() {
               </span>
             </div>
 
-            {/* React Window Mock */}
+            {/* React Window v2 Mock */}
             <List
-              height={600}
-              itemCount={100}
-              itemSize={600}
-              width="100%"
+              style={{ height: 600, width: "100%" }}
+              rowCount={100}
+              rowHeight={600}
               className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-            >
-              {({ index, style }) => (
+              rowComponent={({ index, style }: any) => (
                 <div
                   style={style}
                   className="snap-center h-full w-full relative border-b border-white/10 bg-neutral-900 flex items-center justify-center"
@@ -238,7 +236,7 @@ export default function Sandbox() {
                   </div>
                 </div>
               )}
-            </List>
+            />
           </section>
         )}
       </div>
