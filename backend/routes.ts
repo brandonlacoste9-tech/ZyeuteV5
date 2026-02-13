@@ -899,6 +899,18 @@ export async function registerRoutes(
         req.params.id as string,
         req.userId!,
       );
+
+      // Broadcast real-time engagement update via Socket.IO
+      const io = app.get("io");
+      if (io) {
+        io.emit("engagement_update", {
+          postId: req.params.id,
+          fireCount: result.newCount,
+          userId: req.userId,
+          type: result.added ? "fire_added" : "fire_removed",
+        });
+      }
+
       res.json(result);
     } catch (error) {
       console.error("Toggle fire error:", error);
@@ -936,6 +948,20 @@ export async function registerRoutes(
 
       // Get user info for response
       const user = await storage.getUser(req.userId!);
+
+      // Broadcast real-time comment event via Socket.IO
+      const io = app.get("io");
+      if (io) {
+        io.emit("engagement_update", {
+          postId: req.params.id,
+          type: "comment_added",
+          comment: {
+            id: comment.id,
+            content: (comment as any).content,
+            username: user?.username,
+          },
+        });
+      }
 
       res.status(201).json({
         comment: { ...comment, user, isFired: false },

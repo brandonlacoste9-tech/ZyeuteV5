@@ -28,6 +28,8 @@ interface RowData {
   isSystemOverloaded: boolean;
   /** When false, active video is paused (tab hidden) */
   isPageVisible: boolean;
+  /** Real-time engagement getter */
+  getEngagement: (postId: string) => { fireCount?: number; commentCount?: number; shareCount?: number };
 }
 
 // Relax type check for react-window compatibility
@@ -57,6 +59,8 @@ import { useVideoActivation } from "@/hooks/useVideoActivation";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { videoCache } from "@/lib/videoWarmCache";
+import { useFeedEngagement } from "@/hooks/useFeedEngagement";
+import { usePreloadHint } from "@/hooks/useVideoTransition";
 
 // ... imports ...
 
@@ -233,6 +237,26 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+
+  // Real-time engagement: subscribe to live fire/comment count updates
+  // Uses a single Supabase channel for all visible posts (efficient)
+  const visiblePostIds = useMemo(() => {
+    // Batch: current ±3 posts
+    const ids: string[] = [];
+    for (let i = Math.max(0, currentIndex - 3); i < Math.min(posts.length, currentIndex + 4); i++) {
+      if (posts[i]?.id) ids.push(posts[i].id);
+    }
+    return ids;
+  }, [currentIndex, posts]);
+  const { getEngagement } = useFeedEngagement(visiblePostIds);
+
+  // Browser-level preload hint for next video URL (n+1)
+  const nextVideoUrl = useMemo(() => {
+    const nextPost = posts[currentIndex + 1];
+    if (!nextPost || nextPost.type !== "video") return null;
+    return nextPost.enhanced_url || nextPost.media_url || nextPost.original_url || null;
+  }, [currentIndex, posts]);
+  usePreloadHint(nextVideoUrl);
 
   // Sync ref with state
   useEffect(() => {
@@ -628,6 +652,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isSlowScrolling: isSlow,
       isSystemOverloaded,
       isPageVisible,
+      getEngagement,
     }),
     [
       posts,
@@ -640,6 +665,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isSlow,
       isSystemOverloaded,
       isPageVisible,
+      getEngagement,
     ],
   );
 
