@@ -142,17 +142,12 @@ export function isVideoPost(post: Post): post is Post & { type: "video" } {
  * Type guard for enhanced video metadata
  */
 export function hasVideoProcessingStatus(post: Post): post is Post & {
-  processing_status:
-    | "ready"
-    | "pending"
-    | "processing"
-    | "completed"
-    | "failed";
+  processing_status: "pending" | "processing" | "completed" | "failed";
 } {
   return (
     isVideoPost(post) &&
     post.processing_status !== undefined &&
-    ["ready", "pending", "processing", "completed", "failed"].includes(
+    ["pending", "processing", "completed", "failed"].includes(
       post.processing_status,
     )
   );

@@ -72,7 +72,7 @@ const WatchLive = lazy(() => import("@/pages/WatchLive"));
 const LiveDiscover = lazy(() => import("@/pages/LiveDiscover"));
 const AIStudio = lazy(() => import("@/pages/AIStudio"));
 const LaZyeute = lazy(() => import("@/pages/LaZyeute"));
-const PexelsGallery = lazy(() => import("@/pages/PexelsGallery"));
+
 const Pulse = lazy(() =>
   import("@/components/skins/SkinSelector").then((module) => ({
     default: module.SkinSelector,
@@ -138,7 +138,7 @@ const TermsOfService = lazy(() => import("@/pages/legal/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("@/pages/legal/PrivacyPolicy"));
 
 const LazyLoadFallback: React.FC = () => (
-  <div className="min-h-screen bg-black flex items-center justify-center">
+  <div className="min-h-screen leather-dark flex items-center justify-center">
     <div className="text-center flex flex-col items-center">
       <MapleSpinner size="lg" className="mb-4" />
       <p className="text-stone-400 font-medium">Chargement...</p>
@@ -162,7 +162,19 @@ const GlobalAuthLoader: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { isLoading } = useAuth();
-  if (isLoading)
+  const [forceShow, setForceShow] = React.useState(false);
+
+  // Nuclear failsafe: if auth is STILL loading after 4s, render the app anyway
+  React.useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => {
+      console.warn("⚠️ GlobalAuthLoader: Force-rendering after 4s timeout");
+      setForceShow(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  if (isLoading && !forceShow)
     return (
       <LoadingScreen message={`Chargement de ${AppConfig.identity.name}...`} />
     );
@@ -269,22 +281,7 @@ function App() {
                                                     </ProtectedRoute>
                                                   }
                                                 />
-                                                <Route
-                                                  path="/pexels"
-                                                  element={
-                                                    <ProtectedRoute>
-                                                      <RouteErrorBoundary>
-                                                        <Suspense
-                                                          fallback={
-                                                            <LazyLoadFallback />
-                                                          }
-                                                        >
-                                                          <PexelsGallery />
-                                                        </Suspense>
-                                                      </RouteErrorBoundary>
-                                                    </ProtectedRoute>
-                                                  }
-                                                />
+
                                                 <Route
                                                   path="/upload"
                                                   element={

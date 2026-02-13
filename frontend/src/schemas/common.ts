@@ -303,12 +303,6 @@ const PostBase = z.object({
   moderation_approved: z.boolean().default(true),
   is_hidden: z.boolean().default(false),
   isHidden: z.boolean().optional(), // Compat
-  mux_asset_id: z.string().nullable().optional(),
-  muxAssetId: z.string().nullable().optional(), // Compat
-  mux_upload_id: z.string().nullable().optional(),
-  muxUploadId: z.string().nullable().optional(), // Compat
-  mux_playback_id: z.string().nullable().optional(),
-  muxPlaybackId: z.string().nullable().optional(), // Compat
   // AI Enrichment (Phase 9 Upgrade)
   ai_description: z.string().nullable().optional(),
   aiDescription: z.string().nullable().optional(), // Compat
@@ -329,8 +323,9 @@ const PostBase = z.object({
   // Video AI Enhancement (optional on all posts; only populated for video)
   original_url: z.string().optional(),
   enhanced_url: z.string().optional(),
+  hls_url: z.string().optional(),
   processing_status: z
-    .enum(["ready", "pending", "processing", "completed", "failed"])
+    .enum(["pending", "processing", "completed", "failed"])
     .optional(),
   visual_filter: z.string().optional(),
 });
@@ -349,7 +344,8 @@ const BasePostSchema = z.discriminatedUnion("type", [PhotoPost, VideoPost]);
 export const PostSchema = z.preprocess((val: any) => {
   if (!val || typeof val !== "object") return val;
 
-  const mediaUrl = val.media_url || val.mediaUrl || val.original_url;
+  const rawHls = val.hls_url || val.hlsUrl;
+  const mediaUrl = rawHls || val.media_url || val.mediaUrl || val.original_url;
   let type = val.type;
 
   // Auto-detect type logic from api.ts
@@ -370,6 +366,8 @@ export const PostSchema = z.preprocess((val: any) => {
     userId: val.user_id || val.userId,
     media_url: mediaUrl,
     mediaUrl: mediaUrl,
+    hls_url: rawHls,
+    hlsUrl: rawHls,
     thumbnail_url: val.thumbnail_url || val.thumbnailUrl,
     thumbnailUrl: val.thumbnail_url || val.thumbnailUrl,
     caption: val.caption,
@@ -391,7 +389,7 @@ export const PostSchema = z.preprocess((val: any) => {
     city: val.city,
     // Ensure processing status defaults if video
     processing_status:
-      val.processing_status || (type === "video" ? "ready" : undefined),
+      val.processing_status || (type === "video" ? "completed" : undefined),
 
     // Moderation
     is_moderated: val.is_moderated || val.isModerated || false,
@@ -405,13 +403,6 @@ export const PostSchema = z.preprocess((val: any) => {
       val.moderation_approved || val.moderationApproved || true,
     is_hidden: val.is_hidden || val.isHidden || false,
     isHidden: val.is_hidden || val.isHidden || false,
-    mux_asset_id: val.mux_asset_id || val.muxAssetId,
-    muxAssetId: val.mux_asset_id || val.muxAssetId,
-    mux_upload_id: val.mux_upload_id || val.muxUploadId,
-    muxUploadId: val.mux_upload_id || val.muxUploadId,
-    mux_playback_id: val.mux_playback_id || val.muxPlaybackId,
-    muxPlaybackId: val.mux_playback_id || val.muxPlaybackId,
-
     // AI Enrichment
     ai_description: val.ai_description || val.aiDescription,
     aiDescription: val.ai_description || val.aiDescription,

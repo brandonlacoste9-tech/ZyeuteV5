@@ -13,6 +13,7 @@ import {
   createRemix,
   getSound,
   type Sound,
+  surgicalUpload, // [SOVEREIGN] Use surgical upload
 } from "../services/api";
 import { supabase } from "../lib/supabase";
 import { extractHashtags, generateId } from "../lib/utils";
@@ -57,10 +58,10 @@ export const Upload: React.FC = () => {
 
   // Remix functionality (from URL params)
   const [remixPostId] = React.useState<string | null>(
-    searchParams.get("remixPostId")
+    searchParams.get("remixPostId"),
   );
   const [remixType] = React.useState<"duet" | "stitch" | "react" | null>(
-    searchParams.get("remixType") as "duet" | "stitch" | "react" | null
+    searchParams.get("remixType") as "duet" | "stitch" | "react" | null,
   );
 
   // Sound picker state
@@ -127,132 +128,18 @@ export const Upload: React.FC = () => {
         return;
       }
 
-      let mediaUrl = "";
-      let thumbnailUrl = "";
-      let muxUploadId = "";
+      // [SOVEREIGN] Use Surgical Upload (direct to Supabase/Railway)
+      const result = await surgicalUpload(file, caption);
 
-      const isVideo = file.type.startsWith("video");
-
-      if (isVideo) {
-        // --- VIDEO FLOW (MUX) ---
-        // 1. Generate client-side thumbnail (with timeout telemetry)
-        const { generateVideoThumbnail } =
-          await import("../utils/videoThumbnail");
-        const { mediaTelemetry } = await import("../lib/mediaTelemetry");
-        const thumbDataUrl = await generateVideoThumbnail(file, {
-          onTimeout: () => mediaTelemetry.recordThumbnailTimeout("upload"),
-        });
-        const thumbBlob = dataURIToBlob(thumbDataUrl);
-
-        // 2. Upload thumbnail to Supabase
-        const thumbName = `thumb_${generateId()}.jpg`;
-        const thumbPath = `posts/${user.id}/${thumbName}`;
-        await supabase.storage.from("media").upload(thumbPath, thumbBlob);
-        const {
-          data: { publicUrl: tUrl },
-        } = supabase.storage.from("media").getPublicUrl(thumbPath);
-        thumbnailUrl = tUrl;
-        mediaUrl = tUrl; // Use thumbnail as temporary mediaUrl until Mux is ready
-
-        // 3. Get Mux Upload URL
-        const { createMuxUpload } = await import("../services/api");
-        const muxUpload = await createMuxUpload();
-        if (!muxUpload) throw new Error("Failed to create Mux upload");
-        muxUploadId = muxUpload.uploadId;
-
-        // 4. Start Mux Upload (Async)
-        const UpChunk = await import("@mux/upchunk");
-        const upload = UpChunk.createUpload({
-          endpoint: muxUpload.uploadUrl,
-          file: file,
-          chunkSize: 5120, // 5MB chunks
-        });
-
-        upload.on("error", (err: any) => {
-          uploadLogger.error("Mux Upload Error:", err.detail);
-          toast.error("Erreur durant l'upload vidéo");
-        });
-
-        upload.on("progress", (progress: any) => {
-          // We could show a progress bar here
-          console.log(`Upload progress: ${progress.detail}%`);
-        });
-
-        upload.on("success", () => {
-          uploadLogger.info("Mux Upload Success!");
-        });
-      } else {
-        // --- PHOTO FLOW (SUPABASE) ---
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${generateId()}.${fileExt}`;
-        const filePath = `posts/${user.id}/${fileName}`;
-        const { error: uploadError } = await supabase.storage
-          .from("media")
-          .upload(filePath, file);
-        if (uploadError) throw uploadError;
-
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("media").getPublicUrl(filePath);
-        mediaUrl = publicUrl;
+      if (!result.success || !result.post) {
+        throw new Error(result.error || "Upload failed");
       }
 
-      // 5. Create Post Record (or Remix if remix context)
-      let post;
-
-      if (remixPostId && remixType && isVideo) {
-        // Create remix
-        const remixResult = await createRemix(
-          remixPostId,
-          remixType,
-          mediaUrl,
-          caption.trim(),
-        );
-
-        if (!remixResult.post) {
-          throw new Error(remixResult.error || "Failed to create remix");
-        }
-        post = remixResult.post;
-      } else {
-        // Create regular post
-        post = await createPost({
-          type: isVideo ? "video" : "photo",
-          mediaUrl,
-          thumbnailUrl,
-          muxUploadId,
-          caption: caption.trim(),
-          hashtags: extractHashtags(caption),
-          region: region || undefined,
-          visualFilter: visualFilter === "none" ? undefined : visualFilter,
-          isEphemeral: isEphemeral,
-          soundId: selectedSound?.id,
-          soundStartTime: 0, // Default start time
-        } as any);
-      }
-
-      if (!post) throw new Error("Failed to create post");
-
-      // Mark sound as used if selected
-      if (selectedSound?.id) {
-        try {
-          await fetch(`/api/sounds/${selectedSound.id}/use`, {
-            method: "POST",
-            credentials: "include",
-          });
-        } catch (error) {
-          console.error("Failed to mark sound as used:", error);
-        }
-      }
-
-      toast.success(
-        isVideo
-          ? "Vidéo en traitement! Ti-Guy s'en occupe... 🦫"
-          : "Post publié! 🔥",
-      );
+      toast.success("Post publié! 🔥");
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       uploadLogger.error("Upload error:", error);
-      toast.error("Erreur lors de l'upload");
+      toast.error(error.message || "Erreur lors de l'upload");
     } finally {
       setIsUploading(false);
     }

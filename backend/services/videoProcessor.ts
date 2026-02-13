@@ -19,6 +19,15 @@ export interface ProcessedVideoResult {
   thumbnail: string;
 }
 
+/** HLS output: manifest + variant playlists + segments + thumbnails */
+export interface ProcessedHLSResult {
+  manifestPath: string;
+  outDir: string;
+  thumbnailPath: string;
+  /** All files to upload (manifest, variant .m3u8, .ts segments) */
+  files: Array<{ localPath: string; remoteKey: string }>;
+}
+
 interface TranscodeOptions {
   width: number;
   height: number;
@@ -57,8 +66,11 @@ export async function validateVideo(filePath: string): Promise<boolean> {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
       if (err) {
-          console.warn("[VideoProcessor] ffprobe failed, skipping validation (assuming valid for dev):", err.message);
-          return resolve(true);
+        console.warn(
+          "[VideoProcessor] ffprobe failed, skipping validation (assuming valid for dev):",
+          err.message,
+        );
+        return resolve(true);
       }
 
       const format = metadata.format;
@@ -94,16 +106,18 @@ async function transcodeVideo(
       .preset("fast")
       .on("end", () => resolve())
       .on("error", async (err) => {
-        console.warn(`[VideoProcessor] ffmpeg failed (likely not installed), falling back to copy: ${err.message}`);
+        console.warn(
+          `[VideoProcessor] ffmpeg failed (likely not installed), falling back to copy: ${err.message}`,
+        );
         // Fallback: Copy file directly
         try {
-            await fs.promises.copyFile(inputPath, outputPath);
-            resolve();
+          await fs.promises.copyFile(inputPath, outputPath);
+          resolve();
         } catch (copyErr) {
-            reject(copyErr);
+          reject(copyErr);
         }
       });
-      
+
     command.run();
   });
 }
@@ -118,7 +132,7 @@ async function applyFilter(
     return;
   }
 
-  let videoFilters: string[] = [];
+  const videoFilters: string[] = [];
 
   switch (filterName) {
     case "vintage": // Sepia + Vignette
@@ -160,12 +174,15 @@ async function applyFilter(
       .videoFilters(videoFilters)
       .on("end", () => resolve())
       .on("error", async (err) => {
-        console.warn("[VideoProcessor] Filter failed, falling back to copy:", err.message);
+        console.warn(
+          "[VideoProcessor] Filter failed, falling back to copy:",
+          err.message,
+        );
         try {
-            await fs.promises.copyFile(inputPath, outputPath);
-            resolve();
+          await fs.promises.copyFile(inputPath, outputPath);
+          resolve();
         } catch (copyErr) {
-            reject(copyErr);
+          reject(copyErr);
         }
       })
       .run();
@@ -186,19 +203,22 @@ export async function generateThumbnail(
       })
       .on("end", () => resolve())
       .on("error", async (err) => {
-          console.warn("[VideoProcessor] ffmpeg thumbnail failed, using placeholder:", err.message);
-          // Create dummy thumbnail file to prevent 404s
-          try {
-             // In a real scenario we might copy a default image, here we just create an empty file 
-             // or copy the video file (bad practice but keeps flow alive? No, browser won't load mp4 as jpg)
-             // Better: Create a tiny 1x1 black pixel jpg or just ignore?
-             // If we ignore, the frontend might show broken image.
-             // We'll write a simple text file renamed as .jpg? No.
-             // We'll just skip it and let the frontend show the video poster (which falls back to media_url)
-             resolve();
-          } catch (e) {
-              resolve();
-          }
+        console.warn(
+          "[VideoProcessor] ffmpeg thumbnail failed, using placeholder:",
+          err.message,
+        );
+        // Create dummy thumbnail file to prevent 404s
+        try {
+          // In a real scenario we might copy a default image, here we just create an empty file
+          // or copy the video file (bad practice but keeps flow alive? No, browser won't load mp4 as jpg)
+          // Better: Create a tiny 1x1 black pixel jpg or just ignore?
+          // If we ignore, the frontend might show broken image.
+          // We'll write a simple text file renamed as .jpg? No.
+          // We'll just skip it and let the frontend show the video poster (which falls back to media_url)
+          resolve();
+        } catch (e) {
+          resolve();
+        }
       });
   });
 }
@@ -260,7 +280,9 @@ export async function processVideo(
     for (const f of toDelete) {
       try {
         if (fs.existsSync(f)) fs.unlinkSync(f);
-      } catch {}
+      } catch {
+        /* ignore cleanup errors */
+      }
     }
 
     return {
@@ -268,6 +290,132 @@ export async function processVideo(
       videoMedium: mediumPath,
       videoLow: lowPath,
       thumbnail: thumbPath,
+    };
+  } catch (error) {
+    if (fs.existsSync(rawInputPath)) fs.unlinkSync(rawInputPath);
+    throw error;
+  }
+}
+
+/** HLS rendition config for vertical-first transcoding */
+const HLS_RENDITIONS = [
+  { name: "360p", width: 640, height: 1080, crf: 25 },
+  { name: "720p", width: 1280, height: 1080, crf: 23 },
+  { name: "1080p", width: 1920, height: 1080, crf: 21 },
+] as const;
+
+/**
+ * Process video to HLS format: 3 renditions + master manifest + thumbnails.
+ * Used by the HLS BullMQ worker for adaptive bitrate streaming.
+ */
+export async function processVideoToHLS(
+  job: Pick<VideoProcessingJob, "videoUrl" | "postId">,
+): Promise<ProcessedHLSResult> {
+  const { videoUrl, postId } = job;
+
+  const rawInputPath = await downloadVideo(videoUrl);
+
+  try {
+    await validateVideo(rawInputPath);
+
+    const baseDir = path.join(TEMP_DIR, `hls_${postId}_${uuidv4()}`);
+    await fs.promises.mkdir(baseDir, { recursive: true });
+
+    const renditionDirs: string[] = [];
+
+    for (const { name, width, crf } of HLS_RENDITIONS) {
+      const outDir = path.join(baseDir, name);
+      await fs.promises.mkdir(outDir, { recursive: true });
+      const outM3u8 = path.join(outDir, `${name}.m3u8`);
+      const segmentPattern = path.join(outDir, `${name}_%03d.ts`);
+
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(rawInputPath)
+          .outputOptions([
+            "-c:v libx264",
+            `-crf ${crf}`,
+            "-preset veryfast",
+            `-vf scale=${width}:-2`,
+            "-c:a aac",
+            "-b:a 128k",
+            "-movflags +faststart",
+            "-hls_time 4",
+            "-hls_playlist_type vod",
+            "-hls_segment_filename",
+            segmentPattern,
+          ])
+          .output(outM3u8)
+          .on("end", () => resolve())
+          .on("error", (err) => reject(err))
+          .run();
+      });
+
+      renditionDirs.push(outDir);
+    }
+
+    // Build master manifest
+    const masterPath = path.join(baseDir, "manifest.m3u8");
+    let masterContent = "#EXTM3U\n#EXT-X-VERSION:3\n";
+
+    for (let i = 0; i < HLS_RENDITIONS.length; i++) {
+      const { name } = HLS_RENDITIONS[i];
+      const variantM3u8 = path.join(renditionDirs[i], `${name}.m3u8`);
+      const variant = await fs.promises.readFile(variantM3u8, "utf8");
+      const streamInfo = variant
+        .split("\n")
+        .find((l) => l.startsWith("#EXT-X-STREAM-INF"));
+      if (!streamInfo) continue;
+      masterContent += `${streamInfo},NAME="${name}"\n${name}/${name}.m3u8\n`;
+    }
+
+    await fs.promises.writeFile(masterPath, masterContent, "utf8");
+
+    // Thumbnails at 0s, 2s, 4s
+    const thumbDir = path.join(baseDir, "thumbs");
+    await fs.promises.mkdir(thumbDir, { recursive: true });
+    const thumbPath = path.join(thumbDir, "thumb-0.png");
+
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(rawInputPath)
+        .screenshots({
+          timestamps: ["0.0", "2.0", "4.0"],
+          filename: "thumb-%i.png",
+          folder: thumbDir,
+          size: "384x?",
+        })
+        .on("end", () => resolve())
+        .on("error", (err) => reject(err));
+    });
+
+    // Collect all files for upload (relative to baseDir for remote key)
+    const files: Array<{ localPath: string; remoteKey: string }> = [];
+
+    const walkDir = async (dir: string) => {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        const rel = path.relative(baseDir, full).replace(/\\/g, "/");
+        if (e.isDirectory()) {
+          await walkDir(full);
+        } else {
+          files.push({ localPath: full, remoteKey: rel });
+        }
+      }
+    };
+    await walkDir(baseDir);
+
+    // Cleanup raw input
+    try {
+      if (fs.existsSync(rawInputPath)) fs.unlinkSync(rawInputPath);
+    } catch {
+      /* ignore cleanup errors */
+    }
+
+    return {
+      manifestPath: masterPath,
+      outDir: baseDir,
+      thumbnailPath: thumbPath,
+      files,
     };
   } catch (error) {
     if (fs.existsSync(rawInputPath)) fs.unlinkSync(rawInputPath);

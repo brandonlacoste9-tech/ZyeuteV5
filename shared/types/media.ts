@@ -3,7 +3,6 @@ import { User } from "./user";
 export type PostType = "photo" | "video";
 
 export type ProcessingStatus =
-  | "ready"
   | "pending"
   | "processing"
   | "completed"

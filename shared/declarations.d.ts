@@ -15,7 +15,6 @@ declare module "socket.io-client" {
 declare module "@tanstack/react-query-devtools";
 declare module "@google-cloud/vertexai";
 declare module "@fal-ai/client";
-declare module "@mux/upchunk";
 declare module "uuid";
 
 declare module "@testing-library/react" {

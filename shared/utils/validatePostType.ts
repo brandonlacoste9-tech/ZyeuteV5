@@ -13,7 +13,7 @@ const VIDEO_EXTENSIONS = [
   ".mp4",
   ".mov",
   ".webm",
-  ".m3u8", // HLS streaming (Mux uses this)
+  ".m3u8", // HLS streaming
   ".avi",
   ".mkv",
   ".m4v",
@@ -38,8 +38,6 @@ const IMAGE_EXTENSIONS = [
 
 // Known video hosting platforms
 const VIDEO_HOSTS = [
-  "mux.com",
-  "stream.mux.com",
   "vimeo.com",
   "player.vimeo.com",
   "youtube.com",

@@ -10,6 +10,7 @@ import React, {
   useCallback,
   Suspense,
 } from "react";
+import Hls from "hls.js";
 import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
 import { VideoSource } from "@/hooks/usePrefetchVideo";
@@ -17,7 +18,6 @@ import { videoCache } from "@/lib/videoWarmCache";
 import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
 
-const MuxPlayer = React.lazy(() => import("@mux/mux-player-react"));
 const StreamingDebugOverlay = React.lazy(
   () => import("./StreamingDebugOverlay"),
 );
@@ -44,12 +44,13 @@ export interface VideoPlayerProps {
   onEnded?: () => void;
   onPlay?: () => void;
   onPause?: () => void;
+  /** Called when playback reaches 70% (for prefetching next videos) */
+  onProgress?: (progress: number) => void;
   style?: React.CSSProperties;
   videoStyle?: React.CSSProperties;
   priority?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: VideoSource;
-  muxPlaybackId?: string | null;
   debug?: {
     activeRequests: number;
     concurrency: number;
@@ -67,12 +68,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEnded,
   onPlay,
   onPause,
+  onProgress,
   style,
   videoStyle,
   priority = false,
   preload = "metadata",
   videoSource,
-  muxPlaybackId,
   debug,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -86,9 +87,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   type Readiness = "idle" | "loading" | "ready" | "error";
   const [readiness, setReadiness] = useState<Readiness>("loading");
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
-  const [muxError, setMuxError] = useState(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { tap, impact } = useHaptics();
+
+  // Retry & stall recovery state
+  const retryCountRef = useRef(0);
+  const MAX_RETRIES = 3;
+  const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const progress70FiredRef = useRef(false);
+  const [bufferProgress, setBufferProgress] = useState(0);
 
   // TikTok-style speed controls
   const [playbackRate, setPlaybackRate] = useState(1.0);
@@ -103,21 +110,70 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsDebugEnabled(debugParam || storageParam);
   }, []);
 
-  // Reset Mux error state when playback ID changes (e.g. scroll to new video)
-  useEffect(() => {
-    if (muxPlaybackId) setMuxError(false);
-  }, [muxPlaybackId]);
-
   // MSE State
   const mseRef = useRef<MediaSource | null>(null);
   const [mseUrl, setMseUrl] = useState<string | null>(null);
 
-  // Determine effective source
-  const effectiveSrc =
-    mseUrl ||
-    (videoSource?.type === "blob" || videoSource?.type === "url"
-      ? videoSource.src
-      : src);
+  // HLS.js for .m3u8 sources (adaptive bitrate)
+  const hlsRef = useRef<Hls | null>(null);
+  const isHlsSrc =
+    src &&
+    typeof src === "string" &&
+    (src.endsWith(".m3u8") || src.includes(".m3u8"));
+
+  // Determine effective source (empty when HLS - HLS manages playback)
+  const effectiveSrc = isHlsSrc
+    ? ""
+    : mseUrl ||
+      (videoSource?.type === "blob" || videoSource?.type === "url"
+        ? videoSource.src
+        : src);
+
+  // HLS.js setup for .m3u8 sources
+  useEffect(() => {
+    if (!isHlsSrc || !src || !videoRef.current) return;
+    const el = videoRef.current;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        backBufferLength: 90,
+        enableWorker: true,
+        capLevelToPlayerSize: true,
+      });
+      hlsRef.current = hls;
+      hls.loadSource(src);
+      hls.attachMedia(el);
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) {
+          videoPlayerLogger.warn("[VideoPlayer] HLS fatal error:", data);
+        }
+      });
+      if (autoPlay) {
+        el.muted = true;
+        el.play().catch(() => {});
+      }
+      return () => {
+        hls.destroy();
+        hlsRef.current = null;
+      };
+    }
+    if (el.canPlayType("application/vnd.apple.mpegurl")) {
+      el.src = src;
+      if (autoPlay) el.play().catch(() => {});
+      return () => {
+        el.pause();
+        el.src = "";
+      };
+    }
+  }, [src, isHlsSrc, autoPlay]);
+
+  // Pause HLS when not autoPlay
+  useEffect(() => {
+    if (!isHlsSrc || !videoRef.current) return;
+    if (!autoPlay) {
+      videoRef.current.pause();
+    }
+  }, [isHlsSrc, autoPlay]);
 
   // Metrics
   const metricsRef = useRef({
@@ -221,7 +277,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 try {
                   sb.remove(start, end);
                 } catch (removeErr: any) {
-                  videoPlayerLogger.warn("MSE remove failed:", removeErr?.message);
+                  videoPlayerLogger.warn(
+                    "MSE remove failed:",
+                    removeErr?.message,
+                  );
                 }
               }
             }
@@ -304,22 +363,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [videoSource, mseRetryCount]);
 
-  // Handle video source errors gracefully
+  // Handle video source errors with exponential backoff retry
   const handleError = useCallback(
     (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
       const video = e.currentTarget;
       const error = video.error;
 
-      // Enhanced error logging for diagnostics
-      console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
-        code: error?.code,
-        message: error?.message,
-        networkState: video.networkState,
-        readyState: video.readyState,
-        src: src?.substring(0, 100),
-        currentSrc: video.currentSrc?.substring(0, 100),
-        mseActive: !!mseUrl,
-      });
+      // Only log as error when retries are exhausted; use debug during retries
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
+          code: error?.code,
+          message: error?.message,
+          src: src?.substring(0, 100),
+        });
+      }
 
       // Soft Fallback: If MSE fails, try raw URL once before giving up
       if (mseUrl) {
@@ -332,7 +389,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return;
       }
 
-      videoPlayerLogger.error("Video playback error:", {
+      // Exponential backoff retry (1s, 2s, 4s)
+      if (retryCountRef.current < MAX_RETRIES) {
+        const delay = Math.pow(2, retryCountRef.current) * 1000;
+        retryCountRef.current++;
+        videoPlayerLogger.info(
+          `Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delay}ms for ${src?.substring(0, 50)}`,
+        );
+        setReadiness("loading");
+        loadingTimeoutRef.current = setTimeout(() => {
+          if (videoRef.current) {
+            // Force reload with cache-bust on final retry
+            if (retryCountRef.current === MAX_RETRIES && src) {
+              const bustUrl = src.includes("?")
+                ? `${src}&_retry=${Date.now()}`
+                : `${src}?_retry=${Date.now()}`;
+              videoRef.current.src = bustUrl;
+            }
+            videoRef.current.load();
+          }
+        }, delay);
+        return;
+      }
+
+      videoPlayerLogger.error("Video playback error (retries exhausted):", {
         code: error?.code,
         message: error?.message,
         src: src?.substring(0, 100),
@@ -353,7 +433,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoPlayerLogger.debug(
         `TTFF for ${src.slice(-10)}: ${metricsRef.current.timeToFirstFrame}ms`,
       );
-      mediaTelemetry.recordTimeToFirstFrame(src, metricsRef.current.timeToFirstFrame);
+      mediaTelemetry.recordTimeToFirstFrame(
+        src,
+        metricsRef.current.timeToFirstFrame,
+      );
     }
     if (metricsRef.current.lastStallStart) {
       metricsRef.current.totalStalledTime +=
@@ -365,6 +448,27 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleWaiting = useCallback(() => {
     metricsRef.current.stalledCount++;
     metricsRef.current.lastStallStart = Date.now();
+
+    // Stall recovery: if stalled for >8s, try to nudge playback
+    if (stallTimerRef.current) clearTimeout(stallTimerRef.current);
+    stallTimerRef.current = setTimeout(() => {
+      if (!videoRef.current) return;
+      const video = videoRef.current;
+      // If still waiting (readyState < HAVE_FUTURE_DATA), attempt recovery
+      if (video.readyState < 3 && !video.paused) {
+        videoPlayerLogger.warn("Stall recovery: nudging playback position");
+        // Seek forward slightly to trigger new buffer request
+        const nudge = Math.min(0.5, video.duration - video.currentTime - 0.1);
+        if (nudge > 0) {
+          video.currentTime += nudge;
+        } else {
+          // Near end, try reload
+          video.load();
+          video.play().catch(() => {});
+        }
+      }
+      stallTimerRef.current = null;
+    }, 8000);
   }, []);
 
   const handleCanPlay = useCallback(() => {
@@ -372,6 +476,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;
     }
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
+    retryCountRef.current = 0; // Reset retry count on successful load
     const ms = metricsRef.current.startTime
       ? Date.now() - metricsRef.current.startTime
       : 0;
@@ -381,6 +490,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
     setReadiness("ready");
   }, [src]);
+
+  // Track buffer progress for loading UI
+  const handleProgress = useCallback(() => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (video.buffered.length > 0 && video.duration > 0) {
+      const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+      setBufferProgress(Math.min(100, (bufferedEnd / video.duration) * 100));
+    }
+  }, []);
 
   // Handle loading started
   const handleLoadStart = useCallback(() => {
@@ -393,11 +512,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setReadiness("loading");
     setDuration(0);
     setCurrentTime(0);
+    setBufferProgress(0);
+    retryCountRef.current = 0; // Reset retries for new source
 
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
+    if (stallTimerRef.current) {
+      clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = null;
+    }
 
+    // Timeout: if video hasn't loaded in 15s, trigger retry mechanism
     loadingTimeoutRef.current = setTimeout(() => {
       videoPlayerLogger.warn(
         `Video loading timeout for ${src.substring(0, 50)}...`,
@@ -405,6 +531,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (videoRef.current && src) {
         videoPlayerLogger.info("Attempting auto-retry for failed video");
+        retryCountRef.current = 0; // Allow fresh retries from timeout
         videoRef.current.load();
 
         loadingTimeoutRef.current = setTimeout(() => {
@@ -414,11 +541,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       } else {
         setReadiness("error");
       }
-    }, 30000);
+    }, 15000); // Reduced from 30s to 15s for faster feedback
 
     return () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
+      }
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
       }
     };
   }, [src]);
@@ -479,7 +610,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
-          videoPlayerLogger.warn("Play failed (e.g. policy or interrupted):", err);
+          videoPlayerLogger.warn(
+            "Play failed (e.g. policy or interrupted):",
+            err,
+          );
           setIsPlaying(false);
         });
       }
@@ -552,7 +686,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      if (onProgress && video.duration > 0 && !progress70FiredRef.current) {
+        const progress = video.currentTime / video.duration;
+        if (progress >= 0.7) {
+          progress70FiredRef.current = true;
+          onProgress(progress);
+        }
+      }
+    };
     const handleLoadedMetadata = () => setDuration(video.duration);
     const handleEnded = () => {
       setIsPlaying(false);
@@ -567,6 +710,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("ended", handleEnded);
+      progress70FiredRef.current = false;
 
       // Log Metrics on unmount
       if (metricsRef.current.startTime) {
@@ -579,12 +723,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         });
       }
 
+      // Clear stall recovery timer
+      if (stallTimerRef.current) {
+        clearTimeout(stallTimerRef.current);
+        stallTimerRef.current = null;
+      }
+
       // Hard cleanup to stop buffering/decoding immediately on unmount
       // Moved outside conditional to ensure it always runs regardless of playback state
       video.removeAttribute("src");
       video.load();
     };
-  }, [onEnded, src, mseUrl, videoSource]);
+  }, [onEnded, onProgress, src, mseUrl, videoSource]);
 
   // Format time (seconds to MM:SS)
   const formatTime = (seconds: number) => {
@@ -605,75 +755,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return url.startsWith("/") || url.startsWith("blob:");
     }
   };
-
-  // Mux Player Integration - Return early if Mux ID is present (with error handling)
-  if (muxPlaybackId) {
-    videoPlayerLogger.info("[VideoPlayer] Using MUX path:", {
-      playbackId: muxPlaybackId,
-      autoPlay,
-      muted,
-    });
-    if (muxError) {
-      return (
-        <div
-          className={cn(
-            "relative flex items-center justify-center bg-zinc-900",
-            className,
-          )}
-          style={style}
-        >
-          <div className="text-center p-4">
-            <div className="text-4xl mb-2">⚠️</div>
-            <p className="text-white/60 text-sm mb-3">Vidéo non disponible</p>
-            <button
-              onClick={() => setMuxError(false)}
-              className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 text-sm"
-            >
-              Réessayer
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div
-        className={cn(
-          "relative group video-hover-glow rounded-xl overflow-hidden",
-          className,
-        )}
-        style={style}
-      >
-        <Suspense fallback={<div className="w-full h-full bg-black" />}>
-          <MuxPlayer
-            playbackId={muxPlaybackId}
-            metadataVideoTitle="Zyeuté Exclusive"
-            streamType="on-demand"
-            accentColor="#FF00FF"
-            autoPlay={autoPlay}
-            muted={muted}
-            loop={loop}
-            className="w-full h-full object-cover"
-            style={
-              {
-                height: "100%",
-                width: "100%",
-                "--media-object-fit": "cover",
-                "--media-control-background": "transparent",
-                ...videoStyle,
-              } as any
-            }
-            onEnded={onEnded}
-            onPlay={onPlay}
-            onPause={onPause}
-            onError={(e: any) => {
-              videoPlayerLogger.error("[VideoPlayer] Mux playback error:", e);
-              setMuxError(true);
-            }}
-          />
-        </Suspense>
-      </div>
-    );
-  }
 
   // Native HTML5 path logging
   videoPlayerLogger.info("[VideoPlayer] Using NATIVE HTML5 path:", {
@@ -710,31 +791,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           "relative flex items-center justify-center bg-zinc-900",
           className,
         )}
+        style={style}
       >
-        <div className="text-center p-4">
+        <div className="text-center p-4 max-w-xs">
           <div className="text-4xl mb-2">⚠️</div>
-          <p className="text-white/60 text-sm mb-3">Vidéo non disponible</p>
+          <p className="text-white/60 text-sm mb-1">Vidéo non disponible</p>
           <p className="text-white/40 text-xs mb-4">
-            Le contenu met un peu plus de temps à charger
+            Vérifie ta connexion ou réessaie
           </p>
           <div className="flex gap-2 justify-center">
             <button
               onClick={() => {
+                retryCountRef.current = 0;
                 setReadiness("loading");
+                setBufferProgress(0);
                 if (videoRef.current) {
+                  // Fresh reload with cache-bust
+                  if (src) {
+                    const freshUrl = src.includes("?")
+                      ? `${src}&_fresh=${Date.now()}`
+                      : `${src}?_fresh=${Date.now()}`;
+                    videoRef.current.src = freshUrl;
+                  }
                   videoRef.current.load();
                 }
               }}
-              className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors text-sm"
+              className="px-5 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all active:scale-95 text-sm"
             >
               Réessayer
             </button>
             <button
-              onClick={() => {
-                // Try to refresh the entire feed by reloading
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-stone-600/20 text-stone-300 rounded-lg hover:bg-stone-600/30 transition-colors text-sm"
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-white/10 text-white/70 rounded-full hover:bg-white/15 transition-colors text-sm"
             >
               Rafraîchir
             </button>
@@ -815,31 +903,57 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onLoadStart={handleLoadStart}
         onPlaying={handlePlaying}
         onWaiting={handleWaiting}
+        onProgress={handleProgress}
       />
-      {/* Loading State */}
+      {/* Loading / Buffering State */}
       {readiness === "loading" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
           <div className="text-center">
-            <svg
-              className="animate-spin h-12 w-12 text-gold-400 mx-auto mb-2"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            <p className="text-white/60 text-sm">Chargement...</p>
+            {/* Circular progress indicator */}
+            <div className="relative w-14 h-14 mx-auto mb-3">
+              <svg className="w-14 h-14 animate-spin" viewBox="0 0 56 56">
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.15)"
+                  strokeWidth="4"
+                />
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  fill="none"
+                  stroke="url(#goldGrad)"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeDasharray={`${bufferProgress * 1.5} 150`}
+                />
+                <defs>
+                  <linearGradient
+                    id="goldGrad"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                  >
+                    <stop offset="0%" stopColor="#D4AF37" />
+                    <stop offset="100%" stopColor="#FFD700" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              {bufferProgress > 0 && (
+                <span className="absolute inset-0 flex items-center justify-center text-white/80 text-xs font-mono">
+                  {Math.round(bufferProgress)}%
+                </span>
+              )}
+            </div>
+            <p className="text-white/60 text-sm">
+              {retryCountRef.current > 0
+                ? `Reconnexion... (${retryCountRef.current}/${MAX_RETRIES})`
+                : "Chargement..."}
+            </p>
           </div>
         </div>
       )}

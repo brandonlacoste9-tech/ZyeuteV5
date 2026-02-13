@@ -11,11 +11,11 @@ const apiLogger = logger.withContext("API");
 import { supabase } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
-// [CONFIG] Live Railway Backend URL
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? ""
-    : "https://zyeutev5-production.up.railway.app";
+// [CONFIG] API Base URL
+// Use relative URLs so requests route through the hosting platform's proxy:
+// - Local dev: Vite proxy (/api → localhost:5000)
+// - Vercel: vercel.json rewrite (/api → Railway backend)
+const API_BASE_URL = "";
 
 // Base API call helper
 async function apiCall<T>(
@@ -166,7 +166,7 @@ export async function getFeedPosts(
       .map(mapBackendPost)
       .filter(
         (post: Post | null): post is Post =>
-          post !== null && !!post.id && !!post.media_url,
+          post !== null && !!post.id && !!(post.media_url || post.hls_url),
       );
   } catch (err) {
     // Final safety net
@@ -193,14 +193,30 @@ export async function getExplorePosts(
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!post.media_url,
+        post !== null && !!post.id && !!(post.media_url || post.hls_url),
     );
 }
 
 export async function getPostById(postId: string): Promise<Post | null> {
+  apiLogger.info(`Fetching post ${postId}...`);
+
   const { data, error } = await apiCall<{ post: Post }>(`/posts/${postId}`);
-  if (error || !data) return null;
-  return mapBackendPost(data.post);
+
+  if (error || !data) {
+    apiLogger.error(`Failed to fetch post ${postId}:`, error);
+    return null;
+  }
+
+  const mapped = mapBackendPost(data.post);
+
+  if (mapped && !mapped.media_url) {
+    apiLogger.warn(`Post ${postId} loaded but media_url is missing`, {
+      thumbnail_url: mapped.thumbnail_url,
+      type: mapped.type,
+    });
+  }
+
+  return mapped;
 }
 
 export async function getUserPosts(userId: string): Promise<Post[]> {
@@ -213,7 +229,7 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!post.media_url,
+        post !== null && !!post.id && !!(post.media_url || post.hls_url),
     );
 }
 
@@ -227,34 +243,18 @@ export async function createPost(postData: {
   visibility?: string;
   visualFilter?: string;
   isEphemeral?: boolean;
-  muxUploadId?: string;
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
     body: JSON.stringify({
       ...postData,
       // Ensure processing status is set for videos
-      processing_status: postData.type === "video" ? "pending" : "ready",
+      processing_status: "completed",
     }),
   });
 
   if (error || !data) return null;
   return mapBackendPost(data.post);
-}
-
-export async function createMuxUpload(): Promise<{
-  uploadUrl: string;
-  uploadId: string;
-} | null> {
-  const { data, error } = await apiCall<{
-    uploadUrl: string;
-    uploadId: string;
-  }>("/mux/create-upload", {
-    method: "POST",
-  });
-
-  if (error || !data) return null;
-  return data;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
@@ -744,13 +744,14 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const rawMedia = p.media_url || p.mediaUrl;
   const rawOriginal = p.original_url || p.originalUrl;
   const rawEnhanced = p.enhanced_url || p.enhancedUrl;
+  const rawHls = p.hls_url || p.hlsUrl;
   const processingReady =
-    (p.processing_status || p.processingStatus) === "ready" ||
-    (p.processing_status || p.processingStatus) === "completed";
+    (p.processing_status || p.processingStatus) === "completed" ||
+    (p.processing_status || p.processingStatus) === "ready";
 
-  // Best playable URL: enhanced (if ready) > media > original
+  // Best playable URL: HLS (adaptive) > enhanced (if completed) > media > original
   const mediaUrl =
-    (processingReady && rawEnhanced) || rawMedia || rawOriginal || "";
+    rawHls || (processingReady && rawEnhanced) || rawMedia || rawOriginal || "";
 
   // Auto-detect type if not provided
   let type: "photo" | "video" = p.type;
@@ -774,11 +775,10 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     city: p.city,
 
     // Video-specific (for SingleVideoView / feed)
+    hls_url: rawHls || undefined,
     enhanced_url: rawEnhanced || undefined,
     original_url: rawOriginal || undefined,
     processing_status: p.processing_status || p.processingStatus,
-    mux_playback_id: p.mux_playback_id || p.muxPlaybackId,
-
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,
     view_count: p.view_count || p.viewCount || 0,
@@ -805,85 +805,4 @@ function mapBackendStory(story: Record<string, any>): Story {
   } as Story;
 }
 
-// ============ PEXELS FUNCTIONS ============
-
-export interface PexelsVideoFile {
-  id: number;
-  quality: string;
-  file_type: string;
-  width: number;
-  height: number;
-  link: string;
-}
-
-export interface PexelsVideo {
-  id: number;
-  width: number;
-  height: number;
-  url: string;
-  image: string;
-  duration: number;
-  user: {
-    id: number;
-    name: string;
-    url: string;
-  };
-  video_files: PexelsVideoFile[];
-}
-
-export interface PexelsPhoto {
-  id: number;
-  width: number;
-  height: number;
-  url: string;
-  photographer: string;
-  photographer_url: string;
-  photographer_id: number;
-  avg_color: string;
-  src: {
-    original: string;
-    large2x: string;
-    large: string;
-    medium: string;
-    small: string;
-    portrait: string;
-    landscape: string;
-    tiny: string;
-  };
-  liked: boolean;
-  alt: string;
-}
-
-export interface PexelsResponse {
-  page: number;
-  per_page: number;
-  total_results: number;
-  videos?: PexelsVideo[];
-  photos?: PexelsPhoto[];
-  url?: string;
-  title?: string;
-  description?: string;
-}
-
-export async function getPexelsCurated(
-  limit: number = 10,
-  page: number = 1,
-): Promise<PexelsResponse | null> {
-  const { data, error } = await apiCall<PexelsResponse>(
-    `/pexels/curated?per_page=${limit}&page=${page}`,
-  );
-  if (error || !data) return null;
-  return data;
-}
-
-export async function getPexelsCollection(
-  id: string,
-  limit: number = 10,
-  page: number = 1,
-): Promise<PexelsResponse | null> {
-  const { data, error } = await apiCall<PexelsResponse>(
-    `/pexels/collection/${id}?per_page=${limit}&page=${page}`,
-  );
-  if (error || !data) return null;
-  return data;
-}
+// [SOVEREIGN] Pexels API removed.

@@ -174,6 +174,7 @@ export const posts = pgTable(
     muxUploadId: text("mux_upload_id"),
     promoUrl: text("promo_url"),
     muxPlaybackId: text("mux_playback_id"),
+    hlsUrl: text("hls_url"), // HLS manifest URL for adaptive streaming
     thumbnailUrl: text("thumbnail_url"),
     duration: integer("duration"),
     aspectRatio: text("aspect_ratio"),
@@ -946,6 +947,8 @@ export type InsertGift = z.infer<typeof insertGiftSchema>;
 export type PostReaction = typeof postReactions.$inferSelect;
 export type CommentReaction = typeof commentReactions.$inferSelect;
 export type StoryView = typeof storyViews.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = typeof transactions.$inferInsert;
 export type VirtualCard = any; // Placeholder for now if virtualCards is missing
 export type HiveEvent = any;
 export type EventAttendee = any;

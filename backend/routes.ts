@@ -38,14 +38,14 @@ import emailAutomation from "./email-automation.js";
 // Import Studio API routes
 import studioRoutes from "./routes/studio.js";
 import enhanceRoutes from "./routes/enhance.js";
-// [NEW] Import the JWT verifier
-import { verifyAuthToken } from "./supabase-auth.js";
+// [NEW] Import the JWT verifier + Supabase admin client (for auto-provisioning)
+import { verifyAuthToken, supabaseAdmin } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
 import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import healthRoutes from "./routes/health.js";
-import { muxRouter } from "./routes/mux.js";
+
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
 import flaggingRoutes from "./routes/user-flagging.js";
@@ -67,7 +67,7 @@ import {
   traceSupabase,
   addSpanAttributes,
 } from "./tracer.js";
-import { getVideoQueue } from "./queue.js";
+import { getVideoQueue, getHLSVideoQueue } from "./queue.js";
 import { joualizeText, type JoualStyle } from "./services/joualizer.js";
 import { VertexBridge } from "./ai/vertex-bridge.js";
 import { RoyaleService } from "./services/royale-service.js";
@@ -129,7 +129,7 @@ let stripe: Stripe | null = null;
 
 if (STRIPE_SECRET_KEY) {
   stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2026-01-28.clover",
+    apiVersion: "2025-12-15.acacia" as Stripe.LatestApiVersion,
   });
 } else {
   console.warn(
@@ -191,7 +191,21 @@ export async function registerRoutes(
 
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
-  app.use("/api", muxRouter);
+
+  // Video processing webhook (called by HLS worker for cache invalidation)
+  app.post("/api/webhook/video-processed", (req, res) => {
+    const secret = req.headers["x-webhook-secret"];
+    const expected = process.env.WEBHOOK_SECRET;
+    if (expected && secret !== expected) {
+      return res.status(401).json({ error: "Invalid webhook secret" });
+    }
+    const { videoId } = req.body || {};
+    if (!videoId) {
+      return res.status(400).json({ error: "videoId required" });
+    }
+    // TODO: Invalidate Redis feed cache (DEL feed:*) when cache is implemented
+    res.status(200).json({ ok: true, videoId });
+  });
 
   // [NEW] Debug and Scalability Diagnostics
   app.use("/api/debug", debugRoutes);
@@ -278,15 +292,62 @@ export async function registerRoutes(
   // [RESTORED] Get current user profile (bridged via JWT)
   // This is needed because frontend/src/services/api.ts still calls /auth/me
   // to get the full profile data (coins, region, etc.) which isn't in the JWT.
+  // Auto-provisions user row if Supabase auth user exists but DB row doesn't.
   app.get("/api/auth/me", optionalAuth, async (req, res) => {
     try {
       if (!req.userId) {
         return res.json({ user: null });
       }
 
-      const user = await storage.getUser(req.userId);
+      let user = await storage.getUser(req.userId);
+
+      // Auto-provision: If Supabase user exists but no DB row, create one
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        try {
+          // Get user metadata from Supabase auth token (already validated)
+          const authHeader = req.headers.authorization;
+          const token = authHeader?.split(" ")[1];
+          let email = "";
+          let username = "";
+
+          if (token && supabaseAdmin) {
+            const { data } = await supabaseAdmin.auth.getUser(token);
+            if (data?.user) {
+              email = data.user.email || "";
+              username =
+                data.user.user_metadata?.username ||
+                data.user.user_metadata?.full_name
+                  ?.toLowerCase()
+                  .replace(/\s+/g, "_") ||
+                email.split("@")[0] ||
+                `user_${req.userId.slice(0, 8)}`;
+            }
+          }
+
+          if (!username) {
+            username = `user_${req.userId.slice(0, 8)}`;
+          }
+
+          // Ensure username is unique by appending random suffix if needed
+          const existingByUsername = await storage.getUserByUsername(username);
+          if (existingByUsername) {
+            username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
+          }
+
+          user = await storage.createUser({
+            id: req.userId,
+            username,
+            email,
+            role: "citoyen",
+          });
+
+          console.log(
+            `[Auth] Auto-provisioned user: ${username} (${req.userId})`,
+          );
+        } catch (provisionError) {
+          console.error("[Auth] Auto-provision failed:", provisionError);
+          return res.status(404).json({ error: "User not found" });
+        }
       }
 
       // Exclude sensitive fields from response (taxId, internal permissions)
@@ -841,6 +902,7 @@ export async function registerRoutes(
       const post = await storage.createPost({
         ...parsed.data,
         type: validatedType, // 🛡️ Use validated type
+        processingStatus: "completed",
         isModerated: true,
         moderationApproved:
           modResult.status === "approved" && videoModerationApproved,
@@ -853,10 +915,23 @@ export async function registerRoutes(
       // Queue video for processing by Colony OS workers
       const videoQueue = getVideoQueue();
       await videoQueue.add("processVideo", {
+        postId: post.id,
         videoUrl: post.mediaUrl,
         userId: req.userId,
         visual_filter: req.body.visual_filter || "prestige",
       });
+
+      // Also queue HLS transcoding when enabled (adaptive bitrate streaming)
+      const hlsQueue = getHLSVideoQueue();
+      if (hlsQueue && post.mediaUrl) {
+        hlsQueue
+          .add("processHLS", {
+            postId: post.id,
+            videoUrl: post.mediaUrl,
+            userId: req.userId,
+          })
+          .catch((err) => console.warn("[HLS] Queue add failed:", err.message));
+      }
 
       res.status(201).json({
         post,
@@ -899,6 +974,18 @@ export async function registerRoutes(
         req.params.id as string,
         req.userId!,
       );
+
+      // Broadcast real-time engagement update via Socket.IO
+      const io = app.get("io");
+      if (io) {
+        io.emit("engagement_update", {
+          postId: req.params.id,
+          fireCount: result.newCount,
+          userId: req.userId,
+          type: result.added ? "fire_added" : "fire_removed",
+        });
+      }
+
       res.json(result);
     } catch (error) {
       console.error("Toggle fire error:", error);
@@ -936,6 +1023,20 @@ export async function registerRoutes(
 
       // Get user info for response
       const user = await storage.getUser(req.userId!);
+
+      // Broadcast real-time comment event via Socket.IO
+      const io = app.get("io");
+      if (io) {
+        io.emit("engagement_update", {
+          postId: req.params.id,
+          type: "comment_added",
+          comment: {
+            id: comment.id,
+            content: (comment as any).content,
+            username: user?.username,
+          },
+        });
+      }
 
       res.status(201).json({
         comment: { ...comment, user, isFired: false },
@@ -2394,6 +2495,49 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Get user gifts error:", error);
       res.status(500).json({ error: "Failed to get gifts" });
+    }
+  });
+
+  // Get user's transaction history
+  app.get("/api/users/me/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.userId!;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const transactions = await storage.getUserTransactions(userId, limit);
+
+      res.json({
+        transactions: transactions.map((t) => ({
+          id: t.id,
+          amount: t.amount,
+          creditType: t.creditType,
+          type: t.type,
+          status: t.status,
+          feeAmount: t.feeAmount,
+          taxAmount: t.taxAmount,
+          metadata: t.metadata,
+          hiveId: t.hiveId,
+          sender: t.sender
+            ? {
+                id: t.sender.id,
+                username: t.sender.username,
+                displayName: t.sender.displayName,
+                avatarUrl: t.sender.avatarUrl,
+              }
+            : null,
+          receiver: t.receiver
+            ? {
+                id: t.receiver.id,
+                username: t.receiver.username,
+                displayName: t.receiver.displayName,
+                avatarUrl: t.receiver.avatarUrl,
+              }
+            : null,
+          createdAt: t.createdAt,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Get user transactions error:", error);
+      res.status(500).json({ error: "Failed to get transactions" });
     }
   });
 

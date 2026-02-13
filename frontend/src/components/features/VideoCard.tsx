@@ -21,8 +21,6 @@ import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "../../types";
 
-const MuxVideoPlayer = React.lazy(() => import("./MuxVideoPlayer"));
-
 interface VideoCardProps {
   post: Post;
   user?: User;
@@ -160,28 +158,14 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
-          (post as any).muxPlaybackId || (post as any).mux_playback_id ? (
-            <Suspense fallback={<div className="w-full h-full bg-black" />}>
-              <MuxVideoPlayer
-                playbackId={
-                  (post as any).muxPlaybackId || (post as any).mux_playback_id || ""
-                }
-                poster={post.thumbnail_url || post.media_url}
-                autoPlay={autoPlay}
-                muted={muted}
-                loop
-              />
-            </Suspense>
-          ) : (
-            <VideoPlayer
-              src={post.media_url}
-              poster={post.thumbnail_url || post.media_url}
-              autoPlay={autoPlay}
-              muted={muted}
-              loop
-              priority={priority}
-            />
-          )
+          <VideoPlayer
+            src={post.media_url}
+            poster={post.thumbnail_url || post.media_url}
+            autoPlay={autoPlay}
+            muted={muted}
+            loop
+            priority={priority}
+          />
         ) : (
           <div className="relative w-full h-full group/media">
             <img
@@ -263,10 +247,11 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         >
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
-              ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
-              : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
-              }`}
+            className={`flex items-center gap-2 transition-all duration-200 ${
+              isLiked
+                ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
+                : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
+            }`}
           >
             <svg
               className="w-7 h-7"

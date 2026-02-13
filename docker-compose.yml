@@ -1,7 +1,7 @@
 # 🐝 Zyeuté Trinity - Complete Stack
 # Brain + Hands + Soul integrated deployment
 
-version: '3.8'
+version: "3.8"
 
 services:
   # 🧠 THE BRAIN - Zyeuté Main App (Next.js)
@@ -17,15 +17,15 @@ services:
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-      
+
       # AI/LLM (DeepSeek or Gemini)
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - AI_MODEL=${AI_MODEL:-deepseek-chat}
-      
+
       # Internal Services
       - BROWSER_SERVICE_URL=http://zyeute-hands:8000
-      
+
     depends_on:
       - zyeute-hands
     networks:
@@ -54,14 +54,19 @@ services:
       - zyeute-network
     restart: unless-stopped
 
-  # 📊 (Optional) Redis for caching
-  redis:
-    image: redis:7-alpine
-    container_name: zyeute-cache
+  # 🕯️ THE SOUL - OpenClaw Gateway (WhatsApp/Communication)
+  openclaw-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.clawdbot
+    container_name: zyeute-soul
     ports:
-      - "6379:6379"
+      - "18789:18789"
     volumes:
-      - redis-data:/data
+      - ${HOME}/.clawdbot:/root/.clawdbot
+    environment:
+      - CLAWDBOT_GATEWAY_PORT=18789
+      - MAX_API_TOKEN=${MAX_API_TOKEN}
     networks:
       - zyeute-network
     restart: unless-stopped

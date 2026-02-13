@@ -39,6 +39,8 @@ interface SingleVideoViewProps {
     concurrency: number;
     tier: number;
   };
+  /** Called when playback reaches 70% (for prefetching next videos) */
+  onVideoProgress?: (progress: number) => void;
 }
 
 export const SingleVideoView = React.memo<SingleVideoViewProps>(
@@ -55,6 +57,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     videoSource,
     isCached,
     debug,
+    onVideoProgress,
   }) => {
     const videoRef = useRef<HTMLDivElement>(null);
     const { tap, impact } = useHaptics();
@@ -348,11 +351,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Deep Enhance: Select best video source
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
     const mediaUrl = post.media_url || post.enhanced_url || post.original_url;
+    const muxPlaybackId = post.muxPlaybackId || post.mux_playback_id;
     const validatedType = validatePostType(
       mediaUrl,
       post.type as "video" | "photo",
     );
-    const isVideo = validatedType === "video";
+    const isVideo =
+      validatedType === "video" || !!muxPlaybackId || post.type === "video";
 
     // Log if type was corrected
     if (validatedType !== post.type) {
@@ -364,8 +369,14 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     let videoSrc = "";
 
     if (isVideo) {
-      // Priority order: enhanced_url > media_url > original_url
-      if (post.processing_status === "ready" && post.enhanced_url) {
+      // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
+      const processingReady =
+        post.processing_status === "ready" ||
+        post.processing_status === "completed";
+      const hlsUrl = post.hls_url || (post as any).hlsUrl;
+      if (hlsUrl) {
+        videoSrc = hlsUrl;
+      } else if (processingReady && post.enhanced_url) {
         videoSrc = post.enhanced_url;
       } else if (post.media_url) {
         videoSrc = post.media_url;
@@ -392,10 +403,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
           source: videoSrc.substring(0, 50) + "...",
-          type:
-            post.processing_status === "ready" && post.enhanced_url
-              ? "enhanced"
-              : "original",
+          type: processingReady && post.enhanced_url ? "enhanced" : "original",
         });
       }
     }
@@ -470,8 +478,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               priority={priority}
               preload={isActive ? "auto" : preload}
               videoSource={videoSource}
-              muxPlaybackId={post.muxPlaybackId || post.mux_playback_id}
               debug={debug}
+              onProgress={isActive ? onVideoProgress : undefined}
             />
           ) : (
             <Image
@@ -544,7 +552,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <EphemeralBadge post={post} className="static bg-red-600/90" />
 
           {post.type === "video" &&
-            post.processing_status === "ready" &&
+            (post.processing_status === "ready" ||
+              post.processing_status === "completed") &&
             post.enhanced_url && (
               <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                 <span>✨</span>
@@ -819,7 +828,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       prevProps.post.id === nextProps.post.id &&
       prevProps.isActive === nextProps.isActive &&
       prevProps.post.fire_count === nextProps.post.fire_count &&
-      prevProps.post.comment_count === nextProps.post.comment_count &&
       prevProps.post.comment_count === nextProps.post.comment_count &&
       (prevProps.post.type === "video" && nextProps.post.type === "video"
         ? prevProps.post.processing_status === nextProps.post.processing_status

@@ -18,8 +18,8 @@ if (!isSupabaseConfigured) {
   );
 }
 
-// Create the Supabase client
-let supabaseAdmin: SupabaseClient | null = null;
+// Create the Supabase client (exported for auto-provisioning in routes)
+export let supabaseAdmin: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {
   supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_KEY!, {
@@ -46,7 +46,7 @@ export async function verifyAuthToken(token: string): Promise<string | null> {
     { "auth.method": "jwt_verification" },
     async (span) => {
       try {
-        const { data, error } = await supabaseAdmin.auth.getUser(token);
+        const { data, error } = await supabaseAdmin!.auth.getUser(token);
 
         if (error || !data.user) {
           if (error) {

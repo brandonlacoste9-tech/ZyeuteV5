@@ -35,7 +35,7 @@ const TEST_VIDEOS = [
     hive_id: "quebec",
     user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524", // System user from existing script
     content: "DIAGNOSTIC TEST - Native HTML5 Video Player validation",
-    processing_status: "ready",
+    processing_status: "completed",
   },
   {
     caption: "🔥 DIAGNOSTIC TEST: Shorter Video (For Bigger Blazes)",
@@ -48,7 +48,7 @@ const TEST_VIDEOS = [
     hive_id: "quebec",
     user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
     content: "DIAGNOSTIC TEST - Shorter video for quick validation",
-    processing_status: "ready",
+    processing_status: "completed",
   },
   {
     caption: "🎥 DIAGNOSTIC TEST: Elephant Dream Sample",
@@ -61,7 +61,7 @@ const TEST_VIDEOS = [
     hive_id: "quebec",
     user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
     content: "DIAGNOSTIC TEST - Third sample video",
-    processing_status: "ready",
+    processing_status: "completed",
   },
 ];
 

@@ -28,6 +28,8 @@ interface UnifiedMediaCardProps {
   };
   /** For image prefetching - whether to prefetch adjacent images */
   shouldPrefetch?: boolean;
+  /** Called when video playback reaches 70% (for prefetching next videos) */
+  onVideoProgress?: (progress: number) => void;
 }
 
 /**
@@ -50,6 +52,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
     isCached,
     debug,
     shouldPrefetch = false,
+    onVideoProgress,
   }) => {
     // Route to appropriate component based on post type
     if (post.type === "video") {
@@ -66,6 +69,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           videoSource={videoSource}
           isCached={isCached}
           debug={debug}
+          onVideoProgress={onVideoProgress}
         />
       );
     }

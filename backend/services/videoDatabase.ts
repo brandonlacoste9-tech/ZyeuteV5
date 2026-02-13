@@ -19,14 +19,29 @@ export async function saveVideoUrls(
     videoMediumUrl: string;
     videoLowUrl: string;
     thumbnailUrl: string;
+    hlsUrl?: string;
   },
+): Promise<void> {
+  const set: Record<string, unknown> = {
+    mediaUrl: urls.videoHighUrl,
+    processingStatus: "completed",
+  };
+  if (urls.hlsUrl) set.hlsUrl = urls.hlsUrl;
+  if (urls.thumbnailUrl) set.thumbnailUrl = urls.thumbnailUrl;
+
+  await db.update(posts).set(set).where(eq(posts.id, postId));
+}
+
+export async function saveHLSUrls(
+  postId: string,
+  urls: { hlsUrl: string; thumbnailUrl: string },
 ): Promise<void> {
   await db
     .update(posts)
     .set({
-      mediaUrl: urls.videoHighUrl,
-      // Original URL is kept as backup or previously set
-      // In future, we can add columns for resolutions if schema migration is possible
+      hlsUrl: urls.hlsUrl,
+      thumbnailUrl: urls.thumbnailUrl,
+      mediaUrl: urls.hlsUrl, // Fallback: HLS manifest as primary playable URL
       processingStatus: "completed",
     })
     .where(eq(posts.id, postId));

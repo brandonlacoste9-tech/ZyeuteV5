@@ -41,16 +41,11 @@ const HiveContext = createContext<HiveContextType | undefined>(undefined);
 export const HiveProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // Default to Quebec
-  const [currentHive, setCurrentHive] = useState<HiveConfig>(HIVES.quebec);
-
-  // Load from local storage on mount
-  useEffect(() => {
-    const savedHive = localStorage.getItem("zyeute_hive_id") as HiveId;
-    if (savedHive && HIVES[savedHive]) {
-      setCurrentHive(HIVES[savedHive]);
-    }
-  }, []);
+  // Initialize from localStorage (avoids setState-in-effect)
+  const [currentHive, setCurrentHive] = useState<HiveConfig>(() => {
+    const saved = localStorage.getItem("zyeute_hive_id") as HiveId;
+    return saved && HIVES[saved] ? HIVES[saved] : HIVES.quebec;
+  });
 
   const switchHive = (hiveId: HiveId) => {
     if (HIVES[hiveId]) {
@@ -67,7 +62,7 @@ export const HiveProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         currentHive,
         switchHive,
-        availableHives: (HIVES as any) ? Object.values(HIVES) : [],
+        availableHives: HIVES ? Object.values(HIVES) : [],
       }}
     >
       {children}

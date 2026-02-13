@@ -34,8 +34,22 @@ import {
   type ParentalControl,
   type InsertParentalControl,
   aiGenerationCosts,
+  transactions,
+  type Transaction,
+  type InsertTransaction,
 } from "../shared/schema.js";
-import { eq, and, desc, sql, inArray, isNull, or, gte, lte } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  sql,
+  inArray,
+  isNull,
+  or,
+  gte,
+  lte,
+  aliasedTable,
+} from "drizzle-orm";
 import { traceDatabase } from "./tracer.js";
 import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
@@ -107,15 +121,6 @@ export interface IStorage {
   deletePost(id: string): Promise<boolean>;
   incrementPostViews(id: string): Promise<number>;
   markPostBurned(id: string, reason: string): Promise<void>;
-  updatePostByMuxAssetId(
-    muxAssetId: string,
-    updates: Partial<Post>,
-  ): Promise<Post | undefined>;
-  updatePostByMuxUploadId(
-    muxUploadId: string,
-    updates: Partial<Post>,
-  ): Promise<Post | undefined>;
-
   // Comments
   getPostComments(
     postId: string,
@@ -202,6 +207,10 @@ export interface IStorage {
   refundPiasses(userId: string, amount: number, reason: string): Promise<void>;
   awardKarma(userId: string, amount: number, reason: string): Promise<void>;
   creditPiasses(userId: string, amount: number): Promise<boolean>;
+  getUserTransactions(
+    userId: string,
+    limit?: number,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]>;
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
@@ -371,6 +380,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(posts.createdAt))
       .limit(limit)
       .offset(offset);
+
+    // [FALLBACK] If the feed is empty (e.g., new user with no follows), return explore posts
+    if (result.length === 0) {
+      console.log(
+        `[STORAGE] Feed empty for user ${userId}, falling back to explore`,
+      );
+      return this.getExplorePosts(page, limit, hiveId).then((posts) =>
+        posts.map((p) => ({ ...p, isFired: false })),
+      );
+    }
 
     return result
       .filter((r) => r.user)
@@ -600,30 +619,6 @@ export class DatabaseStorage implements IStorage {
         processingStatus: "failed", // Marker for burned content
       })
       .where(eq(posts.id, id));
-  }
-
-  async updatePostByMuxAssetId(
-    muxAssetId: string,
-    updates: Partial<Post>,
-  ): Promise<Post | undefined> {
-    const result = await db
-      .update(posts)
-      .set(updates)
-      .where(eq(posts.muxAssetId, muxAssetId))
-      .returning();
-    return result[0];
-  }
-
-  async updatePostByMuxUploadId(
-    muxUploadId: string,
-    updates: Partial<Post>,
-  ): Promise<Post | undefined> {
-    const result = await db
-      .update(posts)
-      .set(updates)
-      .where(eq(posts.muxUploadId, muxUploadId))
-      .returning();
-    return result[0];
   }
 
   async updatePost(
@@ -1206,6 +1201,41 @@ export class DatabaseStorage implements IStorage {
         .where(eq(users.id, userId))
         .returning();
       return !!result[0];
+    });
+  }
+
+  async getUserTransactions(
+    userId: string,
+    limit: number = 50,
+  ): Promise<(Transaction & { sender?: User; receiver?: User })[]> {
+    return traceDatabase("SELECT", "transactions", async () => {
+      // Create aliases for sender and receiver
+      const sender = aliasedTable(users, "sender");
+      const receiver = aliasedTable(users, "receiver");
+
+      const results = await db
+        .select({
+          transaction: transactions,
+          sender: sender,
+          receiver: receiver,
+        })
+        .from(transactions)
+        .leftJoin(sender, eq(transactions.senderId, sender.id))
+        .leftJoin(receiver, eq(transactions.receiverId, receiver.id))
+        .where(
+          or(
+            eq(transactions.senderId, userId),
+            eq(transactions.receiverId, userId),
+          ),
+        )
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit);
+
+      return results.map((row) => ({
+        ...row.transaction,
+        sender: row.sender || undefined,
+        receiver: row.receiver || undefined,
+      }));
     });
   }
 

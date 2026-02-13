@@ -13,7 +13,7 @@ import React, {
   memo,
   ReactElement,
 } from "react";
-import { List, ListImperativeAPI } from "react-window";
+import { List } from "react-window";
 
 // react-window 2.x types - RowData is passed via rowProps
 interface RowData {
@@ -28,6 +28,14 @@ interface RowData {
   isSystemOverloaded: boolean;
   /** When false, active video is paused (tab hidden) */
   isPageVisible: boolean;
+  /** Real-time engagement getter */
+  getEngagement: (postId: string) => {
+    fireCount?: number;
+    commentCount?: number;
+    shareCount?: number;
+  };
+  /** Called when active video hits 70% - prefetch next 2 videos */
+  onVideoProgress?: (progress: number) => void;
 }
 
 // Relax type check for react-window compatibility
@@ -39,9 +47,6 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
-  getPexelsCurated,
-  type PexelsPhoto,
-  type PexelsVideo,
 } from "@/services/api";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -60,6 +65,8 @@ import { useVideoActivation } from "@/hooks/useVideoActivation";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { videoCache } from "@/lib/videoWarmCache";
+import { useFeedEngagement } from "@/hooks/useFeedEngagement";
+import { usePreloadHint } from "@/hooks/useVideoTransition";
 
 // ... imports ...
 
@@ -82,6 +89,7 @@ const FeedRow = memo(
       isSlowScrolling,
       isSystemOverloaded,
       isPageVisible = true,
+      onVideoProgress,
     } = data;
 
     const post = posts[index];
@@ -92,7 +100,11 @@ const FeedRow = memo(
     // Only video type posts need prefetching logic
     const videoUrl =
       post?.type === "video"
-        ? post.enhanced_url || post.media_url || post.original_url || ""
+        ? (post as Post).hls_url ||
+          (post as Post).enhanced_url ||
+          (post as Post).media_url ||
+          (post as Post).original_url ||
+          ""
         : "";
 
     // Smart Activation
@@ -133,8 +145,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Next video (n+1): aggressively buffer so it's ready on swipe
-            index === currentIndex + 1 && !isFastScrolling
+            // Adjacent videos (n±1): aggressively buffer for instant swipe
+            isPredictive && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -145,7 +157,8 @@ const FeedRow = memo(
           videoSource={source}
           isCached={isCached}
           debug={debug}
-          shouldPrefetch={isPredictive} // Prefetch adjacent images
+          shouldPrefetch={isPredictive}
+          onVideoProgress={isPriority ? onVideoProgress : undefined}
         />
       </div>
     );
@@ -237,6 +250,35 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState(false);
 
+  // Real-time engagement: subscribe to live fire/comment count updates
+  // Uses a single Supabase channel for all visible posts (efficient)
+  const visiblePostIds = useMemo(() => {
+    // Batch: current ±3 posts
+    const ids: string[] = [];
+    for (
+      let i = Math.max(0, currentIndex - 3);
+      i < Math.min(posts.length, currentIndex + 4);
+      i++
+    ) {
+      if (posts[i]?.id) ids.push(posts[i].id);
+    }
+    return ids;
+  }, [currentIndex, posts]);
+  const { getEngagement } = useFeedEngagement(visiblePostIds);
+
+  // Browser-level preload hint for next video URL (n+1)
+  const nextVideoUrl = useMemo(() => {
+    const nextPost = posts[currentIndex + 1];
+    if (!nextPost || nextPost.type !== "video") return null;
+    return (
+      nextPost.enhanced_url ||
+      nextPost.media_url ||
+      nextPost.original_url ||
+      null
+    );
+  }, [currentIndex, posts]);
+  usePreloadHint(nextVideoUrl);
+
   // Sync ref with state
   useEffect(() => {
     postsRef.current = posts;
@@ -272,104 +314,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState, posts.length]);
 
-  // Transform Pexels items to Post format
-  const transformPexelsToPosts = useCallback(
-    (
-      photos: PexelsPhoto[],
-      videos: PexelsVideo[],
-    ): Array<Post & { user: User }> => {
-      const transformed: Array<Post & { user: User }> = [];
-      const pexelsUser: User = {
-        id: "pexels",
-        username: "pexels_canada",
-        display_name: "Créateur Québec ⚜️", // Localized identity
-        avatar_url: "/attached_assets/logo_zyeute_gold.png", // Use local asset if possible
-        bio: "Contenu propulsé par Pexels pour Zyeuté",
-        city: "Montréal",
-        region: "Québec",
-        is_verified: true, // Pexels is a verified source for us
-        coins: 0,
-        fire_score: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        followers_count: 5000,
-        following_count: 0,
-        posts_count: 100,
-        is_following: false,
-        role: "citoyen" as const,
-        custom_permissions: {},
-        tiGuyCommentsEnabled: true,
-        last_daily_bonus: null,
-      } as User;
-
-      // Transform photos
-      photos.forEach((photo) => {
-        transformed.push({
-          id: `pexels-photo-${photo.id}`,
-          user_id: `pexels-${photo.photographer_id}`,
-          media_url: photo.src.original,
-          thumbnail_url: photo.src.medium,
-          caption: photo.alt || `Photo par ${photo.photographer} ⚜️`,
-          type: "photo" as const,
-          fire_count: Math.floor(Math.random() * 100), // Local flavor: start with some fires
-          comment_count: 0,
-          created_at: new Date().toISOString(),
-          user: {
-            ...pexelsUser,
-            id: `pexels-${photo.photographer_id}`,
-            username: photo.photographer.toLowerCase().replace(/\s/g, "_"),
-            display_name: photo.photographer,
-            avatar_url: photo.src.tiny,
-          },
-        } as Post & { user: User });
-      });
-
-      // Transform videos (skip entries with no playable video file)
-      videos.forEach((video) => {
-        let videoUrl: string | null = null;
-        if (video.video_files && video.video_files.length > 0) {
-          const hdVideos = video.video_files.filter((f) => f.quality === "hd");
-          if (hdVideos.length > 0) {
-            hdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
-            videoUrl = hdVideos[0].link;
-          } else {
-            const sdVideos = video.video_files.filter(
-              (f) => f.quality === "sd",
-            );
-            if (sdVideos.length > 0) {
-              sdVideos.sort((a, b) => b.width * b.height - a.width * a.height);
-              videoUrl = sdVideos[0].link;
-            } else {
-              videoUrl = video.video_files[0].link;
-            }
-          }
-        }
-        if (!videoUrl) return; // Skip videos with no playable file (avoid image-as-video)
-        transformed.push({
-          id: `pexels-video-${video.id}`,
-          user_id: `pexels-${video.user?.id || "unknown"}`,
-          media_url: videoUrl,
-          thumbnail_url: video.image,
-          caption: `Moment capturé par ${video.user?.name || "Créateur Pexels"} 🍁`,
-          type: "video" as const,
-          fire_count: Math.floor(Math.random() * 150),
-          comment_count: Math.floor(Math.random() * 20),
-          created_at: new Date().toISOString(),
-          user: {
-            ...pexelsUser,
-            id: `pexels-${video.user?.id || "unknown"}`,
-            username: (video.user?.name || "pexels")
-              .toLowerCase()
-              .replace(/\s/g, "_"),
-            display_name: video.user?.name || "Créateur Québec",
-          },
-        } as Post & { user: User });
-      });
-
-      return transformed;
-    },
-    [],
-  );
+  // [DEPRECATED] Pexels transformation logic removed for Sovereign Stack
+  const transformPexelsToPosts = useCallback(() => [], []);
 
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
@@ -415,51 +361,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       apiSuccess = false;
     }
 
-    // [SMART PLAY] If API failed or returned 0, we MUST have content. Pivot to Pexels.
-    if (!apiSuccess || validPosts.length === 0) {
-      feedLogger.info("Empty or failed DB feed, triggering Pexels fallback...");
-      let pexelsAttempts = 0;
-      const maxPexelsAttempts = 3;
+    // [SOVEREIGN] If API failed or returned 0, we show empty state (NO Pexels)
+    setPosts(validPosts);
+    setHasMore(validPosts.length === 10);
+    if (validPosts.length === 0) setFetchError(true);
 
-      while (pexelsAttempts < maxPexelsAttempts) {
-        try {
-          const pexelsData = await getPexelsCurated(15, 1);
-          if (pexelsData && pexelsData.videos?.length) {
-            const pexelsPosts = transformPexelsToPosts(
-              [],
-              pexelsData.videos || [],
-            );
-            setPosts(pexelsPosts);
-            setHasMore(true);
-            break;
-          } else {
-            feedLogger.warn(`Pexels attempt ${pexelsAttempts + 1} returned empty`);
-            pexelsAttempts++;
-            if (pexelsAttempts < maxPexelsAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
-            }
-          }
-        } catch (pexelsError) {
-          feedLogger.error(`Pexels attempt ${pexelsAttempts + 1} failed:`, pexelsError);
-          pexelsAttempts++;
-          if (pexelsAttempts < maxPexelsAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 1000 * pexelsAttempts));
-          }
-        }
-      }
-
-      if (pexelsAttempts >= maxPexelsAttempts) {
-        feedLogger.error("All Pexels attempts failed. Showing empty state.");
-        setPosts([]);
-        setFetchError(true);
-      }
-    } else {
-      // We have DB posts, we can still mix in Pexels or just show DB
-      setPosts(validPosts);
-      setHasMore(validPosts.length === 10);
-    }
-
-    setHasMore(validPosts.length === 10 || false);
     setPage(0);
     setIsLoading(false);
   }, [savedState, transformPexelsToPosts]);
@@ -504,10 +410,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     const timer = setTimeout(() => {
       if (isLoading && posts.length === 0) {
-        feedLogger.warn(
-          "⏱️ DB response slow (>2s). Forcing Pexels fallback for instant content.",
-        );
-        fetchVideoFeed(); // trigger fetch which has fallback logic
+        feedLogger.warn("⏱️ DB response slow (>2s).");
+        // [SOVEREIGN] No fallback fetch
       }
     }, 2000);
 
@@ -568,7 +472,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (i >= 0 && i < posts.length) {
         const p = posts[i];
         if (p?.type === "video") {
-          const url = (p as Post).enhanced_url || (p as Post).media_url || (p as Post).original_url;
+          const url =
+            (p as Post).hls_url ||
+            (p as Post).enhanced_url ||
+            (p as Post).media_url ||
+            (p as Post).original_url;
           if (url) retainUrls.push(url);
         }
       }
@@ -586,16 +494,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [currentIndex, posts]);
 
-  // Smart Prefetching: Load heavy chunks (Mux, Camera) when main thread is idle
+  // Smart Prefetching: Load heavy chunks (Camera) when main thread is idle
   // This ensures they are ready in the browser cache when the user needs them
   useEffect(() => {
     const prefetchHeavyChunks = () => {
-      feedLogger.debug(
-        "Prefetching heavy chunks (Mux, Camera) in background...",
-      );
+      feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
       // Trigger dynamic imports to populate browser cache without executing render logic
       import("@/components/features/CameraView").catch(() => {});
-      import("./MuxVideoPlayer").catch(() => {});
     };
 
     let idleId: any = null;
@@ -706,8 +611,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     async (postId: string, _currentFire: number) => {
       feedLogger.debug("Fire toggle for post:", postId);
 
-      if (postId.startsWith("pexels-")) return;
-
       if (!isOnline) {
         // Queue action if offline
         // We pass a placeholder userId since the actual API call will use the session
@@ -749,6 +652,27 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, []);
 
+  // Prefetch next 2 videos when active video hits 70% playback
+  const handleVideoProgress = useCallback(
+    (_progress: number) => {
+      const next1 = posts[currentIndex + 1];
+      const next2 = posts[currentIndex + 2];
+      const urls: string[] = [];
+      for (const p of [next1, next2]) {
+        if (p?.type === "video") {
+          const url =
+            (p as Post).hls_url ||
+            (p as Post).enhanced_url ||
+            (p as Post).media_url ||
+            (p as Post).original_url;
+          if (url) urls.push(url);
+        }
+      }
+      urls.forEach((url) => fetch(url, { method: "HEAD" }).catch(() => {}));
+    },
+    [posts, currentIndex],
+  );
+
   // Data object passed to rows
   const itemData: RowData = useMemo(
     () => ({
@@ -762,6 +686,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isSlowScrolling: isSlow,
       isSystemOverloaded,
       isPageVisible,
+      getEngagement,
+      onVideoProgress: handleVideoProgress,
     }),
     [
       posts,
@@ -774,6 +700,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       isSlow,
       isSystemOverloaded,
       isPageVisible,
+      getEngagement,
+      handleVideoProgress,
     ],
   );
 
@@ -789,38 +717,28 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     return (
       <div
         className={cn(
-          "w-full h-full flex flex-col items-center justify-center bg-zinc-900 p-8 text-center",
+          "w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-8 text-center",
           className,
         )}
       >
-        <div className="text-4xl mb-4">
-          {!isOnline ? "📡" : fetchError ? "⚠️" : "📱"}
-        </div>
-        <p className="text-stone-400 mb-2">
-          {!isOnline
-            ? "Tu es hors ligne. Reconnecte-toi pour voir le fil."
-            : fetchError
-              ? "Impossible de charger le fil."
-              : "Aucun contenu disponible pour le moment."}
+        <div className="text-6xl mb-6 animate-pulse">🎥</div>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Bienvenue sur Zyeuté
+        </h2>
+        <p className="text-white/60 mb-8 max-w-xs mx-auto">
+          Le fil est vide. Sois le premier à partager un moment unique avec le
+          Québec.
         </p>
-        {fetchError && (
-          <p className="text-stone-500 text-sm mb-2 max-w-sm">
-            Vérifie ta connexion. En démo, le backend doit avoir PEXELS_API_KEY (Railway).
-          </p>
-        )}
-        {(!isOnline || fetchError) && (
-          <button
-            type="button"
-            onClick={() => {
-              setFetchError(false);
-              hasInitializedRef.current = false;
-              fetchVideoFeed();
-            }}
-            className="mt-4 px-6 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 transition-colors font-medium"
-          >
-            Réessayer
-          </button>
-        )}
+
+        <button
+          onClick={() => {
+            // Navigate to upload or trigger refresh
+            fetchVideoFeed();
+          }}
+          className="px-8 py-3 bg-[#D4AF37] text-black font-bold rounded-full hover:bg-[#C5A028] transition-transform active:scale-95 shadow-[0_0_20px_rgba(212,175,55,0.4)]"
+        >
+          Rafraîchir
+        </button>
       </div>
     );
   }
@@ -841,16 +759,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               DEBUG: {width}x{height} | {posts.length} posts
             </div> */}
 
-            <List<RowData>
+            <List
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory scroll-smooth"
+              className="no-scrollbar snap-y snap-mandatory"
               style={{ height, width }}
               rowCount={posts.length}
               rowHeight={height}
-              itemData={itemData}
-              overscanCount={isFast ? 3 : 1}
-              onItemsRendered={onRowsRendered}
-              children={FeedRow}
+              rowProps={{ data: itemData }}
+              overscanCount={isFast ? 3 : 2}
+              onRowsRendered={onRowsRendered}
+              rowComponent={FeedRow}
             />
           </>
         )}

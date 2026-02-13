@@ -147,6 +147,11 @@ export function usePrefetchVideo(
 
         if (!response.ok) {
           if (response.status === 416) return;
+          // 403 = hotlink blocked, 404 = video gone — skip retries
+          if (response.status === 403 || response.status === 404) {
+            controller.abort();
+            return;
+          }
           throw new Error(`Chunk fetch failed: ${response.status}`);
         }
 

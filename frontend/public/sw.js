@@ -1,5 +1,6 @@
 // Service Worker for Zyeuté PWA
-const CACHE_NAME = 'zyeute-v1';
+const CACHE_NAME = 'zyeute-v6';
+const OLD_CACHES = ['zyeute-v1', 'zyeute-v2', 'zyeute-v3', 'zyeute-v4', 'zyeute-v5'];
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -7,15 +8,15 @@ self.addEventListener('install', (event) => {
   self.skipWaiting(); // Activate immediately
 });
 
-// Activate event
+// Activate event - delete old caches so clients load the new build
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((cacheName) => cacheName !== CACHE_NAME)
-          .map((cacheName) => caches.delete(cacheName))
+          .filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
       );
     })
   );

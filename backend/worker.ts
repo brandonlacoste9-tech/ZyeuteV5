@@ -1,6 +1,7 @@
 import { Worker, Job } from "bullmq";
 import { VideoProcessingJob } from "./services/videoProcessor.js";
 import { VideoOrchestrator } from "./services/videoOrchestrator.js";
+import { hlsVideoWorker } from "./workers/hlsVideoProcessor.js";
 import { MemoryMinerBee } from "./ai/bees/memory-miner.js";
 import { PrivacyAuditorBee } from "./ai/bees/privacy-auditor.js";
 import { HiveTask } from "./ai/types.js";
@@ -37,12 +38,11 @@ try {
   videoWorker.on("failed", (job, err) => {
     console.log(`[Worker] Job ${job?.id} failed with ${err.message}`);
   });
-  
-  videoWorker.on("error", (err) => {
-      // Don't crash on connection lost, just log
-      console.error("[Worker] Redis connection error:", err.message);
-  });
 
+  videoWorker.on("error", (err) => {
+    // Don't crash on connection lost, just log
+    console.error("[Worker] Redis connection error:", err.message);
+  });
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Video Worker:", e.message);
@@ -51,12 +51,12 @@ try {
   }
   // Create a dummy worker object to prevent exports validation failure
   videoWorker = {
-      close: async () => {},
-      on: () => {},
+    close: async () => {},
+    on: () => {},
   } as unknown as Worker<VideoProcessingJob>;
 }
 
-export { videoWorker };
+export { videoWorker, hlsVideoWorker };
 
 // --- MEMORY MINER WORKER ---
 let memoryWorker: Worker;
@@ -114,18 +114,17 @@ try {
   memoryWorker.on("failed", (job, err) => {
     console.log(`[MemoryWorker] Job ${job?.id} failed with ${err.message}`);
   });
-  
-  memoryWorker.on("error", (err) => {
-      console.error("[MemoryWorker] Redis connection error:", err.message);
-  });
 
+  memoryWorker.on("error", (err) => {
+    console.error("[MemoryWorker] Redis connection error:", err.message);
+  });
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Memory Worker:", e.message);
   }
   memoryWorker = {
-      close: async () => {},
-      on: () => {},
+    close: async () => {},
+    on: () => {},
   } as unknown as Worker;
 }
 
@@ -156,19 +155,18 @@ try {
       concurrency: 1,
     },
   );
-  
+
   privacyWorker.on("error", (err) => {
-       console.error("[PrivacyWorker] Redis connection error:", err.message);
+    console.error("[PrivacyWorker] Redis connection error:", err.message);
   });
-  
 } catch (e: any) {
-    if (e.message !== "Redis connection not configured") {
-      console.error("Failed to initialize Privacy Worker:", e.message);
-    }
-    privacyWorker = {
-        close: async () => {},
-        on: () => {},
-    } as unknown as Worker;
+  if (e.message !== "Redis connection not configured") {
+    console.error("Failed to initialize Privacy Worker:", e.message);
+  }
+  privacyWorker = {
+    close: async () => {},
+    on: () => {},
+  } as unknown as Worker;
 }
 
 export { privacyWorker };
