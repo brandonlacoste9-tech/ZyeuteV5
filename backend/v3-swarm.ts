@@ -627,7 +627,6 @@ export async function v3Flow(
           const { imageGeneratorBee } = await import("./ai/bees/image-generator.js");
           const result = await imageGeneratorBee.generate({
             prompt: coreDecision.notes,
-            style: coreDecision.fal_preset || undefined,
             size: "square",
             enhancePrompt: true,
           });

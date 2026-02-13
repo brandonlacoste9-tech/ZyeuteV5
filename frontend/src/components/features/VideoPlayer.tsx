@@ -307,17 +307,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const video = e.currentTarget;
       const error = video.error;
 
-      // Enhanced error logging for diagnostics
-      console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
-        code: error?.code,
-        message: error?.message,
-        networkState: video.networkState,
-        readyState: video.readyState,
-        src: src?.substring(0, 100),
-        currentSrc: video.currentSrc?.substring(0, 100),
-        mseActive: !!mseUrl,
-        retryCount: retryCountRef.current,
-      });
+      // Only log as error when retries are exhausted; use debug during retries
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
+          code: error?.code,
+          message: error?.message,
+          src: src?.substring(0, 100),
+        });
+      }
 
       // Soft Fallback: If MSE fails, try raw URL once before giving up
       if (mseUrl) {
