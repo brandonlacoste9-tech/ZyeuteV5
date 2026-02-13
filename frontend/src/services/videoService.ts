@@ -1,6 +1,12 @@
 /**
  * 🎬 VIDEO SERVICE - AI Video Editing
  * Ti-Guy Studio - Smart video processing
+ *
+ * WARNING: Most functions in this file are MOCK STUBS (setTimeout placeholders).
+ * Only extractThumbnail() and getVideoMetadata() contain real implementations.
+ * The mock functions (processVideo, generateCaptions, smartTrim, addBackgroundMusic,
+ * cropToVertical) return fake data and should be replaced with real backend
+ * integration (ffmpeg.wasm or server-side processing) before production use.
  */
 
 import { logger } from "@/lib/logger";
