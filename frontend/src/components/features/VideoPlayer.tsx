@@ -17,8 +17,6 @@ import { videoCache } from "@/lib/videoWarmCache";
 import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
 
-import ZyeuteVideoPlayer from "../media/ZyeuteVideoPlayer";
-
 const StreamingDebugOverlay = React.lazy(
   () => import("./StreamingDebugOverlay"),
 );
