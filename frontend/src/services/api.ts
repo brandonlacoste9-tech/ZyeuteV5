@@ -745,10 +745,9 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const rawOriginal = p.original_url || p.originalUrl;
   const rawEnhanced = p.enhanced_url || p.enhancedUrl;
   const processingReady =
-    (p.processing_status || p.processingStatus) === "ready" ||
     (p.processing_status || p.processingStatus) === "completed";
 
-  // Best playable URL: enhanced (if ready) > media > original
+  // Best playable URL: enhanced (if completed) > media > original
   const mediaUrl =
     (processingReady && rawEnhanced) || rawMedia || rawOriginal || "";
 

@@ -143,7 +143,6 @@ export function isVideoPost(post: Post): post is Post & { type: "video" } {
  */
 export function hasVideoProcessingStatus(post: Post): post is Post & {
   processing_status:
-    | "ready"
     | "pending"
     | "processing"
     | "completed"

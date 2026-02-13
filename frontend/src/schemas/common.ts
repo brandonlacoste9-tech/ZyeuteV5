@@ -324,7 +324,7 @@ const PostBase = z.object({
   original_url: z.string().optional(),
   enhanced_url: z.string().optional(),
   processing_status: z
-    .enum(["ready", "pending", "processing", "completed", "failed"])
+    .enum(["pending", "processing", "completed", "failed"])
     .optional(),
   visual_filter: z.string().optional(),
 });
@@ -385,7 +385,7 @@ export const PostSchema = z.preprocess((val: any) => {
     city: val.city,
     // Ensure processing status defaults if video
     processing_status:
-      val.processing_status || (type === "video" ? "ready" : undefined),
+      val.processing_status || (type === "video" ? "completed" : undefined),
 
     // Moderation
     is_moderated: val.is_moderated || val.isModerated || false,
