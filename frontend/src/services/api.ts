@@ -243,7 +243,6 @@ export async function createPost(postData: {
   visibility?: string;
   visualFilter?: string;
   isEphemeral?: boolean;
-  muxUploadId?: string;
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
@@ -256,14 +255,6 @@ export async function createPost(postData: {
 
   if (error || !data) return null;
   return mapBackendPost(data.post);
-}
-
-// [DEPRECATED] Mux upload logic removed for Sovereign Stack
-export async function createMuxUpload(): Promise<{
-  uploadUrl: string;
-  uploadId: string;
-} | null> {
-  return null;
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
@@ -786,8 +777,6 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     enhanced_url: rawEnhanced || undefined,
     original_url: rawOriginal || undefined,
     processing_status: p.processing_status || p.processingStatus,
-    mux_playback_id: p.mux_playback_id || p.muxPlaybackId,
-
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,
     view_count: p.view_count || p.viewCount || 0,

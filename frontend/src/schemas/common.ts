@@ -303,12 +303,6 @@ const PostBase = z.object({
   moderation_approved: z.boolean().default(true),
   is_hidden: z.boolean().default(false),
   isHidden: z.boolean().optional(), // Compat
-  mux_asset_id: z.string().nullable().optional(),
-  muxAssetId: z.string().nullable().optional(), // Compat
-  mux_upload_id: z.string().nullable().optional(),
-  muxUploadId: z.string().nullable().optional(), // Compat
-  mux_playback_id: z.string().nullable().optional(),
-  muxPlaybackId: z.string().nullable().optional(), // Compat
   // AI Enrichment (Phase 9 Upgrade)
   ai_description: z.string().nullable().optional(),
   aiDescription: z.string().nullable().optional(), // Compat
@@ -405,13 +399,6 @@ export const PostSchema = z.preprocess((val: any) => {
       val.moderation_approved || val.moderationApproved || true,
     is_hidden: val.is_hidden || val.isHidden || false,
     isHidden: val.is_hidden || val.isHidden || false,
-    mux_asset_id: val.mux_asset_id || val.muxAssetId,
-    muxAssetId: val.mux_asset_id || val.muxAssetId,
-    mux_upload_id: val.mux_upload_id || val.muxUploadId,
-    muxUploadId: val.mux_upload_id || val.muxUploadId,
-    mux_playback_id: val.mux_playback_id || val.muxPlaybackId,
-    muxPlaybackId: val.mux_playback_id || val.muxPlaybackId,
-
     // AI Enrichment
     ai_description: val.ai_description || val.aiDescription,
     aiDescription: val.ai_description || val.aiDescription,

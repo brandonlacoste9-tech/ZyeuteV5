@@ -463,7 +463,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               priority={priority}
               preload={isActive ? "auto" : preload}
               videoSource={videoSource}
-              muxPlaybackId={post.muxPlaybackId || post.mux_playback_id}
               debug={debug}
             />
           ) : (

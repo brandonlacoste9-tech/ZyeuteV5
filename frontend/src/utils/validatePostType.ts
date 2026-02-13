@@ -28,8 +28,6 @@ const IMAGE_EXTENSIONS = [
 
 // Known video hosting platforms
 const VIDEO_HOSTS = [
-  "mux.com",
-  "stream.mux.com",
   "vimeo.com",
   "player.vimeo.com",
   "youtube.com",

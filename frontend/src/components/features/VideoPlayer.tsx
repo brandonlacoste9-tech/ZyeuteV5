@@ -50,7 +50,6 @@ export interface VideoPlayerProps {
   priority?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: VideoSource;
-  muxPlaybackId?: string | null;
   debug?: {
     activeRequests: number;
     concurrency: number;
@@ -73,7 +72,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   priority = false,
   preload = "metadata",
   videoSource,
-  muxPlaybackId,
   debug,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -87,7 +85,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   type Readiness = "idle" | "loading" | "ready" | "error";
   const [readiness, setReadiness] = useState<Readiness>("loading");
   const [isDebugEnabled, setIsDebugEnabled] = useState(false);
-  const [muxError, setMuxError] = useState(false);
   const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { tap, impact } = useHaptics();
 
@@ -103,11 +100,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const storageParam = localStorage.getItem("debug") === "true";
     setIsDebugEnabled(debugParam || storageParam);
   }, []);
-
-  // Reset Mux error state when playback ID changes (e.g. scroll to new video)
-  useEffect(() => {
-    if (muxPlaybackId) setMuxError(false);
-  }, [muxPlaybackId]);
 
   // MSE State
   const mseRef = useRef<MediaSource | null>(null);
@@ -606,52 +598,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return url.startsWith("/") || url.startsWith("blob:");
     }
   };
-
-  // Mux Player Integration - Return early if Mux ID is present (with error handling)
-  if (muxPlaybackId) {
-    videoPlayerLogger.info("[VideoPlayer] Using MUX path:", {
-      playbackId: muxPlaybackId,
-      autoPlay,
-      muted,
-    });
-    if (muxError) {
-      return (
-        <div
-          className={cn(
-            "relative flex items-center justify-center bg-zinc-900",
-            className,
-          )}
-          style={style}
-        >
-          <div className="text-center p-4">
-            <div className="text-4xl mb-2">⚠️</div>
-            <p className="text-white/60 text-sm mb-3">Vidéo non disponible</p>
-            <button
-              onClick={() => setMuxError(false)}
-              className="px-4 py-2 bg-gold-500/20 text-gold-400 rounded-lg hover:bg-gold-500/30 text-sm"
-            >
-              Réessayer
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div
-        className={cn(
-          "relative group video-hover-glow rounded-xl overflow-hidden",
-          className,
-        )}
-        style={style}
-      >
-        <ZyeuteVideoPlayer
-          src={src}
-          poster={poster}
-          autoPlay={autoPlay}
-        />
-      </div>
-    );
-  }
 
   // Native HTML5 path logging
   videoPlayerLogger.info("[VideoPlayer] Using NATIVE HTML5 path:", {
