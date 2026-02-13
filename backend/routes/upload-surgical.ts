@@ -30,7 +30,7 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
 
 /**
  * SURGICAL UPLOAD BYPASS
- * Direct to Supabase Storage -> No Mux, No Webhooks, Instant Launch.
+ * Direct to Supabase Storage -> No Webhooks, Instant Launch.
  */
 surgicalUploadRouter.post(
   "/simple",

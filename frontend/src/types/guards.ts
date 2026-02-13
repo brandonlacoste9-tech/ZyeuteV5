@@ -151,7 +151,7 @@ export function hasVideoProcessingStatus(post: Post): post is Post & {
   return (
     isVideoPost(post) &&
     post.processing_status !== undefined &&
-    ["ready", "pending", "processing", "completed", "failed"].includes(
+    ["pending", "processing", "completed", "failed"].includes(
       post.processing_status,
     )
   );

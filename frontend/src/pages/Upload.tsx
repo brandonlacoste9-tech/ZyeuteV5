@@ -128,8 +128,7 @@ export const Upload: React.FC = () => {
         return;
       }
 
-      // [SOVEREIGN] Use Surgical Upload for everything
-      // This bypasses Mux and goes straight to Supabase/Railway
+      // [SOVEREIGN] Use Surgical Upload (direct to Supabase/Railway)
       const result = await surgicalUpload(file, caption);
 
       if (!result.success || !result.post) {
