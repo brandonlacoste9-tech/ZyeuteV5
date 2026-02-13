@@ -477,16 +477,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [currentIndex, posts]);
 
-  // Smart Prefetching: Load heavy chunks (Mux, Camera) when main thread is idle
+  // Smart Prefetching: Load heavy chunks (Camera) when main thread is idle
   // This ensures they are ready in the browser cache when the user needs them
   useEffect(() => {
     const prefetchHeavyChunks = () => {
-      feedLogger.debug(
-        "Prefetching heavy chunks (Mux, Camera) in background...",
-      );
+      feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
       // Trigger dynamic imports to populate browser cache without executing render logic
       import("@/components/features/CameraView").catch(() => { });
-      // [SOVEREIGN] Mux removed
     };
 
     let idleId: any = null;

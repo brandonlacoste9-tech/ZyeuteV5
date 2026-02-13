@@ -128,11 +128,17 @@ function createMockClient() {
         list: async () => ({ data: [], error: null }),
       }),
     },
-    channel: (name: string) => ({
-      on: () => ({ subscribe: () => {} }),
-      subscribe: () => {},
-      unsubscribe: () => {},
-    }),
+    channel: (name: string, _opts?: any) => {
+      const ch: any = {
+        on: () => ch, // chainable
+        subscribe: (_cb?: any) => ch,
+        unsubscribe: () => {},
+        untrack: () => ch,
+        track: () => ch,
+        send: () => Promise.resolve("ok"),
+      };
+      return ch;
+    },
     removeChannel: () => {},
   } as any;
 }

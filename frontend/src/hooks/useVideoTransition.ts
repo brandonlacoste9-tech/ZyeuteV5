@@ -83,14 +83,14 @@ export function usePreloadHint(nextVideoUrl: string | null) {
     // Don't preload blob URLs or data URLs
     if (nextVideoUrl.startsWith("blob:") || nextVideoUrl.startsWith("data:")) return;
 
-    // Create preload link for next video
+    // Create prefetch link for next video (rel="prefetch" is better than
+    // rel="preload" here because we want low-priority background fetch for
+    // a resource that will be used on the *next* navigation/scroll, not the
+    // current one. Browsers don't support as="video" for preload anyway.)
     const link = document.createElement("link");
-    link.rel = "preload";
-    link.as = "video";
+    link.rel = "prefetch";
     link.href = nextVideoUrl;
     link.crossOrigin = "anonymous";
-    // Low priority - don't compete with current video
-    (link as any).fetchPriority = "low";
 
     document.head.appendChild(link);
     linkRef.current = link;

@@ -51,9 +51,15 @@ export function useFeedEngagement(postIds: string[]) {
     }
 
     // Single channel for all feed engagement
-    const channel = supabase.channel("feed:engagement", {
-      config: { broadcast: { self: true } },
-    });
+    let channel: ReturnType<typeof supabase.channel>;
+    try {
+      channel = supabase.channel("feed:engagement", {
+        config: { broadcast: { self: true } },
+      });
+    } catch (err) {
+      feedEngagementLogger.warn("Failed to create engagement channel:", err);
+      return;
+    }
 
     channel
       .on("broadcast", { event: "engagement_update" }, (payload: any) => {
