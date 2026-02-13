@@ -70,9 +70,24 @@ export function recordApiCall(endpoint: string) {
 
 /**
  * Send metrics to Colony OS
+ * Silently no-ops when COLONY_OS_URL is not set
  */
+let _metricsColonyAvailable: boolean | null = null;
+let _metricsLastCheck = 0;
+
 export async function sendMetricsToColony(): Promise<void> {
-  const colonyOsUrl = process.env.COLONY_OS_URL || "http://localhost:3001";
+  const colonyOsUrl = process.env.COLONY_OS_URL;
+
+  // If COLONY_OS_URL is not explicitly set, silently skip
+  if (!colonyOsUrl) {
+    return;
+  }
+
+  // Circuit breaker: skip if Colony was down recently (5 min window)
+  const now = Date.now();
+  if (_metricsColonyAvailable === false && now - _metricsLastCheck < 5 * 60 * 1000) {
+    return;
+  }
 
   try {
     const response = await fetch(`${colonyOsUrl}/api/zyeute-metrics`, {
@@ -85,18 +100,15 @@ export async function sendMetricsToColony(): Promise<void> {
         ...metrics,
         timestamp: new Date().toISOString(),
       }),
+      signal: AbortSignal.timeout(5000),
     });
 
-    if (!response.ok) {
-      console.warn(
-        `[Colony Bridge] Failed to send metrics: ${response.status}`,
-      );
-    } else {
-      console.log("[Colony Bridge] Metrics sent successfully");
-    }
-  } catch (error) {
-    console.error("[Colony Bridge] Failed to send metrics:", error);
-    // Don't throw - metrics are best-effort
+    _metricsColonyAvailable = response.ok;
+    _metricsLastCheck = now;
+  } catch {
+    // Silently mark unavailable — no log spam
+    _metricsColonyAvailable = false;
+    _metricsLastCheck = now;
   }
 }
 

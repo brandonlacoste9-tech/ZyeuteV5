@@ -622,13 +622,16 @@ export async function v3Flow(
       }
 
       case "FAL": {
-        // Call FAL Tool
+        // Call FAL Tool via Image Generator Bee
         try {
-          const { ImageGenTool } = await import("./ai/tools/image_gen.js");
-          const imageUrl = await ImageGenTool.generate(
-            coreDecision.notes,
-            coreDecision.fal_preset || "flux-schnell",
-          );
+          const { imageGeneratorBee } = await import("./ai/bees/image-generator.js");
+          const result = await imageGeneratorBee.generate({
+            prompt: coreDecision.notes,
+            style: coreDecision.fal_preset || undefined,
+            size: "square",
+            enhancePrompt: true,
+          });
+          const imageUrl = result.imageUrl || "";
 
           const tiGuyResponse = await v3TiGuyChat(
             `J'ai généré l'image que tu m'as demandée: ${coreDecision.notes}. Voici le lien: ${imageUrl}`,
@@ -653,15 +656,16 @@ export async function v3Flow(
       }
 
       case "BROWSER": {
-        // Call Browser Tool
+        // Call Browser Control Bee
         try {
-          const { BrowserTool } = await import("./ai/tools/browser.js");
+          const { browserControlBee } = await import("./ai/bees/browser-control.js");
           const query = coreDecision.context?.query || userAction;
-          const searchResults = await BrowserTool.search(query);
+          const searchResults = await browserControlBee.search("google", query);
 
           // Summarize results
-          const contextSummary = searchResults
-            .map((r) => `${r.title}: ${r.snippet} (${r.url})`)
+          const results = Array.isArray(searchResults) ? searchResults : [];
+          const contextSummary = results
+            .map((r: { title?: string; snippet?: string; url?: string }) => `${r.title}: ${r.snippet} (${r.url})`)
             .join("\n\n");
 
           const response = await v3TiGuyChat(

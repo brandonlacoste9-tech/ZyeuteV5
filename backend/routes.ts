@@ -38,8 +38,8 @@ import emailAutomation from "./email-automation.js";
 // Import Studio API routes
 import studioRoutes from "./routes/studio.js";
 import enhanceRoutes from "./routes/enhance.js";
-// [NEW] Import the JWT verifier
-import { verifyAuthToken } from "./supabase-auth.js";
+// [NEW] Import the JWT verifier + Supabase admin client (for auto-provisioning)
+import { verifyAuthToken, supabaseAdmin } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
 import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
@@ -277,15 +277,58 @@ export async function registerRoutes(
   // [RESTORED] Get current user profile (bridged via JWT)
   // This is needed because frontend/src/services/api.ts still calls /auth/me
   // to get the full profile data (coins, region, etc.) which isn't in the JWT.
+  // Auto-provisions user row if Supabase auth user exists but DB row doesn't.
   app.get("/api/auth/me", optionalAuth, async (req, res) => {
     try {
       if (!req.userId) {
         return res.json({ user: null });
       }
 
-      const user = await storage.getUser(req.userId);
+      let user = await storage.getUser(req.userId);
+
+      // Auto-provision: If Supabase user exists but no DB row, create one
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        try {
+          // Get user metadata from Supabase auth token (already validated)
+          const authHeader = req.headers.authorization;
+          const token = authHeader?.split(" ")[1];
+          let email = "";
+          let username = "";
+
+          if (token && supabaseAdmin) {
+            const { data } = await supabaseAdmin.auth.getUser(token);
+            if (data?.user) {
+              email = data.user.email || "";
+              username =
+                data.user.user_metadata?.username ||
+                data.user.user_metadata?.full_name?.toLowerCase().replace(/\s+/g, "_") ||
+                email.split("@")[0] ||
+                `user_${req.userId.slice(0, 8)}`;
+            }
+          }
+
+          if (!username) {
+            username = `user_${req.userId.slice(0, 8)}`;
+          }
+
+          // Ensure username is unique by appending random suffix if needed
+          const existingByUsername = await storage.getUserByUsername(username);
+          if (existingByUsername) {
+            username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
+          }
+
+          user = await storage.createUser({
+            id: req.userId,
+            username,
+            email,
+            role: "citoyen",
+          });
+
+          console.log(`[Auth] Auto-provisioned user: ${username} (${req.userId})`);
+        } catch (provisionError) {
+          console.error("[Auth] Auto-provision failed:", provisionError);
+          return res.status(404).json({ error: "User not found" });
+        }
       }
 
       // Exclude sensitive fields from response (taxId, internal permissions)
