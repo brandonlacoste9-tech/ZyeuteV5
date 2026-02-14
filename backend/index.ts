@@ -36,6 +36,9 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const app = express();
 
+// Trust proxy (Railway, Vercel) - required for express-rate-limit to work behind reverse proxy
+app.set("trust proxy", 1);
+
 // CORS: allow frontend (Vercel / localhost) to call this backend
 app.use(
   cors({
