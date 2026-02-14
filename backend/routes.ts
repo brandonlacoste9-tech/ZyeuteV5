@@ -365,7 +365,7 @@ export async function registerRoutes(
 
   // ============ USER ROUTES ============
 
-  // Get user by username
+  // Get user by username or UUID
   app.get("/api/users/:username", optionalAuth, async (req, res) => {
     try {
       const identifier = req.params.username as string;
@@ -380,6 +380,53 @@ export async function registerRoutes(
 
       if (!user) {
         user = await storage.getUserByUsername(identifier);
+      }
+
+      // Auto-provision: If requesting own profile by UUID and no DB row yet, create one
+      if (!user && req.userId === identifier && uuidRegex.test(identifier)) {
+        try {
+          const authHeader = req.headers.authorization;
+          const token = authHeader?.split(" ")[1];
+          let email = "";
+          let username = "";
+
+          if (token && supabaseAdmin) {
+            const { data } = await supabaseAdmin.auth.getUser(token);
+            if (data?.user) {
+              email = data.user.email || "";
+              username =
+                data.user.user_metadata?.username ||
+                data.user.user_metadata?.full_name
+                  ?.toLowerCase()
+                  .replace(/\s+/g, "_") ||
+                email.split("@")[0] ||
+                `user_${identifier.slice(0, 8)}`;
+            }
+          }
+
+          if (!username) username = `user_${identifier.slice(0, 8)}`;
+
+          const existingByUsername = await storage.getUserByUsername(username);
+          if (existingByUsername) {
+            username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
+          }
+
+          user = await storage.createUser({
+            id: identifier,
+            username,
+            email,
+            role: "citoyen",
+          });
+
+          console.log(
+            `[Auth] Auto-provisioned user via /users/:id: ${username} (${identifier})`,
+          );
+        } catch (provisionError) {
+          console.error(
+            "[Auth] Auto-provision in /users/:id failed:",
+            provisionError,
+          );
+        }
       }
 
       if (!user) {
