@@ -65,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const enhanceUser = async (sessionUser: any) => {
     if (!sessionUser) return null;
     try {
-      // Fetch full profile (Role, Coins, etc.)
-      const fullProfile = await getUserProfile(sessionUser.id);
+      // Use /auth/me for current user - it auto-provisions if profile missing
+      const fullProfile = await getUserProfile("me");
       if (fullProfile) return fullProfile;
 
       // Fallback if profile doesn't exist yet (rare race condition)
@@ -129,8 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
-                profile.role === "moderator" ||
-                (await checkIsAdmin(initialSession.user as any)),
+                  profile.role === "moderator" ||
+                  (await checkIsAdmin(initialSession.user as any)),
               );
             }
           } else {
