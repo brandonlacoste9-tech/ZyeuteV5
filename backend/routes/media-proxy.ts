@@ -89,9 +89,7 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     const body = resp.body;
     if (body) {
-      const nodeStream = Readable.fromWeb(
-        body as import("stream").web.ReadableStream,
-      );
+      const nodeStream = Readable.fromWeb(body as any);
       nodeStream.pipe(res);
       nodeStream.on("error", (err) => {
         console.error("[MediaProxy] Stream error:", err);
