@@ -19,6 +19,7 @@ import { useTranslation } from "@/i18n";
 
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import type { Post, User } from "../../types";
 
 interface VideoCardProps {
@@ -159,8 +160,12 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
       >
         {post.type === "video" ? (
           <VideoPlayer
-            src={post.media_url}
-            poster={post.thumbnail_url || post.media_url}
+            src={getProxiedMediaUrl(post.media_url) || post.media_url}
+            poster={
+              getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+              post.thumbnail_url ||
+              post.media_url
+            }
             autoPlay={autoPlay}
             muted={muted}
             loop

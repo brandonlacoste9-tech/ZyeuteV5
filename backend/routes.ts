@@ -52,6 +52,7 @@ import flaggingRoutes from "./routes/user-flagging.js";
 import remixRoutes from "./routes/remix.js";
 import soundRoutes from "./routes/sounds.js";
 import pexelsRoutes from "./routes/pexels.js";
+import mediaProxyRoutes from "./routes/media-proxy.js";
 import sentryDebugRoutes from "./routes/sentry-debug.js";
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
 import dialogflowTiguyRoutes from "./routes/dialogflow-tiguy.js";
@@ -225,6 +226,9 @@ export async function registerRoutes(
   });
 
   app.use("/api/pexels", pexelsRoutes);
+
+  // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
+  app.use("/api/media-proxy", mediaProxyRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);

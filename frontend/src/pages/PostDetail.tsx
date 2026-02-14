@@ -22,6 +22,7 @@ import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { Image } from "@/components/Image";
 import { InteractiveText } from "@/components/InteractiveText";
 import VideoDebugOverlay from "@/components/video/VideoDebugOverlay";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 
 const postDetailLogger = logger.withContext("PostDetail");
 
@@ -328,13 +329,19 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
   // Always prefetch full video for detail view (Tier 2)
   const videoUrl = post.type === "video" ? post.media_url : "";
   const { source } = usePrefetchVideo(videoUrl, 2);
+  const proxiedVideo =
+    post.type === "video"
+      ? getProxiedMediaUrl(post.media_url) || post.media_url
+      : "";
+  const proxiedPoster =
+    getProxiedMediaUrl(post.thumbnail_url || undefined) || post.thumbnail_url;
 
   if (post.type === "video") {
     return (
       <div className="relative w-full h-full bg-black">
         <VideoPlayer
-          src={post.media_url}
-          poster={post.thumbnail_url || undefined}
+          src={proxiedVideo}
+          poster={proxiedPoster}
           autoPlay={true}
           muted={false}
           loop={true}

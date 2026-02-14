@@ -18,6 +18,7 @@ import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
 import { useVideoVision } from "@/hooks/useVideoVision";
 import { validatePostType } from "@/utils/validatePostType";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { RemixModal } from "./RemixModal";
 import { getRemixInfo } from "@/services/api";
 import { Music } from "lucide-react";
@@ -399,6 +400,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           },
         );
       } else {
+        // Route external URLs (Mixkit, Unsplash, Pexels) through media proxy to fix 403/ORB
+        videoSrc = getProxiedMediaUrl(videoSrc) || videoSrc;
         // Log valid video source for debugging
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
@@ -469,7 +472,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {post.type === "video" ? (
             <VideoPlayer
               src={videoSrc}
-              poster={post.thumbnail_url || post.media_url}
+              poster={
+                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                post.thumbnail_url ||
+                post.media_url
+              }
               autoPlay={isActive}
               muted={isMuted}
               loop
