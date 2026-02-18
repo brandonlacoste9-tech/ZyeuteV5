@@ -11,6 +11,8 @@ const PROXY_DOMAINS = [
   "pexels.com",
   "videos.pexels.com",
   "images.pexels.com",
+  "supabase.co",
+  "supabase.in",
 ];
 
 export function needsMediaProxy(url: string | undefined): boolean {
