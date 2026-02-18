@@ -9,6 +9,7 @@ import DOMPurify from "dompurify";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
+import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -159,18 +160,33 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
-          <VideoPlayer
-            src={getProxiedMediaUrl(post.media_url) || post.media_url}
-            poster={
-              getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-              post.thumbnail_url ||
-              post.media_url
-            }
-            autoPlay={autoPlay}
-            muted={muted}
-            loop
-            priority={priority}
-          />
+          post.mux_playback_id ? (
+            <MuxVideoPlayer
+              playbackId={post.mux_playback_id}
+              thumbnailUrl={
+                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                post.thumbnail_url ||
+                post.media_url
+              }
+              className="w-full h-full"
+              autoPlay={autoPlay}
+              muted={muted}
+              loop
+            />
+          ) : (
+            <VideoPlayer
+              src={getProxiedMediaUrl(post.media_url) || post.media_url}
+              poster={
+                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                post.thumbnail_url ||
+                post.media_url
+              }
+              autoPlay={autoPlay}
+              muted={muted}
+              loop
+              priority={priority}
+            />
+          )
         ) : (
           <div className="relative w-full h-full group/media">
             <img

@@ -1,151 +1,61 @@
-# ✅ Mux Integration - Setup Complete!
+# MUX Video Integration - Status Report
 
-## 🎉 Status: READY FOR TESTING
+**Status:** ✅ Code Integrated & Verified (TypeScript Checks Pass)
+**Pending:** ⚠️ Configuration & Environment Setup
 
-All Mux credentials have been configured and Railway is deploying with the new environment variables.
+## 1. Code Integration Complete
 
----
+The following components have been fully integrated and type-checked (`npm run check` passes):
 
-## ✅ What's Configured
+- **Backend:**
+  - `backend/routes/mux.ts`: Full API implementation (Upload, Status, Webhooks).
+  - Webhook signature verification implemented.
+  - Database schema (`posts` table) updated with Mux fields.
+- **Frontend:**
+  - `MuxUpload.tsx`: Direct upload component with chunking.
+  - `MuxVideoPlayer.tsx`: Playback component (v8+ SDK compliant).
+  - `SingleVideoView.tsx`: Integration with feed and playback logic.
+  - `api.ts`: API service methods for Mux endpoints.
 
-### Backend Environment Variables (Railway)
+## 2. Configuration Action Required
 
-- ✅ `MUX_TOKEN_ID`: Configured
-- ✅ `MUX_TOKEN_SECRET`: Configured
-- ⚠️ `MUX_WEBHOOK_SECRET`: (Optional - for webhook signature verification)
+**CRITICAL:** The application is currently configured with placeholder or invalid Mux credentials in `.env`.
 
-### Code Components (Already Existing)
+**You must update `.env` with valid keys from your Mux Dashboard:**
 
-- ✅ **Package**: `@mux/mux-player-react@^3.10.2` installed
-- ✅ **Component**: `frontend/src/components/features/MuxVideoPlayer.tsx`
-- ✅ **Backend Routes**: `backend/routes/mux.ts` (upload & webhooks)
-- ✅ **Database**: `mux_playback_id` column in `publications` table
-- ✅ **Current Usage**: `VideoCard.tsx` conditionally uses MuxVideoPlayer
-
----
-
-## 🚀 Testing Mux Integration
-
-### Step 1: Verify Backend Deployment
-
-Wait for Railway deployment to complete, then check logs for:
-
-```
-✅ Mux client initialized successfully
+```env
+# Get these from https://dashboard.mux.com/settings/access-tokens
+MUX_TOKEN_ID=YOUR_REAL_TOKEN_ID
+MUX_TOKEN_SECRET=YOUR_REAL_LONG_SECRET_KEY
+MUX_WEBHOOK_SECRET=YOUR_WEBHOOK_SECRET
 ```
 
-### Step 2: Test Video Upload via Mux Direct Upload
+_The current `MUX_TOKEN_SECRET` appears too short to be valid._
 
-**API Endpoint:**
+## 3. Environment Build Issue
 
-```
-POST /api/mux/create-upload
-```
+The project is currently failing to build (`npm run build`) due to a Windows-specific `rollup` dependency issue (`@rollup/rollup-win32-x64-msvc`).
+**Recommendation:**
 
-**Expected Response:**
+1. Delete `node_modules` and `package-lock.json`.
+2. Run `npm install` fresh.
+3. Run `npm run build` again.
 
-```json
-{
-  "uploadUrl": "https://storage.googleapis.com/...",
-  "uploadId": "upload-id-here"
-}
-```
+## 4. Testing Procedure (Once Configured)
 
-### Step 3: Test Video Playback
+1. **Start Backend:** `npm run dev`
+2. **Verify Configuration:**
+   - Ensure the server logs "✅ Mux client initialized successfully".
+3. **Test Upload:**
+   - Go to `/upload` page.
+   - Select "Vidéo Standard (Mux)".
+   - Upload a test video.
+4. **Test Webhooks (Local):**
+   - Use `ngrok` or similar to expose localhost.
+   - Update Mux webhook settings to point to your ngrok URL.
+   - Or just rely on polling status in the frontend.
 
-Once a video has `mux_playback_id` set:
+## 5. Deployment
 
-- Videos with `mux_playback_id` will use `MuxVideoPlayer` component
-- Videos without it will use standard `VideoPlayer`
-
-**Check in browser console:**
-
-- Look for Mux analytics events
-- Verify playback controls work
-- Test timeline hover previews (if enabled)
-
----
-
-## 📋 Next Steps (Optional Enhancements)
-
-### 1. Configure Webhook Secret (Recommended for Production)
-
-**In Railway:**
-
-- Add `MUX_WEBHOOK_SECRET` environment variable
-- Get the secret from Mux Dashboard → Settings → Webhooks
-
-**In Mux Dashboard:**
-
-- Configure webhook URL: `https://zyeutev5-production.up.railway.app/api/webhooks/mux`
-- Copy the webhook signing secret
-
-### 2. Integrate MuxPlayer into Main Feed (Optional)
-
-Currently `MuxVideoPlayer` is only used in `VideoCard.tsx`. To use it in the main `ContinuousFeed`:
-
-See `MUX_PLAYER_INTEGRATION_GUIDE.md` for implementation options.
-
-### 3. Test Mux Features
-
-- ✅ Adaptive bitrate streaming (automatic)
-- ✅ Timeline hover previews (built-in)
-- ✅ Analytics tracking (automatic with metadata)
-- ✅ Chromecast support (built-in)
-
----
-
-## 🔍 Troubleshooting
-
-### Issue: Videos not uploading to Mux
-
-**Check:**
-
-1. Railway logs for Mux API errors
-2. `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are set correctly
-3. Mux dashboard shows API usage
-
-### Issue: Videos not playing with MuxPlayer
-
-**Check:**
-
-1. `mux_playback_id` is set in database
-2. Post has `mux_playback_id` in response from API
-3. Browser console for Mux Player errors
-
-### Issue: Webhook not receiving events
-
-**Check:**
-
-1. `MUX_WEBHOOK_SECRET` is set (if using signature verification)
-2. Webhook URL is configured in Mux Dashboard
-3. Railway logs for webhook requests
-
----
-
-## 📊 Mux Dashboard
-
-**Access:** https://dashboard.mux.com
-
-**Check:**
-
-- Video assets (uploads, processing status)
-- Playback analytics
-- API usage/billing
-- Webhook configuration
-
----
-
-## 🎯 Summary
-
-✅ **Backend**: Mux credentials configured in Railway  
-✅ **Code**: All components already exist and are ready  
-✅ **Database**: Schema supports Mux playback IDs  
-✅ **Deployment**: Railway redeploying with new variables
-
-**Status**: Ready to test video uploads and playback with Mux!
-
----
-
-**Last Updated**: 2026-01-12  
-**Deployment Status**: Railway deploying...
+- Ensure environment variables are set in your deployment platform (Vercel/Railway).
+- Generate a new webhook secret in Mux for the production URL.

@@ -52,6 +52,7 @@ import flaggingRoutes from "./routes/user-flagging.js";
 import remixRoutes from "./routes/remix.js";
 import soundRoutes from "./routes/sounds.js";
 import pexelsRoutes from "./routes/pexels.js";
+import muxRoutes from "./routes/mux.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
 import sentryDebugRoutes from "./routes/sentry-debug.js";
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
@@ -226,6 +227,7 @@ export async function registerRoutes(
   });
 
   app.use("/api/pexels", pexelsRoutes);
+  app.use("/api/mux", muxRoutes);
 
   // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
   app.use("/api/media-proxy", mediaProxyRoutes);
@@ -793,6 +795,29 @@ export async function registerRoutes(
         body.content = body.caption;
       }
 
+      // [MUX] Create post from MUX direct upload
+      if (body.videoType === "mux" && body.muxData) {
+        const { assetId, playbackId, uploadId } = body.muxData;
+        body.muxAssetId = assetId;
+        body.muxUploadId = uploadId;
+        body.muxPlaybackId = playbackId || null;
+        if (playbackId) {
+          body.mediaUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+          body.hlsUrl = body.mediaUrl;
+          body.thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+        }
+        body.content = body.caption || body.content || "Nouveau partage sur Zyeuté! 🍁";
+      }
+
+      // [PEXELS] Create post from Pexels stock video
+      if (body.videoType === "pexels" && body.pexelsData) {
+        const { videoUrl, thumbnail, duration } = body.pexelsData;
+        body.mediaUrl = videoUrl;
+        body.thumbnailUrl = thumbnail;
+        body.duration = duration;
+        body.content = body.caption || body.content || "Vidéo Pexels";
+      }
+
       const parsed = insertPostSchema.safeParse({
         ...body,
         userId: req.userId,
@@ -847,8 +872,9 @@ export async function registerRoutes(
       }
 
       // 🛡️ SECURITY: Moderate video content if mediaUrl is a video
+      // Skip for Pexels (stock footage from trusted source)
       let videoModerationApproved = true;
-      if (parsed.data.mediaUrl) {
+      if (parsed.data.mediaUrl && body.videoType !== "pexels") {
         const validatedType = validatePostType(
           parsed.data.mediaUrl,
           (parsed.data as any).type || "photo",
@@ -945,10 +971,13 @@ export async function registerRoutes(
         : undefined; // 24 hours
 
       // 🛡️ GUARDRAIL: Validate post type based on media URL
-      const validatedType = validatePostType(
-        parsed.data.mediaUrl,
-        (parsed.data as any).type || "photo",
-      );
+      const validatedType =
+        body.videoType === "mux" || body.videoType === "pexels"
+          ? "video"
+          : validatePostType(
+              parsed.data.mediaUrl,
+              (parsed.data as any).type || "photo",
+            );
 
       const post = await storage.createPost({
         ...parsed.data,
@@ -963,25 +992,28 @@ export async function registerRoutes(
         expiresAt,
       } as any);
 
-      // Queue video for processing by Colony OS workers
-      const videoQueue = getVideoQueue();
-      await videoQueue.add("processVideo", {
-        postId: post.id,
-        videoUrl: post.mediaUrl,
-        userId: req.userId,
-        visual_filter: req.body.visual_filter || "prestige",
-      });
+      // Queue video for processing (skip for MUX/Pexels - already streamable)
+      const isMuxOrPexels =
+        req.body.videoType === "mux" || req.body.videoType === "pexels";
+      if (!isMuxOrPexels) {
+        const videoQueue = getVideoQueue();
+        await videoQueue.add("processVideo", {
+          postId: post.id,
+          videoUrl: post.mediaUrl,
+          userId: req.userId,
+          visual_filter: req.body.visual_filter || "prestige",
+        });
 
-      // Also queue HLS transcoding when enabled (adaptive bitrate streaming)
-      const hlsQueue = getHLSVideoQueue();
-      if (hlsQueue && post.mediaUrl) {
-        hlsQueue
-          .add("processHLS", {
-            postId: post.id,
-            videoUrl: post.mediaUrl,
-            userId: req.userId,
-          })
-          .catch((err) => console.warn("[HLS] Queue add failed:", err.message));
+        const hlsQueue = getHLSVideoQueue();
+        if (hlsQueue && post.mediaUrl) {
+          hlsQueue
+            .add("processHLS", {
+              postId: post.id,
+              videoUrl: post.mediaUrl,
+              userId: req.userId,
+            })
+            .catch((err) => console.warn("[HLS] Queue add failed:", err.message));
+        }
       }
 
       res.status(201).json({

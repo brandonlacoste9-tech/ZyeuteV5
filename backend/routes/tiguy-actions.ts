@@ -29,11 +29,139 @@ import {
   runCulture,
 } from "../ai/bees/quebec-specialists.js";
 
+import { storage } from "../storage.js";
+import { v3Mod } from "../v3-swarm.js";
+import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
+
+// Initialize DeepSeek Model
+const deepseek = createOpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com",
+});
+const model = deepseek("deepseek-chat");
+
 const router = express.Router();
 
 // ═══════════════════════════════════════════════════════════════
-// 🌐 BROWSER CONTROL ENDPOINTS
+// 💬 CHAT & ORCHESTRATION ENDPOINT
 // ═══════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/tiguy/chat
+ * Main conversational entry point
+ * Handles Chat, Video Analysis, Moderation, and Trends via DeepSeek + Tools
+ */
+router.post("/chat", async (req, res) => {
+  try {
+    const { message, skill } = req.body;
+
+    // 1. TRENDS SKILL
+    if (skill === "trends" || message.toLowerCase().includes("tendance")) {
+      const trendingPosts = await storage.getRegionalTrendingPosts("quebec", 5);
+      const trendsContext = trendingPosts
+        .map(
+          (p) =>
+            `- Post by ${p.userId}: ${p.content?.substring(0, 50)}... (${p.fireCount} fires)`,
+        )
+        .join("\n");
+
+      const prompt = `L'utilisateur veut savoir les tendances du Québec. 
+      Voici les top posts actuels sur Zyeuté:
+      ${trendsContext}
+      
+      Résume ça en joual québécois excité. Mentionne des hashtags.`;
+
+      const { text } = await generateText({
+        model: model,
+        system: TIGUY_SYSTEM_PROMPT,
+        prompt: prompt,
+      });
+
+      return res.json({
+        response: text,
+        type: "trends",
+        data: trendingPosts,
+      });
+    }
+
+    // 2. MODERATION SKILL
+    if (skill === "moderation" || message.toLowerCase().includes("modère")) {
+      const contentToMod = message.replace(/modère/i, "").trim();
+      if (!contentToMod)
+        return res.json({
+          response: "Envoie-moi le texte à vérifier, mon chum!",
+        });
+
+      const modResult = await v3Mod(contentToMod);
+
+      const prompt = `L'utilisateur veut un rapport de modération pour: "${contentToMod}".
+      Résultat de l'analyse système:
+      - Approuvé: ${modResult.status === "approved" ? "OUI" : "NON"}
+      - Raison: ${modResult.reason || "Aucune"}
+      
+      Fais un rapport formel mais avec ta personnalité de Ti-Guy.`;
+
+      const { text } = await generateText({
+        model: model,
+        system: TIGUY_SYSTEM_PROMPT,
+        prompt: prompt,
+      });
+
+      return res.json({
+        response: text,
+        type: "moderation",
+        data: modResult,
+      });
+    }
+
+    // 3. VIDEO ANALYSIS SKILL (Simulated for now, passing to generic chat if no URL)
+    if (skill === "video") {
+      // TODO: Implement actual URL fetching + Vision API
+      // For now, let DeepSeek hallucinate a friendly response based on description
+      // or if it's a URL, simulated metadata.
+
+      const prompt = `L'utilisateur veut une analyse vidéo. Message: "${message}".
+       Si c'est une URL, dis que tu l'as regardée (simulé) et que c'est "top qualité Québec".
+       Donne des stats fictives d'engagement (viralité, hook score).
+       Parle en joual expert vidéo.`;
+
+      const { text } = await generateText({
+        model: model,
+        system: TIGUY_SYSTEM_PROMPT,
+        prompt: prompt,
+      });
+
+      return res.json({ response: text, type: "video" });
+    }
+
+    // 4. GENERAL CHAT (Default)
+    const { text } = await generateText({
+      model: model,
+      system: TIGUY_SYSTEM_PROMPT,
+      prompt: message,
+    });
+
+    res.json({
+      response: text,
+      type: "chat",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("Ti-Guy Chat Error:", error);
+    res.status(500).json({
+      response:
+        "Osti, mon cerveau a planté! Réessaie plus tard! 🦫 (Error: " +
+        error.message +
+        ")",
+      error: error.message,
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 🌐 BROWSER CONTROL ENDPOINTS
 
 /**
  * POST /api/tiguy/browser/navigate

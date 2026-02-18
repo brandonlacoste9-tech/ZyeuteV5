@@ -81,10 +81,6 @@ if (!connection) {
       connection,
       concurrency: parseInt(process.env.HLS_WORKER_CONCURRENCY || "1"),
       limiter: { max: 5, duration: 60000 },
-      settings: {
-        backoffDelay: 5000,
-      },
-      timeout: 5 * 60 * 1000,
     },
   );
 

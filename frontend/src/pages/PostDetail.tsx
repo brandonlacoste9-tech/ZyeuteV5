@@ -80,11 +80,11 @@ export const PostDetail: React.FC = () => {
             ...postData,
             user_fire: fireData
               ? {
-                  fire_level: fireData.fire_level,
-                  user_id: (await supabase.auth.getUser()).data.user?.id || "",
-                  post_id: id,
-                  created_at: new Date().toISOString(),
-                }
+                fire_level: fireData.fire_level,
+                user_id: (await supabase.auth.getUser()).data.user?.id || "",
+                post_id: id,
+                created_at: new Date().toISOString(),
+              }
               : undefined,
           });
         }
@@ -340,8 +340,8 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
     return (
       <div className="relative w-full h-full bg-black">
         <VideoPlayer
-          src={proxiedVideo}
-          poster={proxiedPoster}
+          src={proxiedVideo || ""}
+          poster={proxiedPoster || undefined}
           autoPlay={true}
           muted={false}
           loop={true}

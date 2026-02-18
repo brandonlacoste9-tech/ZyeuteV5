@@ -18,7 +18,7 @@ import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 const API_BASE_URL = "";
 
 // Base API call helper
-async function apiCall<T>(
+export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
@@ -234,8 +234,8 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
 }
 
 export async function createPost(postData: {
-  type: string;
-  mediaUrl: string;
+  type?: string;
+  mediaUrl?: string;
   thumbnailUrl?: string;
   caption?: string;
   hashtags?: string[];
@@ -243,12 +243,22 @@ export async function createPost(postData: {
   visibility?: string;
   visualFilter?: string;
   isEphemeral?: boolean;
+  /** MUX direct upload - create post from MUX asset */
+  videoType?: "mux" | "pexels";
+  muxData?: { assetId: string; playbackId: string; uploadId: string };
+  pexelsData?: {
+    pexelsId: string;
+    videoUrl: string;
+    thumbnail: string;
+    duration: number;
+    width: number;
+    height: number;
+  };
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
     body: JSON.stringify({
       ...postData,
-      // Ensure processing status is set for videos
       processing_status: "completed",
     }),
   });
@@ -745,13 +755,22 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const rawOriginal = p.original_url || p.originalUrl;
   const rawEnhanced = p.enhanced_url || p.enhancedUrl;
   const rawHls = p.hls_url || p.hlsUrl;
+  const muxPlaybackId = p.mux_playback_id || p.muxPlaybackId;
   const processingReady =
     (p.processing_status || p.processingStatus) === "completed" ||
     (p.processing_status || p.processingStatus) === "ready";
 
-  // Best playable URL: HLS (adaptive) > enhanced (if completed) > media > original
+  // Best playable URL: MUX HLS > HLS > enhanced (if completed) > media > original
+  const muxHlsUrl = muxPlaybackId
+    ? `https://stream.mux.com/${muxPlaybackId}.m3u8`
+    : "";
   const mediaUrl =
-    rawHls || (processingReady && rawEnhanced) || rawMedia || rawOriginal || "";
+    rawHls ||
+    muxHlsUrl ||
+    (processingReady && rawEnhanced) ||
+    rawMedia ||
+    rawOriginal ||
+    "";
 
   // Auto-detect type if not provided
   let type: "photo" | "video" = p.type;
@@ -779,6 +798,7 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     enhanced_url: rawEnhanced || undefined,
     original_url: rawOriginal || undefined,
     processing_status: p.processing_status || p.processingStatus,
+    mux_playback_id: p.mux_playback_id || p.muxPlaybackId || undefined,
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,
     view_count: p.view_count || p.viewCount || 0,

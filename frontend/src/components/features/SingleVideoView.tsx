@@ -6,6 +6,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
+import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -351,8 +352,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     // Deep Enhance: Select best video source
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
-    const mediaUrl = post.media_url || post.enhanced_url || post.original_url;
-    const muxPlaybackId = post.muxPlaybackId || post.mux_playback_id;
+    const mediaUrl = post.media_url || post.enhanced_url || post.original_url || "";
+    const muxPlaybackId = post.mux_playback_id;
     const validatedType = validatePostType(
       mediaUrl,
       post.type as "video" | "photo",
@@ -371,9 +372,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     if (isVideo) {
       // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
-      const processingReady =
-        post.processing_status === "ready" ||
-        post.processing_status === "completed";
+      const processingReady = post.processing_status === "completed";
       const hlsUrl = post.hls_url || (post as any).hlsUrl;
       if (hlsUrl) {
         videoSrc = hlsUrl;
@@ -430,9 +429,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Swipe Direction Indicator */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
-              swipeDirection === "left" ? "animate-pulse" : ""
-            }`}
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
+              }`}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -451,43 +449,59 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   </>
                 )
               ) : // LEGACY MODE: Advanced Features
-              swipeDirection === "left" ? (
-                <>
-                  <div className="text-6xl mb-2">🔨</div>
-                  <p className="text-gold-400 font-bold text-lg">
-                    Régénération...
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-6xl mb-2">🔒</div>
-                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                </>
-              )}
+                swipeDirection === "left" ? (
+                  <>
+                    <div className="text-6xl mb-2">🔨</div>
+                    <p className="text-gold-400 font-bold text-lg">
+                      Régénération...
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-6xl mb-2">🔒</div>
+                    <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                  </>
+                )}
             </div>
           </div>
         )}
         {/* Full-screen Media */}
         <div className="absolute inset-0 w-full h-full">
           {post.type === "video" ? (
-            <VideoPlayer
-              src={videoSrc}
-              poster={
-                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                post.thumbnail_url ||
-                post.media_url
-              }
-              autoPlay={isActive}
-              muted={isMuted}
-              loop
-              className="w-full h-full object-cover"
-              style={filterStyle}
-              priority={priority}
-              preload={isActive ? "auto" : preload}
-              videoSource={videoSource}
-              debug={debug}
-              onProgress={isActive ? onVideoProgress : undefined}
-            />
+            post.mux_playback_id ? (
+              <MuxVideoPlayer
+                playbackId={post.mux_playback_id}
+                thumbnailUrl={
+                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                  post.thumbnail_url ||
+                  post.media_url
+                }
+                className="w-full h-full object-cover"
+                style={filterStyle}
+                autoPlay={isActive}
+                muted={isMuted}
+                loop
+              />
+            ) : (
+              <VideoPlayer
+                src={videoSrc}
+                poster={
+                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                  post.thumbnail_url ||
+                  post.media_url
+                }
+                autoPlay={isActive}
+                muted={isMuted}
+                loop
+                className="w-full h-full object-cover"
+                style={filterStyle}
+                priority={priority}
+                preload={isActive ? "auto" : preload}
+                videoSource={videoSource}
+                debug={debug}
+                onProgress={isActive ? onVideoProgress : undefined}
+              />
+            )
           ) : (
             <Image
               src={post.media_url}
@@ -514,11 +528,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
             {/* Persistent mute icon */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                showMuteIndicator
-                  ? "bg-white/90 scale-125"
-                  : "bg-black/40 backdrop-blur-sm"
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${showMuteIndicator
+                ? "bg-white/90 scale-125"
+                : "bg-black/40 backdrop-blur-sm"
+                }`}
             >
               {isMuted ? (
                 <svg
@@ -559,8 +572,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <EphemeralBadge post={post} className="static bg-red-600/90" />
 
           {post.type === "video" &&
-            (post.processing_status === "ready" ||
-              post.processing_status === "completed") &&
+            post.processing_status === "completed" &&
             post.enhanced_url && (
               <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                 <span>✨</span>
@@ -676,16 +688,14 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked ? "scale-110" : ""
-              }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
+                }`}
             >
               <div
-                className={`text-4xl transition-all ${
-                  isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                    : "grayscale opacity-80"
-                }`}
+                className={`text-4xl transition-all ${isLiked
+                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                  : "grayscale opacity-80"
+                  }`}
               >
                 🔥
               </div>
@@ -700,21 +710,18 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleFollow();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isFollowing ? "scale-105" : ""
-              }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isFollowing ? "scale-105" : ""
+                }`}
             >
               <div
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
-                  isFollowing
-                    ? "border-gold-500 bg-gold-500/20"
-                    : "border-white/80 bg-black/20 hover:border-gold-400"
-                }`}
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${isFollowing
+                  ? "border-gold-500 bg-gold-500/20"
+                  : "border-white/80 bg-black/20 hover:border-gold-400"
+                  }`}
               >
                 <span
-                  className={`text-2xl font-bold ${
-                    isFollowing ? "text-gold-500" : "text-white"
-                  }`}
+                  className={`text-2xl font-bold ${isFollowing ? "text-gold-500" : "text-white"
+                    }`}
                 >
                   {isFollowing ? "✓" : "+"}
                 </span>

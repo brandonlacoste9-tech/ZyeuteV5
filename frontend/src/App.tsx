@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { MainLayout } from "@/components/MainLayout";
+import TiGuyMessaging from "@/components/features/TiGuyMessaging";
 import { HiveProvider } from "@/contexts/HiveContext";
 import { PageTransition } from "@/components/AnimatedRoutes";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
@@ -794,7 +795,7 @@ function App() {
                                                 />
                                               </Routes>
                                             </PageTransition>
-                                            <ChatButton />
+                                            <TiGuyMessaging />
                                           </MainLayout>
                                         }
                                       />

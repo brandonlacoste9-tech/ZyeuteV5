@@ -30,8 +30,12 @@ import {
   IoClose,
   IoFlame,
 } from "react-icons/io5";
+import { MuxUpload } from "@/components/video/MuxUpload";
+import { PexelsFeed } from "@/components/video/PexelsFeed";
 
 const uploadLogger = logger.withContext("Upload");
+
+type UploadMode = "camera" | "gallery" | "mux" | "pexels";
 
 const VISUAL_FILTERS = [
   { id: "none", name: "Original", emoji: "✨" },
@@ -55,6 +59,22 @@ export const Upload: React.FC = () => {
   const [isEphemeral, setIsEphemeral] = React.useState(false); // View-Once / Burn Mode
   const [isUploading, setIsUploading] = React.useState(false);
   const [showCamera, setShowCamera] = React.useState(false);
+  const [uploadMode, setUploadMode] = React.useState<UploadMode | null>(null);
+
+  // MUX / Pexels state
+  const [muxData, setMuxData] = React.useState<{
+    assetId: string;
+    playbackId: string;
+    uploadId: string;
+  } | null>(null);
+  const [pexelsData, setPexelsData] = React.useState<{
+    pexelsId: string;
+    videoUrl: string;
+    thumbnail: string;
+    duration: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Remix functionality (from URL params)
   const [remixPostId] = React.useState<string | null>(
@@ -105,9 +125,13 @@ export const Upload: React.FC = () => {
     return new Blob([ab], { type: mimeString });
   };
 
-  // Upload post
+  // Upload post (surgical, MUX, or Pexels)
   const handleUpload = async () => {
-    if (!file) {
+    const hasMux = !!muxData;
+    const hasPexels = !!pexelsData;
+    const hasFile = !!file;
+
+    if (!hasFile && !hasMux && !hasPexels) {
       toast.warning("Ajoute une image ou vidéo!");
       return;
     }
@@ -118,7 +142,7 @@ export const Upload: React.FC = () => {
     }
 
     setIsUploading(true);
-    toast.info("Upload en cours... 📤");
+    toast.info("Publication en cours... 📤");
 
     try {
       const user = await getCurrentUser();
@@ -128,13 +152,35 @@ export const Upload: React.FC = () => {
         return;
       }
 
-      // [SOVEREIGN] Use Surgical Upload (direct to Supabase/Railway)
-      const result = await surgicalUpload(file, caption);
+      if (hasMux) {
+        const post = await createPost({
+          videoType: "mux",
+          muxData,
+          caption,
+        });
+        if (!post) throw new Error("Erreur création post MUX");
+        toast.success("Post publié! 🔥");
+        navigate("/");
+        return;
+      }
 
+      if (hasPexels) {
+        const post = await createPost({
+          videoType: "pexels",
+          pexelsData,
+          caption,
+        });
+        if (!post) throw new Error("Erreur création post Pexels");
+        toast.success("Post publié! 🔥");
+        navigate("/");
+        return;
+      }
+
+      // [SOVEREIGN] Surgical Upload (camera/gallery)
+      const result = await surgicalUpload(file!, caption);
       if (!result.success || !result.post) {
         throw new Error(result.error || "Upload failed");
       }
-
       toast.success("Post publié! 🔥");
       navigate("/");
     } catch (error: any) {
@@ -160,45 +206,115 @@ export const Upload: React.FC = () => {
 
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
         {/* Media Selection */}
-        {!preview ? (
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setShowCamera(true)}
-              className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
-            >
-              <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
-              <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
-                <IoCamera className="text-3xl text-gold-500" />
+        {!preview && !muxData && !pexelsData ? (
+          <>
+            {uploadMode === "mux" ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setUploadMode(null)}
+                  className="text-leather-400 hover:text-white text-sm"
+                >
+                  ← Retour
+                </button>
+                <MuxUpload
+                  onUploadComplete={(d) => {
+                    setMuxData(d);
+                    setUploadMode(null);
+                  }}
+                  onCancel={() => setUploadMode(null)}
+                />
               </div>
-              <span className="text-white font-bold tracking-wide">CAMÉRA</span>
-            </button>
+            ) : uploadMode === "pexels" ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setUploadMode(null)}
+                  className="text-leather-400 hover:text-white text-sm"
+                >
+                  ← Retour
+                </button>
+                <PexelsFeed onSelectVideo={(d) => setPexelsData(d)} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => setShowCamera(true)}
+                  className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
+                    <IoCamera className="text-3xl text-gold-500" />
+                  </div>
+                  <span className="text-white font-bold tracking-wide">
+                    CAMÉRA
+                  </span>
+                </button>
 
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
-            >
-              <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
-              <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
-                <IoImages className="text-3xl text-gold-500" />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
+                    <IoImages className="text-3xl text-gold-500" />
+                  </div>
+                  <span className="text-white font-bold tracking-wide">
+                    GALERIE
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setUploadMode("mux")}
+                  className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
+                    <IoCloudUploadOutline className="text-3xl text-gold-500" />
+                  </div>
+                  <span className="text-white font-bold tracking-wide">
+                    UPLOAD MUX
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setUploadMode("pexels")}
+                  className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
+                    <IoImages className="text-3xl text-gold-500" />
+                  </div>
+                  <span className="text-white font-bold tracking-wide">
+                    PEXELS
+                  </span>
+                </button>
               </div>
-              <span className="text-white font-bold tracking-wide">
-                GALERIE
-              </span>
-            </button>
-          </div>
-        ) : (
+            )}
+          </>
+        ) : (preview || muxData || pexelsData) ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Preview Card */}
             <div className="relative aspect-[4/5] bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-leather-800 group">
-              {file?.type.startsWith("video") ? (
+              {muxData?.playbackId ? (
+                <img
+                  src={`https://image.mux.com/${muxData.playbackId}/thumbnail.jpg`}
+                  alt="MUX Preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : pexelsData ? (
+                <img
+                  src={pexelsData.thumbnail}
+                  alt="Pexels Preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : file?.type.startsWith("video") ? (
                 <video
-                  src={preview}
+                  src={preview!}
                   className="w-full h-full object-cover"
                   controls
                 />
               ) : (
                 <img
-                  src={preview}
+                  src={preview!}
                   alt="Preview"
                   className="w-full h-full object-cover"
                 />
@@ -208,6 +324,8 @@ export const Upload: React.FC = () => {
                 onClick={() => {
                   setFile(null);
                   setPreview(null);
+                  setMuxData(null);
+                  setPexelsData(null);
                 }}
                 className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full hover:bg-red-600 transition-colors"
               >
@@ -216,7 +334,13 @@ export const Upload: React.FC = () => {
 
               <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
                 <div className="badge-premium inline-flex items-center gap-2">
-                  {file?.type.startsWith("video") ? "🎥 VIDÉO" : "📸 PHOTO"}
+                  {muxData
+                    ? "🎥 MUX"
+                    : pexelsData
+                      ? "🎥 PEXELS"
+                      : file?.type.startsWith("video")
+                        ? "🎥 VIDÉO"
+                        : "📸 PHOTO"}
                 </div>
               </div>
             </div>
@@ -233,19 +357,17 @@ export const Upload: React.FC = () => {
                   <button
                     key={filter.id}
                     onClick={() => setVisualFilter(filter.id)}
-                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                      visualFilter === filter.id
+                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${visualFilter === filter.id
                         ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
                         : "border-leather-700 bg-black/40"
-                    }`}
+                      }`}
                   >
                     <span className="text-2xl">{filter.emoji}</span>
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-tighter ${
-                        visualFilter === filter.id
+                      className={`text-[10px] font-bold uppercase tracking-tighter ${visualFilter === filter.id
                           ? "text-gold-400"
                           : "text-leather-400"
-                      }`}
+                        }`}
                     >
                       {filter.name}
                     </span>
@@ -291,7 +413,7 @@ export const Upload: React.FC = () => {
                       ];
                       const randomCaption =
                         suggestions[
-                          Math.floor(Math.random() * suggestions.length)
+                        Math.floor(Math.random() * suggestions.length)
                         ];
                       setCaption((prev) =>
                         prev ? `${prev} ${randomCaption}` : randomCaption,
@@ -395,7 +517,11 @@ export const Upload: React.FC = () => {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={isUploading || !file}
+                disabled={
+                  isUploading ||
+                  (!file && !muxData && !pexelsData) ||
+                  !caption.trim()
+                }
                 className="flex-[2] btn-gold py-4 rounded-2xl font-black text-lg shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 group"
               >
                 {isUploading ? (
@@ -409,7 +535,7 @@ export const Upload: React.FC = () => {
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
         <input
           type="file"

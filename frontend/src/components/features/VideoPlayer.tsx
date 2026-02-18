@@ -844,7 +844,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setShowControls(false);
         setShowSpeedMenu(false);
       }}
-      onClick={togglePlay}
+      onClick={(e) => {
+        e.stopPropagation(); // Prevent parent (e.g. VideoCard) from catching and navigating away
+        togglePlay();
+      }}
     >
       {/* Streaming Debug Overlay */}
       {isDebugEnabled && debug && (

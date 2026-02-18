@@ -52,6 +52,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:external": "playwright test --config=playwright.config.external.ts",
     "populate:feed": "tsx scripts/populate-feed.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:vitals": "playwright test tests/vital-signs/",
@@ -79,6 +80,9 @@
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
     "@jridgewell/trace-mapping": "^0.3.25",
+    "@mux/mux-node": "^12.8.1",
+    "@mux/mux-player-react": "^3.11.4",
+    "@mux/upchunk": "^3.5.0",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.69.0",
     "@opentelemetry/instrumentation-express": "^0.59.0",
@@ -117,7 +121,6 @@
     "cors": "^2.8.6",
     "date-fns": "^4.1.0",
     "dompurify": "^3.3.1",
-    "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
     "express": "^5.2.1",
@@ -137,6 +140,7 @@
     "pg": "^8.18.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.71.1",
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^10.0.2",
@@ -188,6 +192,7 @@
     "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.24",
     "cross-env": "^10.1.0",
+    "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.9",
     "esbuild": "^0.27.2",
     "eslint": "^10.0.0",
@@ -222,6 +227,7 @@
     "fast-xml-parser": "^5.3.4"
   },
   "optionalDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.57.1",
     "bufferutil": "^4.0.8",
     "utf-8-validate": "^6.0.4"
   }

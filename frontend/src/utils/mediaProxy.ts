@@ -25,7 +25,7 @@ export function needsMediaProxy(url: string | undefined): boolean {
 }
 
 export function getProxiedMediaUrl(url: string | undefined): string {
-  if (!url || typeof url !== "string") return url;
+  if (!url || typeof url !== "string") return "";
   if (!needsMediaProxy(url)) return url;
   return `/api/media-proxy?url=${encodeURIComponent(url)}`;
 }

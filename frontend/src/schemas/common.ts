@@ -324,6 +324,7 @@ const PostBase = z.object({
   original_url: z.string().optional(),
   enhanced_url: z.string().optional(),
   hls_url: z.string().optional(),
+  mux_playback_id: z.string().optional(),
   processing_status: z
     .enum(["pending", "processing", "completed", "failed"])
     .optional(),
