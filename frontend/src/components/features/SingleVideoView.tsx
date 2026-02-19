@@ -482,6 +482,24 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 muted={isMuted}
                 loop
               />
+            ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+              // 🐝 FIX: Show loading state instead of black screen
+              <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
+                <div className="animate-spin text-4xl mb-4">⚙️</div>
+                <div className="text-white/80 text-sm font-medium">
+                  {post.processing_status === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
+                </div>
+                <div className="text-white/50 text-xs mt-2">
+                  Zyeute traite votre vidéo
+                </div>
+                {post.thumbnail_url && (
+                  <img 
+                    src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                    alt="Preview"
+                    className="absolute inset-0 w-full h-full object-cover opacity-30 -z-10"
+                  />
+                )}
+              </div>
             ) : (
               <VideoPlayer
                 src={videoSrc}
