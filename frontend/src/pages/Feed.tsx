@@ -5,7 +5,6 @@
 
 import React, { useState, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ChatButton } from "@/components/ChatButton";
 import { StoryCarousel } from "@/components/features/StoryCircle";
 import { GiftModal } from "@/components/features/GiftModal";
 import { GiftOverlay } from "@/components/features/GiftOverlay";
@@ -218,9 +217,6 @@ export const Feed: React.FC = () => {
           <ContinuousFeed />
         </ErrorBoundary>
       </div>
-
-      {/* Premium Chat Button - Ti-Guy Bronze Emblem */}
-      <ChatButton isFixed={true} />
 
       {/* Gift Modal */}
       {selectedRecipient && selectedPostId && (
