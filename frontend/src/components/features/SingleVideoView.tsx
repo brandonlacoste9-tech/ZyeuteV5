@@ -589,19 +589,18 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         <div className="absolute top-16 right-4 z-20 flex flex-col gap-2 items-end">
           <EphemeralBadge post={post} className="static bg-red-600/90" />
 
-          {post.type === "video" &&
-            post.processing_status === "completed" &&
-            post.enhanced_url && (
+          {post.type === "video" && (
+            post.processing_status === "processing" ? (
+              <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
+                <span className="animate-spin">⚙️</span>
+                <span>Amélioration...</span>
+              </div>
+            ) : post.processing_status === "completed" && post.enhanced_url ? (
               <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
                 <span>✨</span>
                 <span>4K ULTRA</span>
               </div>
-            )}
-          {post.type === "video" && post.processing_status === "processing" && (
-            <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
-              <span className="animate-spin">⚙️</span>
-              <span>Amélioration...</span>
-            </div>
+            ) : null
           )}
         </div>
 
