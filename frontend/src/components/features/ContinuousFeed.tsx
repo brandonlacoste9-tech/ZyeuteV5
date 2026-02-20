@@ -314,8 +314,29 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState, posts.length]);
 
-  // [DEPRECATED] Pexels transformation logic removed for Sovereign Stack
-  const transformPexelsToPosts = useCallback(() => [], []);
+  // Transform Pexels videos to Post format for fallback
+  const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
+    return pexelsVideos.map((video, index) => ({
+      id: `pexels-${video.id}`,
+      type: 'video' as const,
+      caption: video.url?.split('/').pop()?.replace(/-/g, ' ') || 'Video from Pexels',
+      media_url: video.video_files?.[0]?.link || video.url,
+      original_url: video.video_files?.[0]?.link || video.url,
+      thumbnail_url: video.image,
+      user: {
+        id: 'pexels-user',
+        username: 'pexels',
+        display_name: 'Pexels',
+        avatar_url: 'https://images.pexels.com/lib/api/pexels.png',
+        is_verified: false,
+      },
+      fire_count: Math.floor(Math.random() * 1000),
+      comment_count: Math.floor(Math.random() * 100),
+      created_at: new Date(Date.now() - index * 3600000).toISOString(),
+      visibility: 'public',
+      hive_id: 'quebec',
+    }));
+  }, []);
 
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
@@ -361,10 +382,30 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       apiSuccess = false;
     }
 
-    // [SOVEREIGN] If API failed or returned 0, we show empty state (NO Pexels)
+    // If API has no posts, fallback to Pexels curated videos
+    if (validPosts.length === 0) {
+      feedLogger.info("No API posts, fetching Pexels fallback...");
+      try {
+        const pexelsRes = await fetch('/api/pexels/curated?per_page=10');
+        if (pexelsRes.ok) {
+          const pexelsData = await pexelsRes.json();
+          if (pexelsData.videos?.length > 0) {
+            const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
+            setPosts(pexelsPosts as Array<Post & { user: User }>);
+            setHasMore(false); // Pexels is one-time fetch
+            setFetchError(false);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (pexelsErr) {
+        feedLogger.error("Pexels fallback failed:", pexelsErr);
+      }
+      setFetchError(true);
+    }
+    
     setPosts(validPosts);
     setHasMore(validPosts.length === 10);
-    if (validPosts.length === 0) setFetchError(true);
 
     setPage(0);
     setIsLoading(false);
