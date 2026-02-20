@@ -35,12 +35,14 @@ import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 
-// Initialize DeepSeek Model
-const deepseek = createOpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com",
-});
-const model = deepseek("deepseek-chat");
+// Initialize DeepSeek Model Lazily
+const getDeepSeekModel = () => {
+  const deepseek = createOpenAI({
+    apiKey: process.env.DEEPSEEK_API_KEY,
+    baseURL: "https://api.deepseek.com",
+  });
+  return deepseek("deepseek-chat");
+};
 
 const router = express.Router();
 
@@ -138,7 +140,7 @@ router.post("/chat", async (req, res) => {
 
     // 4. GENERAL CHAT (Default)
     const { text } = await generateText({
-      model: model,
+      model: getDeepSeekModel(),
       system: TIGUY_SYSTEM_PROMPT,
       prompt: message,
     });
