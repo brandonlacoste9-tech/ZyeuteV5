@@ -40,14 +40,36 @@ const app = express();
 app.set("trust proxy", 1);
 
 // CORS: allow frontend (Vercel / localhost) to call this backend
+const allowedOrigins = [
+  "https://www.zyeute.com",
+  "https://zyeute.com",
+  "https://zyeute.vercel.app",
+  "http://localhost:12000",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: true, // reflect request origin so Vercel + localhost both work
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        console.log(`[CORS] Blocked origin: ${origin}`);
+        callback(null, true); // Allow all for now - Railway debugging
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
   }),
 );
+
+// Handle OPTIONS preflight for all routes
+app.options("*", cors());
 app.use(express.json());
 
 const httpServer = createServer(app);
