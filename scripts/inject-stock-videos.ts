@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { validatePostType } from "../shared/utils/validatePostType";
+import { PexelsService } from "../backend/services/pexels-service";
 
 dotenv.config();
 
@@ -17,69 +18,165 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const STOCK_VIDEOS = [
-  {
-    caption:
-      "The journey of a thousand miles begins with a single step. ✈️ #Travel #Voyageur",
-    media_url:
-      "https://player.vimeo.com/external/475150821.hd.mp4?s=d0f0d2cceca32c86fed4d4a86b97f0775d7e63b1&profile_id=175",
-    type: "video",
-    reactions_count: 999999, // Pin this one!
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content:
-      "The journey of a thousand miles begins with a single step. ✈️ #Travel #Voyageur",
-  },
-  {
-    caption: "Chasing sunsets and new horizons. 🌅 #Nature #Explore",
-    media_url:
-      "https://player.vimeo.com/external/370331493.hd.mp4?s=3301384061a995e80650961a86b99616e729a997&profile_id=175",
-    type: "video",
-    reactions_count: 850,
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content: "Chasing sunsets and new horizons. 🌅 #Nature #Explore",
-  },
-  {
-    caption: "Urban vibes and neon nights. 🏙️ #CityLife #Zyeute",
-    media_url:
-      "https://player.vimeo.com/external/511598444.hd.mp4?s=7b0d8a4e3b3d1664fb9e7986fb87868846c2f0f5&profile_id=175",
-    type: "video",
-    reactions_count: 720,
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content: "Urban vibes and neon nights. 🏙️ #CityLife #Zyeute",
-  },
+// Search queries for diverse content
+const SEARCH_QUERIES = [
+  "montreal city",
+  "urban life",
+  "nature",
+  "dance",
+  "street art",
+  "food",
+  "sunset",
+  "people",
 ];
 
-async function seedStock() {
-  console.log("🚀 Injecting professional stock videos...");
+interface VideoData {
+  caption: string;
+  media_url: string;
+  type: string;
+  reactions_count: number;
+  hive_id: string;
+  user_id: string;
+  content: string;
+  processing_status: string;
+  thumbnail_url?: string;
+  duration?: number;
+  aspect_ratio?: string;
+}
 
-  for (const video of STOCK_VIDEOS) {
-    // 🛡️ GUARDRAIL: Validate type before insert
-    const validatedType = validatePostType(
-      video.media_url,
-      video.type as "video" | "photo",
-    );
-    if (validatedType !== video.type) {
-      console.warn(
-        `🛡️ Type corrected: "${video.type}" → "${validatedType}" for ${video.caption.substring(0, 30)}...`,
-      );
-    }
+/**
+ * Extract the best HD portrait video file from Pexels video
+ */
+function getBestPortraitVideo(videoFiles: any[]): any | null {
+  // Filter for portrait videos (height > width)
+  const portraitVideos = videoFiles.filter(
+    (file) => file.height > file.width && file.file_type === "video/mp4",
+  );
 
-    const { data, error } = await supabase
-      .from("publications")
-      .insert([{ ...video, type: validatedType }])
-      .select();
-
-    if (error) {
-      console.error(`❌ Error inserting video: ${error.message}`);
-    } else {
-      console.log(`✅ Inserted professional video: ${data[0].id}`);
-    }
+  if (portraitVideos.length === 0) {
+    return null;
   }
 
-  console.log("\n✨ Stock video injection complete!");
+  // Prefer HD quality (720p or 1080p)
+  const hdVideo =
+    portraitVideos.find((v) => v.quality === "hd" && v.height >= 720) ||
+    portraitVideos.find((v) => v.height >= 720) ||
+    portraitVideos[0];
+
+  return hdVideo;
+}
+
+/**
+ * Calculate aspect ratio from width and height
+ */
+function calculateAspectRatio(width: number, height: number): string {
+  const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+  const divisor = gcd(width, height);
+  return `${width / divisor}:${height / divisor}`;
+}
+
+async function seedStock() {
+  console.log("🚀 Fetching professional stock videos from Pexels...");
+
+  const videosToInsert: VideoData[] = [];
+  const targetCount = 20;
+
+  try {
+    // Fetch videos from multiple search queries
+    for (const query of SEARCH_QUERIES) {
+      if (videosToInsert.length >= targetCount) {
+        break;
+      }
+
+      console.log(`🔍 Searching for: "${query}"...`);
+
+      try {
+        const response = await PexelsService.searchVideos(query, 5, 1);
+
+        for (const video of response.videos) {
+          if (videosToInsert.length >= targetCount) {
+            break;
+          }
+
+          // Get the best portrait video file
+          const portraitFile = getBestPortraitVideo(video.video_files);
+
+          if (!portraitFile) {
+            console.log(
+              `⏭️  Skipping video ${video.id} - no portrait version available`,
+            );
+            continue;
+          }
+
+          // Calculate aspect ratio
+          const aspectRatio = calculateAspectRatio(
+            portraitFile.width,
+            portraitFile.height,
+          );
+
+          // Create video data
+          const videoData: VideoData = {
+            caption: `${query} #Zyeute #Quebec`,
+            media_url: portraitFile.link,
+            type: "video",
+            reactions_count: Math.floor(Math.random() * 500) + 100,
+            hive_id: "quebec",
+            user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
+            content: `${query} #Zyeute #Quebec`,
+            processing_status: "completed", // Mark as completed so it plays immediately
+            thumbnail_url: video.image,
+            duration: Math.round(video.duration),
+            aspect_ratio: aspectRatio,
+          };
+
+          videosToInsert.push(videoData);
+          console.log(
+            `✅ Added: ${query} (${portraitFile.width}x${portraitFile.height}, ${aspectRatio})`,
+          );
+        }
+      } catch (error) {
+        console.error(`❌ Error searching for "${query}":`, error);
+      }
+    }
+
+    console.log(
+      `\n📦 Inserting ${videosToInsert.length} videos into database...`,
+    );
+
+    // Insert all videos
+    for (const video of videosToInsert) {
+      // Validate type before insert
+      const validatedType = validatePostType(
+        video.media_url,
+        video.type as "video" | "photo",
+      );
+
+      if (validatedType !== video.type) {
+        console.warn(
+          `🛡️ Type corrected: "${video.type}" → "${validatedType}" for ${video.caption.substring(0, 30)}...`,
+        );
+      }
+
+      const { data, error } = await supabase
+        .from("publications")
+        .insert([{ ...video, type: validatedType }])
+        .select();
+
+      if (error) {
+        console.error(`❌ Error inserting video: ${error.message}`);
+      } else {
+        console.log(
+          `✅ Inserted: ${data[0].id} - ${video.caption.substring(0, 40)}...`,
+        );
+      }
+    }
+
+    console.log("\n✨ Stock video injection complete!");
+    console.log(`📊 Total videos inserted: ${videosToInsert.length}`);
+  } catch (error) {
+    console.error("❌ Fatal error during video injection:", error);
+    process.exit(1);
+  }
 }
 
 seedStock();
