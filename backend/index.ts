@@ -98,7 +98,8 @@ let isSystemReady = false;
 // Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
   // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
-  if (req.path === "/api/health") {
+  // Support both /api/health and /api/health/ (trailing slash)
+  if (req.path === "/api/health" || req.path === "/api/health/") {
     return res.status(200).json({
       status: "ok",
       stage: isSystemReady ? "ready" : "initializing",
