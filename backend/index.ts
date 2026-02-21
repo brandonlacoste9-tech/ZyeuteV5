@@ -160,22 +160,24 @@ app.use((req, res, next) => {
         console.log("✅ [Startup] Database Connected Successfully");
 
         // [CRITICAL] Run Database Migrations
-        console.log("📦 [Startup] Running Schema Migrations...");
-        try {
-          await migrate(db, { migrationsFolder: "./migrations" });
-          console.log("✅ [Startup] Migrations Complete");
-        } catch (err: any) {
-          // Log but don't crash main loop if possible, unless critical
-          console.error("⚠️ [Startup] Migration warning/error:", err.message);
-        }
+        // TEMPORARILY DISABLED - Migration causing startup crash
+        // console.log("📦 [Startup] Running Schema Migrations...");
+        // try {
+        //   await migrate(db, { migrationsFolder: "./migrations" });
+        //   console.log("✅ [Startup] Migrations Complete");
+        // } catch (err: any) {
+        //   // Log but don't crash main loop if possible, unless critical
+        //   console.error("⚠️ [Startup] Migration warning/error:", err.message);
+        // }
 
         // [SURGICAL SELF-HEALING] Active Schema Repair
-        try {
-          const { healSchema } = await import("./schemaDoctor.js");
-          await healSchema(pool);
-        } catch (err) {
-          console.warn("⚠️ [Startup] Schema healing skipped:", err);
-        }
+        // TEMPORARILY DISABLED
+        // try {
+        //   const { healSchema } = await import("./schemaDoctor.js");
+        //   await healSchema(pool);
+        // } catch (err) {
+        //   console.warn("⚠️ [Startup] Schema healing skipped:", err);
+        // }
       } catch (dbErr: any) {
         console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
