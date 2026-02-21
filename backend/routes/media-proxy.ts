@@ -19,6 +19,7 @@ const ALLOWED_HOSTS = [
   "unsplash.com",
   "player.vimeo.com",
   "storage.googleapis.com",
+  "commondatastorage.googleapis.com",
   "supabase.co",
   "supabase.in",
 ];

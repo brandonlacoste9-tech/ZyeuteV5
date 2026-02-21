@@ -540,13 +540,28 @@ export class DatabaseStorage implements IStorage {
   ): Promise<(Post & { user: User })[]> {
     return traceDatabase("EXPLORE", "posts", async () => {
       const startTime = Date.now();
+      
+      // Quick check: count total posts first
+      const countResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(posts)
+        .where(eq(posts.hiveId, (hiveId || "quebec") as any));
+      
+      const totalPosts = countResult[0]?.count || 0;
+      console.log(`[STORAGE] Total posts in hive '${hiveId}': ${totalPosts}`);
+      
+      if (totalPosts === 0) {
+        console.log(`[STORAGE] No posts found, returning empty array`);
+        return [];
+      }
+      
       const candidates = await db
         .select({
           post: posts,
           user: users,
         })
         .from(posts)
-        .innerJoin(users, eq(posts.userId, users.id))
+        .leftJoin(users, eq(posts.userId, users.id))
         .where(
           and(
             eq(posts.isHidden, false),
@@ -578,10 +593,13 @@ export class DatabaseStorage implements IStorage {
         console.warn(`[SENTRY] Slow Explore Ranking: ${duration}ms`);
       }
 
-      return ranked.slice(0, limit).map((r) => ({
-        ...r.post,
-        user: r.user,
-      }));
+      return ranked
+        .filter((r) => r.user != null) // Filter out posts with missing users
+        .slice(0, limit)
+        .map((r) => ({
+          ...r.post,
+          user: r.user!,
+        }));
     });
   }
 
