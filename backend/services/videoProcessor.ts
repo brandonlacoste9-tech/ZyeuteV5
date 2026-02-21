@@ -299,9 +299,9 @@ export async function processVideo(
 
 /** HLS rendition config for vertical-first transcoding */
 const HLS_RENDITIONS = [
-  { name: "360p", width: 640, height: 1080, crf: 25 },
-  { name: "720p", width: 1280, height: 1080, crf: 23 },
-  { name: "1080p", width: 1920, height: 1080, crf: 21 },
+  { name: "360p",  width: 360,  height: 640,  bitrate: "800k",  crf: 28 },
+  { name: "720p",  width: 720,  height: 1280, bitrate: "2500k", crf: 24 },
+  { name: "1080p", width: 1080, height: 1920, bitrate: "5000k", crf: 21 },
 ] as const;
 
 /**
@@ -335,7 +335,7 @@ export async function processVideoToHLS(
             "-c:v libx264",
             `-crf ${crf}`,
             "-preset veryfast",
-            `-vf scale=${width}:-2`,
+            `-vf scale=-2:`${height}`,
             "-c:a aac",
             "-b:a 128k",
             "-movflags +faststart",
