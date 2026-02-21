@@ -76,7 +76,7 @@ router.post("/chat", async (req, res) => {
       Résume ça en joual québécois excité. Mentionne des hashtags.`;
 
       const { text } = await generateText({
-        model: model,
+        model: getDeepSeekModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
@@ -106,7 +106,7 @@ router.post("/chat", async (req, res) => {
       Fais un rapport formel mais avec ta personnalité de Ti-Guy.`;
 
       const { text } = await generateText({
-        model: model,
+        model: getDeepSeekModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
@@ -130,7 +130,7 @@ router.post("/chat", async (req, res) => {
        Parle en joual expert vidéo.`;
 
       const { text } = await generateText({
-        model: model,
+        model: getDeepSeekModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
