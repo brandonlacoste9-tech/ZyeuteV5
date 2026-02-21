@@ -44,6 +44,7 @@ const allowedOrigins = [
   "https://www.zyeute.com",
   "https://zyeute.com",
   "https://zyeute.vercel.app",
+  "https://zyeutev5-production.up.railway.app",
   "http://localhost:12000",
   "http://localhost:3000",
   "http://localhost:5173",
@@ -58,7 +59,7 @@ app.use(
         callback(null, true);
       } else {
         console.log(`[CORS] Blocked origin: ${origin}`);
-        callback(null, true); // Allow all for now - Railway debugging
+        callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
