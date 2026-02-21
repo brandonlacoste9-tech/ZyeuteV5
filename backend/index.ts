@@ -94,20 +94,21 @@ const port = Number(process.env.PORT) || 3000;
 let server: any;
 let isSystemReady = false;
 
+// [CRITICAL] Explicit health route - MUST be registered before middleware
+// This ensures Railway healthchecks pass even during initialization
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    stage: isSystemReady ? "ready" : "initializing",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // [NEW] Startup Liveness Middleware
 // Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
-  // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
-  // Support both /api/health and /api/health/ (trailing slash)
-  if (req.path === "/api/health" || req.path === "/api/health/") {
-    return res.status(200).json({
-      status: "ok",
-      stage: isSystemReady ? "ready" : "initializing",
-      uptime: process.uptime(),
-    });
-  }
-
-  // Debug route also overrides
+  // Debug route overrides
   if (req.path === "/api/debug") {
     return res
       .status(200)
