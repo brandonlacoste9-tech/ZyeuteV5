@@ -55,26 +55,40 @@ import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 
 const { Pool } = pg;
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
-  idleTimeoutMillis: 30000,
-  ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
-});
+// Lazy pool - created on first use, AFTER dotenv has loaded in index.ts.
+// ES module imports are hoisted, so eagerly creating the pool here would
+// run before dotenv, leaving DATABASE_URL undefined.
+let _pool: pg.Pool | null = null;
 
-// Database error handling - prevent crashes on connection failures
-pool.on("error", (err) => {
-  console.error("❌ Unexpected database pool error:", err);
-  // Don't crash the process - let health checks handle degraded state
-});
+export function getPool(): pg.Pool {
+  if (!_pool) {
+    _pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
+      idleTimeoutMillis: 30000,
+      ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
+    });
+    // Database error handling - prevent crashes on connection failures
+    _pool.on("error", (err) => {
+      console.error("❌ Unexpected database pool error:", err);
+      // Don't crash the process - let health checks handle degraded state
+    });
+    _pool.on("connect", () => {
+      console.log("✅ Database pool connection established");
+    });
+  }
+  return _pool;
+}
 
-pool.on("connect", () => {
-  console.log("✅ Database pool connection established");
+// Proxy so all existing `pool` imports work unchanged — delegates to
+// getPool() on first property access, which happens after dotenv loads.
+export const pool = new Proxy({} as pg.Pool, {
+  get(_, prop) {
+    return (getPool() as any)[prop];
+  },
 });
 
 export const db = drizzle(pool); // Export db
-export { pool }; // Export pool
 
 export interface IStorage {
   // Users
