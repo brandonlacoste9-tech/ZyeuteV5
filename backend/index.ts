@@ -68,8 +68,8 @@ app.use(
   }),
 );
 
-// Handle OPTIONS preflight for all routes
-app.options("*", cors());
+// Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
+app.options(/.*/, cors());
 app.use(express.json());
 
 const httpServer = createServer(app);
