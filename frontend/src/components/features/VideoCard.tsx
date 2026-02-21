@@ -173,6 +173,18 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               muted={muted}
               loop
             />
+          ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
+              <div className="animate-spin text-3xl mb-3">⚙️</div>
+              <p className="text-white/60 text-xs">Traitement vidéo...</p>
+              {post.thumbnail_url && (
+                <img
+                  src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                  alt="Preview"
+                  className="absolute inset-0 w-full h-full object-cover opacity-20 -z-10"
+                />
+              )}
+            </div>
           ) : (
             <VideoPlayer
               src={getProxiedMediaUrl(post.media_url) || post.media_url}
