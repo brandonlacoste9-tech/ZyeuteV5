@@ -229,7 +229,6 @@
     "fast-xml-parser": "^5.3.4"
   },
   "optionalDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.58.0",
     "bufferutil": "^4.0.8",
     "utf-8-validate": "^6.0.4"
   }
