@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 import { validatePostType } from "../shared/utils/validatePostType";
 
 dotenv.config();
@@ -9,77 +10,106 @@ const supabaseUrl =
   process.env.VITE_SUPABASE_URL ||
   "https://vuanulvyqkfefmjcikfk.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PEXELS_API_KEY =
+  process.env.PEXELS_API_KEY ||
+  "2iANaoqJBF6j0AKJU6Kr67F7xujOMNvFVBeZNK4CaoXQiEezLaxdOpNV";
 
 if (!supabaseKey) {
   console.error("❌ SUPABASE_SERVICE_ROLE_KEY missing");
+  console.error(
+    "   Add it to .env: SUPABASE_SERVICE_ROLE_KEY=your_service_role_key",
+  );
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const STOCK_VIDEOS = [
-  {
-    caption:
-      "The journey of a thousand miles begins with a single step. ✈️ #Travel #Voyageur",
-    media_url:
-      "https://player.vimeo.com/external/475150821.hd.mp4?s=d0f0d2cceca32c86fed4d4a86b97f0775d7e63b1&profile_id=175",
-    type: "video",
-    reactions_count: 999999, // Pin this one!
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content:
-      "The journey of a thousand miles begins with a single step. ✈️ #Travel #Voyageur",
-  },
-  {
-    caption: "Chasing sunsets and new horizons. 🌅 #Nature #Explore",
-    media_url:
-      "https://player.vimeo.com/external/370331493.hd.mp4?s=3301384061a995e80650961a86b99616e729a997&profile_id=175",
-    type: "video",
-    reactions_count: 850,
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content: "Chasing sunsets and new horizons. 🌅 #Nature #Explore",
-  },
-  {
-    caption: "Urban vibes and neon nights. 🏙️ #CityLife #Zyeute",
-    media_url:
-      "https://player.vimeo.com/external/511598444.hd.mp4?s=7b0d8a4e3b3d1664fb9e7986fb87868846c2f0f5&profile_id=175",
-    type: "video",
-    reactions_count: 720,
-    hive_id: "quebec",
-    user_id: "27e6a0ec-4b73-45d7-b391-9e831a210524",
-    content: "Urban vibes and neon nights. 🏙️ #CityLife #Zyeute",
-  },
+// Quebec-themed video search queries
+const SEARCH_QUERIES = [
+  "montreal city",
+  "nature forest",
+  "urban night",
+  "dance portrait",
+  "city life",
 ];
 
-async function seedStock() {
-  console.log("🚀 Injecting professional stock videos...");
+// Guest user ID for seeded content
+const GUEST_USER_ID = "27e6a0ec-4b73-45d7-b391-9e831a210524";
 
-  for (const video of STOCK_VIDEOS) {
-    // 🛡️ GUARDRAIL: Validate type before insert
-    const validatedType = validatePostType(
-      video.media_url,
-      video.type as "video" | "photo",
+async function seedPexelsVideos() {
+  console.log("🎬 Fetching Pexels Videos for Zyeuté feed...");
+  let inserted = 0;
+
+  for (const query of SEARCH_QUERIES) {
+    console.log(`🔎 Searching Pexels Videos: "${query}"`);
+
+    const response = await fetch(
+      `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}&per_page=3&orientation=portrait`,
+      { headers: { Authorization: PEXELS_API_KEY } },
     );
-    if (validatedType !== video.type) {
-      console.warn(
-        `🛡️ Type corrected: "${video.type}" → "${validatedType}" for ${video.caption.substring(0, 30)}...`,
-      );
+
+    if (!response.ok) {
+      console.error(`❌ Pexels API error for "${query}": ${response.statusText}`);
+      continue;
     }
 
-    const { data, error } = await supabase
-      .from("publications")
-      .insert([{ ...video, type: validatedType }])
-      .select();
+    const data: any = await response.json();
 
-    if (error) {
-      console.error(`❌ Error inserting video: ${error.message}`);
-    } else {
-      console.log(`✅ Inserted professional video: ${data[0].id}`);
+    if (!data.videos || data.videos.length === 0) {
+      console.warn(`⚠️  No videos found for: ${query}`);
+      continue;
+    }
+
+    for (const video of data.videos) {
+      // Pick the HD file, or fall back to the highest quality available
+      const files: any[] = video.video_files || [];
+      const hd =
+        files.find((f: any) => f.quality === "hd" && f.width <= 1080) ||
+        files.find((f: any) => f.quality === "hd") ||
+        files[0];
+
+      if (!hd?.link) {
+        console.warn(`  ⚠️  No usable file for video ${video.id}`);
+        continue;
+      }
+
+      const mediaUrl: string = hd.link;
+      const thumbnail: string =
+        video.image || video.video_pictures?.[0]?.picture || "";
+
+      const validatedType = validatePostType(mediaUrl, "video");
+
+      const post = {
+        caption: `${video.user?.name || query} 🎬 #Zyeute #${query.replace(/\s+/g, "")}`,
+        content: `${video.user?.name || query} 🎬 #Zyeute #${query.replace(/\s+/g, "")}`,
+        media_url: mediaUrl,
+        thumbnail_url: thumbnail || null,
+        type: validatedType,
+        hive_id: "quebec",
+        user_id: GUEST_USER_ID,
+        processing_status: "completed",
+      };
+
+      const { data: inserted_row, error } = await supabase
+        .from("publications")
+        .insert([post])
+        .select();
+
+      if (error) {
+        console.error(`  ❌ DB error: ${error.message}`);
+      } else {
+        console.log(
+          `  ✅ Inserted video ${inserted_row[0].id} — ${mediaUrl.substring(0, 60)}...`,
+        );
+        inserted++;
+      }
     }
   }
 
-  console.log("\n✨ Stock video injection complete!");
+  console.log(`\n✨ Done! Inserted ${inserted} videos into the feed.`);
 }
 
-seedStock();
+seedPexelsVideos().catch((err) => {
+  console.error("❌ Script failed:", err);
+  process.exit(1);
+});
