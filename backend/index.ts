@@ -200,6 +200,10 @@ app.use((req, res, next) => {
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
 
+    // Seed route for emergency feed population
+    const { default: seedRouter } = await import("./routes/seed.js");
+    app.use("/api/seed", seedRouter);
+
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
 
