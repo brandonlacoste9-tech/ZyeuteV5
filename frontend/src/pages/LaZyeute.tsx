@@ -333,11 +333,11 @@ export const LaZyeute: React.FC = () => {
               onClick={post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? togglePlayPause : undefined}
             >
               {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? (
-                <video
+                <MuxPlayer
                   ref={(el) => {
                     if (el) videoRefs.current.set(post.id, el);
                   }}
-                  src={post.mediaUrl}
+                  playbackId={post.muxPlaybackId || ''}
                   className="w-full h-full object-cover"
                   loop
                   playsInline
@@ -347,7 +347,7 @@ export const LaZyeute: React.FC = () => {
               ) : (
                 <div className="relative w-full h-full">
                   <img
-                    src={post.mediaUrl}
+                    playbackId={post.muxPlaybackId || ''}
                     alt={post.caption || "Post image"}
                     className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
                       index === currentIndex ? "scale-110" : "scale-100"
