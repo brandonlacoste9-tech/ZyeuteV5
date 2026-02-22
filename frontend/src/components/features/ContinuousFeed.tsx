@@ -98,14 +98,17 @@ const FeedRow = memo(
 
     // Determine Video Source
     // Only video type posts need prefetching logic
+    // Determine video URL - use mediaUrl regardless of type (type field may be missing from older posts)
     const videoUrl =
-      post?.type === "video"
-        ? (post as Post).hls_url ||
-          (post as Post).enhanced_url ||
-          (post as Post).media_url ||
-          (post as Post).original_url ||
-          ""
-        : "";
+      (post as Post).hlsUrl ||
+      (post as Post).hls_url ||
+      (post as Post).enhancedUrl ||
+      (post as Post).enhanced_url ||
+      (post as Post).mediaUrl ||
+      (post as Post).media_url ||
+      (post as Post).originalUrl ||
+      (post as Post).original_url ||
+      "";
 
     // Smart Activation
     const { ref, shouldPlay, preloadTier } = useVideoActivation(
