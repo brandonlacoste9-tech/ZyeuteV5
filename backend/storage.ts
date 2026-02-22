@@ -573,7 +573,7 @@ export class DatabaseStorage implements IStorage {
           WHERE
             COALESCE(p.est_masque, false) = false
             AND p.deleted_at IS NULL
-            AND p.hive_id::text = $1
+            AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
           ORDER BY p.created_at DESC
           LIMIT 100`,
           [targetHive]
