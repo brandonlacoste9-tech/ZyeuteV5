@@ -67,6 +67,7 @@ import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { videoCache } from "@/lib/videoWarmCache";
 import { useFeedEngagement } from "@/hooks/useFeedEngagement";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 
 // ... imports ...
 
@@ -96,19 +97,18 @@ const FeedRow = memo(
     const isPriority = index === currentIndex;
     const isPredictive = Math.abs(index - currentIndex) === 1;
 
-    // Determine Video Source
-    // Only video type posts need prefetching logic
-    // Determine video URL - use mediaUrl regardless of type (type field may be missing from older posts)
-    const videoUrl =
-      (post as Post).hlsUrl ||
-      (post as Post).hls_url ||
-      (post as Post).enhancedUrl ||
+    // Determine Video Source — skip prefetch for Mux (MuxVideoPlayer handles its own streaming)
+    const hasMux = !!(post as Post).mux_playback_id;
+    const rawVideoUrl = hasMux
+      ? ""
+      : (post as Post).hls_url ||
       (post as Post).enhanced_url ||
-      (post as Post).mediaUrl ||
       (post as Post).media_url ||
-      (post as Post).originalUrl ||
       (post as Post).original_url ||
       "";
+    // Proxy the URL now — SingleVideoView also proxies via getProxiedMediaUrl,
+    // so we pass the SAME proxied URL here to avoid src/chunk mismatch in MSE pipeline.
+    const videoUrl = rawVideoUrl ? (getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl) : "";
 
     // Smart Activation
     const { ref, shouldPlay, preloadTier } = useVideoActivation(
@@ -319,12 +319,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Transform Pexels videos to Post format for fallback
   const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
+    // Pick best video quality: HD first, then SD, then anything
+    const getBestVideoUrl = (videoFiles: any[]): string => {
+      if (!videoFiles?.length) return "";
+      const hd = videoFiles.find((f) => f.quality === "hd");
+      const sd = videoFiles.find((f) => f.quality === "sd");
+      return hd?.link || sd?.link || videoFiles[0]?.link || "";
+    };
+
     return pexelsVideos.map((video, index) => ({
       id: `pexels-${video.id}`,
       type: 'video' as const,
       caption: video.url?.split('/').pop()?.replace(/-/g, ' ') || 'Video from Pexels',
-      media_url: video.video_files?.[0]?.link || video.url,
-      original_url: video.video_files?.[0]?.link || video.url,
+      media_url: getBestVideoUrl(video.video_files) || video.url,
+      original_url: getBestVideoUrl(video.video_files) || video.url,
       thumbnail_url: video.image,
       user: {
         id: 'pexels-user',
@@ -394,7 +402,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           const pexelsData = await pexelsRes.json();
           if (pexelsData.videos?.length > 0) {
             const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
-            setPosts(pexelsPosts as Array<Post & { user: User }>);
+            setPosts(pexelsPosts as unknown as Array<Post & { user: User }>);
             setHasMore(false); // Pexels is one-time fetch
             setFetchError(false);
             setIsLoading(false);
@@ -406,9 +414,32 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
       setFetchError(true);
     }
-    
+
     setPosts(validPosts);
     setHasMore(validPosts.length === 10);
+
+    // Debug: log feed structure when ?debug=1
+    if (
+      validPosts.length > 0 &&
+      (new URLSearchParams(window.location.search).get("debug") === "1" ||
+        localStorage.getItem("debug") === "true")
+    ) {
+      const muxCount = validPosts.filter((p) => (p as Post).mux_playback_id).length;
+      const withMedia = validPosts.filter((p) => (p as Post).media_url).length;
+      console.log("[FeedDiagnostic] ContinuousFeed", {
+        total: validPosts.length,
+        withMuxId: muxCount,
+        withMediaUrl: withMedia,
+        sample: validPosts[0]
+          ? {
+            id: validPosts[0].id,
+            type: (validPosts[0] as Post).type,
+            hasMux: !!(validPosts[0] as Post).mux_playback_id,
+            mediaUrlPreview: (validPosts[0] as Post).media_url?.slice(0, 50),
+          }
+          : null,
+      });
+    }
 
     setPage(0);
     setIsLoading(false);
@@ -544,7 +575,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     const prefetchHeavyChunks = () => {
       feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
       // Trigger dynamic imports to populate browser cache without executing render logic
-      import("@/components/features/CameraView").catch(() => {});
+      import("@/components/features/CameraView").catch(() => { });
     };
 
     let idleId: any = null;
@@ -712,7 +743,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (url) urls.push(url);
         }
       }
-      urls.forEach((url) => fetch(url, { method: "HEAD" }).catch(() => {}));
+      urls.forEach((url) => fetch(url, { method: "HEAD" }).catch(() => { }));
     },
     [posts, currentIndex],
   );

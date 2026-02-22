@@ -70,11 +70,11 @@ export const BorderColorProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [color]);
 
   // The value provided to components
-  const contextValue: BorderColorContextType = {
+  const contextValue = React.useMemo(() => ({
     borderColor: color,
     setBorderColor: setColor,
     defaultGold: DEFAULT_GOLD,
-  };
+  }), [color]);
 
   return (
     <BorderColorContext.Provider value={contextValue}>

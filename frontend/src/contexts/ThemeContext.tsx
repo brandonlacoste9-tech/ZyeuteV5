@@ -116,18 +116,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("zyeute_glow_intensity", intensity.toString());
   };
 
+  const value = React.useMemo(() => ({
+    edgeLighting,
+    setEdgeLighting,
+    currentTheme,
+    setTheme,
+    isAnimated,
+    setIsAnimated,
+    glowIntensity,
+    setGlowIntensity,
+  }), [edgeLighting, currentTheme, isAnimated, glowIntensity]);
+
   return (
     <ThemeContext.Provider
-      value={{
-        edgeLighting,
-        setEdgeLighting,
-        currentTheme,
-        setTheme,
-        isAnimated,
-        setIsAnimated,
-        glowIntensity,
-        setGlowIntensity,
-      }}
+      value={value}
     >
       {children}
     </ThemeContext.Provider>

@@ -125,9 +125,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const effectiveSrc = isHlsSrc
     ? ""
     : mseUrl ||
-      (videoSource?.type === "blob" || videoSource?.type === "url"
-        ? videoSource.src
-        : src);
+    (videoSource?.type === "blob" || videoSource?.type === "url"
+      ? videoSource.src
+      : src);
 
   // HLS.js setup for .m3u8 sources
   useEffect(() => {
@@ -150,7 +150,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
       if (autoPlay) {
         el.muted = true;
-        el.play().catch(() => {});
+        el.play().catch(() => { });
       }
       return () => {
         hls.destroy();
@@ -159,7 +159,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     if (el.canPlayType("application/vnd.apple.mpegurl")) {
       el.src = src;
-      if (autoPlay) el.play().catch(() => {});
+      if (autoPlay) el.play().catch(() => { });
       return () => {
         el.pause();
         el.src = "";
@@ -464,7 +464,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         } else {
           // Near end, try reload
           video.load();
-          video.play().catch(() => {});
+          video.play().catch(() => { });
         }
       }
       stallTimerRef.current = null;
@@ -816,7 +816,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   videoRef.current.load();
                 }
               }}
-              className="px-5 py-2.5 bg-gradient-to-r from-[#D4AF37] to-[#FFD700] text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all active:scale-95 text-sm"
+              className="px-5 py-2.5 bg-linear-to-r from-[#D4AF37] to-[#FFD700] text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all active:scale-95 text-sm"
             >
               Réessayer
             </button>
@@ -859,8 +859,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             tier={debug.tier as any}
             playheadByte={
               videoSource?.type === "partial-chunks" &&
-              videoSource.totalSize &&
-              duration
+                videoSource.totalSize &&
+                duration
                 ? (currentTime / duration) * videoSource.totalSize
                 : 0
             }
@@ -885,7 +885,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           alt=""
           className="hidden"
           fetchPriority="high"
-          onError={() => {}} // Ignore errors on preload
+          onError={() => { }} // Ignore errors on preload
         />
       )}
       <video
@@ -896,7 +896,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
         autoPlay={autoPlay} // Explicit attribute + useEffect sync for better compatibility
         loop={loop} // Explicit attribute for continuous playback
-        crossOrigin="anonymous"
         preload={preload}
         fetchPriority={priority ? "high" : "low"} // Next/active: prioritize over thumbnails (Chrome 102+)
         className="w-full h-full object-cover"
@@ -983,7 +982,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {/* Controls Overlay */}
       <div
         className={cn(
-          "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300",
+          "absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300",
           showControls || !isPlaying ? "opacity-100" : "opacity-0",
         )}
         onClick={(e) => e.stopPropagation()}

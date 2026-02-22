@@ -22,6 +22,7 @@ import { validatePostType } from "@/utils/validatePostType";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { RemixModal } from "./RemixModal";
 import { getRemixInfo } from "@/services/api";
+import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { Music } from "lucide-react";
 
 interface SingleVideoViewProps {
@@ -82,6 +83,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Remix State (TikTok-style)
     const [showRemixModal, setShowRemixModal] = useState(false);
     const [remixCount, setRemixCount] = useState((post as any).remixCount || 0);
+
+    // Video error capture (for diagnostic overlay)
+    const [videoError, setVideoError] = useState<Error | null>(null);
+    useEffect(() => {
+      setVideoError(null);
+    }, [post.id]);
 
     // Load remix count
     useEffect(() => {
@@ -465,6 +472,33 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             </div>
           </div>
         )}
+        {/* Video Playback Diagnostic (?debug=1 or localStorage debug=true) */}
+        {post.type === "video" && (
+          <VideoPlaybackDiagnostic
+            postId={post.id}
+            postType={post.type}
+            muxPlaybackId={post.mux_playback_id}
+            mediaUrl={post.media_url}
+            videoSrc={
+              post.mux_playback_id
+                ? `https://stream.mux.com/${post.mux_playback_id}.m3u8`
+                : videoSrc
+            }
+            playerPath={
+              post.mux_playback_id
+                ? "mux"
+                : post.processing_status === "pending" ||
+                    post.processing_status === "processing"
+                  ? "processing"
+                  : videoSrc
+                    ? "native"
+                    : "none"
+            }
+            processingStatus={post.processing_status}
+            error={videoError}
+            isActive={isActive}
+          />
+        )}
         {/* Full-screen Media */}
         <div className="absolute inset-0 w-full h-full">
           {post.type === "video" ? (
@@ -481,6 +515,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 autoPlay={isActive}
                 muted={isMuted}
                 loop
+                onError={(err) => setVideoError(err)}
               />
             ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
               // 🐝 FIX: Show loading state instead of black screen

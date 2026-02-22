@@ -23,6 +23,9 @@ const ALLOWED_HOSTS = [
   "commondatastorage.googleapis.com",
   "supabase.co",
   "supabase.in",
+  // Mux HLS streaming
+  "stream.mux.com",
+  "chunk.mux.com",
 ];
 
 function isAllowedUrl(url: string): boolean {
@@ -150,12 +153,17 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=86400");
+    // Always advertise byte-range support so browsers can seek in videos
+    res.setHeader("Accept-Ranges", "bytes");
+    // CORS headers so <video crossOrigin> doesn't block the response
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Range");
     const contentRange = resp.headers.get("content-range");
     const contentLength = resp.headers.get("content-length");
     if (resp.status === 206 && contentRange) {
       res.status(206);
       res.setHeader("Content-Range", contentRange);
-      res.setHeader("Accept-Ranges", "bytes");
       if (contentLength) res.setHeader("Content-Length", contentLength);
     }
 

@@ -15,6 +15,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { getCurrentUser, togglePostFire } from "@/services/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
+import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import type { Post, User } from "@/types";
 
 export const LaZyeute: React.FC = () => {
@@ -71,7 +74,7 @@ export const LaZyeute: React.FC = () => {
       if (postIndex === currentIndex) {
         video.currentTime = 0;
         if (isPlaying) {
-          video.play().catch(() => {});
+          video.play().catch(() => { });
           setShowEdgeGlow(true);
         } else {
           video.pause();
@@ -83,7 +86,7 @@ export const LaZyeute: React.FC = () => {
     });
 
     // Show edge glow for photos too (after a brief delay)
-    if (!(currentPost?.mediaUrl?.includes('.mp4') || currentPost?.mediaUrl?.includes('video'))) {
+    if (currentPost?.type !== "video") {
       const timer = setTimeout(() => setShowEdgeGlow(true), 300);
       return () => clearTimeout(timer);
     }
@@ -200,9 +203,8 @@ export const LaZyeute: React.FC = () => {
     <div className="fixed inset-0 bg-black">
       {/* Dynamic Edge Lighting Effect */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow ? "opacity-100" : "opacity-0"
-        }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow ? "opacity-100" : "opacity-0"
+          }`}
         style={{
           boxShadow: `
             inset 0 0 60px ${edgeLighting}40,
@@ -214,11 +216,10 @@ export const LaZyeute: React.FC = () => {
 
       {/* Animated Edge Border */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow && currentPost?.mediaUrl?.includes('.mp4') || currentPost?.mediaUrl?.includes('video')
-            ? "opacity-100"
-            : "opacity-0"
-        }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow && currentPost?.type === "video"
+          ? "opacity-100"
+          : "opacity-0"
+          }`}
         style={{
           border: `2px solid ${edgeLighting}60`,
           boxShadow: `
@@ -327,51 +328,87 @@ export const LaZyeute: React.FC = () => {
             className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
             data-testid={`post-slide-${post.id}`}
           >
+            {/* Video Playback Diagnostic (?debug=1) */}
+            {post.type === "video" && (
+              <VideoPlaybackDiagnostic
+                postId={post.id}
+                postType={post.type}
+                muxPlaybackId={(post as Post).mux_playback_id}
+                mediaUrl={post.media_url}
+                videoSrc={
+                  (post as Post).mux_playback_id
+                    ? null
+                    : getProxiedMediaUrl(post.media_url) || post.media_url
+                }
+                playerPath={
+                  (post as Post).mux_playback_id
+                    ? "mux"
+                    : post.media_url
+                      ? "native"
+                      : "none"
+                }
+                isActive={index === currentIndex}
+              />
+            )}
             {/* Media */}
             <div
               className="absolute inset-0 bg-black"
               onClick={post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? togglePlayPause : undefined}
             >
-              {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? (
-                <MuxPlayer
-                  ref={(el) => {
-                    if (el) videoRefs.current.set(post.id, el);
-                  }}
-                  playbackId={post.muxPlaybackId || ''}
-                  className="w-full h-full object-cover"
-                  loop
-                  playsInline
-                  muted={isMuted}
-                  autoPlay={index === currentIndex && isPlaying}
-                />
+              {post.type === "video" ? (
+                (post as Post).mux_playback_id ? (
+                  <MuxVideoPlayer
+                    playbackId={(post as Post).mux_playback_id || ""}
+                    thumbnailUrl={
+                      getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                      post.thumbnail_url ||
+                      post.media_url
+                    }
+                    className="w-full h-full object-cover"
+                    autoPlay={index === currentIndex && isPlaying}
+                    muted={isMuted}
+                    loop
+                  />
+                ) : (
+                  <video
+                    ref={(el) => {
+                      if (el) videoRefs.current.set(post.id, el);
+                    }}
+                    src={
+                      getProxiedMediaUrl(post.media_url) || post.media_url
+                    }
+                    className="w-full h-full object-cover"
+                    loop
+                    playsInline
+                    muted={isMuted}
+                    autoPlay={index === currentIndex && isPlaying}
+                  />
+                )
               ) : (
                 <div className="relative w-full h-full">
                   <img
-                    playbackId={post.muxPlaybackId || ''}
+                    src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     alt={post.caption || "Post image"}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
-                      index === currentIndex ? "scale-110" : "scale-100"
-                    }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? "scale-110" : "scale-100"
+                      }`}
                   />
-                  {/* Subtle Ken Burns effect for photos */}
                 </div>
               )}
 
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                    post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video')
-                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video')
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    }`}
                 >
-                  {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? "▶ Vidéo" : "📷 Photo"}
+                  {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
                 </div>
               </div>
 
               {/* Play/Pause Indicator for Videos */}
-              {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') &&
+              {post.type === "video" &&
                 !isPlaying &&
                 index === currentIndex && (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -429,11 +466,10 @@ export const LaZyeute: React.FC = () => {
                 data-testid={`button-fire-${post.id}`}
               >
                 <div
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    post.is_fired
-                      ? "bg-orange-500/30 scale-110"
-                      : "bg-black/40 hover:bg-black/60"
-                  }`}
+                  className={`p-2 rounded-full transition-all duration-300 ${post.is_fired
+                    ? "bg-orange-500/30 scale-110"
+                    : "bg-black/40 hover:bg-black/60"
+                    }`}
                   style={
                     post.is_fired
                       ? { boxShadow: "0 0 20px rgba(255,100,0,0.5)" }
@@ -441,9 +477,8 @@ export const LaZyeute: React.FC = () => {
                   }
                 >
                   <span
-                    className={`text-2xl transition-transform duration-200 ${
-                      post.is_fired ? "animate-bounce" : ""
-                    }`}
+                    className={`text-2xl transition-transform duration-200 ${post.is_fired ? "animate-bounce" : ""
+                      }`}
                   >
                     🔥
                   </span>

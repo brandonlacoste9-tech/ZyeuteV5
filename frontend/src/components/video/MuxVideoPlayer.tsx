@@ -16,6 +16,8 @@ interface MuxVideoPlayerProps {
   loop?: boolean;
   muted?: boolean;
   style?: React.CSSProperties;
+  /** Called when Mux player errors (for diagnostics) */
+  onError?: (error: Error) => void;
 }
 
 export function MuxVideoPlayer({
@@ -26,23 +28,34 @@ export function MuxVideoPlayer({
   loop = true,
   muted = true,
   style,
+  onError: onErrorProp,
 }: MuxVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleLoadStart = useCallback(() => {
     setIsLoading(true);
     setHasError(false);
+    setErrorMessage(null);
   }, []);
 
   const handleLoadedData = useCallback(() => {
     setIsLoading(false);
   }, []);
 
-  const handleError = useCallback(() => {
-    setIsLoading(false);
-    setHasError(true);
-  }, []);
+  const handleError = useCallback(
+    (e?: unknown) => {
+      setIsLoading(false);
+      setHasError(true);
+      const target = (e as { target?: HTMLVideoElement })?.target;
+      const msg =
+        target?.error?.message || "Mux playback failed";
+      setErrorMessage(msg);
+      onErrorProp?.(new Error(msg));
+    },
+    [onErrorProp],
+  );
 
   if (hasError) {
     return (

@@ -166,7 +166,9 @@ export async function getFeedPosts(
       .map(mapBackendPost)
       .filter(
         (post: Post | null): post is Post =>
-          post !== null && !!post.id && !!(post.media_url || post.hls_url),
+          post !== null &&
+          !!post.id &&
+          !!(post.media_url || post.hls_url || post.mux_playback_id),
       );
   } catch (err) {
     // Final safety net
@@ -193,7 +195,9 @@ export async function getExplorePosts(
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!(post.media_url || post.hls_url),
+        post !== null &&
+        !!post.id &&
+        !!(post.media_url || post.hls_url || post.mux_playback_id),
     );
 }
 
@@ -229,7 +233,9 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!(post.media_url || post.hls_url),
+        post !== null &&
+        !!post.id &&
+        !!(post.media_url || post.hls_url || post.mux_playback_id),
     );
 }
 
@@ -743,6 +749,11 @@ function mapBackendUser(user: Record<string, any>): User {
     // Gamification
     last_daily_bonus: user.last_daily_bonus || user.lastDailyBonus || null,
   } as User;
+}
+
+/** Normalize backend post for feed display (handles snake_case/camelCase, Mux URLs) */
+export function normalizePostForFeed(p: Record<string, any>): Post | null {
+  return mapBackendPost(p);
 }
 
 function mapBackendPost(p: Record<string, any>): Post | null {

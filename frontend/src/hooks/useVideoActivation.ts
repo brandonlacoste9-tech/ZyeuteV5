@@ -70,24 +70,22 @@ export function useVideoActivation(
     }
     setShouldPlay(nextShouldPlay);
 
-    // 2. Preload Tiering Logic
+    // 2. Preload Tiering Logic (reduced aggressiveness to prevent freeze)
     let nextTier: PreloadTier = 0;
 
     if (isFastScrolling) {
-      // Predictive: If scrolling fast, we abort via usePrefetchVideo cleanup
       nextTier = 0;
     } else if (isEngaged && isFocused) {
-      // Aggressive Mode (Engagement-Driven)
-      nextTier = 2; // Full prefetch
+      // Full prefetch only after 3s engagement - prevents initial freeze
+      nextTier = 2;
     } else if (isFocused || priority) {
-      // Main focused item - Tier 1 or 2 based on speed
-      nextTier = isSlowScrolling ? 2 : 1;
+      // Start with partial chunks (Tier 1) - avoid full blob on first paint
+      nextTier = 1;
     } else if (isActuallyVisible || inView) {
-      // Nearby/Visible
       nextTier = 1;
     } else if (predictive && isSlowScrolling) {
-      // Predictive fetch for neighbors when idle
-      nextTier = 3;
+      // Neighbors: light prefetch only
+      nextTier = 1;
     } else {
       nextTier = 0;
     }

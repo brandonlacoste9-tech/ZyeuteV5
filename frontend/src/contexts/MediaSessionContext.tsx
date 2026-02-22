@@ -142,16 +142,18 @@ export const MediaSessionProvider: React.FC<{ children: React.ReactNode }> = ({
     focusLostCallbacksRef.current.delete(id);
   }, []);
 
+  const value = React.useMemo(() => ({
+    currentAudioFocusId,
+    requestAudioFocus,
+    releaseAudioFocus,
+    forceMuteAll,
+    registerFocusLostCallback,
+    unregisterFocusLostCallback,
+  }), [currentAudioFocusId, requestAudioFocus, releaseAudioFocus, forceMuteAll, registerFocusLostCallback, unregisterFocusLostCallback]);
+
   return (
     <MediaSessionContext.Provider
-      value={{
-        currentAudioFocusId,
-        requestAudioFocus,
-        releaseAudioFocus,
-        forceMuteAll,
-        registerFocusLostCallback,
-        unregisterFocusLostCallback,
-      }}
+      value={value}
     >
       {children}
     </MediaSessionContext.Provider>

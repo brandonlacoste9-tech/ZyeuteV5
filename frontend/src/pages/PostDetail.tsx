@@ -9,6 +9,7 @@ import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { FireRating } from "../components/features/FireRating";
 import { VideoPlayer } from "../components/features/VideoPlayer";
+import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VirtualCommentList } from "../components/features/VirtualCommentList";
 import { GiftModal } from "../components/features/GiftModal";
 import { supabase } from "../lib/supabase";
@@ -326,21 +327,47 @@ export const PostDetail: React.FC = () => {
 };
 
 const PostDetailMedia = ({ post }: { post: Post }) => {
-  // Always prefetch full video for detail view (Tier 2)
-  const videoUrl = post.type === "video" ? post.media_url : "";
-  const { source } = usePrefetchVideo(videoUrl, 2);
+  // --- Mux videos: use MuxVideoPlayer directly (handles its own HLS streaming)
+  if (post.type === "video" && post.mux_playback_id) {
+    return (
+      <div className="relative w-full h-full bg-black">
+        <MuxVideoPlayer
+          playbackId={post.mux_playback_id}
+          thumbnailUrl={post.thumbnail_url || undefined}
+          className="w-full h-full"
+          autoPlay={true}
+          muted={false}
+          loop={true}
+        />
+        {/* Debug overlay */}
+        <VideoDebugOverlay
+          isVisible={false}
+          videoId={post.id}
+          mediaUrl={post.media_url}
+          thumbnailUrl={post.thumbnail_url}
+        />
+      </div>
+    );
+  }
+
+  // --- Non-Mux videos (Pexels / Supabase direct): use proxied URL consistently
+  // IMPORTANT: pass the SAME proxied URL to both usePrefetchVideo and VideoPlayer
+  // so MSE pipeline chunks and the <video> src always match.
   const proxiedVideo =
     post.type === "video"
-      ? getProxiedMediaUrl(post.media_url) || post.media_url
+      ? (getProxiedMediaUrl(post.media_url) || post.media_url)
       : "";
   const proxiedPoster =
     getProxiedMediaUrl(post.thumbnail_url || undefined) || post.thumbnail_url;
+
+  // Prefetch using the proxied URL so chunks come from the same origin as <video src>
+  const { source } = usePrefetchVideo(proxiedVideo, 2);
 
   if (post.type === "video") {
     return (
       <div className="relative w-full h-full bg-black">
         <VideoPlayer
-          src={proxiedVideo || ""}
+          src={proxiedVideo}
           poster={proxiedPoster || undefined}
           autoPlay={true}
           muted={false}
@@ -350,8 +377,7 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
           preload="auto"
           videoSource={source}
         />
-
-        {/* Debug overlay: set isVisible={false} when done debugging */}
+        {/* Debug overlay */}
         <VideoDebugOverlay
           isVisible={false}
           videoId={post.id}

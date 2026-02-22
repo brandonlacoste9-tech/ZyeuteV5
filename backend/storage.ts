@@ -56,6 +56,12 @@ import { calculateCulturalMomentum } from "./scoring/algorithms.js";
 const { Pool } = pg;
 
 // Database connection
+console.log(
+  "🔍 [Storage] Initializing pool with DATABASE_URL:",
+  process.env.DATABASE_URL
+    ? `${process.env.DATABASE_URL.slice(0, 20)}...`
+    : "UNDEFINED",
+);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
@@ -576,10 +582,12 @@ export class DatabaseStorage implements IStorage {
             AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
           ORDER BY p.created_at DESC
           LIMIT 100`,
-          [targetHive]
+          [targetHive],
         );
 
-        console.log(`[STORAGE] Raw SQL explore: ${result.rows.length} posts in hive '${targetHive}'`);
+        console.log(
+          `[STORAGE] Raw SQL explore: ${result.rows.length} posts in hive '${targetHive}'`,
+        );
 
         if (result.rows.length === 0) return [];
 
@@ -610,51 +618,94 @@ export class DatabaseStorage implements IStorage {
               createdAt: new Date(row.created_at),
               deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
               // Fields required by Post type with safe defaults
-              originalUrl: null, enhancedUrl: null, mediaMetadata: {},
-              muxUploadId: null, promoUrl: null, hlsUrl2: null, duration: null,
-              visualFilter: "none", enhanceStartedAt: null, enhanceFinishedAt: null,
-              region: null, embedding: null, lastEmbeddedAt: null,
-              transcription: null, transcribedAt: null, aiDescription: null,
-              aiLabels: [], contentFr: null, contentEn: null,
-              hashtags: [], detectedThemes: [], detectedItems: [],
-              aiGenerated: false, quebecScore: 0, viralScore: 0,
-              safetyFlags: {}, isModerated: false, moderationApproved: true,
-              moderationScore: 0, moderatedAt: null,
-              isEphemeral: false, viewCount: 0, maxViews: 1,
-              expiresAt: null, burnedAt: null, isVaulted: false,
-              remixType: null, originalPostId: null, remixCount: 0,
-              soundId: null, soundStartTime: 0,
+              originalUrl: null,
+              enhancedUrl: null,
+              mediaMetadata: {},
+              muxUploadId: null,
+              promoUrl: null,
+              hlsUrl2: null,
+              duration: null,
+              visualFilter: "none",
+              enhanceStartedAt: null,
+              enhanceFinishedAt: null,
+              region: null,
+              embedding: null,
+              lastEmbeddedAt: null,
+              transcription: null,
+              transcribedAt: null,
+              aiDescription: null,
+              aiLabels: [],
+              contentFr: null,
+              contentEn: null,
+              hashtags: [],
+              detectedThemes: [],
+              detectedItems: [],
+              aiGenerated: false,
+              quebecScore: 0,
+              viralScore: 0,
+              safetyFlags: {},
+              isModerated: false,
+              moderationApproved: true,
+              moderationScore: 0,
+              moderatedAt: null,
+              isEphemeral: false,
+              viewCount: 0,
+              maxViews: 1,
+              expiresAt: null,
+              burnedAt: null,
+              isVaulted: false,
+              remixType: null,
+              originalPostId: null,
+              remixCount: 0,
+              soundId: null,
+              soundStartTime: 0,
             } as unknown as Post,
-            user: row.u_id ? {
-              id: row.u_id,
-              username: row.username,
-              displayName: row.display_name,
-              avatarUrl: row.avatar_url,
-              email: row.email,
-              region: row.region,
-              hiveId: row.u_hive_id || "quebec",
-              isAdmin: row.is_admin || false,
-              isPremium: row.is_premium || false,
-              plan: row.plan || "free",
-              credits: row.credits || 0,
-              piasseBalance: Number(row.piasse_balance) || 0,
-              totalKarma: Number(row.total_karma) || 0,
-              subscriptionTier: row.subscription_tier || "free",
-              city: row.u_city,
-              regionId: row.u_region_id,
-              createdAt: new Date(row.u_created_at),
-              updatedAt: row.u_updated_at ? new Date(row.u_updated_at) : null,
-              nectarPoints: Number(row.nectar_points) || 0,
-              currentStreak: Number(row.current_streak) || 0,
-              // Safe defaults for all other User fields
-              bio: null, role: "citoyen", customPermissions: {},
-              location: null, tiGuyCommentsEnabled: true,
-              karmaCredits: 0, cashCredits: 0, totalGiftsSent: 0,
-              totalGiftsReceived: 0, legendaryBadges: [], taxId: null,
-              beeAlias: null, maxStreak: 0, lastDailyBonus: null,
-              unlockedHives: ["quebec"], parentId: null,
-              totalDocumentsProcessed: 0, stripeCustomerId: null, tier: null,
-            } as unknown as User : null,
+            user: row.u_id
+              ? ({
+                  id: row.u_id,
+                  username: row.username,
+                  displayName: row.display_name,
+                  avatarUrl: row.avatar_url,
+                  email: row.email,
+                  region: row.region,
+                  hiveId: row.u_hive_id || "quebec",
+                  isAdmin: row.is_admin || false,
+                  isPremium: row.is_premium || false,
+                  plan: row.plan || "free",
+                  credits: row.credits || 0,
+                  piasseBalance: Number(row.piasse_balance) || 0,
+                  totalKarma: Number(row.total_karma) || 0,
+                  subscriptionTier: row.subscription_tier || "free",
+                  city: row.u_city,
+                  regionId: row.u_region_id,
+                  createdAt: new Date(row.u_created_at),
+                  updatedAt: row.u_updated_at
+                    ? new Date(row.u_updated_at)
+                    : null,
+                  nectarPoints: Number(row.nectar_points) || 0,
+                  currentStreak: Number(row.current_streak) || 0,
+                  // Safe defaults for all other User fields
+                  bio: null,
+                  role: "citoyen",
+                  customPermissions: {},
+                  location: null,
+                  tiGuyCommentsEnabled: true,
+                  karmaCredits: 0,
+                  cashCredits: 0,
+                  totalGiftsSent: 0,
+                  totalGiftsReceived: 0,
+                  legendaryBadges: [],
+                  taxId: null,
+                  beeAlias: null,
+                  maxStreak: 0,
+                  lastDailyBonus: null,
+                  unlockedHives: ["quebec"],
+                  parentId: null,
+                  totalDocumentsProcessed: 0,
+                  stripeCustomerId: null,
+                  tier: null,
+                } as unknown as User)
+              : null,
           }))
           .filter((r) => r.user !== null)
           .map((r) => ({
@@ -1509,4 +1560,3 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
-

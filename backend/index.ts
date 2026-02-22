@@ -1,22 +1,4 @@
-import dotenv from "dotenv";
-// Load .env ONLY in development (Railway provides env vars directly in production)
-if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
-  dotenv.config({ path: ".env.local", override: true });
-  console.log("🔧 [Dev] Loaded .env files");
-} else {
-  console.log(
-    "🚂 [Production] Using Railway environment variables (skipping .env)",
-  );
-}
-// Log but do NOT exit — keep server up so one bad error doesn't kill the process.
-// Use a process manager (e.g. Railway, PM2) to restart if needed.
-process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception (server staying up):", err);
-});
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection (server staying up):", reason, promise);
-});
+import "./preload.js";
 import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes.js";
@@ -29,6 +11,15 @@ import { Server as SocketIOServer } from "socket.io";
 import { db, pool } from "./storage.js";
 import { posts } from "../shared/schema.js";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+
+// Log but do NOT exit — keep server up so one bad error doesn't kill the process.
+// Use a process manager (e.g. Railway, PM2) to restart if needed.
+process.on("uncaughtException", (err) => {
+  console.error("❌ Uncaught Exception (server staying up):", err);
+});
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("❌ Unhandled Rejection (server staying up):", reason, promise);
+});
 
 // DB Pool is imported from ./storage.js
 // const { Pool } = pg;
@@ -55,11 +46,14 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.endsWith(".vercel.app")
+      ) {
         callback(null, true);
       } else {
         console.log(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
@@ -217,8 +211,21 @@ app.use((req, res, next) => {
       serveStatic(app);
     } else {
       console.log("🛠️  Step 3: Setting up Vite (Development)...");
-      const { setupVite } = await import("./vite.js");
-      await setupVite(httpServer, app);
+      try {
+        const { setupVite } = await import("./vite.js");
+        await setupVite(httpServer, app);
+      } catch (viteErr: any) {
+        console.warn(
+          "⚠️ Vite dev server skipped (backend API still works):",
+          viteErr?.message ?? viteErr,
+        );
+        console.warn(
+          "   If you see Rollup/lightningcss native module errors, run: rm -rf node_modules package-lock.json && npm install",
+        );
+        console.warn(
+          "   To run the frontend separately: npx vite (from project root)",
+        );
+      }
     }
 
     // 3. Mark System Ready

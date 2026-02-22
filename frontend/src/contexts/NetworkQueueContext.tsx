@@ -159,9 +159,11 @@ export const NetworkQueueProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [isOnline, processQueue, queue.length]);
 
+  const value = React.useMemo(() => ({ queue, addToQueue, isOnline, processQueue }), [queue, addToQueue, isOnline, processQueue]);
+
   return (
     <NetworkQueueContext.Provider
-      value={{ queue, addToQueue, isOnline, processQueue }}
+      value={value}
     >
       {children}
     </NetworkQueueContext.Provider>

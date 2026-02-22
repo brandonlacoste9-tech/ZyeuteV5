@@ -103,7 +103,14 @@ export function usePrefetchVideo(
       abortControllerRef.current.abort();
     }
 
-    if (tier === 0 || !url) {
+    // Skip prefetch for HLS streams — HLS.js handles its own adaptive streaming
+    // Also skip if Mux (by URL pattern) regardless of whether it's proxied
+    const isHlsUrl =
+      url.endsWith(".m3u8") ||
+      url.includes(".m3u8") ||
+      url.includes("stream.mux.com") ||
+      url.includes("chunk.mux.com");
+    if (tier === 0 || !url || isHlsUrl) {
       setDebugInfo({ requests: 0, concurrency: 1 });
       return;
     }

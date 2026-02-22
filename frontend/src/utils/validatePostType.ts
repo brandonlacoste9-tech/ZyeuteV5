@@ -34,6 +34,8 @@ const VIDEO_HOSTS = [
   "mixkit.co",
   "gtv-videos-bucket",
   "videos.pexels.com",
+  "stream.mux.com",
+  "mux.com",
 ];
 
 // Known image hosting platforms

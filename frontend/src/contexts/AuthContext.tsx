@@ -129,8 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
-                  profile.role === "moderator" ||
-                  (await checkIsAdmin(initialSession.user as any)),
+                profile.role === "moderator" ||
+                (await checkIsAdmin(initialSession.user as any)),
               );
             }
           } else {
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isGuest, isLoading]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     user,
     session,
     isAuthenticated: !!user || isGuest,
@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     logout,
     enterGuestMode,
-  };
+  }), [user, session, isGuest, isLoading, logout, enterGuestMode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
