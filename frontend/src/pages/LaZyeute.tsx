@@ -83,7 +83,7 @@ export const LaZyeute: React.FC = () => {
     });
 
     // Show edge glow for photos too (after a brief delay)
-    if (currentPost?.type !== "video") {
+    if (!(currentPost?.mediaUrl?.includes('.mp4') || currentPost?.mediaUrl?.includes('video'))) {
       const timer = setTimeout(() => setShowEdgeGlow(true), 300);
       return () => clearTimeout(timer);
     }
@@ -330,9 +330,9 @@ export const LaZyeute: React.FC = () => {
             {/* Media */}
             <div
               className="absolute inset-0 bg-black"
-              onClick={post.type === "video" ? togglePlayPause : undefined}
+              onClick={post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? togglePlayPause : undefined}
             >
-              {post.type === "video" ? (
+              {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? (
                 <video
                   ref={(el) => {
                     if (el) videoRefs.current.set(post.id, el);
@@ -361,17 +361,17 @@ export const LaZyeute: React.FC = () => {
               <div className="absolute top-20 left-4 z-30">
                 <div
                   className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                    post.type === "video"
+                    post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video')
                       ? "bg-red-500/20 text-red-400 border border-red-500/30"
                       : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                   }`}
                 >
-                  {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
+                  {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? "▶ Vidéo" : "📷 Photo"}
                 </div>
               </div>
 
               {/* Play/Pause Indicator for Videos */}
-              {post.type === "video" &&
+              {post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') &&
                 !isPlaying &&
                 index === currentIndex && (
                   <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -410,7 +410,7 @@ export const LaZyeute: React.FC = () => {
                 >
                   <img
                     src={post.user?.avatar_url || "/default-avatar.png"}
-                    alt={post.user?.display_name || "User"}
+                    alt={post.user?.displayName || "User"}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -449,7 +449,7 @@ export const LaZyeute: React.FC = () => {
                   </span>
                 </div>
                 <span className="text-white text-xs font-bold">
-                  {post.fire_count || 0}
+                  {post.fireCount || 0}
                 </span>
               </button>
 
@@ -475,7 +475,7 @@ export const LaZyeute: React.FC = () => {
                   </svg>
                 </div>
                 <span className="text-white text-xs font-bold">
-                  {post.comment_count || 0}
+                  {post.commentCount || 0}
                 </span>
               </Link>
 
@@ -515,7 +515,7 @@ export const LaZyeute: React.FC = () => {
                 <span className="text-white font-bold text-base">
                   @{post.user?.username}
                 </span>
-                {post.user?.is_verified && (
+                {post.user?.isVerified && (
                   <span
                     className="drop-shadow-lg"
                     style={{ color: edgeLighting }}
