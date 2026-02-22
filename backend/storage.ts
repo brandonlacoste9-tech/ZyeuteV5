@@ -548,7 +548,7 @@ export class DatabaseStorage implements IStorage {
       try {
         const result = await client.query(
           `SELECT
-            p.id, p.user_id, p.media_url, p.hls_url, p.thumbnail_url,
+            p.id, p.user_id, p.media_url, p.hls_url, p.thumbnail_url, COALESCE(p.type, 'video') as type,
             p.content, p.caption, p.visibility,
             COALESCE(p.reactions_count, 0) as reactions_count,
             COALESCE(p.comments_count, 0) as comments_count,
