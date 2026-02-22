@@ -655,6 +655,18 @@ export async function registerRoutes(
     }
   });
 
+  // [NEW] Public publications endpoint for feed (no auth required)
+  app.get("/api/publications", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const posts = await storage.getRecentPosts(limit);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get publications error:", error);
+      res.status(500).json({ error: "Failed to get publications" });
+    }
+  });
+
   // Get nearby posts
   app.get("/api/posts/nearby", optionalAuth, async (req, res) => {
     try {
