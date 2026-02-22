@@ -44,6 +44,7 @@ const allowedOrigins = [
   "https://www.zyeute.com",
   "https://zyeute.com",
   "https://zyeute.vercel.app",
+  "https://zyeutev5-production.up.railway.app",
   "http://localhost:12000",
   "http://localhost:3000",
   "http://localhost:5173",
@@ -58,7 +59,7 @@ app.use(
         callback(null, true);
       } else {
         console.log(`[CORS] Blocked origin: ${origin}`);
-        callback(null, true); // Allow all for now - Railway debugging
+        callback(new Error('Not allowed by CORS'));
       }
     },
     credentials: true,
@@ -68,8 +69,8 @@ app.use(
   }),
 );
 
-// Handle OPTIONS preflight for all routes
-app.options("*", cors());
+// Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
+app.options(/.*/, cors());
 app.use(express.json());
 
 const httpServer = createServer(app);
@@ -94,19 +95,21 @@ const port = Number(process.env.PORT) || 3000;
 let server: any;
 let isSystemReady = false;
 
+// [CRITICAL] Explicit health route - MUST be registered before middleware
+// This ensures Railway healthchecks pass even during initialization
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    stage: isSystemReady ? "ready" : "initializing",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // [NEW] Startup Liveness Middleware
 // Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
-  // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
-  if (req.path === "/api/health") {
-    return res.status(200).json({
-      status: "ok",
-      stage: isSystemReady ? "ready" : "initializing",
-      uptime: process.uptime(),
-    });
-  }
-
-  // Debug route also overrides
+  // Debug route overrides
   if (req.path === "/api/debug") {
     return res
       .status(200)
@@ -158,22 +161,24 @@ app.use((req, res, next) => {
         console.log("✅ [Startup] Database Connected Successfully");
 
         // [CRITICAL] Run Database Migrations
-        console.log("📦 [Startup] Running Schema Migrations...");
-        try {
-          await migrate(db, { migrationsFolder: "./migrations" });
-          console.log("✅ [Startup] Migrations Complete");
-        } catch (err: any) {
-          // Log but don't crash main loop if possible, unless critical
-          console.error("⚠️ [Startup] Migration warning/error:", err.message);
-        }
+        // TEMPORARILY DISABLED - Migration causing startup crash
+        // console.log("📦 [Startup] Running Schema Migrations...");
+        // try {
+        //   await migrate(db, { migrationsFolder: "./migrations" });
+        //   console.log("✅ [Startup] Migrations Complete");
+        // } catch (err: any) {
+        //   // Log but don't crash main loop if possible, unless critical
+        //   console.error("⚠️ [Startup] Migration warning/error:", err.message);
+        // }
 
         // [SURGICAL SELF-HEALING] Active Schema Repair
-        try {
-          const { healSchema } = await import("./schemaDoctor.js");
-          await healSchema(pool);
-        } catch (err) {
-          console.warn("⚠️ [Startup] Schema healing skipped:", err);
-        }
+        // TEMPORARILY DISABLED
+        // try {
+        //   const { healSchema } = await import("./schemaDoctor.js");
+        //   await healSchema(pool);
+        // } catch (err) {
+        //   console.warn("⚠️ [Startup] Schema healing skipped:", err);
+        // }
       } catch (dbErr: any) {
         console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
