@@ -108,6 +108,7 @@ export interface IStorage {
     limit: number,
     hiveId?: string,
   ): Promise<(Post & { user: User })[]>;
+  getRecentPosts(limit: number): Promise<(Post & { user: User })[]>;
   getNearbyPosts(
     lat: number,
     lon: number,
@@ -734,6 +735,10 @@ export class DatabaseStorage implements IStorage {
         client.release();
       }
     });
+  }
+
+  async getRecentPosts(limit: number): Promise<(Post & { user: User })[]> {
+    return this.getExplorePosts(0, limit, "global");
   }
 
   async createPost(post: InsertPost): Promise<Post> {
