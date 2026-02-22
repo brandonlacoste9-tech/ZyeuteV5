@@ -215,7 +215,7 @@ export const LaZyeute: React.FC = () => {
       {/* Animated Edge Border */}
       <div
         className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow && currentPost?.type === "video"
+          showEdgeGlow && currentPost?.mediaUrl?.includes('.mp4') || currentPost?.mediaUrl?.includes('video')
             ? "opacity-100"
             : "opacity-0"
         }`}
@@ -337,7 +337,7 @@ export const LaZyeute: React.FC = () => {
                   ref={(el) => {
                     if (el) videoRefs.current.set(post.id, el);
                   }}
-                  src={post.media_url}
+                  src={post.mediaUrl}
                   className="w-full h-full object-cover"
                   loop
                   playsInline
@@ -347,7 +347,7 @@ export const LaZyeute: React.FC = () => {
               ) : (
                 <div className="relative w-full h-full">
                   <img
-                    src={post.media_url}
+                    src={post.mediaUrl}
                     alt={post.caption || "Post image"}
                     className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
                       index === currentIndex ? "scale-110" : "scale-100"
