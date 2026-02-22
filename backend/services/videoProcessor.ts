@@ -297,10 +297,10 @@ export async function processVideo(
   }
 }
 
-/** HLS rendition config for vertical-first transcoding */
+/** HLS rendition config for vertical-first (portrait) transcoding */
 const HLS_RENDITIONS = [
-  { name: "360p",  width: 360,  height: 640,  bitrate: "800k",  crf: 28 },
-  { name: "720p",  width: 720,  height: 1280, bitrate: "2500k", crf: 24 },
+  { name: "360p", width: 360, height: 640, bitrate: "800k", crf: 28 },
+  { name: "720p", width: 720, height: 1280, bitrate: "2500k", crf: 24 },
   { name: "1080p", width: 1080, height: 1920, bitrate: "5000k", crf: 21 },
 ] as const;
 
@@ -323,7 +323,7 @@ export async function processVideoToHLS(
 
     const renditionDirs: string[] = [];
 
-    for (const { name, width, crf } of HLS_RENDITIONS) {
+    for (const { name, width, height, crf } of HLS_RENDITIONS) {
       const outDir = path.join(baseDir, name);
       await fs.promises.mkdir(outDir, { recursive: true });
       const outM3u8 = path.join(outDir, `${name}.m3u8`);
@@ -335,7 +335,7 @@ export async function processVideoToHLS(
             "-c:v libx264",
             `-crf ${crf}`,
             "-preset veryfast",
-            `-vf scale=-2:`${height}`,
+            `-vf scale=-2:${height}`,
             "-c:a aac",
             "-b:a 128k",
             "-movflags +faststart",
@@ -353,19 +353,20 @@ export async function processVideoToHLS(
       renditionDirs.push(outDir);
     }
 
-    // Build master manifest
+    // Build master manifest with proper bandwidth info
     const masterPath = path.join(baseDir, "manifest.m3u8");
     let masterContent = "#EXTM3U\n#EXT-X-VERSION:3\n";
 
-    for (let i = 0; i < HLS_RENDITIONS.length; i++) {
-      const { name } = HLS_RENDITIONS[i];
-      const variantM3u8 = path.join(renditionDirs[i], `${name}.m3u8`);
-      const variant = await fs.promises.readFile(variantM3u8, "utf8");
-      const streamInfo = variant
-        .split("\n")
-        .find((l) => l.startsWith("#EXT-X-STREAM-INF"));
-      if (!streamInfo) continue;
-      masterContent += `${streamInfo},NAME="${name}"\n${name}/${name}.m3u8\n`;
+    const bandwidthMap: Record<string, number> = {
+      "360p": 800000,
+      "720p": 2500000,
+      "1080p": 5000000,
+    };
+
+    for (const { name, width, height } of HLS_RENDITIONS) {
+      const bandwidth = bandwidthMap[name] || 1000000;
+      masterContent += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${width}x${height},NAME="${name}"\n`;
+      masterContent += `${name}/${name}.m3u8\n`;
     }
 
     await fs.promises.writeFile(masterPath, masterContent, "utf8");

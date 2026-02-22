@@ -11,11 +11,10 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { MainLayout } from "@/components/MainLayout";
-import TiGuyMessaging from "@/components/features/TiGuyMessaging";
+import { ChatButton } from "@/components/ChatButton";
 import { HiveProvider } from "@/contexts/HiveContext";
 import { PageTransition } from "@/components/AnimatedRoutes";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
-import { ChatButton } from "@/components/ChatButton";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { GuestModeProvider } from "@/contexts/GuestModeContext";
 import { MapleSpinner } from "@/components/ui/MapleSpinner";
@@ -795,7 +794,7 @@ function App() {
                                                 />
                                               </Routes>
                                             </PageTransition>
-                                            <TiGuyMessaging />
+                                            <ChatButton />
                                           </MainLayout>
                                         }
                                       />

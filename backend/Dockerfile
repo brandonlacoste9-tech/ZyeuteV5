@@ -23,10 +23,12 @@ WORKDIR /app
 
 # Copy root package files (monorepo)
 COPY package.json package-lock.json* ./
+COPY .npmrc ./
 
 # Install ALL dependencies (including devDeps for TypeScript build)
 # --legacy-peer-deps: express-async-errors declares express@4; we use express@5 (native async)
-RUN npm ci --legacy-peer-deps
+# --force: skip platform checks for optional dependencies (Windows packages on Linux)
+RUN npm ci --legacy-peer-deps --force || npm ci --legacy-peer-deps --force
 
 # ---------- Stage 3: Build ----------
 FROM base AS build
