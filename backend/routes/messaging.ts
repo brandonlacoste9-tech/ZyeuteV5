@@ -521,4 +521,31 @@ router.post("/conversations/:id/upload", async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/tiguy-cost
+ * Get TI-GUY spending dashboard (admin only)
+ */
+router.get("/admin/tiguy-cost", async (req, res) => {
+  // TODO: Add admin role check
+  // if (!req.user.isAdmin) return res.status(403).json({ error: "Admin only" });
+  
+  try {
+    const { getSpendingDashboard } = await import("../ai/tiguy-cost-monitor");
+    const dashboard = getSpendingDashboard();
+    
+    res.json({
+      ...dashboard,
+      warningThreshold: 800,
+      message: dashboard.status === "warning" 
+        ? "⚠️ TI-GUY a atteint le plafond de $800!"
+        : dashboard.status === "caution"
+        ? "⚡ TI-GUY approche du plafond (90%)"
+        : "✅ TI-GUY fonctionne normalement"
+    });
+  } catch (err) {
+    console.error("[Messaging] Cost dashboard error:", err);
+    res.status(500).json({ error: "Failed to load cost data" });
+  }
+});
+
 export default router;

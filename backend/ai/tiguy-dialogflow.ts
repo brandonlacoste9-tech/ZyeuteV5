@@ -6,6 +6,7 @@
 import { SessionsClient } from "@google-cloud/dialogflow-cx";
 import { broadcastAIResponse, broadcastAITyping } from "../websocket/gateway";
 import { db } from "../db";
+import { costMonitor, checkCostLimit } from "./tiguy-cost-monitor";
 
 // Dialogflow CX configuration
 const DF_CONFIG = {
@@ -44,6 +45,16 @@ export async function queryTI Guy(
   userId: string,
   io: any
 ): Promise<DialogflowResponse> {
+  // Check cost limit before processing
+  const costCheck = checkCostLimit();
+  
+  if (!costCheck.allowed) {
+    // Return cost limit message
+    return {
+      text: costCheck.warning || "TI-GUY est temporairement indisponible. Réessaie plus tard.",
+    };
+  }
+
   // Broadcast "TI-GUY is typing..."
   await broadcastAITyping(io, conversationId, true);
 
