@@ -385,4 +385,68 @@ router.delete("/conversations/:id", async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/conversations/:id/settings
+ * Update conversation settings (ephemeral mode, encryption, etc.)
+ */
+router.patch("/conversations/:id/settings", async (req, res) => {
+  const userId = req.user.id;
+  const { id: conversationId } = req.params;
+  const {
+    ephemeralMode,
+    ephemeralTtlSeconds,
+    encryptionEnabled,
+  } = req.body;
+
+  try {
+    // Verify user is part of conversation
+    const convResult = await db.query(
+      `SELECT id FROM conversations 
+       WHERE id = $1 AND (participant_a = $2 OR participant_b = $2)
+       LIMIT 1`,
+      [conversationId, userId]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Build update dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (ephemeralMode !== undefined) {
+      updates.push(`ephemeral_mode = $${paramIndex++}`);
+      values.push(ephemeralMode);
+    }
+
+    if (ephemeralTtlSeconds !== undefined) {
+      updates.push(`ephemeral_ttl_seconds = $${paramIndex++}`);
+      values.push(ephemeralTtlSeconds);
+    }
+
+    if (encryptionEnabled !== undefined) {
+      updates.push(`encryption_enabled = $${paramIndex++}`);
+      values.push(encryptionEnabled);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "No settings to update" });
+    }
+
+    values.push(conversationId);
+
+    await db.query(
+      `UPDATE conversations SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
+      values
+    );
+
+    res.json({ success: true, message: "Settings updated" });
+  } catch (err) {
+    console.error("[Messaging] Update settings error:", err);
+    res.status(500).json({ error: "Failed to update settings" });
+  }
+});
+
 export default router;
