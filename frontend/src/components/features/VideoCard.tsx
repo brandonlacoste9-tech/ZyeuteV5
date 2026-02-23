@@ -201,7 +201,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                 );
               }
 
-              return post.hls_url ? (
+              return post.hlsUrl ? (
                 <VideoPlayer
                   src={videoSrc}
                   poster={
@@ -229,7 +229,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         ) : (
           <div className="relative w-full h-full group/media">
             <img
-              src={post.media_url}
+              src={post.mediaUrl || post.media_url}
               alt={post.caption || "Photo"}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105"
               loading={priority ? "eager" : "lazy"}
