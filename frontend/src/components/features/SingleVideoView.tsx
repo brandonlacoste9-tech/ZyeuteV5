@@ -497,7 +497,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                     ? "native"
                     : "none"
             }
-            processingStatus={post.processing_status}
+            processingStatus={post.processingStatus}
             error={videoError}
             isActive={isActive}
           />
@@ -509,9 +509,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           {!isActive && !priority ? (
             // Off-screen: Show static thumbnail only (no video element)
             <div className="w-full h-full bg-zinc-900">
-              {post.thumbnail_url ? (
+              {post.thumbnailUrl ? (
                 <img
-                  src={post.thumbnail_url}
+                  src={post.thumbnailUrl || post.thumbnail_url}
                   alt=""
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -523,13 +523,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               )}
             </div>
           ) : post.type === "video" ? (
-            post.mux_playback_id ? (
+            post.muxPlaybackId ? (
               <MuxVideoPlayer
-                playbackId={post.mux_playback_id}
+                playbackId={post.muxPlaybackId}
                 thumbnailUrl={
-                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                  post.thumbnail_url ||
-                  post.media_url
+                  getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
+                  post.thumbnailUrl ||
+                  post.mediaUrl
                 }
                 className="w-full h-full object-cover"
                 style={filterStyle}
@@ -538,19 +538,19 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 loop
                 onError={(err) => setVideoError(err)}
               />
-            ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+            ) : post.processingStatus === "pending" || post.processingStatus === "processing" ? (
               // 🐝 FIX: Show loading state instead of black screen
               <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
                 <div className="animate-spin text-4xl mb-4">⚙️</div>
                 <div className="text-white/80 text-sm font-medium">
-                  {post.processing_status === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
+                  {post.processingStatus === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
                 </div>
                 <div className="text-white/50 text-xs mt-2">
                   Zyeute traite votre vidéo
                 </div>
-                {post.thumbnail_url && (
+                {post.thumbnailUrl && (
                   <img
-                    src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                    src={getProxiedMediaUrl(post.thumbnailUrl) || post.thumbnailUrl}
                     alt="Preview"
                     className="absolute inset-0 w-full h-full object-cover opacity-30 -z-10"
                   />
@@ -559,7 +559,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             ) : (
               // Player selection based on EXPLICIT fields, not URL sniffing
               // Priority: hls_url → VideoPlayer (HLS.js) | media_url → SimpleVideoPlayer (native)
-              post.hls_url ? (
+              post.hlsUrl ? (
                 <VideoPlayer
                   src={videoSrc}
                   poster={
@@ -581,7 +581,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               ) : (
                 <SimpleVideoPlayer
                   src={videoSrc}
-                  poster={post.thumbnail_url || post.media_url}
+                  poster={post.thumbnailUrl || post.mediaUrl}
                   autoPlay={isActive}
                   muted={isMuted}
                   loop
@@ -596,7 +596,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             )
           ) : (
             <Image
-              src={post.media_url}
+              src={post.mediaUrl || post.media_url}
               alt={post.caption || "Post media"}
               className="w-full h-full object-cover"
               style={filterStyle}
