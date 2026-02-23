@@ -17,9 +17,10 @@ const DF_CONFIG = {
 };
 
 const client = new SessionsClient({
-  apiEndpoint: DF_CONFIG.location === "global" 
-    ? "dialogflow.googleapis.com" 
-    : `${DF_CONFIG.location}-dialogflow.googleapis.com`,
+  apiEndpoint:
+    DF_CONFIG.location === "global"
+      ? "dialogflow.googleapis.com"
+      : `${DF_CONFIG.location}-dialogflow.googleapis.com`,
 });
 
 // TI-GUY's user ID (special system user)
@@ -39,19 +40,21 @@ interface DialogflowResponse {
 /**
  * Send message to Dialogflow and get TI-GUY response
  */
-export async function queryTI Guy(
+export async function queryTIGuy(
   conversationId: string,
   userMessage: string,
   userId: string,
-  io: any
+  io: any,
 ): Promise<DialogflowResponse> {
   // Check cost limit before processing
   const costCheck = checkCostLimit();
-  
+
   if (!costCheck.allowed) {
     // Return cost limit message
     return {
-      text: costCheck.warning || "TI-GUY est temporairement indisponible. Réessaie plus tard.",
+      text:
+        costCheck.warning ||
+        "TI-GUY est temporairement indisponible. Réessaie plus tard.",
     };
   }
 
@@ -63,7 +66,7 @@ export async function queryTI Guy(
     DF_CONFIG.projectId!,
     DF_CONFIG.location,
     DF_CONFIG.agentId!,
-    sessionId
+    sessionId,
   );
 
   const request = {
@@ -78,7 +81,7 @@ export async function queryTI Guy(
 
   try {
     const [response] = await client.detectIntent(request);
-    
+
     // Extract response text
     const responseMessages = response.queryResult?.responseMessages || [];
     const textResponse = responseMessages
@@ -90,10 +93,13 @@ export async function queryTI Guy(
     const intent = response.queryResult?.intent?.displayName;
     const confidence = response.queryResult?.match?.confidence;
     const parameters = response.queryResult?.parameters;
-    const sentiment = response.queryResult?.sentimentAnalysisResult?.queryTextSentiment;
+    const sentiment =
+      response.queryResult?.sentimentAnalysisResult?.queryTextSentiment;
 
     // Simulate thinking time for realism
-    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, 1000 + Math.random() * 2000),
+    );
 
     // Stop typing indicator
     await broadcastAITyping(io, conversationId, false);
@@ -102,16 +108,20 @@ export async function queryTI Guy(
       text: textResponse || "Je ne comprends pas bien. Peux-tu reformuler?",
       intent,
       confidence,
-      parameters: parameters ? Object.fromEntries(Object.entries(parameters)) : undefined,
-      sentiment: sentiment ? {
-        score: sentiment.score || 0,
-        magnitude: sentiment.magnitude || 0,
-      } : undefined,
+      parameters: parameters
+        ? Object.fromEntries(Object.entries(parameters))
+        : undefined,
+      sentiment: sentiment
+        ? {
+            score: sentiment.score || 0,
+            magnitude: sentiment.magnitude || 0,
+          }
+        : undefined,
     };
   } catch (err) {
     console.error("[TI-GUY] Dialogflow error:", err);
     await broadcastAITyping(io, conversationId, false);
-    
+
     return {
       text: "Oups, j'ai un petit problème technique. Réessaie dans un moment!",
     };
@@ -124,7 +134,7 @@ export async function queryTI Guy(
 export async function sendTIGuyResponse(
   conversationId: string,
   response: DialogflowResponse,
-  io: any
+  io: any,
 ): Promise<void> {
   try {
     // Store in database
@@ -146,7 +156,7 @@ export async function sendTIGuyResponse(
           isAI: true,
         }),
         false,
-      ]
+      ],
     );
 
     const message = insertResult.rows[0];
@@ -186,25 +196,25 @@ export async function handleUserMessage(
   options: {
     enableAI: boolean;
     aiTriggerKeywords?: string[];
-  } = { enableAI: true }
+  } = { enableAI: true },
 ): Promise<void> {
   if (!options.enableAI) return;
 
   // Check if message should trigger AI
-  const shouldTriggerAI = 
+  const shouldTriggerAI =
     // Direct mention
     userMessage.toLowerCase().includes("@ti-guy") ||
     userMessage.toLowerCase().includes("ti-guy") ||
     userMessage.toLowerCase().includes("ti guy") ||
     // Keywords
-    options.aiTriggerKeywords?.some((kw) => 
-      userMessage.toLowerCase().includes(kw.toLowerCase())
+    options.aiTriggerKeywords?.some((kw) =>
+      userMessage.toLowerCase().includes(kw.toLowerCase()),
     ) ||
     // AI-enabled conversation (no keyword needed)
-    await isAIEnabledConversation(conversationId);
+    (await isAIEnabledConversation(conversationId));
 
   if (shouldTriggerAI) {
-    const response = await queryTI Guy(conversationId, userMessage, userId, io);
+    const response = await queryTIGuy(conversationId, userMessage, userId, io);
     await sendTIGuyResponse(conversationId, response, io);
   }
 }
@@ -212,7 +222,9 @@ export async function handleUserMessage(
 /**
  * Check if conversation has AI enabled
  */
-async function isAIEnabledConversation(conversationId: string): Promise<boolean> {
+async function isAIEnabledConversation(
+  conversationId: string,
+): Promise<boolean> {
   // For now, enable AI in all conversations
   // Later: check conversation settings
   return true;
@@ -222,7 +234,7 @@ async function isAIEnabledConversation(conversationId: string): Promise<boolean>
  * Get TI-GUY's suggested replies for a message
  */
 export async function getSuggestedReplies(
-  messageText: string
+  messageText: string,
 ): Promise<string[]> {
   // Use Dialogflow to generate quick reply suggestions
   const suggestions = [
@@ -233,6 +245,6 @@ export async function getSuggestedReplies(
   ];
 
   // TODO: Use Dialogflow to generate contextual suggestions
-  
+
   return suggestions;
 }

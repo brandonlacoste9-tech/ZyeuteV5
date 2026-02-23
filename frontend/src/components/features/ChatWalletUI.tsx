@@ -1,5 +1,6 @@
 /**
  * ChatZyeute - Leather Wallet UI Design
+ * ⚜️ Fleur-de-lis navigation hub (DMs, Chats, Media)
  * Stitched gold aesthetic with buckle typing area
  */
 
@@ -35,6 +36,22 @@ const LEATHER_TOKENS = {
     gold: "0 0 20px rgba(212,175,55,0.3)",
   },
 };
+
+// --- NAV TAB TYPE ---
+type NavTab = "dm" | "chats" | "media";
+
+interface NavItem {
+  id: NavTab;
+  label: string;
+  icon: string;
+  description: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: "dm", label: "Messages Directs", icon: "💬", description: "Chat privé 1 à 1" },
+  { id: "chats", label: "Chats de Groupe", icon: "👥", description: "Discussions de groupe" },
+  { id: "media", label: "Médias Partagés", icon: "📸", description: "Photos, vidéos, fichiers" },
+];
 
 // --- COMPONENTS ---
 
@@ -73,6 +90,190 @@ const LeatherPanel: React.FC<{
         }}
       />
       <div className="relative z-10">{children}</div>
+    </div>
+  );
+};
+
+/**
+ * FleurNavMenu - ⚜️ fleur-de-lis dropdown navigation hub
+ */
+const FleurNavMenu: React.FC<{
+  activeTab: NavTab;
+  onSelectTab: (tab: NavTab) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+}> = ({ activeTab, onSelectTab, isOpen, onToggle }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onToggle();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen, onToggle]);
+
+  return (
+    <div ref={menuRef} className="relative">
+      {/* ⚜️ Fleur-de-lis button */}
+      <button
+        onClick={onToggle}
+        className="flex items-center justify-center transition-all duration-300"
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: 12,
+          background: `linear-gradient(145deg, ${LEATHER_TOKENS.gold.DEFAULT}, ${LEATHER_TOKENS.gold.dim})`,
+          border: `2px solid ${LEATHER_TOKENS.gold.bright}`,
+          boxShadow: isOpen
+            ? `0 0 20px ${LEATHER_TOKENS.gold.DEFAULT}80, ${LEATHER_TOKENS.shadow.outer}`
+            : LEATHER_TOKENS.shadow.outer,
+          transform: isOpen ? "rotate(15deg)" : "rotate(0deg)",
+        }}
+        aria-label="Navigation menu"
+      >
+        <span style={{ fontSize: 24, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}>
+          ⚜️
+        </span>
+      </button>
+
+      {/* Dropdown menu — wallet clasp style */}
+      {isOpen && (
+        <div
+          className="absolute top-full left-0 mt-3 z-50 overflow-hidden"
+          style={{
+            width: 260,
+            borderRadius: 16,
+            background: `linear-gradient(180deg, ${LEATHER_TOKENS.leather.light} 0%, ${LEATHER_TOKENS.leather.dark} 100%)`,
+            border: `2px solid ${LEATHER_TOKENS.gold.DEFAULT}`,
+            boxShadow: `
+              0 12px 24px rgba(0,0,0,0.6),
+              0 0 30px ${LEATHER_TOKENS.gold.DEFAULT}20,
+              inset 0 1px 2px rgba(255,255,255,0.1)
+            `,
+            animation: "walletOpen 0.25s ease-out",
+          }}
+        >
+          {/* Stitched inner border */}
+          <div
+            className="absolute inset-2 rounded-xl pointer-events-none"
+            style={{
+              border: `1px dashed ${LEATHER_TOKENS.gold.dim}`,
+              opacity: 0.4,
+            }}
+          />
+
+          {/* Menu items */}
+          <div className="relative z-10 py-2">
+            {NAV_ITEMS.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onSelectTab(item.id);
+                    onToggle();
+                  }}
+                  className="w-full flex items-center gap-3 px-5 py-3 transition-all duration-200"
+                  style={{
+                    background: isActive
+                      ? `linear-gradient(90deg, ${LEATHER_TOKENS.gold.DEFAULT}15, transparent)`
+                      : "transparent",
+                    borderLeft: isActive
+                      ? `3px solid ${LEATHER_TOKENS.gold.bright}`
+                      : "3px solid transparent",
+                  }}
+                >
+                  {/* Icon container */}
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: isActive
+                        ? `linear-gradient(145deg, ${LEATHER_TOKENS.gold.DEFAULT}, ${LEATHER_TOKENS.gold.dim})`
+                        : LEATHER_TOKENS.leather.medium,
+                      border: `1px solid ${isActive ? LEATHER_TOKENS.gold.bright : LEATHER_TOKENS.leather.tan}`,
+                      boxShadow: isActive ? LEATHER_TOKENS.shadow.gold : "none",
+                      fontSize: 18,
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+
+                  {/* Label */}
+                  <div style={{ textAlign: "left" }}>
+                    <p
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: isActive ? LEATHER_TOKENS.gold.bright : LEATHER_TOKENS.gold.dim,
+                        margin: 0,
+                      }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: LEATHER_TOKENS.gold.dim,
+                        margin: 0,
+                        opacity: 0.7,
+                      }}
+                    >
+                      {item.description}
+                    </p>
+                  </div>
+
+                  {/* Active indicator */}
+                  {isActive && (
+                    <div
+                      style={{
+                        marginLeft: "auto",
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: LEATHER_TOKENS.gold.bright,
+                        boxShadow: `0 0 8px ${LEATHER_TOKENS.gold.DEFAULT}`,
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer hint */}
+          <div
+            style={{
+              padding: "8px 16px",
+              borderTop: `1px solid ${LEATHER_TOKENS.leather.tan}`,
+              background: LEATHER_TOKENS.leather.dark,
+              borderRadius: "0 0 14px 14px",
+              textAlign: "center",
+            }}
+          >
+            <p style={{ fontSize: 11, color: LEATHER_TOKENS.gold.dim, margin: 0 }}>
+              ⚜️ Zyeuté Messaging
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Keyframe animation */}
+      <style>{`
+        @keyframes walletOpen {
+          from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   );
 };
@@ -154,7 +355,7 @@ const GoldBuckle: React.FC<{
             )}
             style={{
               borderColor: isFocused ? LEATHER_TOKENS.gold.bright : LEATHER_TOKENS.leather.tan,
-              boxShadow: isFocused 
+              boxShadow: isFocused
                 ? `0 0 15px ${LEATHER_TOKENS.gold.DEFAULT}40, inset 0 2px 4px rgba(0,0,0,0.5)`
                 : "inset 0 2px 4px rgba(0,0,0,0.5)",
               textShadow: "0 1px 2px rgba(0,0,0,0.5)",
@@ -237,32 +438,32 @@ const GoldBuckle: React.FC<{
 const MessageBubble: React.FC<{
   children: React.ReactNode;
   isMe?: boolean;
-  isTI Guy?: boolean;
+  isTIGuy?: boolean;
   timestamp?: string;
-}> = ({ children, isMe, isTI Guy, timestamp }) => {
+}> = ({ children, isMe, isTIGuy, timestamp }) => {
   return (
     <div
       className={cn(
         "relative max-w-[80%] rounded-2xl p-4",
         "mb-4",
         isMe && "ml-auto",
-        !isMe && !isTI Guy && "mr-auto",
-        isTI Guy && "mx-auto"
+        !isMe && !isTIGuy && "mr-auto",
+        isTIGuy && "mx-auto"
       )}
       style={{
         background: isMe
           ? `linear-gradient(145deg, ${LEATHER_TOKENS.gold.DEFAULT}20, ${LEATHER_TOKENS.gold.dim}10)`
-          : isTI Guy
-          ? `linear-gradient(145deg, #4A148C20, #311B9220)`
-          : `linear-gradient(145deg, ${LEATHER_TOKENS.leather.medium}, ${LEATHER_TOKENS.leather.dark})`,
+          : isTIGuy
+            ? `linear-gradient(145deg, #4A148C20, #311B9220)`
+            : `linear-gradient(145deg, ${LEATHER_TOKENS.leather.medium}, ${LEATHER_TOKENS.leather.dark})`,
         border: isMe
           ? `2px solid ${LEATHER_TOKENS.gold.DEFAULT}`
-          : isTI Guy
-          ? "2px solid #7C3AED"
-          : `2px solid ${LEATHER_TOKENS.leather.tan}`,
+          : isTIGuy
+            ? "2px solid #7C3AED"
+            : `2px solid ${LEATHER_TOKENS.leather.tan}`,
         boxShadow: `
-          ${LEATHER_TOKENS.shadow.outer},
-          ${isMe ? LEATHER_TOKENS.shadow.gold : ""}
+          ${LEATHER_TOKENS.shadow.outer}
+          ${isMe ? `, ${LEATHER_TOKENS.shadow.gold}` : ""}
         `,
       }}
     >
@@ -277,25 +478,28 @@ const MessageBubble: React.FC<{
 
       {/* Content */}
       <div className="relative z-10">
-        {isTI Guy && (
+        {isTIGuy && (
           <div className="flex items-center gap-2 mb-2 text-[#A78BFA]">
             <span className="text-lg">🦫</span>
             <span className="text-sm font-bold tracking-wider">TI-GUY</span>
           </div>
         )}
-        
-        <div className={cn(
-          "text-[15px] leading-relaxed",
-          isMe && "text-[#F4D03F]",
-          !isMe && "text-[#D4C4A8]",
-          isTI Guy && "text-[#E9D5FF]"
-        )}>
+
+        <div
+          className={cn(
+            "text-[15px] leading-relaxed",
+            isMe && "text-[#F4D03F]",
+            !isMe && "text-[#D4C4A8]",
+            isTIGuy && "text-[#E9D5FF]"
+          )}
+        >
           {children}
         </div>
 
         {timestamp && (
           <div className="mt-2 text-right">
-            <span className="text-xs opacity-50"
+            <span
+              className="text-xs opacity-50"
               style={{ color: isMe ? LEATHER_TOKENS.gold.dim : LEATHER_TOKENS.leather.tan }}
             >
               {timestamp}
@@ -308,13 +512,18 @@ const MessageBubble: React.FC<{
 };
 
 /**
- * WalletHeader - Leather wallet fold header
+ * WalletHeader - Leather wallet fold header with ⚜️ navigation
  */
 const WalletHeader: React.FC<{
-  title: string;
+  activeTab: NavTab;
+  onSelectTab: (tab: NavTab) => void;
   subtitle?: string;
   onSettings?: () => void;
-}> = ({ title, subtitle, onSettings }) => {
+}> = ({ activeTab, onSelectTab, subtitle, onSettings }) => {
+  const [navOpen, setNavOpen] = useState(false);
+
+  const tabLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "Conversation";
+
   return (
     <div
       className="relative rounded-t-2xl p-4 border-b-2"
@@ -337,27 +546,22 @@ const WalletHeader: React.FC<{
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Avatar placeholder */}
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
-            style={{
-              background: `linear-gradient(145deg, ${LEATHER_TOKENS.gold.DEFAULT}, ${LEATHER_TOKENS.gold.dim})`,
-              border: `2px solid ${LEATHER_TOKENS.gold.bright}`,
-              boxShadow: LEATHER_TOKENS.shadow.outer,
-            }}
-          >
-            ⚜️
-          </div>
+          {/* ⚜️ Fleur-de-lis Navigation Hub — Top Left */}
+          <FleurNavMenu
+            activeTab={activeTab}
+            onSelectTab={onSelectTab}
+            isOpen={navOpen}
+            onToggle={() => setNavOpen(!navOpen)}
+          />
 
           <div>
-            <h2 className="text-[#F4D03F] font-bold text-lg"
+            <h2
+              className="text-[#F4D03F] font-bold text-lg"
               style={{ textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}
             >
-              {title}
-            </h2>            
-            {subtitle && (
-              <p className="text-[#8B7355] text-sm">{subtitle}</p>
-            )}
+              {tabLabel}
+            </h2>
+            {subtitle && <p className="text-[#8B7355] text-sm">{subtitle}</p>}
           </div>
         </div>
 
@@ -369,8 +573,19 @@ const WalletHeader: React.FC<{
               border: `1px solid ${LEATHER_TOKENS.leather.tan}`,
             }}
           >
-            <svg className="w-5 h-5" style={{ color: LEATHER_TOKENS.gold.DEFAULT }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            <svg
+              className="w-5 h-5"
+              style={{ color: LEATHER_TOKENS.gold.DEFAULT }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+              />
             </svg>
           </button>
         )}
@@ -380,72 +595,134 @@ const WalletHeader: React.FC<{
 };
 
 /**
+ * MediaGallery - Placeholder for shared media view
+ */
+const MediaGallery: React.FC = () => (
+  <div
+    className="flex-1 flex flex-col items-center justify-center p-8"
+    style={{ color: LEATHER_TOKENS.gold.dim }}
+  >
+    <span style={{ fontSize: 48, marginBottom: 16 }}>📸</span>
+    <p style={{ fontWeight: 700, fontSize: 16, color: LEATHER_TOKENS.gold.DEFAULT }}>
+      Médias Partagés
+    </p>
+    <p style={{ fontSize: 13, textAlign: "center", marginTop: 8, opacity: 0.7 }}>
+      Photos, vidéos et fichiers partagés dans cette conversation apparaîtront ici.
+    </p>
+  </div>
+);
+
+/**
  * Main Chat UI Component
  */
 export const ChatWalletUI: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
+  const [activeTab, setActiveTab] = useState<NavTab>("dm");
   const [messages, setMessages] = useState([
     { id: 1, text: "Salut! Bienvenue dans la messagerie Zyeuté.", isMe: false, time: "14:30" },
     { id: 2, text: "Merci! L'interface est magnifique.", isMe: true, time: "14:31" },
-    { id: 3, text: "🦫 Je suis là pour t'aider aussi!", isTI Guy: true, time: "14:32" },
+    { id: 3, text: "🦫 Je suis là pour t'aider aussi!", isTIGuy: true, time: "14:32" },
   ]);
+
+  const [groupMessages] = useState([
+    { id: 10, text: "Bienvenue dans le groupe Québec Design!", isMe: false, time: "10:00" },
+    { id: 11, text: "Merci! Content d'être ici.", isMe: true, time: "10:05" },
+    { id: 12, text: "🦫 N'hésitez pas à poser vos questions au groupe!", isTIGuy: true, time: "10:06" },
+  ]);
+
+  const chatAreaRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    
-    setMessages([...messages, {
+
+    const newMsg = {
       id: Date.now(),
       text: inputValue,
       isMe: true,
       time: new Date().toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }),
-    }]);
+    };
+
+    if (activeTab === "chats") {
+      // In a real app, update groupMessages state
+    }
+
+    setMessages([...messages, newMsg]);
     setInputValue("");
+
+    // Auto-scroll
+    setTimeout(() => {
+      chatAreaRef.current?.scrollTo({ top: chatAreaRef.current.scrollHeight, behavior: "smooth" });
+    }, 50);
   };
 
+  const currentMessages = activeTab === "chats" ? groupMessages : messages;
+
   return (
-    <div className="w-full max-w-md mx-auto h-[800px] p-4"
+    <div
+      className="w-full max-w-md mx-auto h-[800px] p-4"
       style={{ background: "#0D0B08" }}
     >
       <LeatherPanel className="h-full flex flex-col overflow-hidden">
-        {/* Header */}
+        {/* Header with ⚜️ navigation */}
         <WalletHeader
-          title="Conversation"
-          subtitle="3 participants • TI-GUY actif"
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          subtitle={
+            activeTab === "dm"
+              ? "3 conversations"
+              : activeTab === "chats"
+                ? "2 groupes actifs"
+                : "12 fichiers partagés"
+          }
           onSettings={() => console.log("Settings")}
         />
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2"
-          style={{
-            background: `linear-gradient(180deg, ${LEATHER_TOKENS.leather.dark} 0%, ${LEATHER_TOKENS.leather.medium} 100%)`,
-          }}
-        >
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              isMe={msg.isMe}
-              isTI Guy={msg.isTI Guy}
-              timestamp={msg.time}
+        {/* Content area — switches based on active tab */}
+        {activeTab === "media" ? (
+          <MediaGallery />
+        ) : (
+          <>
+            {/* Messages area */}
+            <div
+              ref={chatAreaRef}
+              className="flex-1 overflow-y-auto p-4 space-y-2"
+              style={{
+                background: `linear-gradient(180deg, ${LEATHER_TOKENS.leather.dark} 0%, ${LEATHER_TOKENS.leather.medium} 100%)`,
+              }}
             >
-              {msg.text}
-            </MessageBubble>
-          ))}
-        </div>
+              {currentMessages.map((msg) => (
+                <MessageBubble
+                  key={msg.id}
+                  isMe={msg.isMe}
+                  isTIGuy={(msg as any).isTIGuy}
+                  timestamp={msg.time}
+                >
+                  {msg.text}
+                </MessageBubble>
+              ))}
+            </div>
 
-        {/* Buckle typing area */}
-        <div className="p-4 border-t-2"
-          style={{
-            borderColor: LEATHER_TOKENS.leather.tan,
-            background: LEATHER_TOKENS.leather.dark,
-          }}
-        >
-          <GoldBuckle
-            value={inputValue}
-            onChange={setInputValue}
-            onSend={handleSend}
-            placeholder="Écris ton message..."
-          />
-        </div>
+            {/* Buckle typing area */}
+            <div
+              className="p-4 border-t-2"
+              style={{
+                borderColor: LEATHER_TOKENS.leather.tan,
+                background: LEATHER_TOKENS.leather.dark,
+              }}
+            >
+              <GoldBuckle
+                value={inputValue}
+                onChange={setInputValue}
+                onSend={handleSend}
+                placeholder={
+                  activeTab === "dm"
+                    ? "Écris ton message..."
+                    : "Message au groupe..."
+                }
+              />
+            </div>
+          </>
+        )}
       </LeatherPanel>
     </div>
   );

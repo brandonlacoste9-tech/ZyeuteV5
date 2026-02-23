@@ -3,11 +3,11 @@
  * Real-time events: messages, presence, typing, TI-GUY responses
  */
 
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { createClient } from "redis";
+import { createClient, RedisClientType } from "redis";
 import jwt from "jsonwebtoken";
-import { db } from "./db";
+import { db } from "../db";
 
 // Event types
 export const Events = {
@@ -16,35 +16,35 @@ export const Events = {
   MESSAGE_UPDATED: "message:updated",
   MESSAGE_READ: "message:read",
   MESSAGE_REACTION: "message:reaction",
-  
+
   // Presence
   PRESENCE_UPDATE: "presence:update",
   USER_ONLINE: "user:online",
   USER_OFFLINE: "user:offline",
-  
+
   // Typing
   TYPING_START: "typing:start",
   TYPING_STOP: "typing:stop",
-  
+
   // TI-GUY AI
   AI_TYPING: "ai:typing",
   AI_REPLY: "ai:reply",
-  
+
   // System
   ERROR: "error",
   CONNECTED: "connected",
 } as const;
 
 interface AuthenticatedSocket extends Socket {
-  userId?: string;
-  username?: string;
+  userId: string;
+  username: string;
 }
 
 export async function createWebSocketGateway(httpServer: any) {
   // Redis clients for adapter (horizontal scaling)
   const pubClient = createClient({ url: process.env.REDIS_URL });
   const subClient = pubClient.duplicate();
-  
+
   await pubClient.connect();
   await subClient.connect();
 
@@ -63,7 +63,7 @@ export async function createWebSocketGateway(httpServer: any) {
   io.use(async (socket: AuthenticatedSocket, next) => {
     try {
       const token = socket.handshake.auth.token || socket.handshake.query.token;
-      
+
       if (!token) {
         return next(new Error("Authentication required"));
       }
@@ -71,10 +71,10 @@ export async function createWebSocketGateway(httpServer: any) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
       socket.userId = decoded.userId;
       socket.username = decoded.username;
-      
+
       // Store user connection in Redis
       await pubClient.hSet("user:sockets", socket.userId, socket.id);
-      
+
       next();
     } catch (err) {
       next(new Error("Invalid token"));
@@ -83,7 +83,7 @@ export async function createWebSocketGateway(httpServer: any) {
 
   io.on("connection", async (socket: AuthenticatedSocket) => {
     console.log(`[WebSocket] User ${socket.username} connected: ${socket.id}`);
-    
+
     // Notify friends that user is online
     await broadcastPresence(io, socket.userId!, "online");
 
@@ -121,18 +121,34 @@ export async function createWebSocketGateway(httpServer: any) {
   return { io, pubClient };
 }
 
+// Helper to broadcast arbitrary events to a conversation room
+export async function broadcastToConversation(
+  io: Server,
+  conversationId: string,
+  event: string,
+  data: any,
+) {
+  io.to(`conversation:${conversationId}`).emit(event, {
+    conversationId,
+    ...data,
+    timestamp: new Date().toISOString(),
+  });
+}
+
 // Join all conversation rooms for a user
 async function joinConversationRooms(socket: AuthenticatedSocket) {
   try {
     const result = await db.query(
       `SELECT id FROM conversations 
        WHERE participant_a = $1 OR participant_b = $1`,
-      [socket.userId]
+      [socket.userId],
     );
 
     for (const row of result.rows) {
       socket.join(`conversation:${row.id}`);
-      console.log(`[WebSocket] ${socket.username} joined room: conversation:${row.id}`);
+      console.log(
+        `[WebSocket] ${socket.username} joined room: conversation:${row.id}`,
+      );
     }
   } catch (err) {
     console.error("[WebSocket] Error joining rooms:", err);
@@ -141,12 +157,12 @@ async function joinConversationRooms(socket: AuthenticatedSocket) {
 
 // Handle typing indicators
 async function handleTyping(
-  socket: AuthenticatedSocket, 
-  conversationId: string, 
-  isTyping: boolean
+  socket: AuthenticatedSocket,
+  conversationId: string,
+  isTyping: boolean,
 ) {
   const event = isTyping ? Events.TYPING_START : Events.TYPING_STOP;
-  
+
   socket.to(`conversation:${conversationId}`).emit(event, {
     conversationId,
     userId: socket.userId,
@@ -156,7 +172,11 @@ async function handleTyping(
 }
 
 // Broadcast presence to friends
-async function broadcastPresence(io: Server, userId: string, status: "online" | "offline") {
+async function broadcastPresence(
+  io: Server,
+  userId: string,
+  status: "online" | "offline",
+) {
   try {
     // Get all conversations this user is in
     const result = await db.query(
@@ -167,13 +187,18 @@ async function broadcastPresence(io: Server, userId: string, status: "online" | 
         END as friend_id
        FROM conversations 
        WHERE participant_a = $1 OR participant_b = $1`,
-      [userId]
+      [userId],
     );
 
-    const event = status === "online" ? Events.USER_ONLINE : Events.USER_OFFLINE;
-    
+    const event =
+      status === "online" ? Events.USER_ONLINE : Events.USER_OFFLINE;
+
     for (const row of result.rows) {
-      const friendSocketId = await io.redisClient?.hGet("user:sockets", row.friend_id);
+      // Look up friend's socket via Redis pub client stored in io context
+      const friendSocketId = await (io as any)._pubClient?.hGet(
+        "user:sockets",
+        row.friend_id,
+      );
       if (friendSocketId) {
         io.to(friendSocketId).emit(event, {
           userId,
@@ -191,7 +216,7 @@ async function broadcastPresence(io: Server, userId: string, status: "online" | 
 export async function broadcastMessage(
   io: Server,
   conversationId: string,
-  message: any
+  message: any,
 ) {
   io.to(`conversation:${conversationId}`).emit(Events.MESSAGE_NEW, {
     conversationId,
@@ -204,7 +229,7 @@ export async function broadcastMessage(
 export async function broadcastAIResponse(
   io: Server,
   conversationId: string,
-  response: any
+  response: any,
 ) {
   io.to(`conversation:${conversationId}`).emit(Events.AI_REPLY, {
     conversationId,
@@ -217,7 +242,7 @@ export async function broadcastAIResponse(
 export async function broadcastAITyping(
   io: Server,
   conversationId: string,
-  isTyping: boolean
+  isTyping: boolean,
 ) {
   const event = isTyping ? Events.AI_TYPING : Events.TYPING_STOP;
   io.to(`conversation:${conversationId}`).emit(event, {
