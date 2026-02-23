@@ -449,4 +449,49 @@ router.patch("/conversations/:id/settings", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/conversations/:id/upload
+ * Upload media (image, video, file) for a conversation
+ */
+router.post("/conversations/:id/upload", async (req, res) => {
+  const userId = req.user.id;
+  const { id: conversationId } = req.params;
+
+  try {
+    // Verify user is part of conversation
+    const convResult = await db.query(
+      `SELECT id FROM conversations 
+       WHERE id = $1 AND (participant_a = $2 OR participant_b = $2)
+       LIMIT 1`,
+      [conversationId, userId]
+    );
+
+    if (convResult.rows.length === 0) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // TODO: Implement multipart upload handling
+    // For now, return presigned URL for client-side upload
+    const { fileType, fileName, fileSize } = req.body;
+
+    // Generate unique file key
+    const timestamp = Date.now();
+    const fileKey = `chat-media/${conversationId}/${userId}/${timestamp}-${fileName}`;
+
+    // TODO: Generate presigned URL from Supabase/S3
+    // const presignedUrl = await generatePresignedUrl(fileKey, fileType);
+
+    res.json({
+      success: true,
+      fileKey,
+      // presignedUrl,
+      uploadUrl: `/api/upload/chat-media`, // Placeholder
+      message: "Upload endpoint ready - implement presigned URL generation"
+    });
+  } catch (err) {
+    console.error("[Messaging] Upload error:", err);
+    res.status(500).json({ error: "Failed to initiate upload" });
+  }
+});
+
 export default router;

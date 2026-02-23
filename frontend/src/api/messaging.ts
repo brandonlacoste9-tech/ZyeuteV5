@@ -145,21 +145,44 @@ export async function deleteConversation(conversationId: string): Promise<void> 
   await apiClient.delete(`/conversations/${conversationId}`);
 }
 
-// Upload voice message (returns URL)
-export async function uploadVoiceMessage(
-  audioBlob: Blob,
-  durationSeconds: number
-): Promise<{ url: string; metadata: { duration: number } }> {
+// Upload file for chat (returns URL)
+export async function uploadChatFile(
+  conversationId: string,
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<{ url: string; metadata: { size: number; type: string; name: string } }> {
   const formData = new FormData();
-  formData.append("audio", audioBlob, "voice-message.webm");
-  formData.append("duration", durationSeconds.toString());
-  
-  const response = await apiClient.post("/upload/voice", formData, {
-    headers: { "Content-Type": "multipart/form-data" }
+  formData.append("file", file);
+  formData.append("conversationId", conversationId);
+
+  const response = await apiClient.post("/upload/chat-file", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress: (progressEvent) => {
+      if (onProgress && progressEvent.total) {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(progress);
+      }
+    }
   });
-  
+
   return {
     url: response.data.url,
-    metadata: { duration: durationSeconds }
+    metadata: {
+      size: file.size,
+      type: file.type,
+      name: file.name
+    }
   };
+}
+
+// Update conversation settings
+export async function updateConversationSettings(
+  conversationId: string,
+  settings: {
+    ephemeralMode?: boolean;
+    ephemeralTtlSeconds?: number;
+    encryptionEnabled?: boolean;
+  }
+): Promise<void> {
+  await apiClient.patch(`/conversations/${conversationId}/settings`, settings);
 }
