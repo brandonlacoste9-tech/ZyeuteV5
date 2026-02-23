@@ -191,6 +191,15 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               const rawVideoUrl = post.hls_url || (post as any).enhanced_url || post.media_url || (post as any).original_url || "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
+              // Validate video source exists
+              if (!videoSrc || videoSrc === "") {
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
+                    <p className="text-white/60 text-sm">Vidéo non disponible</p>
+                  </div>
+                );
+              }
+
               return post.hls_url ? (
                 <VideoPlayer
                   src={videoSrc}

@@ -15,16 +15,33 @@ const ChoixDuGrandCastor: React.FC = () => {
 
     useEffect(() => {
         fetch("/api/publications/choix-du-castor")
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) {
+                    // Silently fail on auth errors - don't crash the feed
+                    console.warn("Choix du Castor: API returned", res.status);
+                    return [];
+                }
+                return res.json();
+            })
             .then((data) => {
-                // Handle different response formats
+                // 🛡️ GUARDRAIL: Ensure data is an array before setting state
+                // Prevents "i.map is not a function" crash
                 const items = Array.isArray(data) ? data : data?.items || data?.data || [];
-                setChoix(items);
+                if (Array.isArray(items)) {
+                    setChoix(items);
+                } else {
+                    console.warn("Choix du Castor: Expected array, got", typeof data, data);
+                    setChoix([]);
+                }
                 setLoading(false);
             })
             .catch((err) => {
                 console.error("Erreur Castor:", err);
+<<<<<<< Updated upstream
                 setChoix([]);
+=======
+                setChoix([]); // Set empty array on error
+>>>>>>> Stashed changes
                 setLoading(false);
             });
     }, []);

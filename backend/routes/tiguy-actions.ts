@@ -172,7 +172,7 @@ router.post("/chat", async (req, res) => {
           ajuster_momentum: tool({
             description: ajusterMomentumTool.description,
             parameters: ajusterMomentumTool.parameters,
-            execute: async ({ id_publication }) => {
+            execute: async ({ id_publication }: { id_publication: string }) => {
               console.log("TOOL CALL: ajuster_momentum", id_publication);
               return await GovernanceBee.ajuster_momentum(id_publication);
             },
@@ -180,7 +180,13 @@ router.post("/chat", async (req, res) => {
           expulser_troll: tool({
             description: expulserTrollTool.description,
             parameters: expulserTrollTool.parameters,
-            execute: async ({ id_utilisateur, raison }) => {
+            execute: async ({
+              id_utilisateur,
+              raison,
+            }: {
+              id_utilisateur: string;
+              raison: string;
+            }) => {
               console.log("TOOL CALL: expulser_troll", id_utilisateur);
               return await GovernanceBee.expulser_troll(id_utilisateur, raison);
             },
@@ -224,7 +230,7 @@ router.post("/chat", async (req, res) => {
       });
 
       // Parole (TTS - Basé sur la réponse finale)
-      const tts = await voiceBee.textToSpeech({ text });
+      const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
 
       return res.json({
         transcription: audio ? transcription : undefined,
@@ -1273,7 +1279,7 @@ router.post("/voice", async (req, res) => {
     });
 
     // Parole (TTS)
-    const tts = await voiceBee.textToSpeech({ text });
+    const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
 
     return res.json({
       transcription: audio ? transcription : undefined,
@@ -1294,7 +1300,7 @@ router.post("/tts", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "Texte requis" });
 
-    const tts = await voiceBee.textToSpeech({ text });
+    const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
     return res.json({ audio: tts.audioBase64 });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

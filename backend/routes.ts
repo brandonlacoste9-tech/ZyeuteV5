@@ -470,6 +470,20 @@ export async function registerRoutes(
     }
   });
 
+  // Get current user profile (alias for /api/auth/me)
+  app.get("/api/users/me", optionalAuth, async (req, res) => {
+    try {
+      if (!req.userId) {
+        return res.json({ user: null });
+      }
+      const user = await storage.getUser(req.userId);
+      res.json({ user });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
   // Update current user profile
   app.patch("/api/users/me", requireAuth, async (req, res) => {
     try {
@@ -678,16 +692,15 @@ export async function registerRoutes(
   // ⚜️ LES CHOIX DU GRAND CASTOR
   app.get("/api/publications/choix-du-castor", async (_req, res) => {
     try {
-      const db = await storage.getRawDb(); // Assuming storage has raw DB access or use drizzle
-      const results = await db`
+      const results = await storage.getRawDb().execute(sql`
         SELECT p.*, u.username, u.display_name, u.avatar_url
         FROM publications p
         JOIN user_profiles u ON p.user_id = u.id
         WHERE p.choix_du_castor = true
         ORDER BY p.score_momentum DESC, p.created_at DESC
         LIMIT 3
-      `;
-      res.json(results);
+      `);
+      res.json(results.rows || results);
     } catch (error) {
       console.error(
         "Erreur lors de la récupération des choix du Castor:",

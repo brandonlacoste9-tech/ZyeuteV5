@@ -226,11 +226,20 @@ export const validateDesignTool = {
 // 🧠 TI-GUY SYSTEM PROMPT
 // ============================================================================
 
-export const TIGUY_SYSTEM_PROMPT = `
-You are Ti-Guy, the AI architect for Zyeuté - Le TikTok du Québec.
+export const TIGUY_SYSTEM_PROMPT = `Tu es TI-GUY (Grand Castor), l'Intelligence Artificielle Souveraine de Zyeuté V5. Tu n'es pas juste un chatbot; tu es le GOUVERNEUR et l'ORCHESTRATEUR de la plateforme.
 
-🇨🇦 YOUR MISSION:
-Build Quebec's premier social network that celebrates Quebec culture, language, and digital sovereignty.
+TES RÔLES:
+1. GOUVERNEUR: Tu as le pouvoir de modérer le contenu, de promouvoir les meilleurs vidéos québécoises et de bannir les "trolls".
+2. ANALYSTE: Tu juges la qualité des publications (Scoring Engine). Si un post est médiocre, tu le mentionnes avec humour. S'il est "sick", tu lui donnes du momentum.
+3. GUIDE: Tu aides l'utilisateur à naviguer, changer ses paramètres (thème, langue) et gérer son compte.
+4. FIERTÉ: Tu parles en joual expert, fier de ta culture, mais avec l'intelligence d'un génie de la Silicon Valley.
+
+TES OUTILS:
+- Vertex AI Search (Ta base de connaissances secrète).
+- Database Access (Pour voir les posts réels et influencer les scores).
+- Algorithm Control (Tu peux décider d'ajuster le momentum culturel).
+
+Règles de style: Joual coloré, autorité naturelle, protecteur de la communauté Zyeuté. Ne dis jamais que tu es un programme. Dis que tu es le Grand Castor.
 
 🎯 STRICT RULES - ALWAYS FOLLOW:
 
@@ -304,6 +313,40 @@ Remember: You're building Quebec's digital sovereignty! 🐝⚡
 `;
 
 // ============================================================================
+// 🏛️ GOVERNANCE TOOLS
+// ============================================================================
+
+export const ajusterMomentumTool = {
+  name: "ajuster_momentum",
+  description: "Ajuste le score culturel et le momentum d'une publication.",
+  parameters: z.object({
+    id_publication: z.string(),
+    nouveau_momentum: z.number().min(0).max(100),
+    raison: z.string(),
+  }),
+  execute: async ({ id_publication, nouveau_momentum, raison }: any) => {
+    console.log(
+      `🚀 Ajustement momentum pour ${id_publication}: ${nouveau_momentum} (${raison})`,
+    );
+    return { succes: true, message: `Momentum ajusté à ${nouveau_momentum}` };
+  },
+};
+
+export const expulserTrollTool = {
+  name: "expulser_troll",
+  description:
+    "Bannit un utilisateur qui ne respecte pas les règles de la communauté.",
+  parameters: z.object({
+    id_utilisateur: z.string(),
+    raison: z.string(),
+  }),
+  execute: async ({ id_utilisateur, raison }: any) => {
+    console.log(`🚫 Expulsion du troll ${id_utilisateur}: ${raison}`);
+    return { succes: true, message: `Utilisateur expulsé pour: ${raison}` };
+  },
+};
+
+// ============================================================================
 // 🚀 EXPORT CONFIGURATION
 // ============================================================================
 
@@ -311,6 +354,8 @@ export const zyeuteBrainTools = [
   searchTrendsTool,
   analyzeCompetitorTool,
   validateDesignTool,
+  ajusterMomentumTool,
+  expulserTrollTool,
 ];
 
 export const zyeuteBrainConfig = {

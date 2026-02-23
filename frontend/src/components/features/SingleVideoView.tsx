@@ -407,8 +407,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           },
         );
       } else {
-        // Route external URLs (Mixkit, Unsplash, Pexels) through media proxy to fix 403/ORB
-        videoSrc = getProxiedMediaUrl(videoSrc) || videoSrc;
+        // Route external URLs through media proxy to fix 403/ORB
+        // Skip MUX URLs - they handle CORS natively
+        if (!videoSrc.includes('stream.mux.com') && !videoSrc.includes('chunk.mux.com')) {
+          videoSrc = getProxiedMediaUrl(videoSrc) || videoSrc;
+        }
         // Log valid video source for debugging
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,

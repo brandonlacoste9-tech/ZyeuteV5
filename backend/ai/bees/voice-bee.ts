@@ -5,24 +5,38 @@
  */
 
 import { z } from "zod";
-import speech from "@google-cloud/speech";
-import textToSpeech from "@google-cloud/text-to-speech";
+import { SpeechClient } from "@google-cloud/speech";
+import { TextToSpeechClient } from "@google-cloud/text-to-speech";
 
 // Schéma de génération vocale
 export const VoiceGenerationSchema = z.object({
   text: z.string().min(1).max(5000),
   voice: z.enum(["quebec-male", "quebec-female", "ti-guy"]).default("ti-guy"),
+  speed: z.number().optional().default(1.0),
+  emotion: z.string().optional().default("happy"),
 });
 
 export type VoiceGenerationRequest = z.infer<typeof VoiceGenerationSchema>;
 
 export class VoiceBee {
-  private clientSTT: speech.SpeechClient;
-  private clientTTS: textToSpeech.TextToSpeechClient;
+  private clientSTT: SpeechClient;
+  private clientTTS: TextToSpeechClient;
 
   constructor() {
-    this.clientSTT = new speech.SpeechClient();
-    this.clientTTS = new textToSpeech.TextToSpeechClient();
+    this.clientSTT = new SpeechClient();
+    this.clientTTS = new TextToSpeechClient();
+  }
+
+  getPronunciationGuide(): Record<string, string> {
+    return {
+      zyeuté: "zi-yeu-té",
+      poutine: "pou-tsine",
+      québec: "ké-bek",
+      "ti-guy": "tsi-ghi",
+      chum: "tchum",
+      char: "tchar",
+      frette: "frette",
+    };
   }
 
   /**

@@ -218,6 +218,7 @@ export interface IStorage {
     userId: string,
     limit?: number,
   ): Promise<(Transaction & { sender?: User; receiver?: User })[]>;
+  getRawDb(): any;
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
@@ -1561,6 +1562,10 @@ export class DatabaseStorage implements IStorage {
 
   async setSystemUserId(userId: string): Promise<void> {
     this.systemUserId = userId;
+  }
+
+  getRawDb() {
+    return db;
   }
 }
 
