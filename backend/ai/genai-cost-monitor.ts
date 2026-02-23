@@ -3,6 +3,8 @@
  * Tracks Vertex AI / Gemini API usage alongside Dialogflow
  */
 
+import { sendCostAlert } from "../services/alert-service";
+
 // Cost estimates (Vertex AI pricing as of 2024)
 const GENAI_COSTS = {
   // Gemini Pro
@@ -153,7 +155,7 @@ class GenAICostMonitor {
     }
   }
 
-  private sendAlert(level: string, totalCost: number) {
+  private async sendAlert(level: string, totalCost: number) {
     const messages: Record<string, string> = {
       ninety: `Google AI at 90%: $${totalCost.toFixed(2)} / $${WARNING_THRESHOLD}`,
       warning: `🚨 GOOGLE AI WARNING: $800 cap reached! Total: $${totalCost.toFixed(2)}`,
@@ -162,7 +164,18 @@ class GenAICostMonitor {
 
     console.error(`[GenAI Cost Alert] ${messages[level]}`);
     
-    // TODO: Send to monitoring/alerting service
+    // Send to monitoring/alerting service
+    await sendCostAlert(
+      level as "ninety" | "warning" | "critical",
+      "Google GenAI (Vertex/Gemini)",
+      this.monthlyCost,
+      WARNING_THRESHOLD,
+      {
+        byModel: this.getCombinedReport().genAI.byModel,
+        dialogflowCost: this.getDialogflowCost(),
+        totalCombined: totalCost,
+      }
+    );
   }
 
   /**

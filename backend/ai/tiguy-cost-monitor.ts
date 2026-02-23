@@ -3,6 +3,8 @@
  * Tracks Dialogflow API usage and warns at $800 cap
  */
 
+import { sendCostAlert } from "../services/alert-service";
+
 import { SessionsClient } from "@google-cloud/dialogflow-cx";
 
 interface CostMetrics {
@@ -98,7 +100,7 @@ class TIGuyCostMonitor {
   /**
    * Send alert to admin
    */
-  private sendAlert(level: "ninety" | "warning" | "critical") {
+  private async sendAlert(level: "ninety" | "warning" | "critical") {
     const messages = {
       ninety: `TI-GUY at 90% of budget: $${this.metrics.monthlyCost.toFixed(2)}`,
       warning: `🚨 TI-GUY WARNING: $800 cap reached! Current: $${this.metrics.monthlyCost.toFixed(2)}`,
@@ -107,8 +109,18 @@ class TIGuyCostMonitor {
 
     console.error(`[TI-GUY Cost Alert] ${messages[level]}`);
     
-    // TODO: Send email/Slack notification to admin
-    // TODO: Log to monitoring service (Datadog, etc.)
+    // Send Slack/email notification
+    await sendCostAlert(
+      level,
+      "TI-GUY (Dialogflow)",
+      this.metrics.monthlyCost,
+      WARNING_THRESHOLD,
+      {
+        dailyQueries: this.metrics.dailyQueries,
+        monthlyQueries: this.metrics.monthlyQueries,
+        queriesUntilWarning: this.getReport().queriesUntilWarning,
+      }
+    );
   }
 
   /**
