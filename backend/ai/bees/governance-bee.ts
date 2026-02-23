@@ -24,14 +24,22 @@ export const GovernanceBee = {
    * Ajoute 10,000 points de momentum et marque comme "Choix du Castor".
    *
    * @param id_publication L'identifiant unique de la vidéo (UUID).
+   * @param nouveau_momentum (Optionnel) Le nouveau niveau de momentum.
+   * @param raison (Optionnel) La raison du boost.
    * @returns Résultat de l'opération.
    */
-  async ajuster_momentum(id_publication: string) {
+  async ajuster_momentum(
+    id_publication: string,
+    nouveau_momentum?: number,
+    raison?: string,
+  ) {
     const db = obtenirSQL();
     if (!db) throw new Error("Base de données non configurée.");
 
     try {
-      console.log(`🚀 Injection de momentum impérial pour : ${id_publication}`);
+      console.log(
+        `🚀 Injection de momentum impérial pour : ${id_publication} (Momentum: ${nouveau_momentum || 10000}, Raison: ${raison || "Choix du Castor"})`,
+      );
 
       const resultat = await db`
         UPDATE publications 
