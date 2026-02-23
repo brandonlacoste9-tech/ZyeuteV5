@@ -2,6 +2,8 @@
  * ChatZyeute - Messagerie Zyeuté
  * Sécurisé, simple, 100% Québécois
  * Thème Cuir & Or avec surpiqures
+ * 
+ * Now with REAL backend integration! 🚀
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
@@ -9,7 +11,9 @@ import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
 import { tiguyService } from "@/services/tiguyService";
+import { messagingService, Conversation, Message, User } from "@/services/messagingService";
 import { toast } from "@/components/Toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   IoSearch,
@@ -69,8 +73,6 @@ const OPTIONS_EPHIMERES = [
 
 // Chiffrement simple mais fonctionnel
 const chiffrerMessage = (texte: string): string => {
-  // Utilisation de l'API Web Crypto pour un vrai chiffrement AES
-  // Pour l'instant, on simule avec un encodage base64 + obfuscation
   const encode = btoa(unescape(encodeURIComponent(texte)));
   return `🔒${encode}`;
 };
@@ -91,37 +93,12 @@ interface Props {
 
 type Onglet = "historique" | "messages" | "groupes" | "fichiers";
 
-interface Message {
-  id: string;
-  expediteur: "utilisateur" | "tiguy";
-  texte: string;
-  heure: Date;
-  estChiffre?: boolean;
-  estEphemere?: boolean;
-  expireDans?: number;
-  reactions?: { emoji: string; compte: number }[];
-  type?: "texte" | "vocal" | "image";
-  dureeVocal?: number;
-}
-
-interface Conversation {
-  id: string;
-  nom: string;
-  avatar?: string;
-  dernierMessage: string;
-  heure: string;
-  nonLus: number;
-  estTiGuy?: boolean;
-  estGroupe?: boolean;
-  membres?: number;
-  enLigne?: number;
-}
-
 export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const { tap, impact } = useHaptics();
+  const { user: currentUser } = useAuth();
   
   // États principaux
-  const [ongletActif, setOngletActif] = useState<Onglet>("historique");
+  const [ongletActif, setOngletActif] = useState<Onglet>("messages");
   const [barreLateraleOuverte, setBarreLateraleOuverte] = useState(true);
   const [conversationActive, setConversationActive] = useState<string>("tiguy");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -129,6 +106,12 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const [tiguyEcrit, setTiguyEcrit] = useState(false);
   const [modeRecherche, setModeRecherche] = useState(false);
   const [requeteRecherche, setRequeteRecherche] = useState("");
+  
+  // Data states
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [activeConversationData, setActiveConversationData] = useState<Conversation | null>(null);
   
   // Fonctionnalités
   const [modeChiffre, setModeChiffre] = useState(false);
@@ -147,32 +130,35 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const refFichier = useRef<HTMLInputElement>(null);
   const intervalEnregistrement = useRef<NodeJS.Timeout | null>(null);
 
-  // Données mockées
-  const conversations: Conversation[] = [
-    { id: "tiguy", nom: "Ti-Guy", dernierMessage: "Salut mon ami!", heure: "2 min", nonLus: 0, estTiGuy: true },
-    { id: "1", nom: "Marie-Louise", dernierMessage: "On se voit demain?", heure: "15 min", nonLus: 2 },
-    { id: "2", nom: "Jean-Guy", dernierMessage: "Tabarnak c'était fou!", heure: "1 h", nonLus: 0 },
-    { id: "3", nom: "Sophie", dernierMessage: "🎬 Nouvelle vidéo", heure: "3 h", nonLus: 5 },
-  ];
-
-  const groupes: Conversation[] = [
-    { id: "g1", nom: "🏒 Les Habs Fans", dernierMessage: "Quelle game hier!", heure: "10 min", nonLus: 12, estGroupe: true, membres: 24, enLigne: 8 },
-    { id: "g2", nom: "🍁 Québec Pride", dernierMessage: "Belle photo!", heure: "1 h", nonLus: 3, estGroupe: true, membres: 156, enLigne: 23 },
-    { id: "g3", nom: "💻 Dev Team", dernierMessage: "PR merged ✅", heure: "3 h", nonLus: 0, estGroupe: true, membres: 8, enLigne: 4 },
-  ];
-
-  // Message de bienvenue
+  // Load conversations on mount
   useEffect(() => {
-    setMessages([
-      {
-        id: "bienvenue",
-        expediteur: "tiguy",
-        texte: "Ayoye! Bienvenue sur Zyeuté Messenger! 🦫⚜️\n\nChu Ti-Guy, ton assistant québécois. Ici, tes messages peuvent être:\n\n🔒 Chiffrés (sécurisés)\n⏱️ Éphémères (auto-destruction)\n\nAppuie sur les boutons en haut pour essayer!",
-        heure: new Date(),
-        reactions: [{ emoji: "👍", compte: 1 }],
-      },
-    ]);
+    loadConversations();
   }, []);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (conversationActive === "tiguy") {
+      // Ti-Guy welcome message
+      setMessages([
+        {
+          id: "bienvenue",
+          sender_id: "tiguy",
+          content: "Ayoye! Bienvenue sur Zyeuté Messenger! 🦫⚜️\n\nChu Ti-Guy, ton assistant québécois. Ici, tes messages peuvent être:\n\n🔒 Chiffrés (sécurisés)\n⏱️ Éphémères (auto-destruction)\n\nAppuie sur les boutons en haut pour essayer!",
+          type: "text",
+          created_at: new Date().toISOString(),
+          is_edited: false,
+          ephemeral_duration: 0,
+          reactions: [{ emoji: "👍", count: 1 }],
+          is_read: true,
+        } as Message,
+      ]);
+      setActiveConversationData(null);
+    } else {
+      loadMessages(conversationActive);
+      const conv = conversations.find(c => c.id === conversationActive);
+      setActiveConversationData(conv || null);
+    }
+  }, [conversationActive, conversations]);
 
   // Scroll auto
   useEffect(() => {
@@ -194,6 +180,34 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
     };
   }, [enregistre]);
 
+  // Load conversations
+  const loadConversations = async () => {
+    try {
+      setLoading(true);
+      const data = await messagingService.getConversations();
+      setConversations(data.conversations);
+    } catch (error) {
+      console.error("Failed to load conversations:", error);
+      toast.error("Impossible de charger les conversations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load messages
+  const loadMessages = async (conversationId: string) => {
+    try {
+      setLoadingMessages(true);
+      const data = await messagingService.getMessages(conversationId);
+      setMessages(data.messages);
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+      toast.error("Impossible de charger les messages");
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
   // Formater durée
   const formaterDuree = (secondes: number) => {
     const mins = Math.floor(secondes / 60);
@@ -201,8 +215,9 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const formaterHeure = (date: Date) => {
-    return date.toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit", hour12: true });
+  const formaterHeure = (date: string | Date) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit", hour12: true });
   };
 
   // Envoyer message
@@ -212,83 +227,127 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
     tap();
     
-    let texteFinal = texte;
-    let estChiffre = false;
-    
-    // Chiffrer si mode activé
-    if (modeChiffre) {
-      texteFinal = chiffrerMessage(texte);
-      estChiffre = true;
-    }
-    
-    const nouveauMessage: Message = {
-      id: `msg-${Date.now()}`,
-      expediteur: "utilisateur",
-      texte: texteFinal,
-      heure: new Date(),
-      estChiffre,
-      estEphemere: modeEphemere > 0,
-      expireDans: modeEphemere,
-    };
-    
-    setMessages(prev => [...prev, nouveauMessage]);
-    setTexteSaisi("");
-    setMenuEmojiOuvert(false);
-    
-    // Programmer suppression si éphémère
-    if (modeEphemere > 0) {
-      setTimeout(() => {
-        setMessages(prev => prev.filter(m => m.id !== nouveauMessage.id));
-        toast.info("💨 Message éphémère supprimé!");
-      }, modeEphemere * 1000);
-    }
-
-    // Réponse Ti-Guy
-    setTiguyEcrit(true);
-    try {
-      const reponse = await tiguyService.sendMessage(texte);
-      const texteReponse = typeof reponse === "string" ? reponse : reponse.response || "Je n'ai pas compris, mon ami!";
+    // Ti-Guy conversation
+    if (conversationActive === "tiguy") {
+      let texteFinal = texte;
+      let estChiffre = false;
       
-      setTimeout(() => {
+      if (modeChiffre) {
+        texteFinal = chiffrerMessage(texte);
+        estChiffre = true;
+      }
+      
+      const nouveauMessage: Message = {
+        id: `msg-${Date.now()}`,
+        sender_id: currentUser?.id || "user",
+        content: texteFinal,
+        type: "text",
+        created_at: new Date().toISOString(),
+        is_edited: false,
+        ephemeral_duration: modeEphemere,
+        is_read: true,
+      };
+      
+      setMessages(prev => [...prev, nouveauMessage]);
+      setTexteSaisi("");
+      setMenuEmojiOuvert(false);
+      
+      if (modeEphemere > 0) {
+        setTimeout(() => {
+          setMessages(prev => prev.filter(m => m.id !== nouveauMessage.id));
+          toast.info("💨 Message éphémère supprimé!");
+        }, modeEphemere * 1000);
+      }
+
+      setTiguyEcrit(true);
+      try {
+        const reponse = await tiguyService.sendMessage(texte);
+        const texteReponse = typeof reponse === "string" ? reponse : reponse.response || "Je n'ai pas compris, mon ami!";
+        
+        setTimeout(() => {
+          setMessages(prev => [...prev, {
+            id: `tiguy-${Date.now()}`,
+            sender_id: "tiguy",
+            content: texteReponse,
+            type: "text",
+            created_at: new Date().toISOString(),
+            is_edited: false,
+            ephemeral_duration: 0,
+            is_read: true,
+          }]);
+          setTiguyEcrit(false);
+        }, 1500);
+      } catch {
         setMessages(prev => [...prev, {
-          id: `tiguy-${Date.now()}`,
-          expediteur: "tiguy",
-          texte: texteReponse,
-          heure: new Date(),
+          id: `tiguy-erreur-${Date.now()}`,
+          sender_id: "tiguy",
+          content: "Oups! J'ai eu un petit problème technique! 🦫",
+          type: "text",
+          created_at: new Date().toISOString(),
+          is_edited: false,
+          ephemeral_duration: 0,
+          is_read: true,
         }]);
         setTiguyEcrit(false);
-      }, 1500);
-    } catch {
-      setMessages(prev => [...prev, {
-        id: `tiguy-erreur-${Date.now()}`,
-        expediteur: "tiguy",
-        texte: "Oups! J'ai eu un petit problème technique! 🦫",
-        heure: new Date(),
-      }]);
-      setTiguyEcrit(false);
+      }
+    } else {
+      // Real user-to-user messaging
+      try {
+        let content = texte;
+        if (modeChiffre) {
+          content = chiffrerMessage(texte);
+        }
+        
+        const { message } = await messagingService.sendMessage(conversationActive, {
+          content,
+          type: "text",
+          ephemeralDuration: modeEphemere,
+        });
+        
+        setMessages(prev => [...prev, message]);
+        setTexteSaisi("");
+        setMenuEmojiOuvert(false);
+        
+        // Refresh conversations to update last message
+        loadConversations();
+      } catch (error) {
+        toast.error("Erreur lors de l'envoi du message");
+      }
     }
   };
 
   // Ajouter réaction
-  const ajouterReaction = (idMessage: string, emoji: string) => {
-    setReactionsMessages(prev => {
-      const actuelles = prev[idMessage] || [];
-      const existante = actuelles.find(r => r.emoji === emoji);
-      
-      if (existante) {
-        existante.compte++;
-        return { ...prev, [idMessage]: actuelles };
+  const ajouterReaction = async (idMessage: string, emoji: string) => {
+    if (conversationActive === "tiguy") {
+      // Mock for Ti-Guy
+      setReactionsMessages(prev => {
+        const actuelles = prev[idMessage] || [];
+        const existante = actuelles.find(r => r.emoji === emoji);
+        
+        if (existante) {
+          existante.compte++;
+          return { ...prev, [idMessage]: actuelles };
+        }
+        return { ...prev, [idMessage]: [...actuelles, { emoji, compte: 1 }] };
+      });
+    } else {
+      // Real API
+      try {
+        await messagingService.addReaction(idMessage, emoji);
+        // Reload messages to get updated reactions
+        loadMessages(conversationActive);
+      } catch (error) {
+        toast.error("Erreur lors de l'ajout de la réaction");
       }
-      return { ...prev, [idMessage]: [...actuelles, { emoji, compte: 1 }] };
-    });
+    }
     tap();
   };
 
   // Basculer déchiffrement
   const basculerDechiffrement = (idMessage: string) => {
     setMessages(prev => prev.map(m => {
-      if (m.id !== idMessage || !m.estChiffre) return m;
-      return { ...m, texte: dechiffrerMessage(m.texte), estChiffre: false };
+      if (m.id !== idMessage || !m.content.startsWith("🔒")) return m;
+      return { ...m, content: dechiffrerMessage(m.content) };
     }));
   };
 
@@ -306,8 +365,16 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
   // Filtre recherche
   const messagesFiltres = requeteRecherche
-    ? messages.filter(m => m.texte.toLowerCase().includes(requeteRecherche.toLowerCase()))
+    ? messages.filter(m => m.content.toLowerCase().includes(requeteRecherche.toLowerCase()))
     : messages;
+
+  // Get display name for active conversation
+  const getActiveConversationName = () => {
+    if (conversationActive === "tiguy") return "Ti-Guy";
+    return activeConversationData?.other_user?.display_name || 
+           activeConversationData?.name || 
+           "Conversation";
+  };
 
   // Écran d'appel
   if (modeAppel) {
@@ -316,9 +383,9 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
         <div className="flex-1 flex items-center justify-center" style={{ backgroundImage: FLEUR_PATTERN }}>
           <div className="text-center">
             <div className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-4 border-[#d4af37] flex items-center justify-center text-6xl mb-6 animate-pulse shadow-2xl shadow-[#d4af37]/30">
-              🦫
+              {conversationActive === "tiguy" ? "🦫" : "👤"}
             </div>
-            <h2 className="text-2xl font-bold text-[#d4af37] mb-2">Ti-Guy</h2>
+            <h2 className="text-2xl font-bold text-[#d4af37] mb-2">{getActiveConversationName()}</h2>
             <p className="text-[#8b7355]">{modeAppel === "video" ? "Appel vidéo en cours..." : "Appel audio en cours..."}</p>
             <p className="text-[#d4af37] font-mono mt-4 text-xl">00:00</p>
           </div>
@@ -384,78 +451,70 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
           {/* Liste conversations */}
           <div className="flex-1 overflow-y-auto py-3">
-            {ongletActif === "historique" && conversations.map(conv => (
-              <button
-                key={conv.id}
-                onClick={() => { setConversationActive(conv.id); tap(); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                  conversationActive === conv.id
-                    ? "bg-[#d4af37]/20 border border-[#d4af37]/40"
-                    : "hover:bg-[#d4af37]/10 border border-transparent"
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center text-lg",
-                  conv.estTiGuy
-                    ? "bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37]"
-                    : "bg-[#3a2820] border border-[#d4af37]/30"
-                )}>
-                  {conv.estTiGuy ? "🦫" : conv.nom[0]}
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-sm font-medium", conversationActive === conv.id ? "text-[#d4af37]" : "text-[#e8dcc8]")}>
-                      {conv.nom}
+            {loading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {/* Ti-Guy always first */}
+                <button
+                  onClick={() => { setConversationActive("tiguy"); tap(); }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                    conversationActive === "tiguy"
+                      ? "bg-[#d4af37]/20 border border-[#d4af37]/40"
+                      : "hover:bg-[#d4af37]/10 border border-transparent"
+                  )}
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-lg">
+                    🦫
+                  </div>
+                  <div className="flex-1 text-left">
+                    <span className={cn("text-sm font-medium", conversationActive === "tiguy" ? "text-[#d4af37]" : "text-[#e8dcc8]")}>
+                      Ti-Guy
                     </span>
-                    <span className="text-[10px] text-[#8b7355]">{conv.heure}</span>
+                    <p className="text-xs text-[#8b7355] truncate">Salut mon ami!</p>
                   </div>
-                  <p className="text-xs text-[#8b7355] truncate">{conv.dernierMessage}</p>
-                </div>
-                {conv.nonLus > 0 && (
-                  <div className="w-5 h-5 rounded-full bg-[#d4af37] text-black text-[10px] font-bold flex items-center justify-center">
-                    {conv.nonLus}
-                  </div>
-                )}
-              </button>
-            ))}
+                </button>
 
-            {ongletActif === "groupes" && groupes.map(groupe => (
-              <button
-                key={groupe.id}
-                onClick={() => { setConversationActive(groupe.id); tap(); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
-                  conversationActive === groupe.id
-                    ? "bg-[#d4af37]/20 border border-[#d4af37]/40"
-                    : "hover:bg-[#d4af37]/10 border border-transparent"
-                )}
-              >
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 border-2 border-[#d4af37] flex items-center justify-center text-lg">
-                    {groupe.nom[0]}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-[#2b1f17]" />
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-sm font-medium", conversationActive === groupe.id ? "text-[#d4af37]" : "text-[#e8dcc8]")}>
-                      {groupe.nom}
-                    </span>
-                    <span className="text-[10px] text-[#8b7355]">{groupe.heure}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-[#8b7355] truncate flex-1">{groupe.dernierMessage}</p>
-                    <span className="text-[10px] text-green-400">{groupe.enLigne} en ligne</span>
-                  </div>
-                </div>
-                {groupe.nonLus > 0 && (
-                  <div className="w-5 h-5 rounded-full bg-[#d4af37] text-black text-[10px] font-bold flex items-center justify-center">
-                    {groupe.nonLus}
-                  </div>
-                )}
-              </button>
-            ))}
+                {/* Real conversations */}
+                {ongletActif === "messages" && conversations.map(conv => (
+                  <button
+                    key={conv.id}
+                    onClick={() => { setConversationActive(conv.id); tap(); }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all",
+                      conversationActive === conv.id
+                        ? "bg-[#d4af37]/20 border border-[#d4af37]/40"
+                        : "hover:bg-[#d4af37]/10 border border-transparent"
+                    )}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#3a2820] border border-[#d4af37]/30 flex items-center justify-center text-lg">
+                      {conv.other_user?.display_name?.[0] || "?"}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className={cn("text-sm font-medium", conversationActive === conv.id ? "text-[#d4af37]" : "text-[#e8dcc8]")}>
+                          {conv.other_user?.display_name || conv.name}
+                        </span>
+                        <span className="text-[10px] text-[#8b7355]">
+                          {conv.last_message_at && formaterHeure(conv.last_message_at)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#8b7355] truncate">
+                        {conv.last_message?.text || "Nouvelle conversation"}
+                      </p>
+                    </div>
+                    {conv.unread_count > 0 && (
+                      <div className="w-5 h-5 rounded-full bg-[#d4af37] text-black text-[10px] font-bold flex items-center justify-center">
+                        {conv.unread_count}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         </div>
 
@@ -471,11 +530,11 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
               
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-2xl shadow-lg shadow-[#d4af37]/20">
-                  🦫
+                  {conversationActive === "tiguy" ? "🦫" : "👤"}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-[#e8dcc8]">Ti-Guy</span>
+                    <span className="text-lg font-bold text-[#e8dcc8]">{getActiveConversationName()}</span>
                     {modeChiffre && <IoLockClosed className="w-4 h-4 text-green-400" title="Mode sécurisé" />}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-[#8b7355]">
@@ -571,129 +630,145 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ background: "#2b1f17", backgroundImage: FLEUR_PATTERN }}>
-            {(requeteRecherche ? messagesFiltres : messages).map((message) => (
-              <div
-                key={message.id}
-                className={cn("flex gap-3 group", message.expediteur === "utilisateur" ? "flex-row-reverse" : "")}
-                onMouseEnter={() => setMessageSurvolle(message.id)}
-                onMouseLeave={() => { if (menuMessageOuvert !== message.id) setMessageSurvolle(null); }}
-              >
-                {/* Avatar */}
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 border-2",
-                  message.expediteur === "tiguy" ? "bg-gradient-to-br from-amber-400 to-amber-700 border-[#d4af37]" : "bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-400"
-                )}>
-                  {message.expediteur === "tiguy" ? "🦫" : "👤"}
-                </div>
-
-                {/* Contenu message */}
-                <div className={cn("max-w-[70%] relative", message.expediteur === "utilisateur" ? "items-end" : "items-start")}>
-                  {/* Indicateur éphémère */}
-                  {message.estEphemere && message.expireDans && (
-                    <div className="flex items-center gap-1 text-[10px] text-red-400 mb-1 animate-pulse">
-                      <IoTimer className="w-3 h-3" />
-                      Auto-destruction
+            {loadingMessages ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="w-10 h-10 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (
+              <>
+                {(requeteRecherche ? messagesFiltres : messages).map((message) => (
+                  <div
+                    key={message.id}
+                    className={cn("flex gap-3 group", message.sender_id === (currentUser?.id || "user") ? "flex-row-reverse" : "")}
+                    onMouseEnter={() => setMessageSurvolle(message.id)}
+                    onMouseLeave={() => { if (menuMessageOuvert !== message.id) setMessageSurvolle(null); }}
+                  >
+                    {/* Avatar */}
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 border-2",
+                      message.sender_id === "tiguy" ? "bg-gradient-to-br from-amber-400 to-amber-700 border-[#d4af37]" : 
+                      message.sender_id === (currentUser?.id || "user") ? "bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-400" :
+                      "bg-[#3a2820] border-[#d4af37]/30"
+                    )}>
+                      {message.sender_id === "tiguy" ? "🦫" : 
+                       message.sender_id === (currentUser?.id || "user") ? "👤" :
+                       message.sender?.display_name?.[0] || "?"}
                     </div>
-                  )}
-                  
-                  {/* Bulle */}
-                  <div className={cn(
-                    "rounded-2xl px-5 py-3 shadow-lg relative",
-                    message.expediteur === "utilisateur" ? "rounded-br-sm" : "rounded-bl-sm"
-                  )} style={{
-                    background: message.expediteur === "utilisateur" 
-                      ? "linear-gradient(135deg, rgba(109,40,217,0.4), rgba(79,70,229,0.3))"
-                      : "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))",
-                    border: message.estChiffre 
-                      ? "2px solid rgba(34,197,94,0.6)" 
-                      : message.expediteur === "utilisateur" 
-                        ? "2px solid rgba(139,92,246,0.4)" 
-                        : "2px solid rgba(212,175,55,0.4)",
-                  }}>
-                    {/* Indicateur chiffrement */}
-                    {message.estChiffre && (
-                      <button onClick={() => basculerDechiffrement(message.id)} className="flex items-center gap-1 text-green-400 text-xs mb-1 hover:underline">
-                        <IoLockClosed className="w-3 h-3" />
-                        Message sécurisé - Cliquer pour lire
-                      </button>
-                    )}
-                    
-                    <p className={cn("leading-relaxed whitespace-pre-wrap text-[15px]", message.expediteur === "utilisateur" ? "text-violet-100" : "text-amber-100")}>
-                      {message.texte}
-                    </p>
-                    
-                    {/* Menu message */}
-                    <button
-                      onClick={() => setMenuMessageOuvert(menuMessageOuvert === message.id ? null : message.id)}
-                      className="absolute -top-2 -right-2 p-1.5 rounded-full bg-[#1a1410] border border-[#d4af37]/30 text-[#8b7355] opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <IoEllipsisHorizontal className="w-3 h-3" />
-                    </button>
-                    
-                    {/* Menu actions */}
-                    {menuMessageOuvert === message.id && (
-                      <div className="absolute right-0 top-6 bg-[#2b1f17] border border-[#d4af37]/30 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
-                        <button onClick={() => { navigator.clipboard.writeText(dechiffrerMessage(message.texte)); toast.success("Copié!"); setMenuMessageOuvert(null); }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-[#e8dcc8] hover:bg-[#d4af37]/10 transition-all">
-                          <IoCopy className="w-4 h-4" /> Copier
-                        </button>
-                        <button onClick={() => { toast.info("Bientôt disponible"); setMenuMessageOuvert(null); }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-all">
-                          <IoTrash className="w-4 h-4" /> Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
-                  {/* Réactions */}
-                  {(reactionsMessages[message.id] || message.reactions) && (
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {(reactionsMessages[message.id] || message.reactions)?.map((reaction, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => ajouterReaction(message.id, reaction.emoji)}
-                          className="px-2 py-0.5 rounded-full text-xs border bg-[#1a1410] border-[#d4af37]/30 hover:border-[#d4af37] transition-all"
-                        >
-                          {reaction.emoji} {reaction.compte}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Barre réactions au survol */}
-                  {messageSurvolle === message.id && !menuMessageOuvert && (
-                    <div className={cn("absolute -bottom-8 z-10", message.expediteur === "utilisateur" ? "right-0" : "left-0")}>
-                      <div className="flex items-center gap-1 bg-[#1a1410] border border-[#d4af37]/30 rounded-full px-2 py-1 shadow-lg">
-                        {REACTIONS.map(emoji => (
-                          <button
-                            key={emoji}
-                            onClick={() => { ajouterReaction(message.id, emoji); setMessageSurvolle(null); }}
-                            className="text-lg p-1 hover:scale-125 transition-transform"
-                          >
-                            {emoji}
+                    {/* Contenu message */}
+                    <div className={cn("max-w-[70%] relative", message.sender_id === (currentUser?.id || "user") ? "items-end" : "items-start")}>
+                      {/* Indicateur éphémère */}
+                      {message.ephemeral_duration > 0 && (
+                        <div className="flex items-center gap-1 text-[10px] text-red-400 mb-1 animate-pulse">
+                          <IoTimer className="w-3 h-3" />
+                          Auto-destruction
+                        </div>
+                      )}
+                      
+                      {/* Bulle */}
+                      <div className={cn(
+                        "rounded-2xl px-5 py-3 shadow-lg relative",
+                        message.sender_id === (currentUser?.id || "user") ? "rounded-br-sm" : "rounded-bl-sm"
+                      )} style={{
+                        background: message.sender_id === (currentUser?.id || "user") 
+                          ? "linear-gradient(135deg, rgba(109,40,217,0.4), rgba(79,70,229,0.3))"
+                          : message.sender_id === "tiguy"
+                            ? "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))"
+                            : "linear-gradient(135deg, rgba(58,40,32,0.8), rgba(43,31,23,0.8))",
+                        border: message.content.startsWith("🔒")
+                          ? "2px solid rgba(34,197,94,0.6)"
+                          : message.sender_id === (currentUser?.id || "user")
+                            ? "2px solid rgba(139,92,246,0.4)"
+                            : "2px solid rgba(212,175,55,0.4)",
+                      }}>
+                        {/* Indicateur chiffrement */}
+                        {message.content.startsWith("🔒") && (
+                          <button onClick={() => basculerDechiffrement(message.id)} className="flex items-center gap-1 text-green-400 text-xs mb-1 hover:underline">
+                            <IoLockClosed className="w-3 h-3" />
+                            Message sécurisé - Cliquer pour lire
                           </button>
-                        ))}
+                        )}
+                        
+                        <p className={cn("leading-relaxed whitespace-pre-wrap text-[15px]", message.sender_id === (currentUser?.id || "user") ? "text-violet-100" : "text-amber-100")}>
+                          {message.content}
+                        </p>
+                        
+                        {/* Menu message */}
+                        <button
+                          onClick={() => setMenuMessageOuvert(menuMessageOuvert === message.id ? null : message.id)}
+                          className="absolute -top-2 -right-2 p-1.5 rounded-full bg-[#1a1410] border border-[#d4af37]/30 text-[#8b7355] opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <IoEllipsisHorizontal className="w-3 h-3" />
+                        </button>
+                        
+                        {/* Menu actions */}
+                        {menuMessageOuvert === message.id && (
+                          <div className="absolute right-0 top-6 bg-[#2b1f17] border border-[#d4af37]/30 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
+                            <button onClick={() => { navigator.clipboard.writeText(dechiffrerMessage(message.content)); toast.success("Copié!"); setMenuMessageOuvert(null); }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-[#e8dcc8] hover:bg-[#d4af37]/10 transition-all">
+                              <IoCopy className="w-4 h-4" /> Copier
+                            </button>
+                            <button onClick={() => { toast.info("Bientôt disponible"); setMenuMessageOuvert(null); }} className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10 transition-all">
+                              <IoTrash className="w-4 h-4" /> Supprimer
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Réactions */}
+                      {(message.reactions && message.reactions.length > 0) && (
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {message.reactions.map((reaction, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => ajouterReaction(message.id, reaction.emoji)}
+                              className="px-2 py-0.5 rounded-full text-xs border bg-[#1a1410] border-[#d4af37]/30 hover:border-[#d4af37] transition-all"
+                            >
+                              {reaction.emoji} {reaction.count}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Barre réactions au survol */}
+                      {messageSurvolle === message.id && !menuMessageOuvert && (
+                        <div className={cn("absolute -bottom-8 z-10", message.sender_id === (currentUser?.id || "user") ? "right-0" : "left-0")}>
+                          <div className="flex items-center gap-1 bg-[#1a1410] border border-[#d4af37]/30 rounded-full px-2 py-1 shadow-lg">
+                            {REACTIONS.map(emoji => (
+                              <button
+                                key={emoji}
+                                onClick={() => { ajouterReaction(message.id, emoji); setMessageSurvolle(null); }}
+                                className="text-lg p-1 hover:scale-125 transition-transform"
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Heure */}
+                      <div className={cn("flex items-center gap-2 mt-1 text-xs text-[#8b7355]", message.sender_id === (currentUser?.id || "user") && "justify-end")}>
+                        <span>{formaterHeure(message.created_at)}</span>
+                        {message.sender_id === (currentUser?.id || "user") && (
+                          message.is_read ? <IoCheckmarkDone className="w-4 h-4 text-green-400" /> : <IoCheckmarkDone className="w-4 h-4 text-[#8b7355]" />
+                        )}
                       </div>
                     </div>
-                  )}
-
-                  {/* Heure */}
-                  <div className={cn("flex items-center gap-2 mt-1 text-xs text-[#8b7355]", message.expediteur === "utilisateur" && "justify-end")}>
-                    <span>{formaterHeure(message.heure)}</span>
-                    {message.expediteur === "utilisateur" && <IoCheckmarkDone className="w-4 h-4 text-[#d4af37]" />}
                   </div>
-                </div>
-              </div>
-            ))}
+                ))}
 
-            {/* Ti-Guy écrit */}
-            {tiguyEcrit && (
-              <div className="flex gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-lg">🦫</div>
-                <div className="rounded-2xl rounded-bl-sm px-5 py-4 flex items-center gap-2" style={{ background: "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))", border: "2px solid rgba(212,175,55,0.4)" }}>
-                  <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" />
-                  <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-              </div>
+                {/* Ti-Guy écrit */}
+                {tiguyEcrit && (
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-lg">🦫</div>
+                    <div className="rounded-2xl rounded-bl-sm px-5 py-4 flex items-center gap-2" style={{ background: "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))", border: "2px solid rgba(212,175,55,0.4)" }}>
+                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" />
+                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div ref={refFinMessages} />
@@ -772,7 +847,10 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                   type="text"
                   value={texteSaisi}
                   onChange={(e) => setTexteSaisi(e.target.value)}
-                  placeholder={modeChiffre ? "🔒 Message sécurisé..." : "Écris à Ti-Guy..."}
+                  placeholder={conversationActive === "tiguy" 
+                    ? (modeChiffre ? "🔒 Message sécurisé..." : "Écris à Ti-Guy...")
+                    : (modeChiffre ? "🔒 Message sécurisé..." : "Écris ton message...")
+                  }
                   className="w-full px-5 py-4 rounded-2xl bg-[#3a2820]/80 border-2 border-[#d4af37]/30 text-[#e8dcc8] placeholder-[#8b7355] outline-none focus:border-[#d4af37]/60 transition-all text-[15px]"
                   style={{ boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)" }}
                 />

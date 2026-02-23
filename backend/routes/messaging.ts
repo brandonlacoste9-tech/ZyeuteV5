@@ -1,5 +1,6 @@
 /**
  * Messaging API Routes
+<<<<<<< Updated upstream
  * Real user-to-user chat for Zyeuté
  */
 
@@ -146,10 +147,144 @@ router.post("/conversations", async (req, res) => {
     });
   } catch (err) {
     console.error("[Messaging] Create conversation error:", err);
+=======
+ * User-to-user conversations, DMs, and group chats
+ */
+
+import express from "express";
+import { requireAuth } from "../lib/auth";
+import { pool } from "../database-pool";
+
+const router = express.Router();
+
+// Get user's conversations
+router.get("/conversations", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    
+    const result = await pool.query(`
+      SELECT 
+        c.id,
+        c.type,
+        c.name,
+        c.avatar_url,
+        c.last_message_at,
+        c.created_at,
+        (
+          SELECT COUNT(*) 
+          FROM messages m 
+          WHERE m.conversation_id = c.id 
+          AND m.created_at > COALESCE(
+            (SELECT last_read_at FROM conversation_participants 
+             WHERE conversation_id = c.id AND user_id = $1), 
+            '1970-01-01'
+          )
+          AND m.sender_id != $1
+          AND m.is_deleted = false
+        ) as unread_count,
+        (
+          SELECT json_build_object(
+            'id', u.id,
+            'username', u.username,
+            'display_name', u.display_name,
+            'avatar_url', u.avatar_url
+          )
+          FROM conversation_participants cp
+          JOIN users u ON u.id = cp.user_id
+          WHERE cp.conversation_id = c.id 
+          AND cp.user_id != $1
+          AND c.type = 'direct'
+          LIMIT 1
+        ) as other_user,
+        (
+          SELECT json_build_object(
+            'text', m.content,
+            'created_at', m.created_at,
+            'sender_id', m.sender_id
+          )
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          AND m.is_deleted = false
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) as last_message
+      FROM conversations c
+      INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
+      WHERE cp.user_id = $1
+        AND cp.left_at IS NULL
+      ORDER BY c.last_message_at DESC NULLS LAST
+    `, [userId]);
+
+    res.json({ conversations: result.rows });
+  } catch (error) {
+    console.error("Error fetching conversations:", error);
+    res.status(500).json({ error: "Failed to fetch conversations" });
+  }
+});
+
+// Get or create direct conversation
+router.post("/conversations/direct", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { otherUserId } = req.body;
+
+    if (!otherUserId) {
+      return res.status(400).json({ error: "otherUserId is required" });
+    }
+
+    // Check if conversation already exists
+    const existingResult = await pool.query(`
+      SELECT c.id
+      FROM conversations c
+      INNER JOIN conversation_participants cp1 ON cp1.conversation_id = c.id
+      INNER JOIN conversation_participants cp2 ON cp2.conversation_id = c.id
+      WHERE c.type = 'direct'
+        AND cp1.user_id = $1
+        AND cp2.user_id = $2
+        AND cp1.left_at IS NULL
+        AND cp2.left_at IS NULL
+      LIMIT 1
+    `, [userId, otherUserId]);
+
+    if (existingResult.rows.length > 0) {
+      return res.json({ conversationId: existingResult.rows[0].id });
+    }
+
+    // Create new conversation
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const convResult = await client.query(`
+        INSERT INTO conversations (type, created_by)
+        VALUES ('direct', $1)
+        RETURNING id
+      `, [userId]);
+
+      const conversationId = convResult.rows[0].id;
+
+      // Add both participants
+      await client.query(`
+        INSERT INTO conversation_participants (conversation_id, user_id)
+        VALUES ($1, $2), ($1, $3)
+      `, [conversationId, userId, otherUserId]);
+
+      await client.query('COMMIT');
+      res.json({ conversationId });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error creating conversation:", error);
+>>>>>>> Stashed changes
     res.status(500).json({ error: "Failed to create conversation" });
   }
 });
 
+<<<<<<< Updated upstream
 /**
  * GET /api/conversations/:id/messages
  * Get messages in a conversation
@@ -344,10 +479,132 @@ router.post("/conversations/:id/messages", async (req, res) => {
     });
   } catch (err) {
     console.error("[Messaging] Send message error:", err);
+=======
+// Get messages in a conversation
+router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const conversationId = req.params.id;
+    const { limit = 50, before } = req.query;
+
+    // Verify user is in conversation
+    const accessCheck = await pool.query(`
+      SELECT 1 FROM conversation_participants
+      WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL
+    `, [conversationId, userId]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Build query
+    let query = `
+      SELECT 
+        m.id,
+        m.content,
+        m.type,
+        m.media_url,
+        m.media_metadata,
+        m.sender_id,
+        m.created_at,
+        m.is_edited,
+        m.ephemeral_duration,
+        m.expires_at,
+        json_build_object(
+          'id', u.id,
+          'username', u.username,
+          'display_name', u.display_name,
+          'avatar_url', u.avatar_url
+        ) as sender,
+        (
+          SELECT json_agg(json_build_object(
+            'emoji', r.emoji,
+            'count', (SELECT COUNT(*) FROM message_reactions WHERE message_id = m.id AND emoji = r.emoji)
+          ))
+          FROM (SELECT DISTINCT emoji FROM message_reactions WHERE message_id = m.id) r
+        ) as reactions,
+        EXISTS(
+          SELECT 1 FROM message_read_receipts 
+          WHERE message_id = m.id AND user_id != $1
+        ) as is_read
+      FROM messages m
+      LEFT JOIN users u ON u.id = m.sender_id
+      WHERE m.conversation_id = $1
+        AND m.is_deleted = false
+        ${before ? "AND m.created_at < $3" : ""}
+      ORDER BY m.created_at DESC
+      LIMIT $2
+    `;
+
+    const params = before 
+      ? [conversationId, parseInt(limit as string), before]
+      : [conversationId, parseInt(limit as string)];
+
+    const result = await pool.query(query, params);
+
+    // Update last read
+    await pool.query(`
+      UPDATE conversation_participants
+      SET last_read_at = NOW()
+      WHERE conversation_id = $1 AND user_id = $2
+    `, [conversationId, userId]);
+
+    res.json({ 
+      messages: result.rows.reverse(), // Return oldest first
+      hasMore: result.rows.length === parseInt(limit as string)
+    });
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
+// Send a message
+router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const conversationId = req.params.id;
+    const { content, type = 'text', mediaUrl, mediaMetadata, ephemeralDuration = 0 } = req.body;
+
+    if (!content?.trim() && !mediaUrl) {
+      return res.status(400).json({ error: "Message content or media required" });
+    }
+
+    // Verify user is in conversation
+    const accessCheck = await pool.query(`
+      SELECT 1 FROM conversation_participants
+      WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL
+    `, [conversationId, userId]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Calculate expiration if ephemeral
+    let expiresAt = null;
+    if (ephemeralDuration > 0) {
+      expiresAt = new Date(Date.now() + ephemeralDuration * 1000);
+    }
+
+    const result = await pool.query(`
+      INSERT INTO messages (
+        conversation_id, sender_id, type, content, media_url, 
+        media_metadata, ephemeral_duration, expires_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [conversationId, userId, type, content, mediaUrl, 
+        JSON.stringify(mediaMetadata || {}), ephemeralDuration, expiresAt]);
+
+    res.json({ message: result.rows[0] });
+  } catch (error) {
+    console.error("Error sending message:", error);
+>>>>>>> Stashed changes
     res.status(500).json({ error: "Failed to send message" });
   }
 });
 
+<<<<<<< Updated upstream
 /**
  * POST /api/messages/:id/reactions
  * Add reaction to message
@@ -384,10 +641,44 @@ router.post("/messages/:id/reactions", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("[Messaging] Add reaction error:", err);
+=======
+// Add reaction to message
+router.post("/messages/:id/reactions", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const messageId = req.params.id;
+    const { emoji } = req.body;
+
+    if (!emoji) {
+      return res.status(400).json({ error: "Emoji required" });
+    }
+
+    // Verify user has access to the message's conversation
+    const accessCheck = await pool.query(`
+      SELECT 1 FROM messages m
+      INNER JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id
+      WHERE m.id = $1 AND cp.user_id = $2 AND cp.left_at IS NULL
+    `, [messageId, userId]);
+
+    if (accessCheck.rows.length === 0) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    await pool.query(`
+      INSERT INTO message_reactions (message_id, user_id, emoji)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+    `, [messageId, userId, emoji]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error adding reaction:", error);
+>>>>>>> Stashed changes
     res.status(500).json({ error: "Failed to add reaction" });
   }
 });
 
+<<<<<<< Updated upstream
 /**
  * DELETE /api/conversations/:id
  * Delete/hide conversation for current user
@@ -555,6 +846,75 @@ router.get("/admin/tiguy-cost", async (req, res) => {
   } catch (err) {
     console.error("[Messaging] Cost dashboard error:", err);
     res.status(500).json({ error: "Failed to load cost data" });
+=======
+// Remove reaction
+router.delete("/messages/:id/reactions/:emoji", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { id: messageId, emoji } = req.params;
+
+    await pool.query(`
+      DELETE FROM message_reactions
+      WHERE message_id = $1 AND user_id = $2 AND emoji = $3
+    `, [messageId, userId, decodeURIComponent(emoji)]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error removing reaction:", error);
+    res.status(500).json({ error: "Failed to remove reaction" });
+  }
+});
+
+// Mark message as read
+router.post("/messages/:id/read", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const messageId = req.params.id;
+
+    await pool.query(`
+      INSERT INTO message_read_receipts (message_id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (message_id, user_id) DO NOTHING
+    `, [messageId, userId]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error marking read:", error);
+    res.status(500).json({ error: "Failed to mark as read" });
+  }
+});
+
+// Search users to start conversation
+router.get("/users/search", requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { q } = req.query;
+
+    if (!q || typeof q !== 'string' || q.length < 2) {
+      return res.status(400).json({ error: "Query must be at least 2 characters" });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        id, 
+        username, 
+        display_name,
+        avatar_url,
+        is_verified
+      FROM users
+      WHERE id != $1
+        AND (username ILIKE $2 OR display_name ILIKE $2)
+      ORDER BY 
+        CASE WHEN username ILIKE $3 THEN 0 ELSE 1 END,
+        username
+      LIMIT 20
+    `, [userId, `%${q}%`, `${q}%`]);
+
+    res.json({ users: result.rows });
+  } catch (error) {
+    console.error("Error searching users:", error);
+    res.status(500).json({ error: "Failed to search users" });
+>>>>>>> Stashed changes
   }
 });
 

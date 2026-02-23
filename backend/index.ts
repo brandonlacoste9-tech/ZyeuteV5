@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
 import hiveRouter from "./routes/hive.js";
+import messagingRouter from "./routes/messaging.js";
 import { createServer } from "http";
 import pg from "pg";
 import { Server as SocketIOServer } from "socket.io";
@@ -198,6 +199,7 @@ app.use((req, res, next) => {
     app.use("/api/debug", debugRouter);
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
+    app.use("/api/messaging", messagingRouter);
 
     // Seed route for emergency feed population
     const { default: seedRouter } = await import("./routes/seed.js");

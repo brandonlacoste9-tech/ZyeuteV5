@@ -53,8 +53,17 @@ tsc_*.txt
 my-project/
 antigravity-kit/
 google-credentials.json
-google-credentials.json
 ZyeuteV5/
+
+# 🔒 Security: Block ALL credential/key files
+*-key.json
+*-credentials.json
+*-service-account.json
+*.pem
+*.p12
+service-account*.json
+credentials*.json
+
 
 # Local tooling / external repos (cloned via scripts, not committed)
 external/
