@@ -531,16 +531,26 @@ router.get("/admin/tiguy-cost", async (req, res) => {
   
   try {
     const { getSpendingDashboard } = await import("../ai/tiguy-cost-monitor");
-    const dashboard = getSpendingDashboard();
+    const { getFullGoogleAIDashboard } = await import("../ai/genai-cost-monitor");
+    
+    const dialogflowDashboard = getSpendingDashboard();
+    const genAIDashboard = getFullGoogleAIDashboard();
     
     res.json({
-      ...dashboard,
-      warningThreshold: 800,
-      message: dashboard.status === "warning" 
-        ? "⚠️ TI-GUY a atteint le plafond de $800!"
-        : dashboard.status === "caution"
-        ? "⚡ TI-GUY approche du plafond (90%)"
-        : "✅ TI-GUY fonctionne normalement"
+      dialogflow: dialogflowDashboard,
+      genAI: genAIDashboard,
+      combined: {
+        totalSpending: genAIDashboard.totalSpending,
+        totalCap: 1300,
+        percentUsed: genAIDashboard.percentUsed,
+        remaining: genAIDashboard.remaining,
+        status: genAIDashboard.status,
+      },
+      message: genAIDashboard.status === "warning" 
+        ? "⚠️ CRÉDITS GOOGLE AI ÉPUISÉS!"
+        : genAIDashboard.status === "caution"
+        ? "⚡ Attention: 90% des crédits utilisés"
+        : "✅ Crédits Google AI OK"
     });
   } catch (err) {
     console.error("[Messaging] Cost dashboard error:", err);
