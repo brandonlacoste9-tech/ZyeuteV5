@@ -18,6 +18,7 @@ import {
 import { getCurrentUser, signIn, signInWithGoogle } from "../lib/supabase";
 import { AppConfig } from "@/config/factory";
 import { useTranslation } from "@/i18n";
+import { OVHCloudFooter } from "@/components/features/OVHCloudBadge";
 
 const loginLogger = logger.withContext("Login");
 
@@ -568,6 +569,9 @@ export const Login: React.FC = () => {
       <p className="text-center text-xs mt-8" style={{ color: "#5C4D3C" }}>
         {identity.name} &copy; {new Date().getFullYear()} - {identity.region}
       </p>
+
+      {/* OVH Cloud Montréal Badge */}
+      <OVHCloudFooter />
     </div>
   );
 };

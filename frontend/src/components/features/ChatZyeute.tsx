@@ -39,6 +39,7 @@ import {
 import { ChatControlCenter } from "./ChatControlCenter";
 import { ChatMediaUploader } from "./ChatMediaUploader";
 import { Avatar } from "./Avatar";
+import { OVHCloudBadge } from "./OVHCloudBadge";
 
 // Voice recording hook
 function useVoiceRecorder() {
@@ -508,6 +509,11 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
         onCancel={() => setShowUploader(false)}
         onUpload={handleFileUpload}
       />
+
+      {/* OVH Cloud Montréal Badge */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20">
+        <OVHCloudBadge variant="minimal" />
+      </div>
     </div>
   );
 };
