@@ -112,16 +112,26 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
   }
 
   if (!isAllowedUrl(url)) {
+    console.error(`[MediaProxy] Domain not allowed: ${url}`);
     return res.status(403).json({ error: "Domain not allowed" });
   }
 
   try {
     const rangeHeader = req.headers.range;
+    
     const fetchHeaders: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (compatible; ZyeuteMediaProxy/1.0)",
-      Accept: "*/*",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Accept: "video/mp4,video/webm,video/*,*/*;q=0.9",
     };
+    
+    // Only add referer for domains that require it
+    if (url.includes('mixkit.co')) {
+      fetchHeaders.Referer = "https://mixkit.co/";
+    }
+    
     if (rangeHeader) fetchHeaders.Range = rangeHeader;
+
+    console.log(`[MediaProxy] Fetching: ${url.substring(0, 80)}...`);
 
     const resp = await fetch(url, {
       headers: fetchHeaders,
@@ -129,7 +139,8 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     });
 
     if (!resp.ok) {
-      return res.status(resp.status).json({ error: "Upstream fetch failed" });
+      console.error(`[MediaProxy] Upstream error ${resp.status}: ${url.substring(0, 80)}`);
+      return res.status(resp.status).json({ error: `Upstream fetch failed: ${resp.status}` });
     }
 
     const contentType =
@@ -181,9 +192,10 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
       res.status(502).json({ error: "No response body" });
     }
   } catch (err: unknown) {
-    console.error("[MediaProxy] Error:", err);
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`[MediaProxy] Error fetching ${url.substring(0, 80)}:`, errorMsg);
     if (!res.headersSent) {
-      res.status(502).json({ error: "Proxy fetch failed" });
+      res.status(502).json({ error: "Proxy fetch failed", details: errorMsg });
     }
   }
 });

@@ -33,15 +33,27 @@ import { storage } from "../storage.js";
 import { v3Mod } from "../v3-swarm.js";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
+import { generateText, tool } from "ai";
+import {
+  zyeuteBrainTools,
+  ajusterMomentumTool,
+  expulserTrollTool,
+} from "../ai/orchestrator.js";
+import { GovernanceBee } from "../ai/bees/governance-bee.js";
 
-// Initialize DeepSeek Model Lazily
-const getDeepSeekModel = () => {
-  const deepseek = createOpenAI({
-    apiKey: process.env.DEEPSEEK_API_KEY,
-    baseURL: "https://api.deepseek.com",
-  });
-  return deepseek("deepseek-chat");
+// Utility to convert tool array to object for AI SDK
+const getToolsAsObject = (tools: any[]) => {
+  return tools.reduce((acc, t) => {
+    acc[t.name] = t;
+    return acc;
+  }, {} as any);
+};
+
+import { getVertexModel } from "../ai/vertex-ai.js";
+
+const getTIGuyModel = () => {
+  // Switch to Vertex AI to use $1,300 credits pool
+  return getVertexModel("gemini-2.0-flash");
 };
 
 const router = express.Router();
@@ -76,7 +88,7 @@ router.post("/chat", async (req, res) => {
       Résume ça en joual québécois excité. Mentionne des hashtags.`;
 
       const { text } = await generateText({
-        model: getDeepSeekModel(),
+        model: getTIGuyModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
@@ -106,7 +118,7 @@ router.post("/chat", async (req, res) => {
       Fais un rapport formel mais avec ta personnalité de Ti-Guy.`;
 
       const { text } = await generateText({
-        model: getDeepSeekModel(),
+        model: getTIGuyModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
@@ -118,29 +130,114 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    // 3. VIDEO ANALYSIS SKILL (Simulated for now, passing to generic chat if no URL)
-    if (skill === "video") {
-      // TODO: Implement actual URL fetching + Vision API
-      // For now, let DeepSeek hallucinate a friendly response based on description
-      // or if it's a URL, simulated metadata.
+    // 3. SEARCH KNOWLEDGE SKILL (GenAI App Builder Credit $1,367)
+    if (
+      skill === "knowledge" ||
+      message.toLowerCase().includes("connaissance") ||
+      message.toLowerCase().includes("cherche dans tes docs")
+    ) {
+      const { DiscoveryEngineBridge } =
+        await import("../ai/discovery-engine.js");
+      const searchResult = await DiscoveryEngineBridge.search(message);
 
-      const prompt = `L'utilisateur veut une analyse vidéo. Message: "${message}".
-       Si c'est une URL, dis que tu l'as regardée (simulé) et que c'est "top qualité Québec".
-       Donne des stats fictives d'engagement (viralité, hook score).
-       Parle en joual expert vidéo.`;
+      const prompt = `L'utilisateur pose une question de connaissance. 
+      Résumé des docs Vertex AI Search: "${searchResult.summary}"
+      
+      Réponds à l'utilisateur avec ces infos en joual. Dis que ça vient de tes "archives secrètes".`;
 
       const { text } = await generateText({
-        model: getDeepSeekModel(),
+        model: getTIGuyModel(),
         system: TIGUY_SYSTEM_PROMPT,
         prompt: prompt,
       });
 
-      return res.json({ response: text, type: "video" });
+      return res.json({
+        response: text,
+        type: "knowledge",
+        data: searchResult,
+      });
     }
 
-    // 4. GENERAL CHAT (Default)
+    // 4. GOVERNANCE SKILL (The Grand Castor Power) ⚖️
+    if (
+      skill === "governance" ||
+      message.toLowerCase().includes("gouvernance") ||
+      message.toLowerCase().includes("boost") ||
+      message.toLowerCase().includes("bannis")
+    ) {
+      const { text, toolResults } = await generateText({
+        model: getTIGuyModel(),
+        system: TIGUY_SYSTEM_PROMPT,
+        tools: {
+          ajuster_momentum: tool({
+            description: ajusterMomentumTool.description,
+            parameters: ajusterMomentumTool.parameters,
+            execute: async ({ id_publication }) => {
+              console.log("TOOL CALL: ajuster_momentum", id_publication);
+              return await GovernanceBee.ajuster_momentum(id_publication);
+            },
+          }),
+          expulser_troll: tool({
+            description: expulserTrollTool.description,
+            parameters: expulserTrollTool.parameters,
+            execute: async ({ id_utilisateur, raison }) => {
+              console.log("TOOL CALL: expulser_troll", id_utilisateur);
+              return await GovernanceBee.expulser_troll(id_utilisateur, raison);
+            },
+          }),
+        },
+        maxSteps: 5,
+        prompt: message,
+      });
+
+      return res.json({
+        response: text,
+        type: "governance",
+        data: toolResults,
+      });
+    }
+
+    // 5. VOICE SKILL (Hearing & Speaking) 🎤
+    if (skill === "voice" || req.path === "/voice") {
+      const { audio } = req.body;
+      if (!audio) return res.status(400).json({ error: "Audio requis" });
+
+      // Écoute (STT)
+      const stt = await voiceBee.speechToText(audio);
+      if (!stt.success || !stt.text) {
+        return res.json({
+          response: "J'ai rien entendu, mon chum! Parle plus fort!",
+          type: "voice_error",
+        });
+      }
+      const transcription = stt.text;
+
+      // Réflexion & Action (Vertex AI avec Tools) 🧠
+      const { text, toolResults } = await generateText({
+        model: getTIGuyModel(),
+        system:
+          TIGUY_SYSTEM_PROMPT +
+          "\nRéponds brièvement et avec autorité. Tu peux utiliser tes outils si l'utilisateur le demande (momentum, ban, etc.).",
+        prompt: transcription,
+        tools: getToolsAsObject(zyeuteBrainTools),
+        maxSteps: 5, // Permet l'exécution séquentielle d'outils
+      });
+
+      // Parole (TTS - Basé sur la réponse finale)
+      const tts = await voiceBee.textToSpeech({ text });
+
+      return res.json({
+        transcription: audio ? transcription : undefined,
+        response: text,
+        audio: tts.audioBase64,
+        toolResults: toolResults.length > 0 ? toolResults : undefined,
+        type: "voice",
+      });
+    }
+
+    // 6. GENERAL CHAT (Default)
     const { text } = await generateText({
-      model: getDeepSeekModel(),
+      model: getTIGuyModel(),
       system: TIGUY_SYSTEM_PROMPT,
       prompt: message,
     });
@@ -687,6 +784,18 @@ router.post("/action", async (req, res) => {
         });
       }
 
+      case "knowledge": {
+        const { DiscoveryEngineBridge } =
+          await import("../ai/discovery-engine.js");
+        const knowledgeResult = await DiscoveryEngineBridge.search(message);
+        return res.json({
+          action: "knowledge",
+          success: true,
+          response: knowledgeResult.summary,
+          data: knowledgeResult,
+        });
+      }
+
       case "music": {
         const musicResult = await runCulture({ payload: { action: "music" } });
         return res.json({
@@ -1128,6 +1237,68 @@ router.get("/capabilities", (req, res) => {
       },
     ],
   });
+});
+
+// 6. VOICE ACTION (Direct Endpoint) 🎤
+router.post("/voice", async (req, res) => {
+  try {
+    const { audio, text: manualText } = req.body;
+
+    let transcription = manualText;
+
+    if (audio && !manualText) {
+      // Écoute (STT)
+      const stt = await voiceBee.speechToText(audio);
+      if (!stt.success || !stt.text) {
+        return res.json({
+          response: "J'ai rien entendu, mon chum! Parle plus fort!",
+          type: "voice_error",
+        });
+      }
+      transcription = stt.text;
+    }
+
+    if (!transcription)
+      return res.status(400).json({ error: "Audio ou texte requis" });
+
+    // Réflexion & Action (Vertex AI Gemini avec Tools) 🧠
+    const { text, toolResults } = await generateText({
+      model: getTIGuyModel(),
+      system:
+        TIGUY_SYSTEM_PROMPT +
+        "\nRéponds brièvement pour une interaction vocale. Tu peux utiliser tes outils si l'utilisateur le demande (momentum, ban, etc.).",
+      prompt: transcription,
+      tools: getToolsAsObject(zyeuteBrainTools),
+      maxSteps: 5,
+    });
+
+    // Parole (TTS)
+    const tts = await voiceBee.textToSpeech({ text });
+
+    return res.json({
+      transcription: audio ? transcription : undefined,
+      response: text,
+      audio: tts.audioBase64,
+      toolResults: toolResults.length > 0 ? toolResults : undefined,
+      type: "voice",
+    });
+  } catch (error: any) {
+    console.error("❌ Erreur Voix Ti-Guy:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 7. TTS ONLY (For Hive Notifications) 📣
+router.post("/tts", async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ error: "Texte requis" });
+
+    const tts = await voiceBee.textToSpeech({ text });
+    return res.json({ audio: tts.audioBase64 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;

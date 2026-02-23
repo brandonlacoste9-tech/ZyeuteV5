@@ -70,12 +70,15 @@
     "prepare": "node -e \"try{const fs=require('fs');const path=require('path');const {execSync}=require('child_process');const huskyPath=path.join(process.cwd(),'node_modules','.bin','husky');if(fs.existsSync(huskyPath)){execSync(huskyPath,{stdio:'inherit'});}}catch(e){if(e.code!=='ENOENT')throw e}\""
   },
   "dependencies": {
+    "@ai-sdk/google-vertex": "^4.0.61",
     "@ai-sdk/openai": "^3.0.26",
     "@fal-ai/client": "^1.9.0",
     "@fal-ai/serverless-client": "^0.15.0",
+    "@google-cloud/dialogflow-cx": "^5.7.0",
     "@google-cloud/discoveryengine": "^2.5.2",
     "@google-cloud/speech": "^7.2.1",
     "@google-cloud/storage": "^7.19.0",
+    "@google-cloud/text-to-speech": "^6.4.0",
     "@google-cloud/vertexai": "^1.10.0",
     "@google-cloud/vision": "^5.3.4",
     "@google/generative-ai": "^0.24.1",
@@ -138,6 +141,7 @@
     "next-themes": "^0.4.6",
     "openid-client": "^6.8.2",
     "pg": "^8.18.0",
+    "postgres": "^3.4.8",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-dropzone": "^15.0.0",

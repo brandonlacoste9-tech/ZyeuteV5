@@ -482,6 +482,27 @@ export const tiguyActionsService = {
       return "culture";
     }
 
+    // Knowledge Search (Vertex AI)
+    if (
+      lowerMessage.includes("connaissance") ||
+      lowerMessage.includes("cherche dans mes docs") ||
+      lowerMessage.includes("archive") ||
+      lowerMessage.includes("doc")
+    ) {
+      return "knowledge";
+    }
+
+    // Governance ⚖️
+    if (
+      lowerMessage.includes("gouvernance") ||
+      lowerMessage.includes("boost") ||
+      lowerMessage.includes("bannis") ||
+      lowerMessage.includes("arbitre") ||
+      lowerMessage.includes("momentum")
+    ) {
+      return "governance";
+    }
+
     return null;
   },
 

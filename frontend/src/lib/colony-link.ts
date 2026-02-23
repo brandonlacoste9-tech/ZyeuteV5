@@ -15,10 +15,8 @@ class ColonyLink {
 
   constructor() {
     if (typeof window !== "undefined") {
-      // this.connect(); // Disabled to prevent Backend Protocol Mismatch Crash
-      console.warn(
-        "🌱 Zyeuté: Colony Socket Disabled (Backend Incompatibility: Missing Socket.IO)",
-      );
+      this.connect();
+      console.log("🌱 Zyeuté: Colony Socket Initialized");
     }
   }
 
@@ -154,6 +152,10 @@ class ColonyLink {
 
   public subscribeToAdGenCampaigns(callback: (campaign: any) => void) {
     this.socket?.on("adgen_campaign", callback);
+  }
+
+  public subscribeToHiveEvents(callback: (event: any) => void) {
+    this.socket?.on("hive_event", callback);
   }
 
   // General Event Handling

@@ -7,6 +7,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
 import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -488,7 +489,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               post.mux_playback_id
                 ? "mux"
                 : post.processing_status === "pending" ||
-                    post.processing_status === "processing"
+                  post.processing_status === "processing"
                   ? "processing"
                   : videoSrc
                     ? "native"
@@ -500,8 +501,26 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           />
         )}
         {/* Full-screen Media */}
+        {/* MEMORY OPTIMIZATION: Unmount video player when off-screen (>2 items away) */}
+        {/* This prevents DOM/video decoder bloat after scrolling through many videos */}
         <div className="absolute inset-0 w-full h-full">
-          {post.type === "video" ? (
+          {!isActive && !priority ? (
+            // Off-screen: Show static thumbnail only (no video element)
+            <div className="w-full h-full bg-zinc-900">
+              {post.thumbnail_url ? (
+                <img
+                  src={post.thumbnail_url}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-white/20 text-sm">Chargement...</div>
+                </div>
+              )}
+            </div>
+          ) : post.type === "video" ? (
             post.mux_playback_id ? (
               <MuxVideoPlayer
                 playbackId={post.mux_playback_id}
@@ -528,7 +547,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   Zyeute traite votre vidéo
                 </div>
                 {post.thumbnail_url && (
-                  <img 
+                  <img
                     src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
                     alt="Preview"
                     className="absolute inset-0 w-full h-full object-cover opacity-30 -z-10"
@@ -536,24 +555,42 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 )}
               </div>
             ) : (
-              <VideoPlayer
-                src={videoSrc}
-                poster={
-                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                  post.thumbnail_url ||
-                  post.media_url
-                }
-                autoPlay={isActive}
-                muted={isMuted}
-                loop
-                className="w-full h-full object-cover"
-                style={filterStyle}
-                priority={priority}
-                preload={isActive ? "auto" : preload}
-                videoSource={videoSource}
-                debug={debug}
-                onProgress={isActive ? onVideoProgress : undefined}
-              />
+              // Player selection based on EXPLICIT fields, not URL sniffing
+              // Priority: hls_url → VideoPlayer (HLS.js) | media_url → SimpleVideoPlayer (native)
+              post.hls_url ? (
+                <VideoPlayer
+                  src={videoSrc}
+                  poster={
+                    getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                    post.thumbnail_url ||
+                    post.media_url
+                  }
+                  autoPlay={isActive}
+                  muted={isMuted}
+                  loop
+                  className="w-full h-full object-cover"
+                  style={filterStyle}
+                  priority={priority}
+                  preload={isActive ? "auto" : preload}
+                  videoSource={videoSource}
+                  debug={debug}
+                  onProgress={isActive ? onVideoProgress : undefined}
+                />
+              ) : (
+                <SimpleVideoPlayer
+                  src={videoSrc}
+                  poster={post.thumbnail_url || post.media_url}
+                  autoPlay={isActive}
+                  muted={isMuted}
+                  loop
+                  className="w-full h-full"
+                  style={filterStyle}
+                  priority={priority}
+                  preload={isActive ? "auto" : preload}
+                  onProgress={isActive ? onVideoProgress : undefined}
+                  onError={(err) => setVideoError(err)}
+                />
+              )
             )
           ) : (
             <Image

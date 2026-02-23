@@ -1,0 +1,16 @@
+{
+  "joual_glossary": [
+    { "term": "money", "joual": "piasses", "phonetic": "pyass" },
+    { "term": "shoveling", "joual": "déneiger", "phonetic": "d'dé-né-ger" },
+    { "term": "friend", "joual": "chum", "phonetic": "tchum" },
+    { "term": "great", "joual": "sick", "phonetic": "sik" },
+    { "term": "reached", "joual": "pogner", "phonetic": "po-nyé" },
+    { "term": "beaver", "joual": "castor", "phonetic": "kas-tor" },
+    { "term": "banish", "joual": "expulser", "phonetic": "èks-pul-sé" }
+  ],
+  "pronunciation_rules": [
+    "Always contract 'de' followed by a consonant into 'd'' in vocal output",
+    "Replace 'piastres' with 'piasses' in all monetary announcements",
+    "Use a rising intonation at the end of celebratory sentences"
+  ]
+}

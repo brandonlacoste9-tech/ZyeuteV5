@@ -59,6 +59,7 @@ import tiguyActionsRoutes from "./routes/tiguy-actions.js";
 import dialogflowTiguyRoutes from "./routes/dialogflow-tiguy.js";
 import dialogflowWebhookRoutes from "./routes/dialogflow-webhook.js";
 import maxApiRoutes from "./routes/max-api.js";
+import { hiveSyncService } from "./services/hive-sync-service.js";
 import { validatePostType } from "../shared/utils/validatePostType.js";
 // Import tracing utilities
 import {
@@ -90,6 +91,8 @@ import {
   type ImageGenerationResponse,
 } from "./ai/vertex-service.js";
 import { generateVideo } from "./ai/media/video-engine.js";
+import { evaluerPublication } from "./lib/evaluateur-video.js";
+import { GovernanceBee } from "./ai/bees/governance-bee.js";
 
 // Configure FAL client
 fal.config({
@@ -207,6 +210,23 @@ export async function registerRoutes(
     }
     // TODO: Invalidate Redis feed cache (DEL feed:*) when cache is implemented
     res.status(200).json({ ok: true, videoId });
+  });
+
+  // [HIVE] Incoming events from Colony OS / n8n
+  app.post("/api/hive/event", async (req, res) => {
+    const secret = req.headers["x-hive-secret"];
+    const expected = process.env.HIVE_SECRET_KEY || "zyeute-hive-secret-2026";
+
+    if (secret !== expected) {
+      return res.status(401).json({ error: "Hive Secret Invalid" });
+    }
+
+    try {
+      const result = await hiveSyncService.handleIncomingEvent(req.body);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
   });
 
   // [NEW] Debug and Scalability Diagnostics
@@ -655,8 +675,29 @@ export async function registerRoutes(
     }
   });
 
-  // [NEW] Public publications endpoint for feed (no auth required)
-  app.get("/api/publications", async (req, res) => {
+  // ⚜️ LES CHOIX DU GRAND CASTOR
+  app.get("/api/publications/choix-du-castor", async (_req, res) => {
+    try {
+      const db = await storage.getRawDb(); // Assuming storage has raw DB access or use drizzle
+      const results = await db`
+        SELECT p.*, u.username, u.display_name, u.avatar_url
+        FROM publications p
+        JOIN user_profiles u ON p.user_id = u.id
+        WHERE p.choix_du_castor = true
+        ORDER BY p.score_momentum DESC, p.created_at DESC
+        LIMIT 3
+      `;
+      res.json(results);
+    } catch (error) {
+      console.error(
+        "Erreur lors de la récupération des choix du Castor:",
+        error,
+      );
+      res.status(500).json({ error: "Erreur serveur" });
+    }
+  });
+
+  app.get("/api/publications/explore", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
       const posts = await storage.getRecentPosts(limit);
@@ -818,7 +859,8 @@ export async function registerRoutes(
           body.hlsUrl = body.mediaUrl;
           body.thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
         }
-        body.content = body.caption || body.content || "Nouveau partage sur Zyeuté! 🍁";
+        body.content =
+          body.caption || body.content || "Nouveau partage sur Zyeuté! 🍁";
       }
 
       // [PEXELS] Create post from Pexels stock video
@@ -1024,7 +1066,34 @@ export async function registerRoutes(
               videoUrl: post.mediaUrl,
               userId: req.userId,
             })
-            .catch((err) => console.warn("[HLS] Queue add failed:", err.message));
+            .catch((err) =>
+              console.warn("[HLS] Queue add failed:", err.message),
+            );
+        }
+      }
+
+      // 👁️ LES YEUX AUTOMATISÉS (Automated Eyes) 🚀
+      if (validatedType === "video" && post.mediaUrl) {
+        const bucketName = process.env.GCS_BUCKET_NAME || "zyeute-videos";
+        if (post.mediaUrl.includes(bucketName)) {
+          const urlParts = post.mediaUrl.split(bucketName + "/");
+          if (urlParts.length > 1) {
+            const gcsUri = `gs://${bucketName}/${urlParts[1]}`;
+            (async () => {
+              try {
+                console.log(`👁️ [Automated Eyes] Analyse : ${gcsUri}`);
+                const verdict = await evaluerPublication(gcsUri);
+                if (verdict.decision === "promouvoir") {
+                  console.log(
+                    `⚜️ [Automated Eyes] PROMOTION (${verdict.score_culturel}pts)`,
+                  );
+                  await GovernanceBee.ajuster_momentum(post.id);
+                }
+              } catch (e) {
+                console.error("❌ [Automated Eyes] Erreur:", e);
+              }
+            })();
+          }
         }
       }
 
@@ -2843,6 +2912,13 @@ export async function registerRoutes(
   app.use("/api", requireAuth, enhanceRoutes);
 
   console.log("✅ Colony OS metrics bridge initialized");
+
+  // Initialize Hive Sync with Socket.IO
+  const io = app.get("io");
+  if (io) {
+    hiveSyncService.setIo(io);
+    console.log("✅ Hive Sync Service initialized with Socket.IO");
+  }
 
   return httpServer;
 }

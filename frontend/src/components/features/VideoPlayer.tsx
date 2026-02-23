@@ -369,13 +369,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const video = e.currentTarget;
       const error = video.error;
 
+      // Log detailed error info
+      const errorCode = error?.code;
+      let errorName = "UNKNOWN";
+      if (errorCode === 1) errorName = "ABORTED";
+      if (errorCode === 2) errorName = "NETWORK";
+      if (errorCode === 3) errorName = "DECODE";
+      if (errorCode === 4) errorName = "SRC_NOT_SUPPORTED";
+
+      console.error(`[VideoPlayer] ❌ VIDEO ERROR (${errorName}):`, {
+        code: errorCode,
+        message: error?.message,
+        src: src?.substring(0, 100),
+        networkState: video.networkState,
+        readyState: video.readyState,
+      });
+
       // Only log as error when retries are exhausted; use debug during retries
       if (retryCountRef.current >= MAX_RETRIES) {
-        console.error("[VideoPlayer] ❌ VIDEO ERROR:", {
-          code: error?.code,
-          message: error?.message,
-          src: src?.substring(0, 100),
-        });
+        console.error("[VideoPlayer] ❌ Max retries reached, showing error UI");
       }
 
       // Soft Fallback: If MSE fails, try raw URL once before giving up
@@ -753,6 +765,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return true;
     } catch {
       return url.startsWith("/") || url.startsWith("blob:");
+    }
+  };
+
+  // Extract direct URL from proxied URL for fallback
+  const getDirectUrl = (proxiedUrl: string): string | null => {
+    if (!proxiedUrl.includes('/api/media-proxy?url=')) return null;
+    try {
+      const url = new URL(proxiedUrl, window.location.origin);
+      const directUrl = url.searchParams.get('url');
+      return directUrl;
+    } catch {
+      return null;
     }
   };
 

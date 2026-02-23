@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -186,18 +187,34 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               )}
             </div>
           ) : (
-            <VideoPlayer
-              src={getProxiedMediaUrl(post.media_url) || post.media_url}
-              poster={
-                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                post.thumbnail_url ||
-                post.media_url
-              }
-              autoPlay={autoPlay}
-              muted={muted}
-              loop
-              priority={priority}
-            />
+            (() => {
+              const rawVideoUrl = post.hls_url || (post as any).enhanced_url || post.media_url || (post as any).original_url || "";
+              const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
+
+              return post.hls_url ? (
+                <VideoPlayer
+                  src={videoSrc}
+                  poster={
+                    getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                    post.thumbnail_url ||
+                    post.media_url
+                  }
+                  autoPlay={autoPlay}
+                  muted={muted}
+                  loop
+                  priority={priority}
+                />
+              ) : (
+                <SimpleVideoPlayer
+                  src={videoSrc}
+                  poster={post.thumbnail_url || post.media_url}
+                  autoPlay={autoPlay}
+                  muted={muted}
+                  loop
+                  priority={priority}
+                />
+              );
+            })()
           )
         ) : (
           <div className="relative w-full h-full group/media">
@@ -280,11 +297,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         >
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${
-              isLiked
+            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
                 ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
                 : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
-            }`}
+              }`}
           >
             <svg
               className="w-7 h-7"

@@ -539,11 +539,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState]);
 
-  // Sliding-window memory: evict blob/chunk data outside active ±1 (debounced to avoid evicting during rapid scroll/updates)
+  // Sliding-window memory: evict blob/chunk data outside active ±2
+  // Keep current ±2 videos in memory, aggressively clean the rest
   const evictTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedVideosRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const retainUrls: string[] = [];
-    for (const i of [currentIndex - 1, currentIndex, currentIndex + 1]) {
+    const windowSize = 2; // Keep current ±2 videos
+
+    for (let i = currentIndex - windowSize; i <= currentIndex + windowSize; i++) {
       if (i >= 0 && i < posts.length) {
         const p = posts[i];
         if (p?.type === "video") {
@@ -552,15 +557,25 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             (p as Post).enhanced_url ||
             (p as Post).media_url ||
             (p as Post).original_url;
-          if (url) retainUrls.push(url);
+          if (url) {
+            retainUrls.push(url);
+            loadedVideosRef.current.add(p.id);
+          }
         }
       }
     }
+
     if (evictTimeoutRef.current) clearTimeout(evictTimeoutRef.current);
     evictTimeoutRef.current = setTimeout(() => {
       evictTimeoutRef.current = null;
       videoCache.evictUrlsNotIn(retainUrls);
-    }, 300);
+
+      // Log memory cleanup for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[Memory] Retaining ${retainUrls.length} videos, cleaned ${posts.length - (windowSize * 2 + 1)}`);
+      }
+    }, 500); // Increased debounce for smoother scrolling
+
     return () => {
       if (evictTimeoutRef.current) {
         clearTimeout(evictTimeoutRef.current);
@@ -569,12 +584,48 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [currentIndex, posts]);
 
+  // Douyin-level Preloading Strategy
+  // Preload next 2 videos aggressively for instant swipe experience
+  const preloadNextVideos = useCallback(() => {
+    const nextIndices = [currentIndex + 1, currentIndex + 2];
+
+    nextIndices.forEach((idx, priority) => {
+      if (idx >= 0 && idx < posts.length) {
+        const post = posts[idx];
+        if (post?.type === 'video') {
+          const url = post.hls_url || post.media_url || post.original_url;
+          if (url && !url.includes('mux')) { // Don't preload MUX - it handles its own
+            // Preload with low priority (not blocking current playback)
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.href = url;
+            link.as = 'fetch';
+            link.fetchPriority = priority === 0 ? 'high' : 'low';
+            document.head.appendChild(link);
+
+            // Cleanup after load
+            setTimeout(() => link.remove(), 10000);
+          }
+        }
+      }
+    });
+  }, [currentIndex, posts]);
+
+  // Trigger preload when current video is stable (not scrolling fast)
+  useEffect(() => {
+    if (isFast) return; // Don't preload during fast scroll
+
+    const timer = setTimeout(() => {
+      preloadNextVideos();
+    }, 1000); // Wait 1s after scroll stops
+
+    return () => clearTimeout(timer);
+  }, [currentIndex, isFast, preloadNextVideos]);
+
   // Smart Prefetching: Load heavy chunks (Camera) when main thread is idle
-  // This ensures they are ready in the browser cache when the user needs them
   useEffect(() => {
     const prefetchHeavyChunks = () => {
       feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
-      // Trigger dynamic imports to populate browser cache without executing render logic
       import("@/components/features/CameraView").catch(() => { });
     };
 
@@ -743,7 +794,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (url) urls.push(url);
         }
       }
-      urls.forEach((url) => fetch(url, { method: "HEAD" }).catch(() => { }));
+      urls.forEach((url) => {
+        const proxiedUrl = getProxiedMediaUrl(url) || url;
+        fetch(proxiedUrl, { method: "HEAD" }).catch(() => { });
+      });
     },
     [posts, currentIndex],
   );

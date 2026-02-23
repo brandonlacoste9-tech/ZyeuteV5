@@ -1,8 +1,10 @@
 import { logger } from "../utils/logger";
+import fs from "fs";
+import path from "path";
 
 // --- Configuration ---
 const PROJECT_ID =
-  process.env.GOOGLE_CLOUD_PROJECT || "spatial-garden-483401-g8";
+  process.env.GOOGLE_CLOUD_PROJECT || "unique-spirit-482300-s4";
 const LOCATION = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 const AGENT_ID = process.env.DIALOGFLOW_CX_AGENT_ID || "";
 
@@ -15,21 +17,40 @@ async function initializeClient() {
   if (client) return client;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore - Optional dependency, may not be installed
     const dialogflowCx = await import("@google-cloud/dialogflow-cx");
     SessionsClient = dialogflowCx.SessionsClient;
-    if (SessionsClient && AGENT_ID) {
-      client = new SessionsClient({
+
+    if (SessionsClient) {
+      const options: any = {
         apiEndpoint: `${LOCATION}-dialogflow.googleapis.com`,
-      });
-      logger.info(
-        `[DialogflowBridge] Initialized Dialogflow CX client for agent: ${AGENT_ID}`,
-      );
+      };
+
+      // Check for service account key file
+      const keyFile =
+        process.env.GOOGLE_APPLICATION_CREDENTIALS || "./zyeute-ai-key.json";
+      const keyPath = path.resolve(process.cwd(), keyFile);
+
+      if (fs.existsSync(keyPath)) {
+        options.keyFilename = keyPath;
+        logger.info(`[DialogflowBridge] Using credentials from ${keyFile}`);
+      }
+
+      client = new SessionsClient(options);
+
+      if (AGENT_ID) {
+        logger.info(
+          `[DialogflowBridge] Initialized Dialogflow CX client for agent: ${AGENT_ID}`,
+        );
+      } else {
+        logger.warn(
+          "[DialogflowBridge] DIALOGFLOW_CX_AGENT_ID not set. Bridge will use mock mode.",
+        );
+        client = null; // Don't use real client without agent ID
+      }
     }
   } catch (error) {
     logger.warn(
-      "[DialogflowBridge] @google-cloud/dialogflow-cx not available, using mock mode",
+      `[DialogflowBridge] @google-cloud/dialogflow-cx error: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 

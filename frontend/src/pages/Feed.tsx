@@ -11,6 +11,7 @@ import { GiftOverlay } from "@/components/features/GiftOverlay";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { getCurrentUser, getStories } from "@/services/api";
 import { ContinuousFeed } from "@/components/features/ContinuousFeed";
+import ChoixDuGrandCastor from "@/components/features/ChoixDuGrandCastor";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { AvatarSkeleton } from "@/components/ui/Skeleton";
 
@@ -18,6 +19,7 @@ import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { DailyGratteuxModal } from "@/components/gamification/DailyGratteuxModal";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
 const feedLogger = logger.withContext("Feed");
 
@@ -130,6 +132,9 @@ export const Feed: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
+      {/* Network Resilience: Offline Banner */}
+      <OfflineBanner />
+      
       {/* Daily Bonus Modal */}
       <DailyGratteuxModal />
 
@@ -208,6 +213,13 @@ export const Feed: React.FC = () => {
         {/* Gold accent line */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-500/20" />
       </div>
+
+      {/* ⚜️ LES CHOIX DU GRAND CASTOR ⚜️ */}
+      <section className="flex-none bg-black">
+        <ErrorBoundary fallback={null}>
+          <ChoixDuGrandCastor />
+        </ErrorBoundary>
+      </section>
 
       {/* Main Content - Continuous Video Feed */}
       <div className="flex-1 w-full bg-black relative">

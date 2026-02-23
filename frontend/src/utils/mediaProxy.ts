@@ -8,9 +8,8 @@ const PROXY_DOMAINS = [
   "assets.mixkit.co",
   "unsplash.com",
   "images.unsplash.com",
-  "pexels.com",
-  "videos.pexels.com",
-  "images.pexels.com",
+  // Note: Pexels videos work fine with direct URLs and proper CORS
+  // "pexels.com", "videos.pexels.com", "images.pexels.com",
   // Note: stream.mux.com is intentionally excluded — MuxVideoPlayer handles
   // its own HLS streaming natively and must never go through this proxy.
   // Note: supabase.co is excluded — direct Supabase storage URLs work without
