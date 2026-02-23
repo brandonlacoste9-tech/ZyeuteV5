@@ -48,7 +48,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     setIsConnecting(true);
 
-    const socket = io(process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001", {
+    const socket = io(import.meta.env.VITE_WS_URL || "ws://localhost:3001", {
       auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,

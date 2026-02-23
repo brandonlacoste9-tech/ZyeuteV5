@@ -34,7 +34,12 @@ if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
 // Create real Supabase client if credentials exist and are valid, otherwise use mock
 export const supabase =
   isValidUrl(supabaseUrl) && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          // Disable Navigator LockManager to prevent 10s timeout errors
+          lockManager: false,
+        },
+      })
     : createMockClient();
 
 // Mock implementation for development without Supabase
