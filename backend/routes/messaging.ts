@@ -301,7 +301,23 @@ router.post("/conversations/:id/messages", async (req, res) => {
     
     const message = insertResult.rows[0];
     
-    // TODO: Send real-time notification via WebSocket
+    // Broadcast to conversation participants via WebSocket
+    const { broadcastMessage } = await import("../websocket/gateway");
+    const { io } = req.app.get("websocket") || {};
+    
+    if (io) {
+      await broadcastMessage(io, conversationId, {
+        id: message.id,
+        senderId: message.sender_id,
+        contentType: message.content_type,
+        contentText: message.content_text,
+        contentUrl: message.content_url,
+        contentMetadata: message.content_metadata,
+        isEphemeral: message.is_ephemeral,
+        expiresAt: message.expires_at,
+        createdAt: message.created_at,
+      });
+    }
     
     res.status(201).json({
       message: {
