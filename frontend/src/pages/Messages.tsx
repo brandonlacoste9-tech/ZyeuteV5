@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { Header } from "../components/layout/Header";
 import { cn } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
-import { useHaptics } from "@/hooks/useHaptics";
+import { useHaptics } from "../hooks/useHaptics";
 
 interface Conversation {
   id: string;
