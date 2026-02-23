@@ -6,6 +6,7 @@
 import { Router } from "express";
 import { db } from "../db";
 import { authenticateToken } from "../middleware/auth";
+import { handleUserMessage } from "../ai/tiguy-dialogflow";
 
 const router = Router();
 
@@ -317,6 +318,16 @@ router.post("/conversations/:id/messages", async (req, res) => {
         expiresAt: message.expires_at,
         createdAt: message.created_at,
       });
+      
+      // Trigger TI-GUY AI response if needed
+      if (contentType === "text" && contentText) {
+        handleUserMessage(conversationId, contentText, userId, io, {
+          enableAI: true,
+          aiTriggerKeywords: ["@ti-guy", "ti-guy", "aide", "help", "?"],
+        }).catch((err) => {
+          console.error("[Messaging] TI-GUY handler error:", err);
+        });
+      }
     }
     
     res.status(201).json({
