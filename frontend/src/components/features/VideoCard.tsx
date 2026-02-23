@@ -188,7 +188,8 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             </div>
           ) : (
             (() => {
-              const rawVideoUrl = post.hls_url || (post as any).enhanced_url || post.media_url || (post as any).original_url || "";
+              // Fix: Use camelCase field names from Drizzle ORM
+              const rawVideoUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || post.originalUrl || "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
               // Validate video source exists
@@ -204,9 +205,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                 <VideoPlayer
                   src={videoSrc}
                   poster={
-                    getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                    post.thumbnail_url ||
-                    post.media_url
+                    getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
+                    post.thumbnailUrl ||
+                    post.mediaUrl
                   }
                   autoPlay={autoPlay}
                   muted={muted}
@@ -216,7 +217,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               ) : (
                 <SimpleVideoPlayer
                   src={videoSrc}
-                  poster={post.thumbnail_url || post.media_url}
+                  poster={post.thumbnailUrl || post.mediaUrl}
                   autoPlay={autoPlay}
                   muted={muted}
                   loop

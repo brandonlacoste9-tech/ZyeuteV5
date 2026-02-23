@@ -322,13 +322,19 @@ const PostBase = z.object({
 
   // Video AI Enhancement (optional on all posts; only populated for video)
   original_url: z.string().optional(),
+  originalUrl: z.string().optional(), // Compat
   enhanced_url: z.string().optional(),
+  enhancedUrl: z.string().optional(), // Compat
   hls_url: z.string().optional(),
+  hlsUrl: z.string().optional(), // Compat
   mux_playback_id: z.string().optional(),
+  muxPlaybackId: z.string().optional(), // Compat
   processing_status: z
     .enum(["pending", "processing", "completed", "failed"])
     .optional(),
+  processingStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(), // Compat
   visual_filter: z.string().optional(),
+  visualFilter: z.string().optional(), // Compat
 });
 
 const PhotoPost = PostBase.extend({
@@ -388,9 +394,19 @@ export const PostSchema = z.preprocess((val: any) => {
     type: type || "photo",
     region: val.region_id || val.region,
     city: val.city,
-    // Ensure processing status defaults if video
+    // Video enhancement fields - normalize both cases
+    original_url: val.original_url || val.originalUrl,
+    originalUrl: val.original_url || val.originalUrl,
+    enhanced_url: val.enhanced_url || val.enhancedUrl,
+    enhancedUrl: val.enhanced_url || val.enhancedUrl,
+    mux_playback_id: val.mux_playback_id || val.muxPlaybackId,
+    muxPlaybackId: val.mux_playback_id || val.muxPlaybackId,
     processing_status:
-      val.processing_status || (type === "video" ? "completed" : undefined),
+      val.processing_status || val.processingStatus || (type === "video" ? "completed" : undefined),
+    processingStatus:
+      val.processing_status || val.processingStatus || (type === "video" ? "completed" : undefined),
+    visual_filter: val.visual_filter || val.visualFilter,
+    visualFilter: val.visual_filter || val.visualFilter,
 
     // Moderation
     is_moderated: val.is_moderated || val.isModerated || false,

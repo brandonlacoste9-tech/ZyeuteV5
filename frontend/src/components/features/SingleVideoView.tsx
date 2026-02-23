@@ -156,8 +156,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const [isFollowing, setIsFollowing] = useState(false);
 
     // Derive counts from props OR real-time updates
-    const fireCount = engagement.fireCount ?? post.fire_count;
-    const commentCount = engagement.commentCount ?? post.comment_count;
+    const fireCount = engagement.fireCount ?? post.fireCount;
+    const commentCount = engagement.commentCount ?? post.commentCount;
 
     const handleFire = () => {
       // Only toggle if not already liked (or toggle off?)
@@ -360,8 +360,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     // Deep Enhance: Select best video source
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
-    const mediaUrl = post.media_url || post.enhanced_url || post.original_url || "";
-    const muxPlaybackId = post.mux_playback_id;
+    const mediaUrl = post.mediaUrl || post.enhancedUrl || post.originalUrl || "";
+    const muxPlaybackId = post.muxPlaybackId;
     const validatedType = validatePostType(
       mediaUrl,
       post.type as "video" | "photo",
@@ -379,17 +379,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     let videoSrc = "";
 
     if (isVideo) {
-      // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
-      const processingReady = post.processing_status === "completed";
-      const hlsUrl = post.hls_url || (post as any).hlsUrl;
-      if (hlsUrl) {
-        videoSrc = hlsUrl;
-      } else if (processingReady && post.enhanced_url) {
-        videoSrc = post.enhanced_url;
-      } else if (post.media_url) {
-        videoSrc = post.media_url;
-      } else if (post.original_url) {
-        videoSrc = post.original_url;
+      // Priority: hlsUrl (adaptive) > enhancedUrl > mediaUrl > originalUrl
+      const processingReady = post.processingStatus === "completed";
+      if (post.hlsUrl) {
+        videoSrc = post.hlsUrl;
+      } else if (processingReady && post.enhancedUrl) {
+        videoSrc = post.enhancedUrl;
+      } else if (post.mediaUrl) {
+        videoSrc = post.mediaUrl;
+      } else if (post.originalUrl) {
+        videoSrc = post.originalUrl;
       }
 
       // Debug log if video source is empty
@@ -400,10 +399,10 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             postId: post.id,
             type: post.type,
             validatedType,
-            enhanced_url: post.enhanced_url,
-            media_url: post.media_url,
-            original_url: post.original_url,
-            processing_status: post.processing_status,
+            enhancedUrl: post.enhancedUrl,
+            mediaUrl: post.mediaUrl,
+            originalUrl: post.originalUrl,
+            processingStatus: post.processingStatus,
           },
         );
       } else {
@@ -416,15 +415,15 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
           source: videoSrc.substring(0, 50) + "...",
-          type: processingReady && post.enhanced_url ? "enhanced" : "original",
+          type: processingReady && post.enhancedUrl ? "enhanced" : "original",
         });
       }
     }
 
     // Deep Enhance: Visual Filters
     const filterStyle =
-      isVideo && post.visual_filter && post.visual_filter !== "none"
-        ? { filter: post.visual_filter }
+      isVideo && post.visualFilter && post.visualFilter !== "none"
+        ? { filter: post.visualFilter }
         : {};
 
     return (
