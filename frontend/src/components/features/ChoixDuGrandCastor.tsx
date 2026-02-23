@@ -37,11 +37,7 @@ const ChoixDuGrandCastor: React.FC = () => {
             })
             .catch((err) => {
                 console.error("Erreur Castor:", err);
-<<<<<<< Updated upstream
-                setChoix([]);
-=======
                 setChoix([]); // Set empty array on error
->>>>>>> Stashed changes
                 setLoading(false);
             });
     }, []);
