@@ -25,12 +25,20 @@ async function initializeClient() {
         apiEndpoint: `${LOCATION}-dialogflow.googleapis.com`,
       };
 
-      // Check for service account key file
+      // Check for service account key file or env var
       const keyFile =
         process.env.GOOGLE_APPLICATION_CREDENTIALS || "./zyeute-ai-key.json";
       const keyPath = path.resolve(process.cwd(), keyFile);
 
-      if (fs.existsSync(keyPath)) {
+      if (process.env.GOOGLE_CREDENTIALS) {
+        try {
+          const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+          options.credentials = credentials;
+          logger.info("[DialogflowBridge] Using credentials from GOOGLE_CREDENTIALS env var");
+        } catch (e) {
+          logger.error("[DialogflowBridge] Failed to parse GOOGLE_CREDENTIALS");
+        }
+      } else if (fs.existsSync(keyPath)) {
         options.keyFilename = keyPath;
         logger.info(`[DialogflowBridge] Using credentials from ${keyFile}`);
       }

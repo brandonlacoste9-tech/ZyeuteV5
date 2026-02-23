@@ -18,19 +18,36 @@ const project =
   process.env.GOOGLE_CLOUD_PROJECT_ID || "gen-lang-client-0092649281";
 const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 
-// Ensure GOOGLE_APPLICATION_CREDENTIALS is set
+// Ensure GOOGLE_APPLICATION_CREDENTIALS is set or credentials provided via env
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  const candidates = [
-    "zyeute-vertex-key.json", // Primary: gen-lang-client project
-    "zyeute-ai-key.json", // Fallback: unique-spirit project
-  ];
+  // Support for JSON string in GOOGLE_CREDENTIALS (for Railway/Render)
+  if (process.env.GOOGLE_CREDENTIALS) {
+    try {
+      const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      const tempKeyPath = path.resolve(process.cwd(), "temp-vertex-key.json");
+      fs.writeFileSync(tempKeyPath, process.env.GOOGLE_CREDENTIALS);
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = tempKeyPath;
+      console.log(
+        "🔑 [Vertex AI] Using credentials from GOOGLE_CREDENTIALS env var",
+      );
+    } catch (e) {
+      console.error("❌ [Vertex AI] Failed to parse GOOGLE_CREDENTIALS:", e);
+    }
+  }
 
-  for (const file of candidates) {
-    const keyPath = path.resolve(process.cwd(), file);
-    if (fs.existsSync(keyPath)) {
-      process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
-      console.log(`🔑 [Vertex AI] Using credentials: ${file}`);
-      break;
+  if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    const candidates = [
+      "zyeute-vertex-key.json", // Primary: gen-lang-client project
+      "zyeute-ai-key.json", // Fallback: unique-spirit project
+    ];
+
+    for (const file of candidates) {
+      const keyPath = path.resolve(process.cwd(), file);
+      if (fs.existsSync(keyPath)) {
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = keyPath;
+        console.log(`🔑 [Vertex AI] Using credentials: ${file}`);
+        break;
+      }
     }
   }
 
