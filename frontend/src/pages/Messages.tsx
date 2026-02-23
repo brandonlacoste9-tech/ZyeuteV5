@@ -264,44 +264,44 @@ export const Messages: React.FC = () => {
         />
       )}
 
-      <Header title="Messages" showSearch={false}>
-        {/* Ambient Mode Toggle */}
-        <div className="flex items-center gap-2 px-4">
-          <button
-            onClick={() => setAmbientMode(prev => prev === 'royal' ? 'default' : 'royal')}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all",
-              ambientMode === 'royal' 
-                ? "bg-[#d4af37] text-black" 
-                : "bg-white/10 text-white/60 hover:bg-white/20"
-            )}
-          >
-            ✨ Royal
-          </button>
-          <button
-            onClick={() => setAmbientMode(prev => prev === 'thinking' ? 'default' : 'thinking')}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all",
-              ambientMode === 'thinking' 
-                ? "bg-purple-500 text-white" 
-                : "bg-white/10 text-white/60 hover:bg-white/20"
-            )}
-          >
-            💭 Think
-          </button>
-          <button
-            onClick={() => setAmbientMode('default')}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium transition-all",
-              ambientMode === 'default' 
-                ? "bg-blue-500 text-white" 
-                : "bg-white/10 text-white/60 hover:bg-white/20"
-            )}
-          >
-            🌙 Default
-          </button>
-        </div>
-      </Header>
+      <Header title="Messages" showSearch={false} />
+
+      {/* Ambient Mode Toggle */}
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+        <button
+          onClick={() => setAmbientMode(prev => prev === 'royal' ? 'default' : 'royal')}
+          className={cn(
+            "px-3 py-1 rounded-full text-xs font-medium transition-all shadow-lg",
+            ambientMode === 'royal' 
+              ? "bg-[#d4af37] text-black" 
+              : "bg-gray-800/80 text-white/80 hover:bg-gray-700"
+          )}
+        >
+          ✨ Royal
+        </button>
+        <button
+          onClick={() => setAmbientMode(prev => prev === 'thinking' ? 'default' : 'thinking')}
+          className={cn(
+            "px-3 py-1 rounded-full text-xs font-medium transition-all shadow-lg",
+            ambientMode === 'thinking' 
+              ? "bg-purple-500 text-white" 
+              : "bg-gray-800/80 text-white/80 hover:bg-gray-700"
+          )}
+        >
+          💭 Think
+        </button>
+        <button
+          onClick={() => setAmbientMode('default')}
+          className={cn(
+            "px-3 py-1 rounded-full text-xs font-medium transition-all shadow-lg",
+            ambientMode === 'default' 
+              ? "bg-blue-500 text-white" 
+              : "bg-gray-800/80 text-white/80 hover:bg-gray-700"
+          )}
+        >
+          🌙 Default
+        </button>
+      </div>
 
       <div className="flex h-[calc(100vh-3.5rem)]">
         {/* Conversations List */}
