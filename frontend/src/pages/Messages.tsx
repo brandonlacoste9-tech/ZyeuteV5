@@ -1,6 +1,7 @@
 /**
  * 💬 Messages / DMs Page
  * Direct messaging interface for Zyeuté users
+ * With Ambient Mood Lighting ✨
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -8,6 +9,7 @@ import { Link } from "react-router-dom";
 import { Header } from "../components/layout/Header";
 import { cn } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
+import { useHaptics } from "@/hooks/useHaptics";
 
 interface Conversation {
   id: string;
@@ -150,14 +152,48 @@ const mockMessages: Message[] = [
   },
 ];
 
+type AmbientMode = 'default' | 'thinking' | 'royal' | 'night' | 'charging' | 'warning';
+
 export const Messages: React.FC = () => {
   const { user } = useAuth();
+  const haptics = useHaptics();
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [ambientMode, setAmbientMode] = useState<AmbientMode>('default');
+  const [glowPhase, setGlowPhase] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Breathing animation loop
+  useEffect(() => {
+    let animationId: number;
+    let startTime = Date.now();
+    
+    const breathe = () => {
+      const elapsed = Date.now() - startTime;
+      const phase = (elapsed % 10000) / 10000;
+      const value = 0.3 + (Math.sin(phase * Math.PI * 2) + 1) / 2 * 0.2;
+      setGlowPhase(value);
+      animationId = requestAnimationFrame(breathe);
+    };
+    
+    animationId = requestAnimationFrame(breathe);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+
+  // Ambient colors based on mode
+  const ambientColors = {
+    default: ['#1a1a2e', '#16213e', '#0f3460'],
+    thinking: ['#2d1b4e', '#1a1a2e', '#4a148c'],
+    royal: ['#0d1b2a', '#1b263b', '#d4af37'],
+    night: ['#000000', '#0a0a0a', '#1a1a1a'],
+    charging: ['#1a1a2e', '#2e1a12', '#d4af37'],
+    warning: ['#2e1a12', '#4a2c1f', '#8b0000'],
+  };
+
+  const currentColors = ambientColors[ambientMode];
 
   // Filter conversations based on search
   const filteredConversations = mockConversations.filter(
@@ -207,8 +243,65 @@ export const Messages: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Header title="Messages" showSearch={false} />
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Ambient Mood Lighting Background */}
+      <div 
+        className="absolute inset-0 -z-10 transition-opacity duration-1000"
+        style={{
+          background: `radial-gradient(ellipse at center bottom, ${currentColors[0]} 0%, ${currentColors[1]} 50%, ${currentColors[2]} 100%)`,
+          opacity: 0.4 * glowPhase,
+          filter: 'blur(60px)',
+        }}
+      />
+      
+      {/* Gold Edge Glow for Royal/Charging Mode */}
+      {(ambientMode === 'royal' || ambientMode === 'charging') && (
+        <div 
+          className="absolute inset-4 rounded-3xl pointer-events-none -z-5"
+          style={{
+            boxShadow: `inset 0 0 ${100 * glowPhase}px rgba(212, 175, 55, ${0.3 * glowPhase})`,
+          }}
+        />
+      )}
+
+      <Header title="Messages" showSearch={false}>
+        {/* Ambient Mode Toggle */}
+        <div className="flex items-center gap-2 px-4">
+          <button
+            onClick={() => setAmbientMode(prev => prev === 'royal' ? 'default' : 'royal')}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              ambientMode === 'royal' 
+                ? "bg-[#d4af37] text-black" 
+                : "bg-white/10 text-white/60 hover:bg-white/20"
+            )}
+          >
+            ✨ Royal
+          </button>
+          <button
+            onClick={() => setAmbientMode(prev => prev === 'thinking' ? 'default' : 'thinking')}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              ambientMode === 'thinking' 
+                ? "bg-purple-500 text-white" 
+                : "bg-white/10 text-white/60 hover:bg-white/20"
+            )}
+          >
+            💭 Think
+          </button>
+          <button
+            onClick={() => setAmbientMode('default')}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
+              ambientMode === 'default' 
+                ? "bg-blue-500 text-white" 
+                : "bg-white/10 text-white/60 hover:bg-white/20"
+            )}
+          >
+            🌙 Default
+          </button>
+        </div>
+      </Header>
 
       <div className="flex h-[calc(100vh-3.5rem)]">
         {/* Conversations List */}
