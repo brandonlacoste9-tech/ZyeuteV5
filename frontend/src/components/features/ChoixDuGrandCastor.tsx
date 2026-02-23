@@ -17,11 +17,14 @@ const ChoixDuGrandCastor: React.FC = () => {
         fetch("/api/publications/choix-du-castor")
             .then((res) => res.json())
             .then((data) => {
-                setChoix(data);
+                // Handle different response formats
+                const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+                setChoix(items);
                 setLoading(false);
             })
             .catch((err) => {
                 console.error("Erreur Castor:", err);
+                setChoix([]);
                 setLoading(false);
             });
     }, []);
