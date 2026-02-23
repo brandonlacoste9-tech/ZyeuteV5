@@ -4,8 +4,8 @@
  */
 
 import express from "express";
-import { requireAuth } from "../lib/auth";
-import { pool } from "../database-pool";
+import { requireAuth } from "../supabase-auth.js";
+import { pool } from "../storage.js";
 import { handleUserMessage } from "../ai/tiguy-dialogflow";
 
 const router = express.Router();
@@ -18,7 +18,7 @@ const router = express.Router();
  */
 router.get("/conversations", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
 
     const result = await pool.query(
       `
@@ -92,7 +92,7 @@ router.get("/conversations", requireAuth, async (req, res) => {
  */
 router.post("/conversations/direct", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const { otherUserId, username } = req.body;
 
     // Support lookup by username or ID
@@ -181,7 +181,7 @@ router.post("/conversations/direct", requireAuth, async (req, res) => {
  */
 router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const conversationId = req.params.id;
     const { limit = "50", before } = req.query;
 
@@ -268,7 +268,7 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
  */
 router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const conversationId = req.params.id;
     const {
       contentType = "text",
@@ -338,7 +338,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
       const { broadcastMessage } = await import("../websocket/gateway");
       const wsCtx = req.app.get("websocket");
       if (wsCtx?.io) {
-        await broadcastMessage(wsCtx.io, conversationId, {
+        await broadcastMessage(wsCtx.io, conversationId as string, {
           id: message.id,
           senderId: message.sender_id,
           contentType: message.content_type,
@@ -352,10 +352,16 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
 
         // Trigger TI-GUY AI response if text message
         if (contentType === "text" && contentText) {
-          handleUserMessage(conversationId, contentText, userId, wsCtx.io, {
-            enableAI: true,
-            aiTriggerKeywords: ["@ti-guy", "ti-guy", "aide", "help", "?"],
-          }).catch((err: any) => {
+          handleUserMessage(
+            conversationId as string,
+            contentText as string,
+            userId as string,
+            wsCtx.io,
+            {
+              enableAI: true,
+              aiTriggerKeywords: ["@ti-guy", "ti-guy", "aide", "help", "?"],
+            },
+          ).catch((err: any) => {
             console.error("[Messaging] TI-GUY handler error:", err);
           });
         }
@@ -391,7 +397,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
  */
 router.post("/messages/:id/reactions", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const messageId = req.params.id;
     const { reaction, emoji } = req.body;
 
@@ -435,13 +441,13 @@ router.delete(
   requireAuth,
   async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = (req as any).userId;
       const { id: messageId, emoji } = req.params;
 
       await pool.query(
         `DELETE FROM message_reactions
        WHERE message_id = $1 AND user_id = $2 AND reaction = $3`,
-        [messageId, userId, decodeURIComponent(emoji)],
+        [messageId, userId, decodeURIComponent(emoji as string)],
       );
 
       res.json({ success: true });
@@ -460,7 +466,7 @@ router.delete(
  */
 router.post("/messages/:id/read", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const messageId = req.params.id;
 
     // Update the message's read_at
@@ -485,7 +491,7 @@ router.post("/messages/:id/read", requireAuth, async (req, res) => {
  */
 router.delete("/conversations/:id", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const conversationId = req.params.id;
 
     await pool.query(
@@ -507,7 +513,7 @@ router.delete("/conversations/:id", requireAuth, async (req, res) => {
  */
 router.patch("/conversations/:id/settings", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const conversationId = req.params.id;
     const { ephemeralMode, ephemeralTtlSeconds, encryptionEnabled } = req.body;
 
@@ -566,7 +572,7 @@ router.patch("/conversations/:id/settings", requireAuth, async (req, res) => {
  */
 router.post("/conversations/:id/upload", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const conversationId = req.params.id;
 
     // Verify user is part of conversation
@@ -609,7 +615,7 @@ router.post("/conversations/:id/upload", requireAuth, async (req, res) => {
  */
 router.get("/users/search", requireAuth, async (req, res) => {
   try {
-    const userId = req.user!.id;
+    const userId = (req as any).userId;
     const { q } = req.query;
 
     if (!q || typeof q !== "string" || q.length < 2) {

@@ -231,32 +231,32 @@ export const TiGuy: React.FC = () => {
     }, 1000);
   }, []);
 
-  // Listen for Hive Events (Q-emplois, AdGenXAI)
+    // Listen for Hive Events (Q-emplois, AdGenXAI)
   useEffect(() => {
-    const unsubscribe = colonyLink.on(\"hive_event\", (event: any) => {
-      console.log(\"🐝 Ti-Guy a reçu un event de la Ruche:\", event);
+    const unsubscribe = colonyLink.on("hive_event", (event: any) => {
+      console.log("Hive event received:", event);
 
       // Notification visuelle rapide dans le chat
       const systemMessage: Message = {
-      id: `hive-${Date.now()}`,
-      text: `🐝 [${event.source.toUpperCase()}] ${event.payload.title}: ${event.payload.message}`,
-      sender: \"tiguy\",
+        id: `hive-${Date.now()}`,
+        text: `[${event.source.toUpperCase()}] ${event.payload.title}: ${event.payload.message}`,
+        sender: "tiguy",
         timestamp: new Date()
-    };
-    setMessages(prev => [...prev, systemMessage]);
+      };
+      setMessages(prev => [...prev, systemMessage]);
 
-    // Si priorité haute, Ti-Guy prend la parole pour l'annoncer
-    if (event.payload.priority === 'high' && !isSpeaking) {
-      PhysicalFeedback.vibrateMomentum();
-      PhysicalFeedback.triggerStrobe(5000);
-      handleVoiceAction(null as any, `Heille! Une nouvelle de la Ruche: ${event.payload.message}`);
-    }
-  });
+      // Si priorite haute, Ti-Guy prend la parole pour l'annoncer
+      if (event.payload.priority === 'high' && !isSpeaking) {
+        PhysicalFeedback.vibrateMomentum();
+        PhysicalFeedback.triggerStrobe(5000);
+        handleVoiceAction(null as any, `Heille! Une nouvelle de la Ruche: ${event.payload.message}`);
+      }
+    });
 
-  return () => {
-    colonyLink.off(\"hive_event\");
+    return () => {
+      unsubscribe();
     };
-}, [isSpeaking]);
+  }, [isSpeaking]);
 
 // Initialize with greeting
 useEffect(() => {

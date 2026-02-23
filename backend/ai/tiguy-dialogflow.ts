@@ -5,7 +5,7 @@
 
 import { SessionsClient } from "@google-cloud/dialogflow-cx";
 import { broadcastAIResponse, broadcastAITyping } from "../websocket/gateway";
-import { db } from "../db";
+import { db } from "../storage.js";
 import { costMonitor, checkCostLimit } from "./tiguy-cost-monitor";
 
 // Dialogflow CX configuration

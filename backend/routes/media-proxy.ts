@@ -21,6 +21,9 @@ const ALLOWED_HOSTS = [
   "player.vimeo.com",
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
+  // Cloudflare Stream - HLS streaming and direct video files
+  "cloudflarestream.com",
+  "*.cloudflarestream.com",
   // Note: supabase.co is excluded - direct Supabase storage URLs work without
   // proxy in production and proxying them breaks byte-range seeking.
   // Note: stream.mux.com and chunk.mux.com are EXCLUDED - MuxVideoPlayer handles

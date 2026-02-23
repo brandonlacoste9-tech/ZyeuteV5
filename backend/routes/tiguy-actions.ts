@@ -174,7 +174,9 @@ router.post("/chat", async (req, res) => {
             parameters: ajusterMomentumTool.parameters,
             execute: async ({ id_publication }: { id_publication: string }) => {
               console.log("TOOL CALL: ajuster_momentum", id_publication);
-              return await GovernanceBee.ajuster_momentum(id_publication);
+              return (await GovernanceBee.ajuster_momentum(
+                id_publication,
+              )) as any;
             },
           }),
           expulser_troll: tool({
@@ -188,13 +190,16 @@ router.post("/chat", async (req, res) => {
               raison: string;
             }) => {
               console.log("TOOL CALL: expulser_troll", id_utilisateur);
-              return await GovernanceBee.expulser_troll(id_utilisateur, raison);
+              return (await GovernanceBee.expulser_troll(
+                id_utilisateur,
+                raison,
+              )) as any;
             },
           }),
         },
         maxSteps: 5,
         prompt: message,
-      });
+      } as any);
 
       return res.json({
         response: text,
@@ -227,10 +232,15 @@ router.post("/chat", async (req, res) => {
         prompt: transcription,
         tools: getToolsAsObject(zyeuteBrainTools),
         maxSteps: 5, // Permet l'exécution séquentielle d'outils
-      });
+      } as any);
 
       // Parole (TTS - Basé sur la réponse finale)
-      const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
+      const tts = await voiceBee.textToSpeech({
+        text,
+        voice: "ti-guy",
+        speed: 1.0,
+        emotion: "happy",
+      });
 
       return res.json({
         transcription: audio ? transcription : undefined,
@@ -1276,10 +1286,15 @@ router.post("/voice", async (req, res) => {
       prompt: transcription,
       tools: getToolsAsObject(zyeuteBrainTools),
       maxSteps: 5,
-    });
+    } as any);
 
     // Parole (TTS)
-    const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
+    const tts = await voiceBee.textToSpeech({
+      text,
+      voice: "ti-guy",
+      speed: 1.0,
+      emotion: "happy",
+    });
 
     return res.json({
       transcription: audio ? transcription : undefined,
@@ -1300,7 +1315,12 @@ router.post("/tts", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "Texte requis" });
 
-    const tts = await voiceBee.textToSpeech({ text, voice: "ti-guy" });
+    const tts = await voiceBee.textToSpeech({
+      text,
+      voice: "ti-guy",
+      speed: 1.0,
+      emotion: "happy",
+    });
     return res.json({ audio: tts.audioBase64 });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

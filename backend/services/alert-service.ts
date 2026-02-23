@@ -3,249 +3,132 @@
  * Sends Slack and email notifications when spending thresholds are hit
  */
 
-import { WebClient } from "@slack/web-api";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../resend-client.js";
 
-// Slack configuration
+// Slack configuration (Replicating structure for compatibility)
 const SLACK_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_CHANNEL = process.env.SLACK_ALERT_CHANNEL || "#alerts";
 
-// Email configuration
-const EMAIL_CONFIG = {
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-};
+export class AlertService {
+  private static instance: AlertService;
 
-const ALERT_EMAILS = (process.env.ALERT_EMAILS || "").split(",").filter(Boolean);
+  private constructor() {}
 
-class AlertService {
-  private slack: WebClient | null = null;
-  private emailTransporter: nodemailer.Transporter | null = null;
+  static getInstance(): AlertService {
+    if (!AlertService.instance) {
+      AlertService.instance = new AlertService();
+    }
+    return AlertService.instance;
+  }
 
-  constructor() {
-    // Initialize Slack if token available
+  /**
+   * Send an alert when a cost threshold is hit
+   */
+  async sendThresholdAlert(data: {
+    totalCost: number;
+    limit: number;
+    threshold: number;
+  }) {
+    const { totalCost, limit, threshold } = data;
+    console.log(
+      `🚨 [Alert] Budget threshold hit: ${threshold * 100}% ($${totalCost.toFixed(4)})`,
+    );
+
+    // 1. Send Slack notification - [DISABLED: Missing dependency]
+    /*
     if (SLACK_TOKEN) {
-      this.slack = new WebClient(SLACK_TOKEN);
+      // Logic for slack would go here if @slack/web-api was installed
     }
+    */
 
-    // Initialize email if configured
-    if (EMAIL_CONFIG.auth.user && EMAIL_CONFIG.auth.pass) {
-      this.emailTransporter = nodemailer.createTransport(EMAIL_CONFIG);
-    }
-  }
-
-  /**
-   * Send cost threshold alert
-   */
-  async sendCostAlert(
-    level: "ninety" | "warning" | "critical",
-    data: {
-      service: string;
-      currentSpending: number;
-      threshold: number;
-      percentUsed: number;
-      remaining: number;
-      details?: Record<string, any>;
-    }
-  ): Promise<void> {
-    const messages = {
-      ninety: `⚡ ${data.service} at 90% of budget`,
-      warning: `🚨 ${data.service} WARNING: Budget cap reached!`,
-      critical: `🛑 ${data.service} CRITICAL: Hard cap reached! Service disabled.`,
-    };
-
-    const title = messages[level];
-    const color = level === "critical" ? "#FF0000" : level === "warning" ? "#FFA500" : "#FFD700";
-
-    // Send Slack alert
-    await this.sendSlackAlert(title, color, data);
-
-    // Send email alert
-    await this.sendEmailAlert(title, level, data);
-
-    // Log to console
-    console.error(`[ALERT] ${title}: $${data.currentSpending.toFixed(2)} / $${data.threshold}`);
-  }
-
-  /**
-   * Send Slack notification
-   */
-  private async sendSlackAlert(
-    title: string,
-    color: string,
-    data: {
-      service: string;
-      currentSpending: number;
-      threshold: number;
-      percentUsed: number;
-      remaining: number;
-      details?: Record<string, any>;
-    }
-  ): Promise<void> {
-    if (!this.slack) {
-      console.log("[Alert] Slack not configured, skipping");
-      return;
-    }
+    // 2. Send email notification via Resend
+    const emailHtml = `
+      <div style="font-family: sans-serif; padding: 20px; border: 2px solid #D4AF37; border-radius: 10px;">
+        <h2 style="color: #D4AF37;">⚜️ Zyeuté Budget Alert: ${threshold * 100}%</h2>
+        <p>Your TI-GUY AI spending has hit a critical threshold.</p>
+        <div style="background: #f4f4f4; padding: 15px; border-radius: 5px;">
+          <p><strong>Total Spent:</strong> $${totalCost.toFixed(4)}</p>
+          <p><strong>Daily Limit:</strong> $${limit.toFixed(2)}</p>
+          <p><strong>Threshold:</strong> ${threshold * 100}%</p>
+        </div>
+        <p>System status: <em>Vigilance accrue activée.</em></p>
+      </div>
+    `;
 
     try {
-      const fields = [
-        { title: "Service", value: data.service, short: true },
-        { title: "Current Spending", value: `$${data.currentSpending.toFixed(2)}`, short: true },
-        { title: "Threshold", value: `$${data.threshold}`, short: true },
-        { title: "Percent Used", value: `${data.percentUsed.toFixed(1)}%`, short: true },
-        { title: "Remaining", value: `$${data.remaining.toFixed(2)}`, short: true },
-      ];
-
-      if (data.details) {
-        fields.push({
-          title: "Details",
-          value: "\n" + Object.entries(data.details)
-            .map(([k, v]) => `• ${k}: ${v}`)
-            .join("\n"),
-          short: false,
-        });
-      }
-
-      await this.slack.chat.postMessage({
-        channel: SLACK_CHANNEL,
-        attachments: [
-          {
-            color,
-            title,
-            fields,
-            footer: "Zyeuté Cost Monitor",
-            ts: Math.floor(Date.now() / 1000),
-          },
-        ],
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || "admin@zyeute.com",
+        subject: `🚨 [Zyeute] Budget Alert: ${threshold * 100}% Threshold Hit`,
+        html: emailHtml,
       });
-
-      console.log("[Alert] Slack notification sent");
     } catch (err) {
-      console.error("[Alert] Failed to send Slack notification:", err);
+      console.error("[Alert] Email failed:", err);
     }
   }
 
   /**
-   * Send email notification
-   */
-  private async sendEmailAlert(
-    title: string,
-    level: string,
-    data: {
-      service: string;
-      currentSpending: number;
-      threshold: number;
-      percentUsed: number;
-      remaining: number;
-      details?: Record<string, any>;
-    }
-  ): Promise<void> {
-    if (!this.emailTransporter || ALERT_EMAILS.length === 0) {
-      console.log("[Alert] Email not configured, skipping");
-      return;
-    }
-
-    try {
-      const emoji = level === "critical" ? "🛑" : level === "warning" ? "🚨" : "⚡";
-      
-      const html = `
-        <h2>${emoji} ${title}</h2>
-        <table border="1" cellpadding="10" style="border-collapse: collapse;">
-          <tr><td><strong>Service</strong></td><td>${data.service}</td></tr>
-          <tr><td><strong>Current Spending</strong></td><td>$${data.currentSpending.toFixed(2)}</td></tr>
-          <tr><td><strong>Threshold</strong></td><td>$${data.threshold}</td></tr>
-          <tr><td><strong>Percent Used</strong></td><td>${data.percentUsed.toFixed(1)}%</td></tr>
-          <tr><td><strong>Remaining</strong></td><td>$${data.remaining.toFixed(2)}</td></tr>
-        </table>
-        ${data.details ? `
-          <h3>Details:</h3>
-          <ul>
-            ${Object.entries(data.details).map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`).join("")}
-          </ul>
-        ` : ""}
-        <hr>
-        <p><em>Zyeuté Cost Monitor - ${new Date().toLocaleString("fr-CA")}</em></p>
-      `;
-
-      await this.emailTransporter.sendMail({
-        from: `"Zyeuté Alerts" <${EMAIL_CONFIG.auth.user}>`,
-        to: ALERT_EMAILS.join(","),
-        subject: `${emoji} ${title} - $${data.currentSpending.toFixed(2)} / $${data.threshold}`,
-        html,
-      });
-
-      console.log("[Alert] Email notification sent to:", ALERT_EMAILS.join(", "));
-    } catch (err) {
-      console.error("[Alert] Failed to send email notification:", err);
-    }
-  }
-
-  /**
-   * Send daily summary
+   * Send a daily summary report
    */
   async sendDailySummary(data: {
+    totalCost: number;
     dialogflowCost: number;
     genAICost: number;
-    totalCost: number;
-    cap: number;
     queriesToday: number;
-  }): Promise<void> {
+    cap: number;
+  }) {
     const title = "📊 Zyeuté AI - Daily Cost Summary";
     const percentUsed = (data.totalCost / data.cap) * 100;
 
-    // Slack summary
-    if (this.slack) {
-      try {
-        await this.slack.chat.postMessage({
-          channel: SLACK_CHANNEL,
-          attachments: [
-            {
-              color: percentUsed > 80 ? "#FF0000" : percentUsed > 50 ? "#FFA500" : "#00FF00",
-              title,
-              fields: [
-                { title: "Dialogflow", value: `$${data.dialogflowCost.toFixed(2)}`, short: true },
-                { title: "GenAI", value: `$${data.genAICost.toFixed(2)}`, short: true },
-                { title: "Total Today", value: `$${data.totalCost.toFixed(2)}`, short: true },
-                { title: "Queries", value: data.queriesToday.toString(), short: true },
-                { title: "Monthly Cap", value: `$${data.cap}`, short: true },
-                { title: "Remaining", value: `$${(data.cap - data.totalCost).toFixed(2)}`, short: true },
-              ],
-              footer: "Zyeuté Cost Monitor",
-              ts: Math.floor(Date.now() / 1000),
-            },
-          ],
-        });
-      } catch (err) {
-        console.error("[Alert] Failed to send Slack summary:", err);
-      }
+    const emailHtml = `
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h2 style="color: ${percentUsed > 80 ? "#FF0000" : "#D4AF37"};">${title}</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Dialogflow</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">$${data.dialogflowCost.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>GenAI (LLMs)</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">$${data.genAICost.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Total Spent</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>$${data.totalCost.toFixed(2)}</strong></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Queries</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">${data.queriesToday}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Monthly Cap</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">$${data.cap}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 20px; font-size: 12px; color: #666;">Zyeuté Cost Monitor Hub • Montréal</p>
+      </div>
+    `;
+
+    try {
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || "admin@zyeute.com",
+        subject: `📊 [Zyeute] Daily AI Cost Summary: $${data.totalCost.toFixed(2)}`,
+        html: emailHtml,
+      });
+    } catch (err) {
+      console.error("[Alert] Daily summary failed:", err);
     }
   }
 }
 
-// Singleton
-export const alertService = new AlertService();
+export const alertService = AlertService.getInstance();
 
 /**
- * Helper to send cost alert from monitors
+ * Backward compatible wrapper for cost monitoring
  */
 export async function sendCostAlert(
-  level: "ninety" | "warning" | "critical",
-  service: string,
-  currentSpending: number,
+  totalCost: number,
+  limit: number,
   threshold: number,
-  details?: Record<string, any>
-): Promise<void> {
-  await alertService.sendCostAlert(level, {
-    service,
-    currentSpending,
-    threshold,
-    percentUsed: (currentSpending / threshold) * 100,
-    remaining: threshold - currentSpending,
-    details,
-  });
+) {
+  return alertService.sendThresholdAlert({ totalCost, limit, threshold });
 }

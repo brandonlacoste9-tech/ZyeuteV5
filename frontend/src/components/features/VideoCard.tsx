@@ -11,6 +11,7 @@ import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
+import { VideoErrorBoundary } from "@/components/video/VideoErrorBoundary";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -205,11 +206,17 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               const rawVideoUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || post.originalUrl || "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
+              // Detect Cloudflare Stream URLs
+              const isCloudflareStream = rawVideoUrl.includes('cloudflarestream.com') || 
+                                         rawVideoUrl.includes('cloudflare-stream.com');
+              const isHLS = rawVideoUrl.includes('.m3u8') || isCloudflareStream;
+
               console.log("[VideoCard] Resolved:", {
                 rawVideoUrl,
                 videoSrc,
                 needsProxy: getProxiedMediaUrl(rawVideoUrl) !== rawVideoUrl,
-                playerType: post.hlsUrl ? 'HLS' : 'Native'
+                playerType: isHLS ? 'HLS' : 'Native',
+                isCloudflareStream
               });
 
               // Validate video source exists
@@ -222,28 +229,34 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                 );
               }
 
-              return post.hlsUrl ? (
-                <VideoPlayer
-                  src={videoSrc}
-                  poster={
-                    getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
-                    post.thumbnailUrl ||
-                    post.mediaUrl
-                  }
-                  autoPlay={autoPlay}
-                  muted={muted}
-                  loop
-                  priority={priority}
-                />
-              ) : (
-                <SimpleVideoPlayer
-                  src={videoSrc}
-                  poster={post.thumbnailUrl || post.mediaUrl}
-                  autoPlay={autoPlay}
-                  muted={muted}
-                  loop
-                  priority={priority}
-                />
+              // Use HLS player for HLS/Cloudflare, native for MP4
+              // Wrap in ErrorBoundary to prevent app freeze
+              return (
+                <VideoErrorBoundary>
+                  {isHLS ? (
+                    <VideoPlayer
+                      src={videoSrc}
+                      poster={
+                        getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
+                        post.thumbnailUrl ||
+                        post.mediaUrl
+                      }
+                      autoPlay={autoPlay}
+                      muted={muted}
+                      loop
+                      priority={priority}
+                    />
+                  ) : (
+                    <SimpleVideoPlayer
+                      src={videoSrc}
+                      poster={post.thumbnailUrl || post.mediaUrl}
+                      autoPlay={autoPlay}
+                      muted={muted}
+                      loop
+                      priority={priority}
+                    />
+                  )}
+                </VideoErrorBoundary>
               );
             })()
           )

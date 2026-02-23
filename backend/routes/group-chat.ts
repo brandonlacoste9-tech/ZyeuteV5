@@ -4,9 +4,12 @@
  */
 
 import { Router } from "express";
-import { db } from "../db";
-import { authenticateToken } from "../middleware/auth";
-import { broadcastMessage, broadcastToConversation } from "../websocket/gateway";
+import { db } from "../storage.js";
+import { requireAuth as authenticateToken } from "../supabase-auth.js";
+import {
+  broadcastMessage,
+  broadcastToConversation,
+} from "../websocket/gateway";
 
 const router = Router();
 
@@ -35,37 +38,36 @@ router.post("/group", async (req, res) => {
       `INSERT INTO conversations (type, title, description, avatar_url, created_by, created_at, updated_at)
        VALUES ('group', $1, $2, $3, $4, NOW(), NOW())
        RETURNING *`,
-      [title, description, avatarUrl, userId]
+      [title, description, avatarUrl, userId],
     );
 
     const conversation = convResult.rows[0];
 
     // Add all members (including creator as owner)
     const allMembers = [...new Set([userId, ...memberIds])];
-    
+
     for (const memberId of allMembers) {
       await db.query(
         `INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
          VALUES ($1, $2, $3, NOW())`,
-        [
-          conversation.id,
-          memberId,
-          memberId === userId ? "owner" : "member",
-        ]
+        [conversation.id, memberId, memberId === userId ? "owner" : "member"],
       );
     }
 
     // Create group settings
-    await db.query(
-      `INSERT INTO group_settings (conversation_id) VALUES ($1)`,
-      [conversation.id]
-    );
+    await db.query(`INSERT INTO group_settings (conversation_id) VALUES ($1)`, [
+      conversation.id,
+    ]);
 
     // Add system message
     await db.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
-      [conversation.id, userId, `${req.user.username} a créé le groupe "${title}"`]
+      [
+        conversation.id,
+        userId,
+        `${req.user.username} a créé le groupe "${title}"`,
+      ],
     );
 
     res.status(201).json({
@@ -99,10 +101,13 @@ router.post("/:id/members", async (req, res) => {
     const roleResult = await db.query(
       `SELECT role FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
-      [conversationId, userId]
+      [conversationId, userId],
     );
 
-    if (roleResult.rows.length === 0 || !["owner", "admin"].includes(roleResult.rows[0].role)) {
+    if (
+      roleResult.rows.length === 0 ||
+      !["owner", "admin"].includes(roleResult.rows[0].role)
+    ) {
       return res.status(403).json({ error: "Only admins can add members" });
     }
 
@@ -111,13 +116,13 @@ router.post("/:id/members", async (req, res) => {
       `INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
        VALUES ($1, $2, 'member', NOW())
        ON CONFLICT DO NOTHING`,
-      [conversationId, newMemberId]
+      [conversationId, newMemberId],
     );
 
     // Get new member info
     const userResult = await db.query(
       `SELECT username, display_name FROM users WHERE id = $1`,
-      [newMemberId]
+      [newMemberId],
     );
 
     const newMember = userResult.rows[0];
@@ -126,7 +131,7 @@ router.post("/:id/members", async (req, res) => {
     await db.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
-      [conversationId, userId, `${newMember.display_name} a rejoint le groupe`]
+      [conversationId, userId, `${newMember.display_name} a rejoint le groupe`],
     );
 
     // Broadcast to group
@@ -161,11 +166,16 @@ router.delete("/:id/members/:memberId", async (req, res) => {
       const roleResult = await db.query(
         `SELECT role FROM conversation_participants
          WHERE conversation_id = $1 AND user_id = $2`,
-        [conversationId, userId]
+        [conversationId, userId],
       );
 
-      if (roleResult.rows.length === 0 || !["owner", "admin"].includes(roleResult.rows[0].role)) {
-        return res.status(403).json({ error: "Only admins can remove members" });
+      if (
+        roleResult.rows.length === 0 ||
+        !["owner", "admin"].includes(roleResult.rows[0].role)
+      ) {
+        return res
+          .status(403)
+          .json({ error: "Only admins can remove members" });
       }
     }
 
@@ -174,22 +184,28 @@ router.delete("/:id/members/:memberId", async (req, res) => {
     // Get user info before removing
     const userResult = await db.query(
       `SELECT username, display_name FROM users WHERE id = $1`,
-      [targetId]
+      [targetId],
     );
 
     // Remove member
     await db.query(
       `DELETE FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
-      [conversationId, targetId]
+      [conversationId, targetId],
     );
 
     // Add system message
-    const actionText = isSelfRemoval ? "a quitté le groupe" : "a été retiré du groupe";
+    const actionText = isSelfRemoval
+      ? "a quitté le groupe"
+      : "a été retiré du groupe";
     await db.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
-      [conversationId, userId, `${userResult.rows[0].display_name} ${actionText}`]
+      [
+        conversationId,
+        userId,
+        `${userResult.rows[0].display_name} ${actionText}`,
+      ],
     );
 
     res.json({ success: true });
@@ -212,7 +228,7 @@ router.get("/:id/members", async (req, res) => {
     const memberCheck = await db.query(
       `SELECT 1 FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
-      [conversationId, userId]
+      [conversationId, userId],
     );
 
     if (memberCheck.rows.length === 0) {
@@ -240,7 +256,7 @@ router.get("/:id/members", async (req, res) => {
       ORDER BY 
         CASE cp.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END,
         u.display_name`,
-      [conversationId]
+      [conversationId],
     );
 
     res.json({ members: result.rows });
@@ -264,10 +280,13 @@ router.patch("/:id", async (req, res) => {
     const roleResult = await db.query(
       `SELECT role FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
-      [conversationId, userId]
+      [conversationId, userId],
     );
 
-    if (roleResult.rows.length === 0 || !["owner", "admin"].includes(roleResult.rows[0].role)) {
+    if (
+      roleResult.rows.length === 0 ||
+      !["owner", "admin"].includes(roleResult.rows[0].role)
+    ) {
       return res.status(403).json({ error: "Only admins can edit group" });
     }
 
@@ -296,7 +315,7 @@ router.patch("/:id", async (req, res) => {
 
     await db.query(
       `UPDATE conversations SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
-      values
+      values,
     );
 
     res.json({ success: true });

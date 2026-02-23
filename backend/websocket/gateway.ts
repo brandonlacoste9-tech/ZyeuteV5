@@ -4,10 +4,11 @@
  */
 
 import { Server, Socket } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
-import { createClient, RedisClientType } from "redis";
-import jwt from "jsonwebtoken";
-import { db } from "../db";
+// [TEMPORARY] Dependency missing in package.json
+// import { createAdapter } from "@socket.io/redis-adapter";
+import Redis from "ioredis";
+import { verifyAuthToken } from "../supabase-auth.js";
+import { db } from "../storage.js";
 
 // Event types
 export const Events = {
@@ -42,11 +43,11 @@ interface AuthenticatedSocket extends Socket {
 
 export async function createWebSocketGateway(httpServer: any) {
   // Redis clients for adapter (horizontal scaling)
-  const pubClient = createClient({ url: process.env.REDIS_URL });
+  // Redis clients for real-time state tracking
+  const pubClient = new Redis(
+    process.env.REDIS_URL || "redis://localhost:6379",
+  );
   const subClient = pubClient.duplicate();
-
-  await pubClient.connect();
-  await subClient.connect();
 
   const io = new Server(httpServer, {
     cors: {
@@ -56,8 +57,8 @@ export async function createWebSocketGateway(httpServer: any) {
     transports: ["websocket", "polling"], // Fallback for compatibility
   });
 
-  // Use Redis adapter for multi-server scaling
-  io.adapter(createAdapter(pubClient, subClient));
+  // Use Redis adapter for multi-server scaling - [DISABLED: Missing dependency]
+  // io.adapter(createAdapter(pubClient, subClient));
 
   // Authentication middleware
   io.use(async (socket: AuthenticatedSocket, next) => {
@@ -68,12 +69,17 @@ export async function createWebSocketGateway(httpServer: any) {
         return next(new Error("Authentication required"));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      socket.userId = decoded.userId;
-      socket.username = decoded.username;
+      const userId = await verifyAuthToken(token);
+      if (!userId) {
+        return next(new Error("Invalid token"));
+      }
+
+      socket.userId = userId;
+      // Socket.IO doesn't necessarily need username in request, but typically it helps
+      socket.username = "citoyen"; // We'll update this if needed
 
       // Store user connection in Redis
-      await pubClient.hSet("user:sockets", socket.userId, socket.id);
+      await pubClient.hset("user:sockets", socket.userId, socket.id);
 
       next();
     } catch (err) {
