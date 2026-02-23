@@ -188,12 +188,33 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             </div>
           ) : (
             (() => {
+              // VIDEO DEBUG LOGGING
+              console.log("[VideoCard] DEBUG:", {
+                postId: post.id,
+                type: post.type,
+                hlsUrl: post.hlsUrl,
+                enhancedUrl: post.enhancedUrl,
+                mediaUrl: post.mediaUrl,
+                originalUrl: post.originalUrl,
+                muxPlaybackId: post.muxPlaybackId,
+                processingStatus: post.processingStatus,
+                thumbnailUrl: post.thumbnailUrl,
+              });
+              
               // Fix: Use camelCase field names from Drizzle ORM
               const rawVideoUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || post.originalUrl || "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
+              console.log("[VideoCard] Resolved:", {
+                rawVideoUrl,
+                videoSrc,
+                needsProxy: getProxiedMediaUrl(rawVideoUrl) !== rawVideoUrl,
+                playerType: post.hlsUrl ? 'HLS' : 'Native'
+              });
+
               // Validate video source exists
               if (!videoSrc || videoSrc === "") {
+                console.error("[VideoCard] NO VIDEO SOURCE for post:", post.id);
                 return (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
                     <p className="text-white/60 text-sm">Vidéo non disponible</p>

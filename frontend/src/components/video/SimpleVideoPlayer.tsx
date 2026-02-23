@@ -47,11 +47,17 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
 
   // Reset state when source changes
   useEffect(() => {
+    console.log("[SimpleVideoPlayer] Source changed:", src);
     setIsLoading(true);
     setHasError(false);
     setProgress(0);
     setRetryCount(0);
   }, [src]);
+  
+  // Log mount
+  useEffect(() => {
+    console.log("[SimpleVideoPlayer] Mounted with:", { src, poster, autoPlay });
+  }, []);
 
   // Handle autoplay
   useEffect(() => {
@@ -127,7 +133,11 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
     
     console.error(`[SimpleVideoPlayer] Error (${retryCount}/${MAX_RETRIES}):`, {
       code: error?.code,
+      message: error?.message,
       src: src?.substring(0, 100),
+      networkState: video?.networkState,
+      readyState: video?.readyState,
+      poster: poster?.substring(0, 50),
     });
 
     // Layer 1: Retry with cache-bust (up to MAX_RETRIES)
