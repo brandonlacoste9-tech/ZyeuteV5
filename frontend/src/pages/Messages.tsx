@@ -166,21 +166,11 @@ export const Messages: React.FC = () => {
   const [glowPhase, setGlowPhase] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Breathing animation loop
+  // Breathing animation loop - DISABLED for performance
+  // TODO: Re-enable with proper GPU optimization and reduced-motion support
   useEffect(() => {
-    let animationId: number;
-    let startTime = Date.now();
-    
-    const breathe = () => {
-      const elapsed = Date.now() - startTime;
-      const phase = (elapsed % 10000) / 10000;
-      const value = 0.3 + (Math.sin(phase * Math.PI * 2) + 1) / 2 * 0.2;
-      setGlowPhase(value);
-      animationId = requestAnimationFrame(breathe);
-    };
-    
-    animationId = requestAnimationFrame(breathe);
-    return () => cancelAnimationFrame(animationId);
+    // Static glow only - no animation to prevent system freeze
+    setGlowPhase(0.4);
   }, []);
 
   // Ambient colors based on mode
@@ -244,25 +234,14 @@ export const Messages: React.FC = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Ambient Mood Lighting Background */}
+      {/* Ambient Mood Lighting Background - SIMPLIFIED (no animation) */}
       <div 
-        className="absolute inset-0 -z-10 transition-opacity duration-1000"
+        className="absolute inset-0 -z-10"
         style={{
-          background: `radial-gradient(ellipse at center bottom, ${currentColors[0]} 0%, ${currentColors[1]} 50%, ${currentColors[2]} 100%)`,
-          opacity: 0.4 * glowPhase,
-          filter: 'blur(60px)',
+          background: `linear-gradient(180deg, ${currentColors[0]} 0%, ${currentColors[1]} 50%, ${currentColors[2]} 100%)`,
+          opacity: 0.3,
         }}
       />
-      
-      {/* Gold Edge Glow for Royal/Charging Mode */}
-      {(ambientMode === 'royal' || ambientMode === 'charging') && (
-        <div 
-          className="absolute inset-4 rounded-3xl pointer-events-none -z-5"
-          style={{
-            boxShadow: `inset 0 0 ${100 * glowPhase}px rgba(212, 175, 55, ${0.3 * glowPhase})`,
-          }}
-        />
-      )}
 
       <Header title="Messages" showSearch={false} />
 

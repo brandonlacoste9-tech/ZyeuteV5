@@ -42,21 +42,10 @@ export const ChatLayout: React.FC = () => {
   
   // Breathing animation loop
   useEffect(() => {
-    let animationId: number;
-    let startTime = Date.now();
-    
-    const breathe = () => {
-      const elapsed = Date.now() - startTime;
-      // 10-second breathing cycle
-      const phase = (elapsed % 10000) / 10000;
-      // Sine wave for smooth breathing: 0.3 → 0.5 → 0.3
-      const value = 0.3 + (Math.sin(phase * Math.PI * 2) + 1) / 2 * 0.2;
-      setGlowPhase(value);
-      animationId = requestAnimationFrame(breathe);
-    };
-    
-    animationId = requestAnimationFrame(breathe);
-    return () => cancelAnimationFrame(animationId);
+    // DISABLED: Breathing animation causing system freezes
+    // Use static glow instead
+    setGlowPhase(0.4);
+    return () => {};
   }, []);
   
   // Ambient glow configuration based on mode
@@ -101,30 +90,24 @@ export const ChatLayout: React.FC = () => {
   
   const currentConfig = ambientConfig[ambientMode];
   
-  // Dynamic background gradient based on mode and breathing
+  // Simplified background - no heavy blur/animation to prevent GPU freeze
   const backgroundStyle = useMemo(() => {
-    const baseOpacity = currentConfig.intensity;
-    const breathingOpacity = glowPhase;
-    
     return {
-      background: `radial-gradient(ellipse at center bottom, 
+      background: `linear-gradient(180deg, 
         ${currentConfig.colors[0]} 0%, 
         ${currentConfig.colors[1]} 50%, 
         ${currentConfig.colors[2]} 100%)`,
-      opacity: baseOpacity * breathingOpacity,
-      transition: 'opacity 0.5s ease-in-out',
+      opacity: 0.2,
     };
-  }, [currentConfig, glowPhase]);
+  }, [currentConfig]);
   
-  // Gold edge glow for royal mode
+  // Simplified edge glow - static only
   const edgeGlowStyle = useMemo(() => {
     if (ambientMode !== 'royal' && ambientMode !== 'charging') return {};
-    
     return {
-      boxShadow: `inset 0 0 ${100 * glowPhase}px rgba(212, 175, 55, ${0.3 * glowPhase}),
-                  0 0 ${50 * glowPhase}px rgba(212, 175, 55, ${0.2 * glowPhase})`,
+      boxShadow: 'inset 0 0 40px rgba(212, 175, 55, 0.15)',
     };
-  }, [ambientMode, glowPhase]);
+  }, [ambientMode]);
   
   // TI-GUY energy/charge simulation
   useEffect(() => {
@@ -277,22 +260,7 @@ export const ChatLayout: React.FC = () => {
         />
       )}
       
-      {/* Floating Particles (Charging/Thinking Mode) */}
-      {(ambientMode === 'thinking' || ambientMode === 'charging') && (
-        <div className="particle-layer">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="floating-particle"
-              style={{
-                left: `${15 + i * 15}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${4 + i * 0.5}s`,
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* Floating Particles DISABLED - caused system freezes */}
       
       {/* Main Chat Container */}
       <div className="chat-layout-inner stitched" style={edgeGlowStyle}>
