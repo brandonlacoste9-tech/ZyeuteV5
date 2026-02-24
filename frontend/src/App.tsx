@@ -1,10 +1,11 @@
-// STEP 7: Test ColonyProvider (Socket.IO)
+// STEP 8: Test NavigationStateProvider
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GuestModeProvider } from "@/contexts/GuestModeContext";
 import { RBACProvider } from "@/contexts/RBACContext";
 import { ColonyProvider } from "@/components/providers/colony-provider";
+import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 
 export default function App() {
   return (
@@ -14,10 +15,12 @@ export default function App() {
           <GuestModeProvider>
             <RBACProvider>
               <ColonyProvider>
-                <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
-                  <h1>🐝 STEP 7: ColonyProvider</h1>
-                  <p>Testing ColonyProvider (Socket.IO)...</p>
-                </div>
+                <NavigationStateProvider>
+                  <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
+                    <h1>🐝 STEP 8: NavigationStateProvider</h1>
+                    <p>Testing NavigationStateProvider...</p>
+                  </div>
+                </NavigationStateProvider>
               </ColonyProvider>
             </RBACProvider>
           </GuestModeProvider>
