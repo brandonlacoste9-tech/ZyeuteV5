@@ -556,12 +556,12 @@ function BottomNav() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50 edge-light edge-bottom"
+      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50"
       style={{ 
         background: `linear-gradient(180deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 50%, ${COLORS.brown} 100%)`,
-        height: "90px",
-        paddingBottom: "24px",
-        borderTop: `1px dashed ${COLORS.gold}40`,
+        height: "80px",
+        paddingBottom: "16px",
+        borderTop: `1px solid ${COLORS.gold}30`,
       }}
     >
       {navItems.map((item) => (
@@ -576,24 +576,44 @@ function BottomNav() {
         >
           {item.isCenter ? (
             <div 
-              className="w-16 h-16 rounded-full flex items-center justify-center"
+              className="w-14 h-14 rounded-full flex items-center justify-center"
               style={{
                 background: `linear-gradient(145deg, ${COLORS.goldLight} 0%, ${COLORS.gold} 50%, ${COLORS.goldDark} 100%)`,
                 border: `2px solid ${COLORS.goldDark}`,
-                boxShadow: `0 4px 15px rgba(201, 162, 39, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)`,
+                boxShadow: `0 4px 15px rgba(201, 162, 39, 0.4)`,
               }}
             >
-              <i className={`${item.iconFill} text-2xl`} style={{ color: COLORS.brownDark }}></i>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill={COLORS.brownDark}>
+                <path d="M12 5v14M5 12h14" stroke={COLORS.brownDark} strokeWidth="2" strokeLinecap="round"/>
+              </svg>
             </div>
           ) : (
             <>
-              <i className={`${currentPath === item.path ? item.iconFill : item.icon} text-2xl mb-1 transition-all duration-300`} style={{ 
-                color: currentPath === item.path ? COLORS.gold : COLORS.textMuted,
-                filter: currentPath === item.path ? 'drop-shadow(0 0 6px rgba(201, 162, 39, 0.6))' : 'none',
-              }}></i>
-              <span className="text-xs transition-all duration-300" style={{ 
-                fontFamily: COLORS.fontBody,
-                letterSpacing: '0.02em',
+              {item.path === '/feed' && (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill={currentPath === item.path ? COLORS.gold : 'none'} stroke={currentPath === item.path ? COLORS.gold : COLORS.textMuted} strokeWidth="2" className="mb-1">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              )}
+              {item.path === '/search' && (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={currentPath === item.path ? COLORS.gold : COLORS.textMuted} strokeWidth="2" className="mb-1">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              )}
+              {item.path === '/notifications' && (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill={currentPath === item.path ? COLORS.gold : 'none'} stroke={currentPath === item.path ? COLORS.gold : COLORS.textMuted} strokeWidth="2" className="mb-1">
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                </svg>
+              )}
+              {item.path === '/profile' && (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill={currentPath === item.path ? COLORS.gold : 'none'} stroke={currentPath === item.path ? COLORS.gold : COLORS.textMuted} strokeWidth="2" className="mb-1">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              )}
+              <span className="text-xs" style={{ 
                 fontWeight: currentPath === item.path ? 600 : 400,
                 color: currentPath === item.path ? COLORS.gold : COLORS.textMuted,
               }}>{item.label}</span>
@@ -1232,62 +1252,47 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
         </div>
       )}
 
-      <div className="absolute right-3 bottom-28 flex flex-col gap-4 items-center">
-        {/* User Avatar - Stitched circle with gold border */}
-        <button onClick={(e) => { e.stopPropagation(); onShowProfile(); }} className="flex flex-col items-center mb-1">
-          <div 
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold relative overflow-hidden"
-            style={{ 
-              background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, 
-              border: `2px solid ${COLORS.gold}`,
-              boxShadow: `0 0 0 2px ${COLORS.brown}, 0 0 10px ${COLORS.gold}40`,
-            }}
-          >
-            {/* Inner stitching */}
-            <div 
-              className="absolute inset-1 rounded-full border border-dashed"
-              style={{ borderColor: `${COLORS.gold}50` }}
-            />
-            <span style={{ color: COLORS.gold, textShadow: `0 0 10px ${COLORS.gold}60` }}>
-              {post.user?.username?.[0]?.toUpperCase() || "?"}
-            </span>
+      <div className="absolute right-4 bottom-24 flex flex-col gap-5 items-center z-40">
+        {/* Avatar */}
+        <button onClick={(e) => { e.stopPropagation(); onShowProfile(); }} className="flex flex-col items-center">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold" style={{ background: COLORS.leather, border: `2px solid ${COLORS.gold}`, color: COLORS.gold }}>
+            {post.user?.username?.[0]?.toUpperCase() || "?"}
           </div>
         </button>
 
-        {/* Fire/Like - Gold flame */}
-        <button onClick={(e) => { e.stopPropagation(); onDoubleTap(); }} className="flex flex-col items-center gap-0.5">
-          <i className="ph-fill ph-fire text-[42px]" style={{ 
-            color: isLiked ? '#FF6B00' : COLORS.gold,
-            filter: isLiked ? `drop-shadow(0 0 12px #FF6B00)` : `drop-shadow(0 0 6px ${COLORS.gold}60)`,
-          }}></i>
-          <span className="text-xs font-medium" style={{ color: COLORS.text }}>{(post.fire_count || 0) + (isLiked ? 1 : 0)}</span>
+        {/* Fire */}
+        <button onClick={(e) => { e.stopPropagation(); onDoubleTap(); }} className="flex flex-col items-center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill={isLiked ? '#FF6B00' : COLORS.gold}>
+            <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"/>
+          </svg>
+          <span className="text-xs mt-1" style={{ color: COLORS.text }}>{(post.fire_count || 0) + (isLiked ? 1 : 0)}</span>
         </button>
 
-        {/* Comments - Gold outline bubble */}
-        <button onClick={(e) => { e.stopPropagation(); onShowComments(); }} className="flex flex-col items-center gap-0.5">
-          <i className="ph ph-chat-teardrop-text text-[40px]" style={{ 
-            color: COLORS.gold,
-            filter: `drop-shadow(0 0 6px ${COLORS.gold}60)`,
-            WebkitTextStroke: `1px ${COLORS.gold}`,
-          }}></i>
-          <span className="text-xs font-medium" style={{ color: COLORS.text }}>{post.comment_count || 0}</span>
+        {/* Comments */}
+        <button onClick={(e) => { e.stopPropagation(); onShowComments(); }} className="flex flex-col items-center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={COLORS.gold} strokeWidth="2">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+          </svg>
+          <span className="text-xs mt-1" style={{ color: COLORS.text }}>{post.comment_count || 0}</span>
         </button>
 
-        {/* Share - Gold curved arrow */}
-        <button className="flex flex-col items-center gap-0.5">
-          <i className="ph ph-share-fat text-[38px]" style={{ 
-            color: COLORS.gold,
-            filter: `drop-shadow(0 0 6px ${COLORS.gold}60)`,
-          }}></i>
-          <span className="text-xs font-medium" style={{ color: COLORS.text }}>Share</span>
+        {/* Share */}
+        <button className="flex flex-col items-center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={COLORS.gold} strokeWidth="2">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+            <polyline points="16 6 12 2 8 6"/>
+            <line x1="12" y1="2" x2="12" y2="15"/>
+          </svg>
+          <span className="text-xs mt-1" style={{ color: COLORS.text }}>Share</span>
         </button>
 
-        {/* Music - at bottom */}
-        <button className="flex flex-col items-center mt-1">
-          <i className="ph ph-music-note text-[32px]" style={{ 
-            color: COLORS.gold,
-            filter: `drop-shadow(0 0 6px ${COLORS.gold}60)`,
-          }}></i>
+        {/* Music */}
+        <button className="flex flex-col items-center mt-2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={COLORS.gold} strokeWidth="2">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
         </button>
       </div>
 
