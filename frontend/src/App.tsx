@@ -22,6 +22,7 @@ import {
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { LaZyeute } from "./pages/LaZyeute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { supabase, getSessionWithTimeout } from "@/lib/supabase";
 
 // ===== AUTH CONTEXT =====
 const AuthContext = createContext(null);
@@ -33,20 +34,18 @@ function AuthProvider({ children }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { createClient } = await import("@supabase/supabase-js");
-        const supabase = createClient(
-          import.meta.env.VITE_SUPABASE_URL,
-          import.meta.env.VITE_SUPABASE_ANON_KEY,
-        );
-        const { data } = await supabase.auth.getSession();
-        if (data.session?.user) {
+        const {
+          data: { session },
+        } = await getSessionWithTimeout(5000);
+
+        if (session?.user) {
           setUser({
-            id: data.session.user.id,
-            email: data.session.user.email,
+            id: session.user.id,
+            email: session.user.email,
             username:
-              data.session.user.user_metadata?.username ||
-              data.session.user.email?.split("@")[0],
-            avatar: data.session.user.user_metadata?.avatar_url,
+              session.user.user_metadata?.username ||
+              session.user.email?.split("@")[0],
+            avatar: session.user.user_metadata?.avatar_url,
           });
         }
       } catch (e) {
@@ -59,11 +58,6 @@ function AuthProvider({ children }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-    );
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -71,11 +65,6 @@ function AuthProvider({ children }) {
   };
 
   const signInWithEmail = async (email, password) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-    );
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -93,11 +82,6 @@ function AuthProvider({ children }) {
   };
 
   const signUpWithEmail = async (email, password, username) => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
-    );
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -109,11 +93,6 @@ function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabase = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY,
-      );
       await supabase.auth.signOut();
     } catch (e) {
       console.error("Logout error:", e);
