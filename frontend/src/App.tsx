@@ -1,9 +1,10 @@
-// STEP 6: Test RBACProvider
+// STEP 7: Test ColonyProvider (Socket.IO)
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { GuestModeProvider } from "@/contexts/GuestModeContext";
 import { RBACProvider } from "@/contexts/RBACContext";
+import { ColonyProvider } from "@/components/providers/colony-provider";
 
 export default function App() {
   return (
@@ -12,10 +13,12 @@ export default function App() {
         <AuthProvider>
           <GuestModeProvider>
             <RBACProvider>
-              <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
-                <h1>🐝 STEP 6: RBACProvider</h1>
-                <p>Testing RBACProvider...</p>
-              </div>
+              <ColonyProvider>
+                <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
+                  <h1>🐝 STEP 7: ColonyProvider</h1>
+                  <p>Testing ColonyProvider (Socket.IO)...</p>
+                </div>
+              </ColonyProvider>
             </RBACProvider>
           </GuestModeProvider>
         </AuthProvider>
