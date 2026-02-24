@@ -1,6 +1,6 @@
 /**
  * ZYEUTÉ - Quebec's TikTok
- * Full Upload Flow - Camera, Record, Post
+ * Full Search Feature + Upload + Everything
  */
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
@@ -89,7 +89,6 @@ const COLORS = {
 };
 
 // ===== COMPONENTS =====
-
 function LoadingScreen() {
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ background: COLORS.brown }}>
@@ -109,7 +108,7 @@ function BottomNav() {
 
   const navItems = [
     { path: "/feed", icon: "🏠", label: "Home" },
-    { path: "/discover", icon: "🔍", label: "Discover" },
+    { path: "/search", icon: "🔍", label: "Search" },
     { path: "/create", icon: "➕", label: "Create", isCenter: true },
     { path: "/notifications", icon: "🔔", label: "Notifications" },
     { path: "/profile", icon: "👤", label: "Profile" },
@@ -117,7 +116,7 @@ function BottomNav() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-4 pb-safe z-50"
+      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-4 z-50"
       style={{ 
         background: `linear-gradient(to top, ${COLORS.brownDark} 0%, ${COLORS.brownDark}ee 80%, transparent 100%)`,
         height: "80px",
@@ -152,6 +151,304 @@ function BottomNav() {
           )}
         </button>
       ))}
+    </div>
+  );
+}
+
+// ===== SEARCH PAGE =====
+function Search() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("videos"); // videos, creators, hashtags
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(["#Quebec", "@marie_qc", "poutine"]);
+
+  // Trending hashtags
+  const trendingHashtags = [
+    { tag: "#Quebec", posts: "12.5K", trending: true },
+    { tag: "#Montreal", posts: "8.2K", trending: true },
+    { tag: "#Joual", posts: "5.1K", trending: false },
+    { tag: "#FleurDeLys", posts: "3.8K", trending: true },
+    { tag: "#Poutine", posts: "2.9K", trending: false },
+    { tag: "#Maple", posts: "1.5K", trending: false },
+    { tag: "#Winter", posts: "4.2K", trending: true },
+    { tag: "#Hockey", posts: "6.7K", trending: true },
+  ];
+
+  // Mock creators
+  const suggestedCreators = [
+    { id: 1, username: "marie_qc", followers: "12.5K", avatar: "M", verified: true },
+    { id: 2, username: "ti_guy_514", followers: "8.2K", avatar: "T", verified: false },
+    { id: 3, username: "sarah_mtl", followers: "5.1K", avatar: "S", verified: true },
+    { id: 4, username: "alex_quebec", followers: "3.8K", avatar: "A", verified: false },
+  ];
+
+  // Search handler
+  const handleSearch = (searchQuery) => {
+    if (!searchQuery.trim()) return;
+    
+    setLoading(true);
+    
+    // Simulate search delay
+    setTimeout(() => {
+      if (searchQuery.startsWith("#")) {
+        // Hashtag search
+        const filtered = trendingHashtags.filter(h => 
+          h.tag.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setResults(filtered);
+        setActiveTab("hashtags");
+      } else if (searchQuery.startsWith("@")) {
+        // User search
+        const filtered = suggestedCreators.filter(c => 
+          c.username.toLowerCase().includes(searchQuery.replace("@", "").toLowerCase())
+        );
+        setResults(filtered);
+        setActiveTab("creators");
+      } else {
+        // Video search (mock)
+        setResults([
+          { id: 1, caption: `Results for "${searchQuery}"`, user: "zyeute_seed", views: "1.2K" },
+          { id: 2, caption: `More about ${searchQuery}`, user: "marie_qc", views: "856" },
+        ]);
+        setActiveTab("videos");
+      }
+      setLoading(false);
+      
+      // Add to recent searches
+      if (!recentSearches.includes(searchQuery)) {
+        setRecentSearches(prev => [searchQuery, ...prev].slice(0, 5));
+      }
+    }, 500);
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setResults([]);
+  };
+
+  return (
+    <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
+      {/* Header with Search */}
+      <div className="sticky top-0 z-40 p-4" style={{ background: COLORS.brownDark }}>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch(query)}
+              placeholder="Search videos, creators, hashtags..."
+              className="w-full px-4 py-3 pl-10 rounded-xl"
+              style={{ 
+                background: COLORS.leather, 
+                border: `1px solid ${COLORS.gold}40`,
+                color: COLORS.text,
+              }}
+            />
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg">🔍</span>
+            {query && (
+              <button 
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg"
+                style={{ color: COLORS.textMuted }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex mt-4 border-b" style={{ borderColor: `${COLORS.gold}30` }}>
+          {["videos", "creators", "hashtags"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="flex-1 py-2 font-bold capitalize"
+              style={{ 
+                color: activeTab === tab ? COLORS.gold : COLORS.textMuted,
+                borderBottom: activeTab === tab ? `2px solid ${COLORS.gold}` : "none",
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4 animate-spin">🐝</div>
+            <p style={{ color: COLORS.textMuted }}>Searching...</p>
+          </div>
+        ) : query ? (
+          // Search Results
+          <div>
+            {activeTab === "videos" && (
+              <div className="grid grid-cols-2 gap-3">
+                {results.map((video) => (
+                  <div 
+                    key={video.id}
+                    className="aspect-[3/4] rounded-xl flex flex-col justify-end p-3 relative overflow-hidden"
+                    style={{ background: COLORS.leather }}
+                  >
+                    <p className="text-sm line-clamp-2" style={{ color: COLORS.text }}>{video.caption}</p>
+                    <p className="text-xs mt-1" style={{ color: COLORS.textMuted }}>@{video.user}</p>
+                    <span className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full" style={{ background: COLORS.gold, color: COLORS.brownDark }}>
+                      ▶ {video.views}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === "creators" && (
+              <div className="space-y-3">
+                {results.map((creator) => (
+                  <div 
+                    key={creator.id}
+                    className="flex items-center gap-4 p-4 rounded-xl"
+                    style={{ background: COLORS.leather }}
+                  >
+                    <div 
+                      className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+                      style={{ border: `2px solid ${COLORS.gold}` }}
+                    >
+                      {creator.avatar}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold flex items-center gap-2" style={{ color: COLORS.gold }}>
+                        @{creator.username}
+                        {creator.verified && <span className="text-blue-400">✓</span>}
+                      </p>
+                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{creator.followers} followers</p>
+                    </div>
+                    <button 
+                      className="px-4 py-2 rounded-full font-bold text-sm"
+                      style={{ background: COLORS.gold, color: COLORS.brownDark }}
+                    >
+                      Follow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === "hashtags" && (
+              <div className="space-y-3">
+                {results.map((hashtag) => (
+                  <div 
+                    key={hashtag.tag}
+                    className="flex items-center justify-between p-4 rounded-xl"
+                    style={{ background: COLORS.leather }}
+                  >
+                    <div>
+                      <p className="font-bold text-lg" style={{ color: COLORS.gold }}>{hashtag.tag}</p>
+                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{hashtag.posts} posts</p>
+                    </div>
+                    {hashtag.trending && (
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: "#ff4444", color: "white" }}>
+                        🔥 Trending
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Default View - Trending & Suggested
+          <div>
+            {/* Recent Searches */}
+            {recentSearches.length > 0 && (
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold" style={{ color: COLORS.text }}>Recent</h3>
+                  <button 
+                    onClick={() => setRecentSearches([])}
+                    className="text-sm"
+                    style={{ color: COLORS.gold }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {recentSearches.map((search, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setQuery(search); handleSearch(search); }}
+                      className="px-4 py-2 rounded-full text-sm flex items-center gap-2"
+                      style={{ background: COLORS.leather, color: COLORS.text }}
+                    >
+                      🕐 {search}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trending Hashtags */}
+            <div className="mb-6">
+              <h3 className="font-bold mb-3 flex items-center gap-2" style={{ color: COLORS.text }}>
+                <span>🔥</span> Trending in Quebec
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {trendingHashtags.slice(0, 6).map((hashtag) => (
+                  <button
+                    key={hashtag.tag}
+                    onClick={() => { setQuery(hashtag.tag); handleSearch(hashtag.tag); }}
+                    className="p-4 rounded-xl text-left relative overflow-hidden"
+                    style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}30` }}
+                  >
+                    <p className="font-bold" style={{ color: COLORS.gold }}>{hashtag.tag}</p>
+                    <p className="text-sm" style={{ color: COLORS.textMuted }}>{hashtag.posts} posts</p>
+                    {hashtag.trending && (
+                      <span className="absolute top-2 right-2 text-xs">🔥</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Suggested Creators */}
+            <div>
+              <h3 className="font-bold mb-3" style={{ color: COLORS.text }}>Creators to Follow</h3>
+              <div className="space-y-3">
+                {suggestedCreators.map((creator) => (
+                  <div 
+                    key={creator.id}
+                    className="flex items-center gap-4 p-3 rounded-xl"
+                    style={{ background: COLORS.leather }}
+                  >
+                    <div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
+                      style={{ border: `2px solid ${COLORS.gold}` }}
+                    >
+                      {creator.avatar}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold" style={{ color: COLORS.gold }}>@{creator.username}</p>
+                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{creator.followers} followers</p>
+                    </div>
+                    <button 
+                      className="px-4 py-2 rounded-full font-bold text-sm"
+                      style={{ background: COLORS.gold, color: COLORS.brownDark }}
+                    >
+                      Follow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <BottomNav />
     </div>
   );
 }
@@ -335,7 +632,6 @@ function CommentsModal({ postId, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-    
     setComments(prev => [...prev, { id: Date.now(), user: "You", text: newComment, avatar: "Y" }]);
     setNewComment("");
   };
@@ -417,8 +713,7 @@ function ProfileModal({ user, onClose }) {
 // ===== UPLOAD / CREATE PAGE =====
 function Create() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [step, setStep] = useState("select"); // select, preview, caption, uploading
+  const [step, setStep] = useState("select");
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [caption, setCaption] = useState("");
@@ -426,37 +721,30 @@ function Create() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
 
-  // Handle file selection
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
     if (!file.type.startsWith("video/")) {
       alert("Please select a video file");
       return;
     }
-
     setVideoFile(file);
     const url = URL.createObjectURL(file);
     setVideoPreview(url);
     setStep("preview");
   };
 
-  // Upload video
   const handleUpload = async () => {
     if (!videoFile) return;
-    
     setUploading(true);
     setStep("uploading");
 
     try {
-      // Create form data
       const formData = new FormData();
       formData.append("video", videoFile);
       formData.append("caption", caption);
       formData.append("hive_id", "quebec");
 
-      // Upload with progress
       const xhr = new XMLHttpRequest();
       
       xhr.upload.onprogress = (e) => {
@@ -485,16 +773,13 @@ function Create() {
 
       xhr.open("POST", "/api/upload");
       xhr.send(formData);
-
     } catch (error) {
-      console.error("Upload error:", error);
       alert("Upload failed. Please try again.");
       setUploading(false);
       setStep("caption");
     }
   };
 
-  // Render different steps
   if (step === "select") {
     return (
       <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
@@ -503,7 +788,6 @@ function Create() {
           <p className="mb-6" style={{ color: COLORS.textMuted }}>Share your Quebec story 🦫⚜️</p>
 
           <div className="space-y-4">
-            {/* Record Video */}
             <button
               onClick={() => fileInputRef.current?.click()}
               className="w-full p-6 rounded-2xl flex flex-col items-center gap-3"
@@ -511,10 +795,8 @@ function Create() {
             >
               <span className="text-5xl">📹</span>
               <span className="font-bold" style={{ color: COLORS.gold }}>Record Video</span>
-              <span className="text-sm" style={{ color: COLORS.textMuted }}>Use camera to record</span>
             </button>
 
-            {/* Upload from Gallery */}
             <button
               onClick={() => fileInputRef.current?.click()}
               className="w-full p-6 rounded-2xl flex flex-col items-center gap-3"
@@ -522,16 +804,9 @@ function Create() {
             >
               <span className="text-5xl">🖼️</span>
               <span className="font-bold" style={{ color: COLORS.gold }}>Upload from Gallery</span>
-              <span className="text-sm" style={{ color: COLORS.textMuted }}>Select existing video</span>
             </button>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="video/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+            <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
           </div>
         </div>
         <BottomNav />
@@ -542,31 +817,13 @@ function Create() {
   if (step === "preview") {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: COLORS.brown }}>
-        {/* Header */}
         <div className="flex justify-between items-center p-4">
           <button onClick={() => setStep("select")} style={{ color: COLORS.text }}>Cancel</button>
           <span className="font-bold" style={{ color: COLORS.gold }}>Preview</span>
-          <button 
-            onClick={() => setStep("caption")} 
-            className="px-4 py-2 rounded-full font-bold"
-            style={{ background: COLORS.gold, color: COLORS.brownDark }}
-          >
-            Next
-          </button>
+          <button onClick={() => setStep("caption")} className="px-4 py-2 rounded-full font-bold" style={{ background: COLORS.gold, color: COLORS.brownDark }}>Next</button>
         </div>
-
-        {/* Video Preview */}
         <div className="flex-1 flex items-center justify-center p-4">
-          {videoPreview && (
-            <video
-              src={videoPreview}
-              className="max-h-full max-w-full rounded-2xl"
-              controls
-              autoPlay
-              loop
-              style={{ maxHeight: "70vh" }}
-            />
-          )}
+          {videoPreview && <video src={videoPreview} className="max-h-full max-w-full rounded-2xl" controls autoPlay loop style={{ maxHeight: "70vh" }} />}
         </div>
       </div>
     );
@@ -575,64 +832,22 @@ function Create() {
   if (step === "caption") {
     return (
       <div className="min-h-screen flex flex-col" style={{ background: COLORS.brown }}>
-        {/* Header */}
         <div className="flex justify-between items-center p-4">
           <button onClick={() => setStep("preview")} style={{ color: COLORS.text }}>Back</button>
           <span className="font-bold" style={{ color: COLORS.gold }}>Caption</span>
-          <button 
-            onClick={handleUpload}
-            disabled={uploading}
-            className="px-4 py-2 rounded-full font-bold"
-            style={{ background: COLORS.gold, color: COLORS.brownDark, opacity: uploading ? 0.5 : 1 }}
-          >
-            {uploading ? "Posting..." : "Post"}
-          </button>
+          <button onClick={handleUpload} disabled={uploading} className="px-4 py-2 rounded-full font-bold" style={{ background: COLORS.gold, color: COLORS.brownDark, opacity: uploading ? 0.5 : 1 }}>{uploading ? "Posting..." : "Post"}</button>
         </div>
-
-        {/* Caption Input */}
         <div className="flex-1 p-4">
           <div className="flex gap-4 mb-6">
-            {videoPreview && (
-              <video
-                src={videoPreview}
-                className="w-24 h-32 rounded-xl object-cover"
-              />
-            )}
+            {videoPreview && <video src={videoPreview} className="w-24 h-32 rounded-xl object-cover" />}
             <div className="flex-1">
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="Describe your video... #Quebec #Joual"
-                className="w-full h-32 p-4 rounded-xl resize-none"
-                style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-              />
-              <p className="text-right text-sm mt-2" style={{ color: COLORS.textMuted }}>{caption.length}/500</p>
+              <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Describe your video... #Quebec #Joual" className="w-full h-32 p-4 rounded-xl resize-none" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }} />
             </div>
           </div>
-
-          {/* Hashtag Suggestions */}
-          <div className="mb-4">
-            <p className="text-sm mb-2" style={{ color: COLORS.textMuted }}>Popular hashtags</p>
-            <div className="flex flex-wrap gap-2">
-              {["#Quebec", "#Montreal", "#Joual", "#FleurDeLys", "#Poutine", "#Maple"].map(tag => (
-                <button
-                  key={tag}
-                  onClick={() => setCaption(prev => prev + " " + tag)}
-                  className="px-3 py-1 rounded-full text-sm"
-                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.gold }}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Visibility */}
-          <div className="p-4 rounded-xl" style={{ background: COLORS.leather }}>
-            <div className="flex justify-between items-center">
-              <span style={{ color: COLORS.text }}>Who can view</span>
-              <span style={{ color: COLORS.gold }}>Everyone 🔓</span>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {["#Quebec", "#Montreal", "#Joual", "#FleurDeLys", "#Poutine", "#Maple"].map(tag => (
+              <button key={tag} onClick={() => setCaption(prev => prev + " " + tag)} className="px-3 py-1 rounded-full text-sm" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.gold }}>{tag}</button>
+            ))}
           </div>
         </div>
       </div>
@@ -645,20 +860,10 @@ function Create() {
         <div className="text-center p-8">
           <div className="text-6xl mb-4">🐝</div>
           <h2 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Uploading...</h2>
-          
-          {/* Progress Bar */}
           <div className="w-64 h-3 rounded-full mx-auto mb-4" style={{ background: COLORS.leather }}>
-            <div 
-              className="h-full rounded-full transition-all duration-300"
-              style={{ 
-                background: `linear-gradient(90deg, ${COLORS.gold}, ${COLORS.goldLight})`,
-                width: `${uploadProgress}%`,
-              }}
-            />
+            <div className="h-full rounded-full transition-all duration-300" style={{ background: `linear-gradient(90deg, ${COLORS.gold}, ${COLORS.goldLight})`, width: `${uploadProgress}%` }} />
           </div>
-          
           <p style={{ color: COLORS.textMuted }}>{uploadProgress}% complete</p>
-          <p className="text-sm mt-4" style={{ color: COLORS.textMuted }}>Don't close this window</p>
         </div>
       </div>
     );
@@ -677,55 +882,11 @@ function Feed() {
   );
 }
 
-function Discover() {
-  const navigate = useNavigate();
-  
-  return (
-    <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
-      <div className="p-4">
-        <h1 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Discover</h1>
-        
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Search videos, creators, hashtags..."
-          className="w-full px-4 py-3 rounded-xl mb-6"
-          style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-        />
-
-        {/* Trending Tags */}
-        <h2 className="font-bold mb-3" style={{ color: COLORS.text }}>Trending in Quebec</h2>
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { tag: "#Quebec", posts: "12.5K" },
-            { tag: "#Montreal", posts: "8.2K" },
-            { tag: "#Joual", posts: "5.1K" },
-            { tag: "#FleurDeLys", posts: "3.8K" },
-            { tag: "#Poutine", posts: "2.9K" },
-            { tag: "#Maple", posts: "1.5K" },
-          ].map(({ tag, posts }) => (
-            <button 
-              key={tag}
-              className="p-4 rounded-2xl text-left"
-              style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40` }}
-            >
-              <p className="font-bold" style={{ color: COLORS.gold }}>{tag}</p>
-              <p className="text-sm" style={{ color: COLORS.textMuted }}>{posts} posts</p>
-            </button>
-          ))}
-        </div>
-      </div>
-      <BottomNav />
-    </div>
-  );
-}
-
 function Notifications() {
   const notifications = [
     { id: 1, text: "@marie_qc liked your video", time: "2m ago", icon: "🔥" },
     { id: 2, text: "@ti_guy started following you", time: "1h ago", icon: "👤" },
     { id: 3, text: "Your video hit 100 views! 🔥", time: "3h ago", icon: "📈" },
-    { id: 4, text: "@sarah_mtl commented: 'C'est ben beau!'", time: "5h ago", icon: "💬" },
   ];
 
   return (
@@ -734,11 +895,7 @@ function Notifications() {
         <h1 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Notifications</h1>
         <div className="space-y-3">
           {notifications.map(notif => (
-            <div 
-              key={notif.id}
-              className="p-4 rounded-2xl flex items-center gap-3"
-              style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}20` }}
-            >
+            <div key={notif.id} className="p-4 rounded-2xl flex items-center gap-3" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}20` }}>
               <span className="text-2xl">{notif.icon}</span>
               <div className="flex-1">
                 <p style={{ color: COLORS.text }}>{notif.text}</p>
@@ -757,73 +914,25 @@ function Profile() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("videos");
 
-  const videos = [
-    { id: 1, views: "1.2K", thumbnail: "🎬" },
-    { id: 2, views: "856", thumbnail: "🎵" },
-    { id: 3, views: "2.1K", thumbnail: "🔥" },
-    { id: 4, views: "432", thumbnail: "⚜️" },
-  ];
-
   return (
     <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
-      {/* Header */}
       <div className="p-4 text-center">
-        <div 
-          className="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold"
-          style={{ background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, border: `3px solid ${COLORS.gold}`, boxShadow: `0 0 30px ${COLORS.gold}30` }}
-        >
+        <div className="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold" style={{ background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, border: `3px solid ${COLORS.gold}`, boxShadow: `0 0 30px ${COLORS.gold}30` }}>
           {user?.username?.[0]?.toUpperCase() || "?"}
         </div>
-
         <h1 className="text-2xl font-bold" style={{ color: COLORS.gold }}>@{user?.username || "Guest"}</h1>
         <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec Creator ⚜️</p>
-
-        {/* Stats */}
         <div className="flex justify-around mb-8">
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>12</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Videos</p></div>
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>1.2K</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Followers</p></div>
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>89</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Following</p></div>
         </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 mb-6">
-          <button className="flex-1 py-3 rounded-xl font-bold" style={{ background: COLORS.gold, color: COLORS.brownDark }}>Edit Profile</button>
-          <button onClick={logout} className="px-6 py-3 rounded-xl font-bold border" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>Logout</button>
-        </div>
-
-        {/* Tabs */}
+        <button onClick={logout} className="w-full max-w-xs py-3 rounded-xl font-bold border mb-6" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>Logout</button>
         <div className="flex border-b" style={{ borderColor: `${COLORS.gold}40` }}>
-          <button 
-            onClick={() => setActiveTab("videos")}
-            className="flex-1 py-3 font-bold"
-            style={{ color: activeTab === "videos" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "videos" ? `2px solid ${COLORS.gold}` : "none" }}
-          >
-            Videos
-          </button>
-          <button 
-            onClick={() => setActiveTab("liked")}
-            className="flex-1 py-3 font-bold"
-            style={{ color: activeTab === "liked" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "liked" ? `2px solid ${COLORS.gold}` : "none" }}
-          >
-            Liked
-          </button>
+          <button onClick={() => setActiveTab("videos")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "videos" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "videos" ? `2px solid ${COLORS.gold}` : "none" }}>Videos</button>
+          <button onClick={() => setActiveTab("liked")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "liked" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "liked" ? `2px solid ${COLORS.gold}` : "none" }}>Liked</button>
         </div>
       </div>
-
-      {/* Video Grid */}
-      <div className="grid grid-cols-3 gap-1 p-4">
-        {videos.map(video => (
-          <div 
-            key={video.id}
-            className="aspect-[3/4] rounded-lg flex flex-col items-center justify-center relative"
-            style={{ background: COLORS.leather }}
-          >
-            <span className="text-4xl mb-2">{video.thumbnail}</span>
-            <span className="text-xs" style={{ color: COLORS.textMuted }}>{video.views} views</span>
-          </div>
-        ))}
-      </div>
-
       <BottomNav />
     </div>
   );
@@ -841,14 +950,10 @@ function Login() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ background: COLORS.brown }}>
       <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
       <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,191,0,0.15) 0%, transparent 70%)" }} />
-
       <div className="relative z-10 text-center">
         <div className="text-8xl mb-4">⚜️</div>
-        <h1 className="text-5xl font-black mb-2" style={{ background: "linear-gradient(180deg, #FFD700 0%, #DAA520 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-          ZYEUTÉ
-        </h1>
+        <h1 className="text-5xl font-black mb-2" style={{ background: "linear-gradient(180deg, #FFD700 0%, #DAA520 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ZYEUTÉ</h1>
         <p className="mb-8" style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
-
         <div className="space-y-4 w-72">
           <button onClick={signInWithGoogle} className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3" style={{ background: COLORS.gold, color: COLORS.brownDark }}>
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -880,7 +985,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/feed" element={<Feed />} />
-        <Route path="/discover" element={<Discover />} />
+        <Route path="/search" element={<Search />} />
         <Route path="/create" element={<Create />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
