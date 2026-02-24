@@ -1,4 +1,4 @@
-// STEP 10: Test MediaSessionProvider
+// STEP 11: Test BorderColorProvider
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import { ColonyProvider } from "@/components/providers/colony-provider";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
 import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
+import { BorderColorProvider } from "@/contexts/BorderColorContext";
 
 export default function App() {
   return (
@@ -20,10 +21,12 @@ export default function App() {
                 <NavigationStateProvider>
                   <NetworkQueueProvider>
                     <MediaSessionProvider>
-                      <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
-                        <h1>🐝 STEP 10: MediaSessionProvider</h1>
-                        <p>Testing MediaSessionProvider...</p>
-                      </div>
+                      <BorderColorProvider>
+                        <div style={{ padding: 50, textAlign: "center", fontFamily: "Arial", background: "#000", color: "#fff", minHeight: "100vh" }}>
+                          <h1>🐝 STEP 11: BorderColorProvider</h1>
+                          <p>Testing BorderColorProvider...</p>
+                        </div>
+                      </BorderColorProvider>
                     </MediaSessionProvider>
                   </NetworkQueueProvider>
                 </NavigationStateProvider>
