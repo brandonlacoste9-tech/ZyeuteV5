@@ -1034,3 +1034,109 @@
 .animate-heart-pump {
   animation: heart-pump 0.8s ease-out forwards;
 }
+
+/* ============ EDGE LIGHTING SYSTEM ============ */
+
+/* Dynamic Edge Color - Controlled by CSS Variable */
+:root {
+  --edge-color: #C9A227;
+  --edge-glow: rgba(201, 162, 39, 0.6);
+  --edge-glow-soft: rgba(201, 162, 39, 0.3);
+  --edge-glow-strong: rgba(201, 162, 39, 0.8);
+}
+
+/* Edge Lighting Animation */
+@keyframes edge-pulse {
+  0%, 100% { 
+    box-shadow: 
+      0 0 5px var(--edge-glow-soft),
+      0 0 10px var(--edge-glow-soft),
+      inset 0 0 5px var(--edge-glow-soft);
+  }
+  50% { 
+    box-shadow: 
+      0 0 10px var(--edge-glow),
+      0 0 20px var(--edge-glow-soft),
+      inset 0 0 10px var(--edge-glow-soft);
+  }
+}
+
+/* Base Edge Lighting Class */
+.edge-light {
+  position: relative;
+  border: 1px solid var(--edge-color);
+  box-shadow: 
+    0 0 5px var(--edge-glow-soft),
+    0 0 10px var(--edge-glow-soft),
+    inset 0 0 5px var(--edge-glow-soft);
+  transition: all 0.3s ease;
+}
+
+.edge-light:hover {
+  box-shadow: 
+    0 0 10px var(--edge-glow),
+    0 0 20px var(--edge-glow-soft),
+    inset 0 0 10px var(--edge-glow-soft);
+}
+
+/* Strong Edge Lighting */
+.edge-light-strong {
+  position: relative;
+  border: 2px solid var(--edge-color);
+  box-shadow: 
+    0 0 10px var(--edge-glow),
+    0 0 20px var(--edge-glow-soft),
+    0 0 40px var(--edge-glow-soft),
+    inset 0 0 10px var(--edge-glow-soft);
+}
+
+/* Animated Edge Pulse */
+.edge-light-pulse {
+  animation: edge-pulse 2s ease-in-out infinite;
+}
+
+/* Bottom Edge Only (like status bar) */
+.edge-bottom {
+  border-bottom: 2px solid var(--edge-color);
+  box-shadow: 
+    0 4px 10px var(--edge-glow-soft),
+    0 2px 5px var(--edge-glow-soft);
+}
+
+/* Top Edge Only */
+.edge-top {
+  border-top: 2px solid var(--edge-color);
+  box-shadow: 
+    0 -4px 10px var(--edge-glow-soft),
+    0 -2px 5px var(--edge-glow-soft);
+}
+
+/* Edge Accent Text */
+.text-edge {
+  color: var(--edge-color);
+  text-shadow: 
+    0 0 5px var(--edge-glow-soft),
+    0 0 10px var(--edge-glow-soft);
+}
+
+/* Edge Icon Glow */
+.icon-edge {
+  color: var(--edge-color);
+  filter: drop-shadow(0 0 3px var(--edge-glow)) drop-shadow(0 0 6px var(--edge-glow-soft));
+}
+
+/* Edge Progress Bar */
+.edge-progress {
+  background: linear-gradient(90deg, var(--edge-color), var(--edge-color));
+  box-shadow: 0 0 10px var(--edge-glow);
+}
+
+/* Color Theme Variants */
+[data-theme="gold"] { --edge-color: #C9A227; --edge-glow: rgba(201, 162, 39, 0.6); }
+[data-theme="blue"] { --edge-color: #0066CC; --edge-glow: rgba(0, 102, 204, 0.6); }
+[data-theme="red"] { --edge-color: #CC0000; --edge-glow: rgba(204, 0, 0, 0.6); }
+[data-theme="green"] { --edge-color: #00AA44; --edge-glow: rgba(0, 170, 68, 0.6); }
+[data-theme="purple"] { --edge-color: #8833CC; --edge-glow: rgba(136, 51, 204, 0.6); }
+[data-theme="pink"] { --edge-color: #CC3377; --edge-glow: rgba(204, 51, 119, 0.6); }
+[data-theme="orange"] { --edge-color: #FF6600; --edge-glow: rgba(255, 102, 0, 0.6); }
+[data-theme="teal"] { --edge-color: #00AAAA; --edge-glow: rgba(0, 170, 170, 0.6); }

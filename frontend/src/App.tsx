@@ -556,13 +556,11 @@ function BottomNav() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50"
+      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50 edge-light edge-bottom"
       style={{ 
         background: `linear-gradient(180deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 50%, ${COLORS.brown} 100%)`,
-        borderTop: `1px dashed ${COLORS.gold}30`,
         height: "90px",
         paddingBottom: "24px",
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
       }}
     >
       {navItems.map((item) => (
@@ -609,6 +607,17 @@ function Settings() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [activeSection, setActiveSection] = useState("account");
+  
+  useEffect(() => {
+    const savedColor = localStorage.getItem('edgeColor');
+    if (savedColor) {
+      document.documentElement.style.setProperty('--edge-color', savedColor);
+      const r = parseInt(savedColor.slice(1, 3), 16);
+      const g = parseInt(savedColor.slice(3, 5), 16);
+      const b = parseInt(savedColor.slice(5, 7), 16);
+      document.documentElement.style.setProperty('--edge-glow', `rgba(${r}, ${g}, ${b}, 0.6)`);
+    }
+  }, []);
   
   const [settings, setSettings] = useState({
     username: user?.username || "",
@@ -839,6 +848,46 @@ function Settings() {
               checked={settings.reducedMotion}
               onChange={() => handleToggle("reducedMotion")}
             />
+            <div className="pt-4 border-t" style={{ borderColor: `${COLORS.gold}30` }}>
+              <h3 className="font-bold mb-4" style={{ color: COLORS.textMuted }}>Edge Lighting Color</h3>
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { color: '#C9A227', name: 'Gold' },
+                  { color: '#0066CC', name: 'Blue' },
+                  { color: '#00AA44', name: 'Green' },
+                  { color: '#CC0000', name: 'Red' },
+                  { color: '#8833CC', name: 'Purple' },
+                  { color: '#CC3377', name: 'Pink' },
+                  { color: '#FF6600', name: 'Orange' },
+                  { color: '#00AAAA', name: 'Teal' },
+                ].map(({ color, name }) => (
+                  <button
+                    key={color}
+                    onClick={() => {
+                      document.documentElement.style.setProperty('--edge-color', color);
+                      const r = parseInt(color.slice(1, 3), 16);
+                      const g = parseInt(color.slice(3, 5), 16);
+                      const b = parseInt(color.slice(5, 7), 16);
+                      document.documentElement.style.setProperty('--edge-glow', `rgba(${r}, ${g}, ${b}, 0.6)`);
+                      localStorage.setItem('edgeColor', color);
+                    }}
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all hover:scale-105"
+                    style={{ background: COLORS.leather }}
+                    title={name}
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-full border-2"
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: `${color}80`,
+                        boxShadow: `0 0 10px ${color}60`
+                      }}
+                    />
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>{name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         );
 
