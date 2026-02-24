@@ -201,7 +201,7 @@
     "drizzle-kit": "^0.31.9",
     "esbuild": "^0.27.2",
     "eslint": "^10.0.0",
-    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "fast-check": "^3.23.2",
     "globals": "^17.3.0",
