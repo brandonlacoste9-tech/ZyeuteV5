@@ -1,11 +1,10 @@
 /**
- * ZYEUTÉ - Simple French-Only Version
+ * ZYEUTÉ - Simple English Version
  * No i18n, no locale switching, no blinking
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { Suspense, lazy, useState, useEffect } from "react";
-import { createContext, useContext } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useState, useEffect, createContext, useContext } from "react";
 
 // ===== SIMPLE AUTH CONTEXT =====
 const AuthContext = createContext(null);
@@ -15,7 +14,6 @@ function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check session once
     const checkAuth = async () => {
       try {
         const { createClient } = await import("@supabase/supabase-js");
@@ -78,19 +76,17 @@ const useAuth = () => useContext(AuthContext);
 
 // ===== SIMPLE PAGES =====
 
-// Loading Screen
 function PageLoader() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin text-4xl mb-4">🐝</div>
-        <p className="text-gray-400">Ça charge...</p>
+        <p className="text-gray-400">Loading...</p>
       </div>
     </div>
   );
 }
 
-// Login Page - French Only
 function Login() {
   const navigate = useNavigate();
   const { user, signInWithGoogle } = useAuth();
@@ -102,7 +98,7 @@ function Login() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
       <h1 className="text-4xl font-bold text-yellow-500 mb-2">🐝 ZYEUTÉ</h1>
-      <p className="text-gray-400 mb-8">Le Swarm Québécois ⚜️</p>
+      <p className="text-gray-400 mb-8">The Quebec Swarm ⚜️</p>
 
       <div className="w-full max-w-sm space-y-4">
         <button
@@ -115,32 +111,29 @@ function Login() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Continuer avec Google
+          Continue with Google
         </button>
 
         <button
           onClick={() => navigate("/feed")}
           className="w-full py-4 border border-yellow-500/30 text-yellow-500 rounded-xl"
         >
-          Continuer en tant qu'invité
+          Continue as Guest
         </button>
       </div>
     </div>
   );
 }
 
-// Simple Feed Page
 function Feed() {
   const { user, logout } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch posts once
     fetch("/api/explore?page=0&limit=10&hive=quebec")
       .then(r => r.json())
       .then(data => {
-        // Handle different response formats
         const postsArray = Array.isArray(data) ? data : data?.posts || [];
         setPosts(postsArray);
         setLoading(false);
@@ -152,23 +145,21 @@ function Feed() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
       <div className="sticky top-0 bg-black/80 backdrop-blur border-b border-gray-800 p-4 flex justify-between items-center">
         <h1 className="text-xl font-bold text-yellow-500">🐝 Zyeuté</h1>
         <div className="flex gap-4">
           {user && <span className="text-gray-400">{user.username}</span>}
           <button onClick={logout} className="text-sm text-gray-400">
-            Déconnexion
+            Logout
           </button>
         </div>
       </div>
 
-      {/* Feed */}
       <div className="divide-y divide-gray-800">
         {posts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
-            <p>Rien à zyeuter pour l'instant!</p>
-            <p className="text-sm mt-2">Reviens plus tard 🦫</p>
+            <p>Nothing to see yet!</p>
+            <p className="text-sm mt-2">Check back later 🦫</p>
           </div>
         ) : (
           posts.map(post => (
@@ -177,7 +168,7 @@ function Feed() {
                 <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
                   {post.user?.username?.[0]?.toUpperCase() || "?"}
                 </div>
-                <span className="font-semibold">{post.user?.username || "Anonyme"}</span>
+                <span className="font-semibold">{post.user?.username || "Anonymous"}</span>
               </div>
               {post.media_url && (
                 <video
@@ -191,7 +182,7 @@ function Feed() {
               <div className="flex gap-4 mt-2 text-sm text-gray-500">
                 <button>🔥 {post.fire_count || 0}</button>
                 <button>💬 {post.comment_count || 0}</button>
-                <button>↗️ Partager</button>
+                <button>↗️ Share</button>
               </div>
             </div>
           ))
@@ -201,20 +192,15 @@ function Feed() {
   );
 }
 
-// Auth Callback
 function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase handles the callback automatically
     setTimeout(() => navigate("/feed"), 1000);
   }, [navigate]);
 
   return <PageLoader />;
 }
-
-// ===== ROUTER SETUP =====
-import { useNavigate } from "react-router-dom";
 
 function AppContent() {
   return (
@@ -230,7 +216,6 @@ function AppContent() {
   );
 }
 
-// ===== MAIN APP =====
 export default function App() {
   return (
     <AuthProvider>
