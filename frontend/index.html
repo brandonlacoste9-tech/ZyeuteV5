@@ -73,21 +73,22 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration - DEFERRED to avoid blocking initial load/freeze -->
     <script>
-      if ("serviceWorker" in navigator) {
+      if ("serviceWorker" in navigator && !window.location.search.includes("noSW=1")) {
         window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("/sw.js", { updateViaCache: "none" })
-            .then((registration) => {
-              console.log("✅ SW registered:", registration.scope);
-              // Check for updates immediately and periodically
-              registration.update();
-              setInterval(() => registration.update(), 60 * 60 * 1000);
-            })
-            .catch((error) => {
-              console.error("❌ SW registration failed:", error);
-            });
+          (window.requestIdleCallback || function(cb) { setTimeout(cb, 1); })(() => {
+            navigator.serviceWorker
+              .register("/sw.js", { updateViaCache: "none" })
+              .then((registration) => {
+                console.log("✅ SW registered:", registration.scope);
+                registration.update();
+                setInterval(() => registration.update(), 60 * 60 * 1000);
+              })
+              .catch((error) => {
+                console.error("❌ SW registration failed:", error);
+              });
+          }, { timeout: 3000 });
         });
       }
     </script>

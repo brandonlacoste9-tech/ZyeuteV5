@@ -2,6 +2,9 @@
  * Infinite Scroll Feed Hook
  * Uses React Query for data fetching with cursor-based pagination
  * Compatible with both LaZyeute (TikTok) and Feed (grid) components
+ *
+ * CRITICAL: Uses Supabase session token (not localStorage "token")
+ * to match backend JWT validation.
  */
 
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -9,6 +12,7 @@ import { useInView } from "react-intersection-observer";
 import { useEffect, useMemo } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed } from "@/services/api";
+import { supabase } from "@/lib/supabase";
 
 interface FeedResponse {
   posts: Post[];
@@ -18,6 +22,17 @@ interface FeedResponse {
 }
 
 export type FeedType = "feed" | "explore" | "smart";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 export function useInfiniteFeed(feedType: FeedType = "explore") {
   const {
@@ -30,6 +45,10 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     refetch,
   } = useInfiniteQuery<FeedResponse>({
     queryKey: ["feed-infinite", feedType],
+    staleTime: 30_000, // 30s - avoid aggressive refetch on mount
+    gcTime: 5 * 60 * 1000, // 5 min cache
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({
         limit: "20",
@@ -37,10 +56,10 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
+        headers,
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -139,10 +158,10 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
+        headers,
+        credentials: "include",
       });
 
       if (!response.ok) {
