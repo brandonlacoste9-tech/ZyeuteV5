@@ -641,30 +641,44 @@ export const LaZyeute: React.FC = () => {
             </div>
           </Link>
 
-          {/* Fire */}
+          {/* Fire - larger flame with warm red/orange glow */}
           <button
             onClick={() => handleFireToggle(currentPost.id)}
             className="flex flex-col items-center gap-1 press-scale"
             data-testid={`button-fire-${currentPost.id}`}
           >
             <div
-              className="p-2 rounded-full transition-all duration-300"
+              className="p-2.5 rounded-full transition-all duration-300"
               style={{
                 boxShadow: (currentPost as any).is_fired
-                  ? `0 0 16px ${edgeLighting}80, 0 0 24px rgba(255,140,0,0.4)`
-                  : `0 0 10px ${edgeLighting}40`,
+                  ? "0 0 24px rgba(255,120,80,0.9), 0 0 32px rgba(255,80,40,0.7)"
+                  : `0 0 12px ${edgeLighting}60`,
+                background: (currentPost as any).is_fired
+                  ? "radial-gradient(circle at 30% 10%, #FFE8C2 0%, #FF9F6E 35%, #FF5A3C 70%, rgba(0,0,0,0.8) 100%)"
+                  : "radial-gradient(circle at 30% 10%, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
               }}
             >
               <svg
-                className="w-7 h-7"
+                className="w-8 h-8"
                 viewBox="0 0 24 24"
-                fill={(currentPost as any).is_fired ? "#FF8C00" : "none"}
-                stroke={edgeLighting}
-                strokeWidth={(currentPost as any).is_fired ? 0 : 1.5}
+                fill={
+                  (currentPost as any).is_fired ? "url(#flameGradient)" : "none"
+                }
+                stroke={(currentPost as any).is_fired ? "none" : edgeLighting}
+                strokeWidth={(currentPost as any).is_fired ? 0 : 1.6}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
               >
+                {/* warm red/orange gradient for active flame */}
+                <defs>
+                  <radialGradient id="flameGradient" cx="50%" cy="20%" r="70%">
+                    <stop offset="0%" stopColor="#FFEFD5" />
+                    <stop offset="35%" stopColor="#FFC26A" />
+                    <stop offset="70%" stopColor="#FF5A3C" />
+                    <stop offset="100%" stopColor="#C62828" />
+                  </radialGradient>
+                </defs>
                 <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
               </svg>
             </div>
@@ -807,11 +821,14 @@ export const LaZyeute: React.FC = () => {
 
       {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-8 py-3"
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around"
         style={{
           background:
             "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
           borderTop: `1px solid ${edgeLighting}30`,
+          paddingInline: 24,
+          paddingTop: 8,
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
         }}
       >
         {/* Home */}
