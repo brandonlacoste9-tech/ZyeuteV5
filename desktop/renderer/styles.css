@@ -12,6 +12,11 @@
   --gold-dark: #8B6914;
   --gold-muted: #A68B5C;
   
+  /* Edge Lighting Colors - Dynamic */
+  --edge-color: #C9A227;
+  --edge-glow: rgba(201, 162, 39, 0.6);
+  --edge-glow-soft: rgba(201, 162, 39, 0.3);
+  
   /* Rich Leather Browns */
   --brown: #1A0F0A;
   --brown-light: #2C1810;
