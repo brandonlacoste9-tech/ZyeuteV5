@@ -1174,7 +1174,7 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
           style={{ animation: "heartPop 0.8s ease-out forwards" }}
         >
-          <span className="text-8xl">🔥</span>
+          <i className="ph-fill ph-fire text-8xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 20px ${COLORS.gold})` }}></i>
         </div>
       )}
 
@@ -1190,24 +1190,30 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
         </button>
 
         <button onClick={(e) => { e.stopPropagation(); onDoubleTap(); }} className="flex flex-col items-center gap-1">
-          <span className="text-4xl" style={{ filter: isLiked ? "drop-shadow(0 0 10px #FFBF00)" : "none" }}>🔥</span>
+          <i className={`ph-fill ph-fire text-4xl transition-all duration-300`} style={{ 
+            color: isLiked ? COLORS.gold : COLORS.text,
+            filter: isLiked ? `drop-shadow(0 0 10px ${COLORS.gold})` : "none"
+          }}></i>
           <span className="text-sm font-bold" style={{ color: COLORS.text }}>{(post.fire_count || 0) + (isLiked ? 1 : 0)}</span>
         </button>
 
         <button onClick={(e) => { e.stopPropagation(); onShowComments(); }} className="flex flex-col items-center gap-1">
-          <span className="text-4xl">💬</span>
+          <i className="ph ph-chat-circle text-4xl" style={{ color: COLORS.text }}></i>
           <span className="text-sm font-bold" style={{ color: COLORS.text }}>{post.comment_count || 0}</span>
         </button>
 
         <button className="flex flex-col items-center gap-1">
-          <span className="text-4xl">↗️</span>
+          <i className="ph ph-share-fat text-4xl" style={{ color: COLORS.text }}></i>
           <span className="text-sm font-bold" style={{ color: COLORS.text }}>Share</span>
         </button>
       </div>
 
       <div className="absolute left-4 bottom-32 right-24">
         <p className="text-lg mb-2" style={{ color: COLORS.text }}>{post.caption}</p>
-        <p className="text-sm opacity-70" style={{ color: COLORS.textMuted }}>🎵 Original Sound - {post.user?.username}</p>
+        <p className="text-sm flex items-center gap-1" style={{ color: COLORS.textMuted }}>
+          <i className="ph-fill ph-music-note" style={{ color: COLORS.gold }}></i>
+          Original Sound - {post.user?.username}
+        </p>
       </div>
     </div>
   );
@@ -1216,9 +1222,9 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
 // ===== COMMENTS MODAL =====
 function CommentsModal({ postId, onClose }) {
   const [comments, setComments] = useState([
-    { id: 1, user: "marie_qc", text: "C'est ben beau! 🔥", avatar: "M" },
+    { id: 1, user: "marie_qc", text: "C'est ben beau!", avatar: "M" },
     { id: 2, user: "ti_guy_514", text: "Tabarnac c'est nice", avatar: "T" },
-    { id: 3, user: "sarah_mtl", text: "Love this! ⚜️", avatar: "S" },
+    { id: 3, user: "sarah_mtl", text: "Love this!", avatar: "S" },
   ]);
   const [newComment, setNewComment] = useState("");
 
@@ -1237,7 +1243,7 @@ function CommentsModal({ postId, onClose }) {
         onClick={e => e.stopPropagation()}
       >
         <div className="w-12 h-1 rounded-full mx-auto mb-4" style={{ background: COLORS.gold }} />
-        <h3 className="text-xl font-bold mb-4 text-center" style={{ color: COLORS.gold }}>Comments</h3>
+        <h3 className="text-xl font-bold mb-4 text-center" style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}>Comments</h3>
         
         <div className="overflow-y-auto mb-4" style={{ maxHeight: "40vh" }}>
           {comments.map(comment => (
@@ -1286,7 +1292,10 @@ function ProfileModal({ user, onClose }) {
         </div>
 
         <h2 className="text-2xl font-bold mb-1" style={{ color: COLORS.gold }}>@{user?.username}</h2>
-        <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec Creator ⚜️</p>
+        <p className="mb-6 flex items-center justify-center gap-1" style={{ color: COLORS.textMuted }}>
+          Quebec Creator
+          <img src="/zyeute-icon.svg" alt="⚜️" className="w-4 h-4 inline" />
+        </p>
 
         <div className="flex justify-around mb-6">
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>1.2K</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Followers</p></div>
