@@ -1232,11 +1232,6 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
       )}
 
       <div className="absolute right-4 bottom-32 flex flex-col gap-5 items-center">
-        {/* Music - Outline style */}
-        <button className="flex flex-col items-center">
-          <i className="ph ph-music-note text-3xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 4px ${COLORS.gold}60)` }}></i>
-        </button>
-
         {/* User Avatar - No text label */}
         <button onClick={(e) => { e.stopPropagation(); onShowProfile(); }} className="flex flex-col items-center">
           <div 
@@ -1266,6 +1261,11 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
         <button className="flex flex-col items-center gap-1">
           <i className="ph-fill ph-share-fat text-4xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 6px ${COLORS.gold}60)` }}></i>
           <span className="text-xs font-medium" style={{ color: COLORS.text }}>Share</span>
+        </button>
+
+        {/* Music - at bottom */}
+        <button className="flex flex-col items-center">
+          <i className="ph ph-music-note text-3xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 4px ${COLORS.gold}60)` }}></i>
         </button>
       </div>
 
