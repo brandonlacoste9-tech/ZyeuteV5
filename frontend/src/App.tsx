@@ -53,13 +53,18 @@ function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
-    await supabase.auth.signOut();
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        import.meta.env.VITE_SUPABASE_URL,
+        import.meta.env.VITE_SUPABASE_ANON_KEY
+      );
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
     setUser(null);
+    window.location.href = "/login";
   };
 
   return (
@@ -135,7 +140,9 @@ function Feed() {
     fetch("/api/explore?page=0&limit=10&hive=quebec")
       .then(r => r.json())
       .then(data => {
-        setPosts(data || []);
+        // Handle different response formats
+        const postsArray = Array.isArray(data) ? data : data?.posts || [];
+        setPosts(postsArray);
         setLoading(false);
       })
       .catch(() => setLoading(false));
