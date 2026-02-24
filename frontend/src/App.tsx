@@ -1386,26 +1386,71 @@ function Create() {
     return (
       <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
         <div className="p-4">
-          <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.gold }}>Create</h1>
-          <p className="mb-6" style={{ color: COLORS.textMuted }}>Share your Quebec story 🦫⚜️</p>
+          <h1 
+            className="text-3xl mb-2"
+            style={{ 
+              color: COLORS.gold,
+              fontFamily: COLORS.fontDisplay,
+              fontWeight: 700,
+            }}
+          >
+            Create
+          </h1>
+          <p 
+            className="mb-8 flex items-center justify-center gap-1"
+            style={{ 
+              color: COLORS.textMuted,
+              fontFamily: COLORS.fontDisplay,
+              fontStyle: 'italic',
+            }}
+          >
+            Share your Quebec story
+            <img src="/zyeute-icon.svg" alt="⚜️" className="w-4 h-4 inline" />
+          </p>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full p-6 rounded-2xl flex flex-col items-center gap-3"
-              style={{ background: COLORS.leather, border: `2px dashed ${COLORS.gold}60` }}
+              className="w-full p-8 rounded-2xl flex flex-col items-center gap-4 transition-all duration-300"
+              style={{ 
+                background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+                border: `2px dashed ${COLORS.gold}40`,
+              }}
             >
-              <span className="text-5xl">📹</span>
-              <span className="font-bold" style={{ color: COLORS.gold }}>Record Video</span>
+              <i className="ph ph-video-camera text-5xl" style={{ color: COLORS.gold }}></i>
+              <span 
+                className="font-bold"
+                style={{ 
+                  color: COLORS.gold,
+                  fontFamily: COLORS.fontDisplay,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Record Video
+              </span>
             </button>
 
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full p-6 rounded-2xl flex flex-col items-center gap-3"
-              style={{ background: COLORS.leather, border: `2px dashed ${COLORS.gold}60` }}
+              className="w-full p-8 rounded-2xl flex flex-col items-center gap-4 transition-all duration-300"
+              style={{ 
+                background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+                border: `2px dashed ${COLORS.gold}40`,
+              }}
             >
-              <span className="text-5xl">🖼️</span>
-              <span className="font-bold" style={{ color: COLORS.gold }}>Upload from Gallery</span>
+              <i className="ph ph-image text-5xl" style={{ color: COLORS.gold }}></i>
+              <span 
+                className="font-bold"
+                style={{ 
+                  color: COLORS.gold,
+                  fontFamily: COLORS.fontDisplay,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Upload from Gallery
+              </span>
             </button>
 
             <input ref={fileInputRef} type="file" accept="video/*" onChange={handleFileSelect} className="hidden" />
@@ -1460,12 +1505,21 @@ function Create() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: COLORS.brown }}>
         <div className="text-center p-8">
-          <div className="text-6xl mb-4">🐝</div>
-          <h2 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Uploading...</h2>
-          <div className="w-64 h-3 rounded-full mx-auto mb-4" style={{ background: COLORS.leather }}>
+          <img src="/zyeute-beaver.svg" alt="Zyeuté" className="w-20 h-20 mx-auto mb-4" style={{ filter: `drop-shadow(0 0 20px ${COLORS.gold}40)` }} />
+          <h2 
+            className="text-2xl mb-4"
+            style={{ 
+              color: COLORS.gold,
+              fontFamily: COLORS.fontDisplay,
+              fontWeight: 700,
+            }}
+          >
+            Uploading...
+          </h2>
+          <div className="w-64 h-3 rounded-full mx-auto mb-4" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}30` }}>
             <div className="h-full rounded-full transition-all duration-300" style={{ background: `linear-gradient(90deg, ${COLORS.gold}, ${COLORS.goldLight})`, width: `${uploadProgress}%` }} />
           </div>
-          <p style={{ color: COLORS.textMuted }}>{uploadProgress}% complete</p>
+          <p style={{ color: COLORS.textMuted, fontFamily: COLORS.fontBody }}>{uploadProgress}% complete</p>
         </div>
       </div>
     );
@@ -1540,34 +1594,119 @@ function Profile() {
 
   return (
     <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
-      <div className="p-4 text-center">
-        <div className="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold" style={{ background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, border: `3px solid ${COLORS.gold}`, boxShadow: `0 0 30px ${COLORS.gold}30` }}>
-          {user?.username?.[0]?.toUpperCase() || "?"}
+      <div className="p-6 text-center">
+        {/* Avatar with stitching */}
+        <div 
+          className="w-28 h-28 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold relative"
+          style={{ 
+            background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, 
+            border: `3px solid ${COLORS.gold}`,
+            boxShadow: `0 0 30px ${COLORS.gold}20`,
+          }}
+        >
+          <span style={{ fontFamily: COLORS.fontDisplay }}>{user?.username?.[0]?.toUpperCase() || "?"}</span>
+          {/* Inner stitching ring */}
+          <div 
+            className="absolute inset-2 rounded-full border-2 border-dashed"
+            style={{ borderColor: `${COLORS.gold}40` }}
+          />
         </div>
-        <h1 className="text-2xl font-bold" style={{ color: COLORS.gold }}>@{user?.username || "Guest"}</h1>
-        <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec Creator ⚜️</p>
+        
+        <h1 
+          className="text-3xl mb-1"
+          style={{ 
+            color: COLORS.gold, 
+            fontFamily: COLORS.fontDisplay,
+            fontWeight: 700,
+          }}
+        >
+          @{user?.username || "Guest"}
+        </h1>
+        <p 
+          className="mb-8 flex items-center justify-center gap-1"
+          style={{ 
+            color: COLORS.textMuted,
+            fontFamily: COLORS.fontDisplay,
+            fontStyle: 'italic',
+          }}
+        >
+          Quebec Creator
+          <img src="/zyeute-icon.svg" alt="⚜️" className="w-4 h-4 inline" />
+        </p>
 
-        <div className="flex justify-around mb-8">
-          <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>12</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Videos</p></div>
-          <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>1.2K</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Followers</p></div>
-          <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>89</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Following</p></div>
+        {/* Stats */}
+        <div className="flex justify-around mb-8 px-4">
+          <div className="text-center">
+            <p className="text-2xl font-bold" style={{ color: COLORS.gold, fontFamily: COLORS.fontBody }}>12</p>
+            <p className="text-xs uppercase tracking-wider" style={{ color: COLORS.textMuted }}>Videos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold" style={{ color: COLORS.gold, fontFamily: COLORS.fontBody }}>1.2K</p>
+            <p className="text-xs uppercase tracking-wider" style={{ color: COLORS.textMuted }}>Followers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold" style={{ color: COLORS.gold, fontFamily: COLORS.fontBody }}>89</p>
+            <p className="text-xs uppercase tracking-wider" style={{ color: COLORS.textMuted }}>Following</p>
+          </div>
         </div>
 
+        {/* Settings Button */}
         <button 
           onClick={() => navigate("/settings")}
-          className="w-full max-w-xs py-3 rounded-xl font-bold border mb-4 flex items-center justify-center gap-2"
-          style={{ borderColor: COLORS.gold, color: COLORS.gold }}
+          className="w-full max-w-xs py-4 rounded-xl font-bold mb-4 flex items-center justify-center gap-2 transition-all duration-300"
+          style={{ 
+            background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+            border: `2px dashed ${COLORS.gold}40`,
+            color: COLORS.gold,
+            fontFamily: COLORS.fontDisplay,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
         >
-          <span>⚙️</span> Settings
+          <i className="ph ph-gear text-lg"></i>
+          <span>Settings</span>
         </button>
 
-        <button onClick={logout} className="w-full max-w-xs py-3 rounded-xl font-bold border" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
-          Logout
+        <button 
+          onClick={logout} 
+          className="w-full max-w-xs py-3 rounded-xl font-bold border flex items-center justify-center gap-2 transition-all duration-300"
+          style={{ 
+            borderColor: "#ff444480", 
+            color: "#ff6b6b",
+            background: 'transparent',
+            fontFamily: COLORS.fontBody,
+          }}
+        >
+          <i className="ph ph-sign-out text-lg"></i>
+          <span>Logout</span>
         </button>
 
-        <div className="flex border-b mt-8" style={{ borderColor: `${COLORS.gold}40` }}>
-          <button onClick={() => setActiveTab("videos")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "videos" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "videos" ? `2px solid ${COLORS.gold}` : "none" }}>Videos</button>
-          <button onClick={() => setActiveTab("liked")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "liked" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "liked" ? `2px solid ${COLORS.gold}` : "none" }}>Liked</button>
+        {/* Tabs */}
+        <div className="flex border-b mt-8" style={{ borderColor: `${COLORS.gold}30` }}>
+          <button 
+            onClick={() => setActiveTab("videos")} 
+            className="flex-1 py-3 font-bold transition-all duration-300"
+            style={{ 
+              color: activeTab === "videos" ? COLORS.gold : COLORS.textMuted, 
+              borderBottom: activeTab === "videos" ? `2px solid ${COLORS.gold}` : "none",
+              fontFamily: COLORS.fontDisplay,
+              letterSpacing: '0.05em',
+            }}
+          >
+            Videos
+          </button>
+          <button 
+            onClick={() => setActiveTab("liked")} 
+            className="flex-1 py-3 font-bold transition-all duration-300"
+            style={{ 
+              color: activeTab === "liked" ? COLORS.gold : COLORS.textMuted, 
+              borderBottom: activeTab === "liked" ? `2px solid ${COLORS.gold}` : "none",
+              fontFamily: COLORS.fontDisplay,
+              letterSpacing: '0.05em',
+            }}
+          >
+            Liked
+          </button>
         </div>
       </div>
       <BottomNav />
