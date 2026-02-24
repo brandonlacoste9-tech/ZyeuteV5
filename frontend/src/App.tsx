@@ -547,11 +547,11 @@ function BottomNav() {
   const currentPath = location.pathname;
 
   const navItems = [
-    { path: "/feed", icon: "ph-house", label: "Home" },
-    { path: "/search", icon: "ph-magnifying-glass", label: "Search" },
-    { path: "/create", icon: "ph-plus", label: "Create", isCenter: true },
-    { path: "/notifications", icon: "ph-bell", label: "Notifications" },
-    { path: "/profile", icon: "ph-user", label: "Profile" },
+    { path: "/feed", icon: "ph-house", iconFill: "ph-fill ph-house", label: "Home" },
+    { path: "/search", icon: "ph-magnifying-glass", iconFill: "ph-fill ph-magnifying-glass", label: "Search" },
+    { path: "/create", icon: "ph-plus", iconFill: "ph-fill ph-plus", label: "Create", isCenter: true },
+    { path: "/notifications", icon: "ph-bell", iconFill: "ph-fill ph-bell", label: "Notifications" },
+    { path: "/profile", icon: "ph-user", iconFill: "ph-fill ph-user", label: "Profile" },
   ];
 
   return (
@@ -582,17 +582,19 @@ function BottomNav() {
                 boxShadow: `0 4px 15px rgba(201, 162, 39, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)`,
               }}
             >
-              <i className={`${item.icon} text-2xl`} style={{ color: COLORS.brownDark }}></i>
+              <i className={`${item.iconFill} text-2xl`} style={{ color: COLORS.brownDark }}></i>
             </div>
           ) : (
             <>
-              <i className={`${item.icon} text-2xl mb-1`} style={{ 
-                filter: currentPath === item.path ? 'drop-shadow(0 0 4px rgba(201, 162, 39, 0.5))' : 'none'
+              <i className={`${currentPath === item.path ? item.iconFill : item.icon} text-2xl mb-1 transition-all duration-300`} style={{ 
+                color: currentPath === item.path ? COLORS.gold : COLORS.textMuted,
+                filter: currentPath === item.path ? 'drop-shadow(0 0 6px rgba(201, 162, 39, 0.6))' : 'none',
               }}></i>
-              <span className="text-xs" style={{ 
+              <span className="text-xs transition-all duration-300" style={{ 
                 fontFamily: COLORS.fontBody,
                 letterSpacing: '0.02em',
-                fontWeight: currentPath === item.path ? 500 : 400,
+                fontWeight: currentPath === item.path ? 600 : 400,
+                color: currentPath === item.path ? COLORS.gold : COLORS.textMuted,
               }}>{item.label}</span>
             </>
           )}
