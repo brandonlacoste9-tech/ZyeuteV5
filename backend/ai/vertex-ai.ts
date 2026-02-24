@@ -20,18 +20,33 @@ const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 
 // Ensure GOOGLE_APPLICATION_CREDENTIALS is set or credentials provided via env
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-  // Support for JSON string in GOOGLE_CREDENTIALS (for Railway/Render)
-  if (process.env.GOOGLE_CREDENTIALS) {
+  // Support for JSON string in GOOGLE_CREDENTIALS or GOOGLE_SERVICE_ACCOUNT_JSON (for Railway/Render)
+  const credsJson =
+    process.env.GOOGLE_CREDENTIALS || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (credsJson) {
     try {
-      const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      // Normalize: strip BOM, trim, handle double-encoded JSON
+      let raw = credsJson.replace(/^\uFEFF/, "").trim();
+      let parsed: unknown = JSON.parse(raw);
+      // If result is a string, it was double-encoded
+      if (typeof parsed === "string") parsed = JSON.parse(parsed as string);
+      const credentials = parsed as Record<string, unknown>;
+      if (!credentials || typeof credentials !== "object") {
+        throw new Error("Parsed value is not a valid credentials object");
+      }
       const tempKeyPath = path.resolve(process.cwd(), "temp-vertex-key.json");
-      fs.writeFileSync(tempKeyPath, process.env.GOOGLE_CREDENTIALS);
+      fs.writeFileSync(tempKeyPath, JSON.stringify(credentials));
       process.env.GOOGLE_APPLICATION_CREDENTIALS = tempKeyPath;
       console.log(
-        "🔑 [Vertex AI] Using credentials from GOOGLE_CREDENTIALS env var",
+        "🔑 [Vertex AI] Using credentials from env var (GOOGLE_CREDENTIALS or GOOGLE_SERVICE_ACCOUNT_JSON)",
       );
     } catch (e) {
-      console.error("❌ [Vertex AI] Failed to parse GOOGLE_CREDENTIALS:", e);
+      console.warn(
+        "⚠️ [Vertex AI] Failed to parse credentials JSON. Check GOOGLE_CREDENTIALS in Railway: must be valid JSON (no trailing commas, proper quotes). AI features may be disabled.",
+      );
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Parse error:", e);
+      }
     }
   }
 

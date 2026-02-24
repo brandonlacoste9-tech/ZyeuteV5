@@ -171,16 +171,8 @@ router.post("/chat", async (req, res) => {
         tools: {
           ajuster_momentum: tool({
             description: ajusterMomentumTool.description,
-            parameters: ajusterMomentumTool.parameters,
-            execute: async ({
-              id_publication,
-              nouveau_momentum,
-              raison,
-            }: {
-              id_publication: string;
-              nouveau_momentum: number;
-              raison: string;
-            }): Promise<unknown> => {
+            inputSchema: ajusterMomentumTool.parameters,
+            execute: async ({ id_publication, nouveau_momentum, raison }) => {
               console.log(
                 "TOOL CALL: ajuster_momentum",
                 id_publication,
@@ -197,14 +189,8 @@ router.post("/chat", async (req, res) => {
           }),
           expulser_troll: tool({
             description: expulserTrollTool.description,
-            parameters: expulserTrollTool.parameters,
-            execute: async ({
-              id_utilisateur,
-              raison,
-            }: {
-              id_utilisateur: string;
-              raison: string;
-            }): Promise<unknown> => {
+            inputSchema: expulserTrollTool.parameters,
+            execute: async ({ id_utilisateur, raison }) => {
               console.log("TOOL CALL: expulser_troll", id_utilisateur, raison);
               const result = await GovernanceBee.expulser_troll(
                 id_utilisateur,

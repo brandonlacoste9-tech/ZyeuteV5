@@ -30,13 +30,24 @@ async function initializeClient() {
         process.env.GOOGLE_APPLICATION_CREDENTIALS || "./zyeute-ai-key.json";
       const keyPath = path.resolve(process.cwd(), keyFile);
 
-      if (process.env.GOOGLE_CREDENTIALS) {
+      const credsJson =
+        process.env.GOOGLE_CREDENTIALS || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+      if (credsJson) {
         try {
-          const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-          options.credentials = credentials;
-          logger.info("[DialogflowBridge] Using credentials from GOOGLE_CREDENTIALS env var");
+          let raw = credsJson.replace(/^\uFEFF/, "").trim();
+          let parsed: unknown = JSON.parse(raw);
+          if (typeof parsed === "string") parsed = JSON.parse(parsed as string);
+          const credentials = parsed as Record<string, unknown>;
+          if (credentials && typeof credentials === "object") {
+            options.credentials = credentials;
+            logger.info(
+              "[DialogflowBridge] Using credentials from env var",
+            );
+          }
         } catch (e) {
-          logger.error("[DialogflowBridge] Failed to parse GOOGLE_CREDENTIALS");
+          logger.warn(
+            "[DialogflowBridge] Failed to parse credentials JSON. Using key file or mock mode.",
+          );
         }
       } else if (fs.existsSync(keyPath)) {
         options.keyFilename = keyPath;
