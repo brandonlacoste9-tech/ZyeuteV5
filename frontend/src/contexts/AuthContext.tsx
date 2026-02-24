@@ -66,7 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionUser) return null;
     try {
       // Use /auth/me for current user - it auto-provisions if profile missing
-      const fullProfile = await getUserProfile("me");
+      // Add timeout to prevent hanging if backend is down
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
+      );
+      const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
       if (fullProfile) return fullProfile;
 
       // Fallback if profile doesn't exist yet (rare race condition)

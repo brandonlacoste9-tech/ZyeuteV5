@@ -39,11 +39,17 @@ export async function apiCall<T>(
 
     const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    
     const response = await fetch(apiUrl, {
       ...options,
       headers,
-      credentials: "include", // Include cookies for session
+      credentials: "include",
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     const data = await response.json().catch(() => null);
 
@@ -70,6 +76,10 @@ export async function apiCall<T>(
 
     return { data, error: null };
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      apiLogger.error(`API timeout: ${endpoint}`);
+      return { data: null, error: "Request timeout", code: "TIMEOUT" };
+    }
     apiLogger.error(`API call failed: ${endpoint}`, error);
     return { data: null, error: "Network error", code: "NETWORK_ERROR" };
   }
