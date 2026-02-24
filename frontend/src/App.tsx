@@ -1,4 +1,4 @@
-// STEP 13: Test ACTUAL Feed Component (THE REAL TEST!)
+// FINAL TEST: Bypass Feed, test API directly
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -12,7 +12,18 @@ import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { HiveProvider } from "@/contexts/HiveContext";
 import { Login } from "@/pages/Login";
-import { Feed } from "@/pages/Feed";
+
+// Simple placeholder instead of Feed
+function FeedPlaceholder() {
+  return (
+    <div style={{ padding: 50, textAlign: "center", background: "#000", color: "#fff", minHeight: "100vh" }}>
+      <h1>🐝 FEED PLACEHOLDER</h1>
+      <p>Login worked! But Feed component is bypassed.</p>
+      <p>The issue is in the Feed/Video components.</p>
+      <button onClick={() => window.location.href = "/login"}>Back to Login</button>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -30,7 +41,7 @@ export default function App() {
                           <HiveProvider>
                             <Routes>
                               <Route path="/login" element={<Login />} />
-                              <Route path="/feed" element={<Feed />} />
+                              <Route path="/feed" element={<FeedPlaceholder />} />
                               <Route path="*" element={<Navigate to="/login" />} />
                             </Routes>
                           </HiveProvider>
