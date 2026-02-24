@@ -576,8 +576,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   src={videoSrc}
                   poster={
                     getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
-                    post.thumbnail_url ?? post.thumbnailUrl ??
-                    post.media_url ?? post.mediaUrl
+                    (post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl)
                   }
                   autoPlay={isActive}
                   muted={isMuted}
