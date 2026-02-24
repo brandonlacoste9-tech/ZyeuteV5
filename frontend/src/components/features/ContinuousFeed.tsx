@@ -225,8 +225,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { isOnline, addToQueue } = useNetworkQueue();
 
   const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
-  // Initialize from saved state or defaults
-  const savedState = getFeedState(stateKey);
+  const isFetchingRef = useRef(false); // Prevent concurrent fetches
+  const lastFetchTimeRef = useRef(0); // Rate limit fetches
+  // Initialize from saved state or defaults - memoize to prevent loop
+  const savedState = useMemo(() => getFeedState(stateKey), [stateKey, getFeedState]);
 
   // Scroll Velocity Tracking
   const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
@@ -351,8 +353,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
+    // GUARD: Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      feedLogger.debug("Fetch already in progress, skipping");
+      return;
+    }
+    
+    // GUARD: Rate limit - wait at least 1s between fetches
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < 1000) {
+      feedLogger.debug("Rate limited, skipping fetch");
+      return;
+    }
+    
     // If we already have posts (restored state), don't fetch initial
-    // Log the check to verify logic
     if (savedState?.posts?.length) {
       feedLogger.debug(
         `Skipping fetch, found ${savedState.posts.length} posts in savedState`,
@@ -360,12 +374,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       return;
     }
 
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = Date.now();
     feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
     setFetchError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
-    let apiSuccess = false;
 
     try {
       // Fetch first page with Hive filtering
@@ -383,66 +398,43 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
           return true;
         }) as Array<Post & { user: User }>;
-        apiSuccess = true;
       }
+
+      // If API has no posts, fallback to Pexels curated videos
+      if (validPosts.length === 0) {
+        feedLogger.info("No API posts, fetching Pexels fallback...");
+        try {
+          const pexelsRes = await fetch('/api/pexels/curated?per_page=10');
+          if (pexelsRes.ok) {
+            const pexelsData = await pexelsRes.json();
+            if (pexelsData.videos?.length > 0) {
+              const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
+              setPosts(pexelsPosts as unknown as Array<Post & { user: User }>);
+              setHasMore(false); // Pexels is one-time fetch
+              setFetchError(false);
+              return;
+            }
+          }
+        } catch (pexelsErr) {
+          feedLogger.error("Pexels fallback failed:", pexelsErr);
+        }
+        setFetchError(true);
+      } else {
+        setPosts(validPosts);
+        setHasMore(validPosts.length === 10);
+      }
+
+      setPage(0);
     } catch (error) {
       feedLogger.error(
-        "Error fetching API posts, pivoting to Pexels fallback:",
+        "Error fetching API posts:",
         error,
       );
-      apiSuccess = false;
-    }
-
-    // If API has no posts, fallback to Pexels curated videos
-    if (validPosts.length === 0) {
-      feedLogger.info("No API posts, fetching Pexels fallback...");
-      try {
-        const pexelsRes = await fetch('/api/pexels/curated?per_page=10');
-        if (pexelsRes.ok) {
-          const pexelsData = await pexelsRes.json();
-          if (pexelsData.videos?.length > 0) {
-            const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
-            setPosts(pexelsPosts as unknown as Array<Post & { user: User }>);
-            setHasMore(false); // Pexels is one-time fetch
-            setFetchError(false);
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch (pexelsErr) {
-        feedLogger.error("Pexels fallback failed:", pexelsErr);
-      }
       setFetchError(true);
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
     }
-
-    setPosts(validPosts);
-    setHasMore(validPosts.length === 10);
-
-    // Debug: log feed structure when ?debug=1
-    if (
-      validPosts.length > 0 &&
-      (new URLSearchParams(window.location.search).get("debug") === "1" ||
-        localStorage.getItem("debug") === "true")
-    ) {
-      const muxCount = validPosts.filter((p) => (p as Post).mux_playback_id).length;
-      const withMedia = validPosts.filter((p) => (p as Post).media_url).length;
-      console.log("[FeedDiagnostic] ContinuousFeed", {
-        total: validPosts.length,
-        withMuxId: muxCount,
-        withMediaUrl: withMedia,
-        sample: validPosts[0]
-          ? {
-            id: validPosts[0].id,
-            type: (validPosts[0] as Post).type,
-            hasMux: !!(validPosts[0] as Post).mux_playback_id,
-            mediaUrlPreview: (validPosts[0] as Post).media_url?.slice(0, 50),
-          }
-          : null,
-      });
-    }
-
-    setPage(0);
-    setIsLoading(false);
   }, [savedState, transformPexelsToPosts]);
 
   // Load more videos

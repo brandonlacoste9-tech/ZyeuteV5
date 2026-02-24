@@ -17,72 +17,99 @@ import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 // - Vercel: vercel.json rewrite (/api → Railway backend)
 const API_BASE_URL = "";
 
-// Base API call helper
+// [DEDUPLICATION] Prevent duplicate in-flight requests
+const pendingRequests = new Map<string, Promise<any>>();
+
+function getRequestKey(endpoint: string, options: RequestInit): string {
+  return `${options.method || 'GET'}:${endpoint}:${JSON.stringify(options.body || '')}`;
+}
+
+// Base API call helper with deduplication
 export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
-  try {
-    // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
-    const { data: { session } } = await getSessionWithTimeout(3000);
-    const token = session?.access_token;
+  const requestKey = getRequestKey(endpoint, options);
+  
+  // Return existing pending request if exists (prevents duplicate in-flight requests)
+  if (pendingRequests.has(requestKey)) {
+    apiLogger.debug(`Deduplicating request: ${endpoint}`);
+    return pendingRequests.get(requestKey)!;
+  }
+  
+  // Create the request promise
+  const requestPromise = (async () => {
+    try {
+      const { data: { session } } = await getSessionWithTimeout(3000);
+      const token = session?.access_token;
 
-    // Prepare headers with Authorization if token exists
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((options.headers as Record<string, string>) || {}),
-    };
+      // Prepare headers with Authorization if token exists
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...((options.headers as Record<string, string>) || {}),
+      };
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
 
-    const apiUrl = `${API_BASE_URL}/api${endpoint}`;
+      const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-    
-    const response = await fetch(apiUrl, {
-      ...options,
-      headers,
-      credentials: "include",
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch(apiUrl, {
+        ...options,
+        headers,
+        credentials: "include",
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
 
-    const data = await response.json().catch(() => null);
+      const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      const code =
-        (data && data.code) ||
-        (response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED");
-      if (response.status >= 500) {
-        apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
-          code,
-        });
+      if (!response.ok) {
+        const code =
+          (data && data.code) ||
+          (response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED");
+        if (response.status >= 500) {
+          apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
+            code,
+          });
+          return {
+            data: null,
+            error: (data && data.error) || "Server Unavailable",
+            code,
+          };
+        }
         return {
           data: null,
-          error: (data && data.error) || "Server Unavailable",
+          error: (data && data.error) || "Request failed",
           code,
         };
       }
-      return {
-        data: null,
-        error: (data && data.error) || "Request failed",
-        code,
-      };
-    }
 
-    return { data, error: null };
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      apiLogger.error(`API timeout: ${endpoint}`);
-      return { data: null, error: "Request timeout", code: "TIMEOUT" };
+      return { data, error: null };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        apiLogger.error(`API timeout: ${endpoint}`);
+        return { data: null, error: "Request timeout", code: "TIMEOUT" };
+      }
+      apiLogger.error(`API call failed: ${endpoint}`, error);
+      return { data: null, error: "Network error", code: "NETWORK_ERROR" };
+    } finally {
+      // Clean up pending request after a delay to prevent immediate refetch
+      setTimeout(() => {
+        pendingRequests.delete(requestKey);
+      }, 100);
     }
-    apiLogger.error(`API call failed: ${endpoint}`, error);
-    return { data: null, error: "Network error", code: "NETWORK_ERROR" };
-  }
+  })();
+  
+  // Store the pending request
+  pendingRequests.set(requestKey, requestPromise);
+  
+  return requestPromise;
 }
 
 // ============ AUTH FUNCTIONS ============
