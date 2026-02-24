@@ -1231,33 +1231,41 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
         </div>
       )}
 
-      <div className="absolute right-4 bottom-32 flex flex-col gap-6">
-        <button onClick={(e) => { e.stopPropagation(); onShowProfile(); }} className="flex flex-col items-center gap-1">
+      <div className="absolute right-4 bottom-32 flex flex-col gap-5 items-center">
+        {/* Music - Outline style */}
+        <button className="flex flex-col items-center">
+          <i className="ph ph-music-note text-3xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 4px ${COLORS.gold}60)` }}></i>
+        </button>
+
+        {/* User Avatar - No text label */}
+        <button onClick={(e) => { e.stopPropagation(); onShowProfile(); }} className="flex flex-col items-center">
           <div 
-            className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+            className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold stitched relative"
             style={{ background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, border: `2px solid ${COLORS.gold}` }}
           >
             {post.user?.username?.[0]?.toUpperCase() || "?"}
           </div>
-          <span className="text-xs" style={{ color: COLORS.text }}>@{post.user?.username}</span>
         </button>
 
+        {/* Fire/Like - Filled gold when active */}
         <button onClick={(e) => { e.stopPropagation(); onDoubleTap(); }} className="flex flex-col items-center gap-1">
-          <i className={`ph-fill ph-fire text-4xl transition-all duration-300`} style={{ 
+          <i className={`${isLiked ? 'ph-fill' : 'ph'} ph-fire text-4xl transition-all duration-300`} style={{ 
             color: isLiked ? COLORS.gold : COLORS.text,
-            filter: isLiked ? `drop-shadow(0 0 10px ${COLORS.gold})` : "none"
+            filter: isLiked ? `drop-shadow(0 0 8px ${COLORS.gold})` : "none"
           }}></i>
-          <span className="text-sm font-bold" style={{ color: COLORS.text }}>{(post.fire_count || 0) + (isLiked ? 1 : 0)}</span>
+          <span className="text-xs font-medium" style={{ color: isLiked ? COLORS.gold : COLORS.text }}>{(post.fire_count || 0) + (isLiked ? 1 : 0)}</span>
         </button>
 
+        {/* Comments - Filled */}
         <button onClick={(e) => { e.stopPropagation(); onShowComments(); }} className="flex flex-col items-center gap-1">
-          <i className="ph ph-chat-circle text-4xl" style={{ color: COLORS.text }}></i>
-          <span className="text-sm font-bold" style={{ color: COLORS.text }}>{post.comment_count || 0}</span>
+          <i className="ph-fill ph-chat-circle text-4xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 6px ${COLORS.gold}60)` }}></i>
+          <span className="text-xs font-medium" style={{ color: COLORS.text }}>{post.comment_count || 0}</span>
         </button>
 
+        {/* Share - Filled */}
         <button className="flex flex-col items-center gap-1">
-          <i className="ph ph-share-fat text-4xl" style={{ color: COLORS.text }}></i>
-          <span className="text-sm font-bold" style={{ color: COLORS.text }}>Share</span>
+          <i className="ph-fill ph-share-fat text-4xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 6px ${COLORS.gold}60)` }}></i>
+          <span className="text-xs font-medium" style={{ color: COLORS.text }}>Share</span>
         </button>
       </div>
 
