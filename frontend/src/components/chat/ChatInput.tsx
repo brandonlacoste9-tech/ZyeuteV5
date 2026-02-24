@@ -80,7 +80,7 @@ export const ChatInput: React.FC<Props> = ({ onSend, isTyping, chatType }) => {
     }
     
     // TODO: Actually record and send voice
-    toast.info('Voice message feature coming soon!');
+    toast.info('Messages vocaux bientôt disponibles!');
     setRecordingDuration(0);
   }, []);
 

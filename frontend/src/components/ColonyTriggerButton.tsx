@@ -42,7 +42,7 @@ export const ColonyTriggerButton: React.FC = () => {
     setLoading(true);
     try {
       // Colony integration disabled temporarily
-      toast.info("Colony integration coming soon");
+      toast.info("Colony bientôt disponible");
       // const task = await createColonyTask({
       //   command: command.trim(),
       //   origin: 'Zyeute',
@@ -118,10 +118,10 @@ export const ColonyTriggerButton: React.FC = () => {
           className="w-full px-6 py-3 bg-gold-500 hover:bg-gold-600 disabled:bg-neutral-700 disabled:cursor-not-allowed text-black font-bold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2 focus:ring-offset-black"
           aria-label="Envoyer la tâche à la Colonie"
         >
-          {loading ? "Sending..." : "🐝 Send Task to Worker Bee"}
+          {loading ? "Envoi..." : "🐝 Envoyer à la Colonie"}
         </button>
 
-        {/* Recent Tasks */}
+        {/* Tâches récentes */}
         {recentTasks.length > 0 && (
           <div className="mt-6 pt-4 border-t border-gold-500/20">
             <h4 className="text-sm font-semibold mb-2 text-stone-400">
