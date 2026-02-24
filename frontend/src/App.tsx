@@ -1,5 +1,6 @@
-// TEST: Feed component with NO video (isolate the issue)
+// TEST: Google Sign-In + Simple Feed
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -11,24 +12,46 @@ import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { HiveProvider } from "@/contexts/HiveContext";
 
-// Simple feed without ContinuousFeed
-function SimpleFeedTest() {
-  const { user, isLoading } = useAuth();
-  
-  if (isLoading) return <div style={{color: "#fff", padding: 50}}>Loading auth...</div>;
-  
+// Simple login with Google
+function SimpleLogin() {
+  const handleGoogleSignIn = async () => {
+    console.log("Starting Google sign-in...");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/feed",
+      },
+    });
+    if (error) console.error("Google sign-in error:", error);
+  };
+
   return (
-    <div style={{ padding: 50, textAlign: "center", background: "#000", color: "#fff", minHeight: "100vh" }}>
-      <h1>🐝 FEED TEST</h1>
-      <p>User: {user?.email || "Guest"}</p>
-      <p>This page loaded! Auth works!</p>
-      <p>Now we need to test the actual Feed component...</p>
+    <div style={{ padding: 50, textAlign: "center", background: "#111", color: "#fff", minHeight: "100vh" }}>
+      <h1>🐝 ZYEUTE LOGIN TEST</h1>
+      <button 
+        onClick={handleGoogleSignIn}
+        style={{ padding: "15px 30px", fontSize: 18, cursor: "pointer", background: "#4285f4", color: "#fff", border: "none", borderRadius: 5 }}
+      >
+        Sign in with Google
+      </button>
     </div>
   );
 }
 
-// Original Login
-import { Login } from "@/pages/Login";
+// Simple feed
+function SimpleFeed() {
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) return <div style={{color: "#fff", padding: 50}}>Loading...</div>;
+  
+  return (
+    <div style={{ padding: 50, textAlign: "center", background: "#000", color: "#fff", minHeight: "100vh" }}>
+      <h1>🐝 FEED LOADED!</h1>
+      <p>User: {user?.email || "No user"}</p>
+      <p>Google sign-in worked!</p>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -44,8 +67,8 @@ export default function App() {
                       <BrowserRouter>
                         <HiveProvider>
                           <Routes>
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/feed" element={<SimpleFeedTest />} />
+                            <Route path="/login" element={<SimpleLogin />} />
+                            <Route path="/feed" element={<SimpleFeed />} />
                             <Route path="*" element={<Navigate to="/login" />} />
                           </Routes>
                         </HiveProvider>
