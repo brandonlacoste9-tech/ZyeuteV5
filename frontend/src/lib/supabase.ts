@@ -36,7 +36,11 @@ export const supabase =
   isValidUrl(supabaseUrl) && supabaseAnonKey
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
-          // Disable Navigator LockManager to prevent 10s timeout errors
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          // ⚜️ VOYAGEUR LUXURY: Disable LockManager to prevent 10s timeout errors on concurrent auth calls
+          // This fixes the Navigator LockManager timeout often seen in complex app initializations.
           lockManager: false,
         },
       })

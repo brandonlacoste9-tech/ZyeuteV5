@@ -153,9 +153,13 @@ export const NetworkQueueProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [queue, isOnline]);
 
   // Auto-process when coming online
+  const isProcessingRef = useRef(false);
   useEffect(() => {
-    if (isOnline && queue.length > 0) {
-      processQueue();
+    if (isOnline && queue.length > 0 && !isProcessingRef.current) {
+      isProcessingRef.current = true;
+      processQueue().finally(() => {
+        isProcessingRef.current = false;
+      });
     }
   }, [isOnline, processQueue, queue.length]);
 

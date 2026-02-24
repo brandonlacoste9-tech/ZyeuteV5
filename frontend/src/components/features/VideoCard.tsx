@@ -189,21 +189,25 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
             </div>
           ) : (
             (() => {
-              // VIDEO DEBUG LOGGING
+              // VIDEO DEBUG LOGGING - Check both snake_case and camelCase
               console.log("[VideoCard] DEBUG:", {
                 postId: post.id,
                 type: post.type,
-                hlsUrl: post.hlsUrl,
-                enhancedUrl: post.enhancedUrl,
-                mediaUrl: post.mediaUrl,
-                originalUrl: post.originalUrl,
-                muxPlaybackId: post.muxPlaybackId,
-                processingStatus: post.processingStatus,
-                thumbnailUrl: post.thumbnailUrl,
+                hlsUrl: post.hls_url ?? post.hlsUrl,
+                enhancedUrl: post.enhanced_url ?? post.enhancedUrl,
+                mediaUrl: post.media_url ?? post.mediaUrl,
+                originalUrl: post.original_url ?? post.originalUrl,
+                muxPlaybackId: post.mux_playback_id ?? post.muxPlaybackId,
+                processingStatus: post.processing_status ?? post.processingStatus,
+                thumbnailUrl: post.thumbnail_url ?? post.thumbnailUrl,
               });
               
-              // Fix: Use camelCase field names from Drizzle ORM
-              const rawVideoUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || post.originalUrl || "";
+              // Support both snake_case (DB) and camelCase (Drizzle/TS) for compatibility
+              const rawVideoUrl = 
+                post.hls_url ?? post.hlsUrl ?? 
+                post.enhanced_url ?? post.enhancedUrl ?? 
+                post.media_url ?? post.mediaUrl ?? 
+                post.original_url ?? post.originalUrl ?? "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
               // Detect Cloudflare Stream URLs
@@ -237,9 +241,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                     <VideoPlayer
                       src={videoSrc}
                       poster={
-                        getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
-                        post.thumbnailUrl ||
-                        post.mediaUrl
+                        getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
+                        post.thumbnail_url ?? post.thumbnailUrl ?? 
+                        post.media_url ?? post.mediaUrl
                       }
                       autoPlay={autoPlay}
                       muted={muted}
@@ -249,7 +253,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                   ) : (
                     <SimpleVideoPlayer
                       src={videoSrc}
-                      poster={post.thumbnailUrl || post.mediaUrl}
+                      poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
                       autoPlay={autoPlay}
                       muted={muted}
                       loop
@@ -263,7 +267,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         ) : (
           <div className="relative w-full h-full group/media">
             <img
-              src={post.mediaUrl || post.media_url}
+              src={post.media_url || post.mediaUrl}
               alt={post.caption || "Photo"}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105"
               loading={priority ? "eager" : "lazy"}

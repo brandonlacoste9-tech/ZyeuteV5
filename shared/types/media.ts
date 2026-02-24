@@ -42,9 +42,17 @@ export interface Post {
 
   // Video specific (AI Brain)
   original_url?: string;
+  originalUrl?: string; // Compat
   enhanced_url?: string;
+  enhancedUrl?: string; // Compat
+  hls_url?: string;
+  hlsUrl?: string; // Compat
+  mux_playback_id?: string;
+  muxPlaybackId?: string; // Compat
   processing_status?: ProcessingStatus;
+  processingStatus?: ProcessingStatus; // Compat
   visual_filter?: string;
+  visualFilter?: string; // Compat
 }
 
 export interface Story {

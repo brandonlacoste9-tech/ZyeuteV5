@@ -180,18 +180,19 @@ router.post("/chat", async (req, res) => {
               id_publication: string;
               nouveau_momentum: number;
               raison: string;
-            }) => {
+            }): Promise<unknown> => {
               console.log(
                 "TOOL CALL: ajuster_momentum",
                 id_publication,
                 nouveau_momentum,
                 raison,
               );
-              return (await GovernanceBee.ajuster_momentum(
+              const result = await GovernanceBee.ajuster_momentum(
                 id_publication,
                 nouveau_momentum,
                 raison,
-              )) as any;
+              );
+              return result;
             },
           }),
           expulser_troll: tool({
@@ -203,12 +204,13 @@ router.post("/chat", async (req, res) => {
             }: {
               id_utilisateur: string;
               raison: string;
-            }) => {
+            }): Promise<unknown> => {
               console.log("TOOL CALL: expulser_troll", id_utilisateur, raison);
-              return (await GovernanceBee.expulser_troll(
+              const result = await GovernanceBee.expulser_troll(
                 id_utilisateur,
                 raison,
-              )) as any;
+              );
+              return result;
             },
           }),
         },

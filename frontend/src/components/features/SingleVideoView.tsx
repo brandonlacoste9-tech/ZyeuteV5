@@ -24,7 +24,7 @@ import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { RemixModal } from "./RemixModal";
 import { getRemixInfo } from "@/services/api";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
-import { Music } from "lucide-react";
+import { Music, AlertCircle } from "lucide-react";
 
 interface SingleVideoViewProps {
   post: Post;
@@ -359,9 +359,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     }, []);
 
     // Deep Enhance: Select best video source
+    // Support both snake_case and camelCase for compatibility
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
-    const mediaUrl = post.mediaUrl || post.enhancedUrl || post.originalUrl || "";
-    const muxPlaybackId = post.muxPlaybackId;
+    const mediaUrl = (post.media_url ?? post.mediaUrl) || 
+                     (post.enhanced_url ?? post.enhancedUrl) || 
+                     (post.original_url ?? post.originalUrl) || "";
+    const muxPlaybackId = post.mux_playback_id ?? post.muxPlaybackId;
     const validatedType = validatePostType(
       mediaUrl,
       post.type as "video" | "photo",
@@ -379,16 +382,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     let videoSrc = "";
 
     if (isVideo) {
-      // Priority: hlsUrl (adaptive) > enhancedUrl > mediaUrl > originalUrl
-      const processingReady = post.processingStatus === "completed";
-      if (post.hlsUrl) {
-        videoSrc = post.hlsUrl;
-      } else if (processingReady && post.enhancedUrl) {
-        videoSrc = post.enhancedUrl;
-      } else if (post.mediaUrl) {
-        videoSrc = post.mediaUrl;
-      } else if (post.originalUrl) {
-        videoSrc = post.originalUrl;
+      // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
+      const processingReady = (post.processing_status ?? post.processingStatus) === "completed";
+      if (post.hls_url ?? post.hlsUrl) {
+        videoSrc = post.hls_url ?? post.hlsUrl ?? "";
+      } else if (processingReady && (post.enhanced_url ?? post.enhancedUrl)) {
+        videoSrc = post.enhanced_url ?? post.enhancedUrl ?? "";
+      } else if (post.media_url ?? post.mediaUrl) {
+        videoSrc = post.media_url ?? post.mediaUrl ?? "";
+      } else if (post.original_url ?? post.originalUrl) {
+        videoSrc = post.original_url ?? post.originalUrl ?? "";
       }
 
       // Debug log if video source is empty
@@ -399,10 +402,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             postId: post.id,
             type: post.type,
             validatedType,
-            enhancedUrl: post.enhancedUrl,
-            mediaUrl: post.mediaUrl,
-            originalUrl: post.originalUrl,
-            processingStatus: post.processingStatus,
+            hlsUrl: post.hls_url ?? post.hlsUrl,
+            enhancedUrl: post.enhanced_url ?? post.enhancedUrl,
+            mediaUrl: post.media_url ?? post.mediaUrl,
+            originalUrl: post.original_url ?? post.originalUrl,
+            processingStatus: post.processing_status ?? post.processingStatus,
           },
         );
       } else {
@@ -415,15 +419,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
           source: videoSrc.substring(0, 50) + "...",
-          type: processingReady && post.enhancedUrl ? "enhanced" : "original",
+          type: processingReady && (post.enhanced_url ?? post.enhancedUrl) ? "enhanced" : "original",
         });
       }
     }
 
     // Deep Enhance: Visual Filters
+    const visualFilter = post.visual_filter ?? post.visualFilter;
     const filterStyle =
-      isVideo && post.visualFilter && post.visualFilter !== "none"
-        ? { filter: post.visualFilter }
+      isVideo && visualFilter && visualFilter !== "none"
+        ? { filter: visualFilter }
         : {};
 
     return (
@@ -523,13 +528,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               )}
             </div>
           ) : post.type === "video" ? (
-            post.muxPlaybackId ? (
+            post.mux_playback_id ? (
               <MuxVideoPlayer
-                playbackId={post.muxPlaybackId}
+                playbackId={post.mux_playback_id}
                 thumbnailUrl={
-                  getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl) ||
-                  post.thumbnailUrl ||
-                  post.mediaUrl
+                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                  post.thumbnail_url ||
+                  post.media_url
                 }
                 className="w-full h-full object-cover"
                 style={filterStyle}
@@ -538,34 +543,41 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 loop
                 onError={(err) => setVideoError(err)}
               />
-            ) : post.processingStatus === "pending" || post.processingStatus === "processing" ? (
+            ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
               // 🐝 FIX: Show loading state instead of black screen
               <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
                 <div className="animate-spin text-4xl mb-4">⚙️</div>
                 <div className="text-white/80 text-sm font-medium">
-                  {post.processingStatus === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
+                  {post.processing_status === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
                 </div>
                 <div className="text-white/50 text-xs mt-2">
                   Zyeute traite votre vidéo
                 </div>
-                {post.thumbnailUrl && (
+                {post.thumbnail_url && (
                   <img
-                    src={getProxiedMediaUrl(post.thumbnailUrl) || post.thumbnailUrl}
+                    src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
                     alt="Preview"
                     className="absolute inset-0 w-full h-full object-cover opacity-30 -z-10"
                   />
                 )}
               </div>
+            ) : !videoSrc ? (
+              // No video source available - show error state
+              <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900">
+                <AlertCircle className="w-12 h-12 text-white/30 mb-3" />
+                <p className="text-white/60 text-sm">Vidéo non disponible</p>
+                <p className="text-white/40 text-xs mt-1">Source manquante</p>
+              </div>
             ) : (
               // Player selection based on EXPLICIT fields, not URL sniffing
               // Priority: hls_url → VideoPlayer (HLS.js) | media_url → SimpleVideoPlayer (native)
-              post.hlsUrl ? (
+              (post.hls_url ?? post.hlsUrl) ? (
                 <VideoPlayer
                   src={videoSrc}
                   poster={
-                    getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                    post.thumbnail_url ||
-                    post.media_url
+                    getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
+                    post.thumbnail_url ?? post.thumbnailUrl ??
+                    post.media_url ?? post.mediaUrl
                   }
                   autoPlay={isActive}
                   muted={isMuted}
@@ -581,7 +593,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               ) : (
                 <SimpleVideoPlayer
                   src={videoSrc}
-                  poster={post.thumbnailUrl || post.mediaUrl}
+                  poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
                   autoPlay={isActive}
                   muted={isMuted}
                   loop

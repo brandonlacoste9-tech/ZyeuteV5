@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAuthStore } from "@/store/cliqueStore";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Event types (match backend)
 export const SocketEvents = {
@@ -40,7 +40,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const { token } = useAuthStore();
+  const { session } = useAuth();
+  const token = session?.access_token;
 
   // Connect to WebSocket
   useEffect(() => {
@@ -66,55 +67,55 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       options.onConnected?.();
     });
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", (reason: string) => {
       console.log("[WebSocket] Disconnected:", reason);
       setIsConnected(false);
     });
 
-    socket.on("connect_error", (error) => {
+    socket.on("connect_error", (error: any) => {
       console.error("[WebSocket] Connection error:", error);
       setIsConnecting(false);
       options.onError?.(error);
     });
 
     // Message events
-    socket.on(SocketEvents.MESSAGE_NEW, (data) => {
+    socket.on(SocketEvents.MESSAGE_NEW, (data: any) => {
       console.log("[WebSocket] New message:", data);
       options.onMessageNew?.(data);
     });
 
-    socket.on(SocketEvents.MESSAGE_UPDATED, (data) => {
+    socket.on(SocketEvents.MESSAGE_UPDATED, (data: any) => {
       console.log("[WebSocket] Message updated:", data);
       options.onMessageUpdated?.(data);
     });
 
     // Presence events
-    socket.on(SocketEvents.USER_ONLINE, (data) => {
+    socket.on(SocketEvents.USER_ONLINE, (data: any) => {
       console.log("[WebSocket] User online:", data);
       options.onUserOnline?.(data);
     });
 
-    socket.on(SocketEvents.USER_OFFLINE, (data) => {
+    socket.on(SocketEvents.USER_OFFLINE, (data: any) => {
       console.log("[WebSocket] User offline:", data);
       options.onUserOffline?.(data);
     });
 
     // Typing events
-    socket.on(SocketEvents.TYPING_START, (data) => {
+    socket.on(SocketEvents.TYPING_START, (data: any) => {
       options.onTypingStart?.(data);
     });
 
-    socket.on(SocketEvents.TYPING_STOP, (data) => {
+    socket.on(SocketEvents.TYPING_STOP, (data: any) => {
       options.onTypingStop?.(data);
     });
 
     // AI events
-    socket.on(SocketEvents.AI_REPLY, (data) => {
+    socket.on(SocketEvents.AI_REPLY, (data: any) => {
       console.log("[WebSocket] AI reply:", data);
       options.onAIReply?.(data);
     });
 
-    socket.on(SocketEvents.AI_TYPING, (data) => {
+    socket.on(SocketEvents.AI_TYPING, (data: any) => {
       options.onAITyping?.(data);
     });
 
@@ -152,42 +153,54 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 // Hook for conversation-specific real-time updates
 export function useConversationSocket(
   conversationId: string | null,
-  options: UseWebSocketOptions = {}
+  options: UseWebSocketOptions = {},
 ) {
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [isAITyping, setIsAITyping] = useState(false);
 
-  const handleTypingStart = useCallback((data: any) => {
-    if (data.conversationId === conversationId) {
-      setTypingUsers((prev) => new Set([...prev, data.username]));
-      options.onTypingStart?.(data);
-    }
-  }, [conversationId, options.onTypingStart]);
+  const handleTypingStart = useCallback(
+    (data: any) => {
+      if (data.conversationId === conversationId) {
+        setTypingUsers((prev) => new Set([...prev, data.username]));
+        options.onTypingStart?.(data);
+      }
+    },
+    [conversationId, options.onTypingStart],
+  );
 
-  const handleTypingStop = useCallback((data: any) => {
-    if (data.conversationId === conversationId) {
-      setTypingUsers((prev) => {
-        const next = new Set(prev);
-        next.delete(data.username);
-        return next;
-      });
-      options.onTypingStop?.(data);
-    }
-  }, [conversationId, options.onTypingStop]);
+  const handleTypingStop = useCallback(
+    (data: any) => {
+      if (data.conversationId === conversationId) {
+        setTypingUsers((prev) => {
+          const next = new Set(prev);
+          next.delete(data.username);
+          return next;
+        });
+        options.onTypingStop?.(data);
+      }
+    },
+    [conversationId, options.onTypingStop],
+  );
 
-  const handleAIReply = useCallback((data: any) => {
-    if (data.conversationId === conversationId) {
-      setIsAITyping(false);
-      options.onAIReply?.(data);
-    }
-  }, [conversationId, options.onAIReply]);
+  const handleAIReply = useCallback(
+    (data: any) => {
+      if (data.conversationId === conversationId) {
+        setIsAITyping(false);
+        options.onAIReply?.(data);
+      }
+    },
+    [conversationId, options.onAIReply],
+  );
 
-  const handleAITyping = useCallback((data: any) => {
-    if (data.conversationId === conversationId) {
-      setIsAITyping(true);
-      options.onAITyping?.(data);
-    }
-  }, [conversationId, options.onAITyping]);
+  const handleAITyping = useCallback(
+    (data: any) => {
+      if (data.conversationId === conversationId) {
+        setIsAITyping(true);
+        options.onAITyping?.(data);
+      }
+    },
+    [conversationId, options.onAITyping],
+  );
 
   const socket = useWebSocket({
     ...options,

@@ -21,6 +21,10 @@ class ColonyLink {
   }
 
   private async connect() {
+    // ⚔️ FOCUS MODE: Temporarily disabling Colony to focus on Zyeuté Core
+    console.log("🌱 Zyeuté: Colony Link disabled (Focus Mode active)");
+    return;
+
     try {
       const {
         data: { session },

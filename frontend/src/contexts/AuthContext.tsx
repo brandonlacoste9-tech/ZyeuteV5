@@ -98,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const startTime = Date.now();
+    console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;
     const initStart = Date.now();
 
