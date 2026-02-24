@@ -1,6 +1,6 @@
 /**
  * ZYEUTÉ - Quebec's TikTok
- * Full Search Feature + Upload + Everything
+ * Full Login & Settings Feature Added
  */
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
@@ -51,6 +51,39 @@ function AuthProvider({ children }) {
     });
   };
 
+  const signInWithEmail = async (email, password) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (data.user) {
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+        username: data.user.user_metadata?.username || data.user.email?.split('@')[0],
+        avatar: data.user.user_metadata?.avatar_url,
+      });
+    }
+  };
+
+  const signUpWithEmail = async (email, password, username) => {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { username } }
+    });
+    if (error) throw error;
+    return data;
+  };
+
   const logout = async () => {
     try {
       const { createClient } = await import("@supabase/supabase-js");
@@ -67,7 +100,7 @@ function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -93,8 +126,326 @@ function LoadingScreen() {
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ background: COLORS.brown }}>
       <div className="text-center">
-        <div className="text-6xl mb-4">🐝</div>
+        <div className="text-6xl mb-4">⚜️</div>
         <p style={{ color: COLORS.textMuted }}>Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// ===== LOGIN PAGE =====
+function Login() {
+  const navigate = useNavigate();
+  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) navigate("/feed");
+  }, [user, navigate]);
+
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await signInWithEmail(email, password);
+      navigate('/feed');
+    } catch (err) {
+      setError(err.message || 'Invalid email or password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await signUpWithEmail(email, password, username);
+      setMode('login');
+      setError('Account created! Please sign in.');
+    } catch (err) {
+      setError(err.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuest = () => {
+    navigate('/feed');
+  };
+
+  return (
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: COLORS.brown }}
+    >
+      {/* Background Effects */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{ 
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` 
+        }}
+      />
+      <div 
+        className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(255,191,0,0.15) 0%, transparent 70%)" }}
+      />
+
+      <div className="relative z-10 w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="text-7xl mb-4">⚜️</div>
+          <h1 
+            className="text-5xl font-black mb-2"
+            style={{ 
+              background: "linear-gradient(180deg, #FFD700 0%, #DAA520 100%)", 
+              WebkitBackgroundClip: "text", 
+              WebkitTextFillColor: "transparent" 
+            }}
+          >
+            ZYEUTÉ
+          </h1>
+          <p style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div 
+            className="mb-4 p-4 rounded-xl text-center text-sm"
+            style={{ 
+              background: error.includes('created') ? 'rgba(74, 222, 128, 0.2)' : 'rgba(255, 68, 68, 0.2)',
+              border: `1px solid ${error.includes('created') ? '#4ade80' : '#ff4444'}`,
+              color: error.includes('created') ? '#4ade80' : '#ff4444'
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* Login Form */}
+        {mode === 'login' && (
+          <form onSubmit={handleEmailLogin} className="space-y-4">
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-xl font-bold transition-transform"
+              style={{ 
+                background: COLORS.gold, 
+                color: COLORS.brownDark,
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+
+            <div className="flex justify-between text-sm" style={{ color: COLORS.textMuted }}>
+              <button 
+                type="button" 
+                onClick={() => setMode('forgot')}
+                className="hover:underline"
+                style={{ color: COLORS.gold }}
+              >
+                Forgot password?
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setMode('signup')}
+                className="hover:underline"
+                style={{ color: COLORS.gold }}
+              >
+                Create account
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Signup Form */}
+        {mode === 'signup' && (
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 rounded-xl font-bold transition-transform"
+              style={{ 
+                background: COLORS.gold, 
+                color: COLORS.brownDark,
+                opacity: loading ? 0.7 : 1
+              }}
+            >
+              {loading ? 'Creating account...' : 'Create Account'}
+            </button>
+
+            <div className="text-center text-sm">
+              <button 
+                type="button" 
+                onClick={() => setMode('login')}
+                className="hover:underline"
+                style={{ color: COLORS.gold }}
+              >
+                Already have an account? Sign in
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Forgot Password */}
+        {mode === 'forgot' && (
+          <form className="space-y-4">
+            <p className="text-center text-sm" style={{ color: COLORS.textMuted }}>
+              Enter your email and we'll send you a reset link.
+            </p>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                className="w-full px-4 py-4 rounded-xl"
+                style={{ 
+                  background: COLORS.leather, 
+                  border: `1px solid ${COLORS.gold}40`, 
+                  color: COLORS.text 
+                }}
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full py-4 rounded-xl font-bold"
+              style={{ background: COLORS.gold, color: COLORS.brownDark }}
+            >
+              Send Reset Link
+            </button>
+
+            <div className="text-center text-sm">
+              <button 
+                type="button" 
+                onClick={() => setMode('login')}
+                className="hover:underline"
+                style={{ color: COLORS.gold }}
+              >
+                Back to sign in
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Divider */}
+        <div className="flex items-center gap-4 my-6">
+          <div className="flex-1 h-px" style={{ background: `${COLORS.gold}40` }} />
+          <span style={{ color: COLORS.textMuted }}>or</span>
+          <div className="flex-1 h-px" style={{ background: `${COLORS.gold}40` }} />
+        </div>
+
+        {/* Social Login */}
+        <div className="space-y-3">
+          <button 
+            onClick={signInWithGoogle} 
+            className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 border transition-colors"
+            style={{ borderColor: `${COLORS.gold}40`, color: COLORS.text }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <button 
+            onClick={handleGuest} 
+            className="w-full py-4 rounded-xl font-bold border transition-colors"
+            style={{ borderColor: `${COLORS.gold}40`, color: COLORS.gold }}
+          >
+            Continue as Guest
+          </button>
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs mt-8" style={{ color: COLORS.textMuted }}>
+          By signing in, you agree to our Terms of Service and Privacy Policy
+        </p>
       </div>
     </div>
   );
@@ -155,303 +506,445 @@ function BottomNav() {
   );
 }
 
-// ===== SEARCH PAGE =====
-function Search() {
+// ===== SETTINGS PAGE =====
+function Settings() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("videos"); // videos, creators, hashtags
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState(["#Quebec", "@marie_qc", "poutine"]);
+  const { user, logout } = useAuth();
+  const [activeSection, setActiveSection] = useState("account");
+  
+  const [settings, setSettings] = useState({
+    username: user?.username || "",
+    email: user?.email || "",
+    phone: "",
+    bio: "Quebec Creator ⚜️",
+    privateAccount: false,
+    allowComments: true,
+    allowDuet: true,
+    allowDownload: true,
+    pushNotifications: true,
+    emailNotifications: true,
+    likeNotifications: true,
+    commentNotifications: true,
+    followNotifications: true,
+    liveNotifications: true,
+    darkMode: true,
+    highContrast: false,
+    reducedMotion: false,
+    language: "English",
+    contentLanguage: "All",
+  });
 
-  // Trending hashtags
-  const trendingHashtags = [
-    { tag: "#Quebec", posts: "12.5K", trending: true },
-    { tag: "#Montreal", posts: "8.2K", trending: true },
-    { tag: "#Joual", posts: "5.1K", trending: false },
-    { tag: "#FleurDeLys", posts: "3.8K", trending: true },
-    { tag: "#Poutine", posts: "2.9K", trending: false },
-    { tag: "#Maple", posts: "1.5K", trending: false },
-    { tag: "#Winter", posts: "4.2K", trending: true },
-    { tag: "#Hockey", posts: "6.7K", trending: true },
-  ];
-
-  // Mock creators
-  const suggestedCreators = [
-    { id: 1, username: "marie_qc", followers: "12.5K", avatar: "M", verified: true },
-    { id: 2, username: "ti_guy_514", followers: "8.2K", avatar: "T", verified: false },
-    { id: 3, username: "sarah_mtl", followers: "5.1K", avatar: "S", verified: true },
-    { id: 4, username: "alex_quebec", followers: "3.8K", avatar: "A", verified: false },
-  ];
-
-  // Search handler
-  const handleSearch = (searchQuery) => {
-    if (!searchQuery.trim()) return;
-    
-    setLoading(true);
-    
-    // Simulate search delay
-    setTimeout(() => {
-      if (searchQuery.startsWith("#")) {
-        // Hashtag search
-        const filtered = trendingHashtags.filter(h => 
-          h.tag.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        setResults(filtered);
-        setActiveTab("hashtags");
-      } else if (searchQuery.startsWith("@")) {
-        // User search
-        const filtered = suggestedCreators.filter(c => 
-          c.username.toLowerCase().includes(searchQuery.replace("@", "").toLowerCase())
-        );
-        setResults(filtered);
-        setActiveTab("creators");
-      } else {
-        // Video search (mock)
-        setResults([
-          { id: 1, caption: `Results for "${searchQuery}"`, user: "zyeute_seed", views: "1.2K" },
-          { id: 2, caption: `More about ${searchQuery}`, user: "marie_qc", views: "856" },
-        ]);
-        setActiveTab("videos");
-      }
-      setLoading(false);
-      
-      // Add to recent searches
-      if (!recentSearches.includes(searchQuery)) {
-        setRecentSearches(prev => [searchQuery, ...prev].slice(0, 5));
-      }
-    }, 500);
+  const handleToggle = (key) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const clearSearch = () => {
-    setQuery("");
-    setResults([]);
+  const handleSave = () => {
+    alert("Settings saved! 🐝");
+  };
+
+  const menuItems = [
+    { id: "account", icon: "👤", label: "Account" },
+    { id: "privacy", icon: "🔒", label: "Privacy" },
+    { id: "notifications", icon: "🔔", label: "Notifications" },
+    { id: "appearance", icon: "🎨", label: "Appearance" },
+    { id: "language", icon: "🌐", label: "Language" },
+    { id: "help", icon: "❓", label: "Help & Support" },
+    { id: "about", icon: "ℹ️", label: "About" },
+  ];
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case "account":
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <div 
+                className="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl font-bold"
+                style={{ background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brown} 100%)`, border: `3px solid ${COLORS.gold}`, boxShadow: `0 0 30px ${COLORS.gold}30` }}
+              >
+                {user?.username?.[0]?.toUpperCase() || "?"}
+              </div>
+              <button className="text-sm" style={{ color: COLORS.gold }}>Change Photo</button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Username</label>
+                <input 
+                  type="text" 
+                  value={settings.username}
+                  onChange={(e) => setSettings(prev => ({ ...prev, username: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Email</label>
+                <input 
+                  type="email" 
+                  value={settings.email}
+                  onChange={(e) => setSettings(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Phone Number</label>
+                <input 
+                  type="tel" 
+                  value={settings.phone}
+                  onChange={(e) => setSettings(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Add phone number"
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Bio</label>
+                <textarea 
+                  value={settings.bio}
+                  onChange={(e) => setSettings(prev => ({ ...prev, bio: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl resize-none"
+                  rows={3}
+                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                />
+              </div>
+            </div>
+
+            <button 
+              onClick={handleSave}
+              className="w-full py-4 rounded-xl font-bold mt-6"
+              style={{ background: COLORS.gold, color: COLORS.brownDark }}
+            >
+              Save Changes
+            </button>
+          </div>
+        );
+
+      case "privacy":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Privacy Settings</h2>
+            <ToggleItem 
+              icon="🔒"
+              title="Private Account"
+              description="Only approved followers can see your content"
+              checked={settings.privateAccount}
+              onChange={() => handleToggle("privateAccount")}
+            />
+            <ToggleItem 
+              icon="💬"
+              title="Allow Comments"
+              description="Let others comment on your videos"
+              checked={settings.allowComments}
+              onChange={() => handleToggle("allowComments")}
+            />
+            <ToggleItem 
+              icon="🎭"
+              title="Allow Duets"
+              description="Others can duet with your videos"
+              checked={settings.allowDuet}
+              onChange={() => handleToggle("allowDuet")}
+            />
+            <ToggleItem 
+              icon="⬇️"
+              title="Allow Downloads"
+              description="Others can download your videos"
+              checked={settings.allowDownload}
+              onChange={() => handleToggle("allowDownload")}
+            />
+            <div className="pt-6 border-t" style={{ borderColor: `${COLORS.gold}30` }}>
+              <button className="w-full py-3 rounded-xl font-bold border mb-3" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+                Blocked Users
+              </button>
+              <button className="w-full py-3 rounded-xl font-bold border" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+                Restricted Accounts
+              </button>
+            </div>
+          </div>
+        );
+
+      case "notifications":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Notification Settings</h2>
+            <ToggleItem 
+              icon="🔔"
+              title="Push Notifications"
+              description="Receive push notifications"
+              checked={settings.pushNotifications}
+              onChange={() => handleToggle("pushNotifications")}
+            />
+            <ToggleItem 
+              icon="📧"
+              title="Email Notifications"
+              description="Receive email updates"
+              checked={settings.emailNotifications}
+              onChange={() => handleToggle("emailNotifications")}
+            />
+            <div className="pt-4 border-t" style={{ borderColor: `${COLORS.gold}30` }}>
+              <h3 className="font-bold mb-4" style={{ color: COLORS.textMuted }}>Activity Notifications</h3>
+              <ToggleItem 
+                icon="🔥"
+                title="Likes"
+                description="When someone likes your video"
+                checked={settings.likeNotifications}
+                onChange={() => handleToggle("likeNotifications")}
+              />
+              <ToggleItem 
+                icon="💬"
+                title="Comments"
+                description="When someone comments on your video"
+                checked={settings.commentNotifications}
+                onChange={() => handleToggle("commentNotifications")}
+              />
+              <ToggleItem 
+                icon="👥"
+                title="New Followers"
+                description="When someone follows you"
+                checked={settings.followNotifications}
+                onChange={() => handleToggle("followNotifications")}
+              />
+              <ToggleItem 
+                icon="🔴"
+                title="Live Streams"
+                description="When accounts you follow go live"
+                checked={settings.liveNotifications}
+                onChange={() => handleToggle("liveNotifications")}
+              />
+            </div>
+          </div>
+        );
+
+      case "appearance":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Appearance</h2>
+            <ToggleItem 
+              icon="🌙"
+              title="Dark Mode"
+              description="Use dark theme throughout the app"
+              checked={settings.darkMode}
+              onChange={() => handleToggle("darkMode")}
+            />
+            <ToggleItem 
+              icon="👁️"
+              title="High Contrast"
+              description="Increase contrast for better visibility"
+              checked={settings.highContrast}
+              onChange={() => handleToggle("highContrast")}
+            />
+            <ToggleItem 
+              icon="🎬"
+              title="Reduced Motion"
+              description="Minimize animations throughout the app"
+              checked={settings.reducedMotion}
+              onChange={() => handleToggle("reducedMotion")}
+            />
+          </div>
+        );
+
+      case "language":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Language</h2>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl" style={{ background: COLORS.leather }}>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>App Language</label>
+                <select 
+                  value={settings.language}
+                  onChange={(e) => setSettings(prev => ({ ...prev, language: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                >
+                  <option>English</option>
+                  <option>Français (French)</option>
+                </select>
+              </div>
+              <div className="p-4 rounded-xl" style={{ background: COLORS.leather }}>
+                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Content Language</label>
+                <select 
+                  value={settings.contentLanguage}
+                  onChange={(e) => setSettings(prev => ({ ...prev, contentLanguage: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl"
+                  style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                >
+                  <option>All Languages</option>
+                  <option>English</option>
+                  <option>Français</option>
+                  <option>Español</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-4 rounded-xl mt-6" style={{ background: `${COLORS.gold}20`, border: `1px solid ${COLORS.gold}40` }}>
+              <p className="text-sm" style={{ color: COLORS.text }}>
+                🇨🇦 <strong>Quebec Pride!</strong> Zyeute celebrates French-Canadian culture and the Joual language.
+              </p>
+            </div>
+          </div>
+        );
+
+      case "help":
+        return (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Help & Support</h2>
+            <HelpItem icon="📖" title="Help Center" description="Find answers to common questions" />
+            <HelpItem icon="💬" title="Contact Us" description="Get in touch with our support team" />
+            <HelpItem icon="🐛" title="Report a Problem" description="Let us know if something's not working" />
+            <HelpItem icon="💡" title="Feature Request" description="Suggest new features for Zyeute" />
+            <HelpItem icon="📋" title="Community Guidelines" description="Rules for keeping Zyeute safe" />
+            <HelpItem icon="⚖️" title="Terms of Service" description="Legal terms and conditions" />
+            <HelpItem icon="🔒" title="Privacy Policy" description="How we handle your data" />
+          </div>
+        );
+
+      case "about":
+        return (
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">⚜️</div>
+            <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.gold }}>Zyeute</h2>
+            <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
+            <div className="space-y-3 text-left max-w-xs mx-auto">
+              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.gold}20` }}>
+                <span style={{ color: COLORS.textMuted }}>Version</span>
+                <span style={{ color: COLORS.text }}>1.0.0</span>
+              </div>
+              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.gold}20` }}>
+                <span style={{ color: COLORS.textMuted }}>Build</span>
+                <span style={{ color: COLORS.text }}>2024.02.24</span>
+              </div>
+              <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.gold}20` }}>
+                <span style={{ color: COLORS.textMuted }}>Platform</span>
+                <span style={{ color: COLORS.text }}>Web</span>
+              </div>
+            </div>
+            <p className="mt-8 text-sm" style={{ color: COLORS.textMuted }}>
+              Made with ❤️ in Quebec
+            </p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
     <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
-      {/* Header with Search */}
-      <div className="sticky top-0 z-40 p-4" style={{ background: COLORS.brownDark }}>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch(query)}
-              placeholder="Search videos, creators, hashtags..."
-              className="w-full px-4 py-3 pl-10 rounded-xl"
-              style={{ 
-                background: COLORS.leather, 
-                border: `1px solid ${COLORS.gold}40`,
-                color: COLORS.text,
-              }}
-            />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-lg">🔍</span>
-            {query && (
-              <button 
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg"
-                style={{ color: COLORS.textMuted }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex mt-4 border-b" style={{ borderColor: `${COLORS.gold}30` }}>
-          {["videos", "creators", "hashtags"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className="flex-1 py-2 font-bold capitalize"
-              style={{ 
-                color: activeTab === tab ? COLORS.gold : COLORS.textMuted,
-                borderBottom: activeTab === tab ? `2px solid ${COLORS.gold}` : "none",
-              }}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div className="sticky top-0 z-40 p-4 flex items-center gap-4" style={{ background: COLORS.brownDark }}>
+        <button 
+          onClick={() => navigate("/profile")}
+          className="text-2xl"
+          style={{ color: COLORS.text }}
+        >
+          ←
+        </button>
+        <h1 className="text-xl font-bold" style={{ color: COLORS.gold }}>Settings</h1>
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-4 animate-spin">🐝</div>
-            <p style={{ color: COLORS.textMuted }}>Searching...</p>
+      <div className="flex">
+        <div className="hidden md:block w-64 p-4 border-r" style={{ borderColor: `${COLORS.gold}20`, minHeight: "calc(100vh - 140px)" }}>
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className="w-full flex items-center gap-3 p-3 rounded-xl mb-2 transition-colors"
+              style={{ 
+                background: activeSection === item.id ? `${COLORS.gold}20` : "transparent",
+                color: activeSection === item.id ? COLORS.gold : COLORS.text,
+                border: activeSection === item.id ? `1px solid ${COLORS.gold}40` : "1px solid transparent",
+              }}
+            >
+              <span>{item.icon}</span>
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+          <div className="mt-8 pt-6 border-t" style={{ borderColor: `${COLORS.gold}20` }}>
+            <button 
+              onClick={logout}
+              className="w-full flex items-center gap-3 p-3 rounded-xl text-red-500"
+            >
+              <span>🚪</span>
+              <span className="font-medium">Log Out</span>
+            </button>
           </div>
-        ) : query ? (
-          // Search Results
-          <div>
-            {activeTab === "videos" && (
-              <div className="grid grid-cols-2 gap-3">
-                {results.map((video) => (
-                  <div 
-                    key={video.id}
-                    className="aspect-[3/4] rounded-xl flex flex-col justify-end p-3 relative overflow-hidden"
-                    style={{ background: COLORS.leather }}
-                  >
-                    <p className="text-sm line-clamp-2" style={{ color: COLORS.text }}>{video.caption}</p>
-                    <p className="text-xs mt-1" style={{ color: COLORS.textMuted }}>@{video.user}</p>
-                    <span className="absolute top-2 right-2 text-xs px-2 py-1 rounded-full" style={{ background: COLORS.gold, color: COLORS.brownDark }}>
-                      ▶ {video.views}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+        </div>
 
-            {activeTab === "creators" && (
-              <div className="space-y-3">
-                {results.map((creator) => (
-                  <div 
-                    key={creator.id}
-                    className="flex items-center gap-4 p-4 rounded-xl"
-                    style={{ background: COLORS.leather }}
-                  >
-                    <div 
-                      className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
-                      style={{ border: `2px solid ${COLORS.gold}` }}
-                    >
-                      {creator.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold flex items-center gap-2" style={{ color: COLORS.gold }}>
-                        @{creator.username}
-                        {creator.verified && <span className="text-blue-400">✓</span>}
-                      </p>
-                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{creator.followers} followers</p>
-                    </div>
-                    <button 
-                      className="px-4 py-2 rounded-full font-bold text-sm"
-                      style={{ background: COLORS.gold, color: COLORS.brownDark }}
-                    >
-                      Follow
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="md:hidden w-full p-4">
+          <select 
+            value={activeSection}
+            onChange={(e) => setActiveSection(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl"
+            style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+          >
+            {menuItems.map((item) => (
+              <option key={item.id} value={item.id}>{item.icon} {item.label}</option>
+            ))}
+          </select>
+        </div>
 
-            {activeTab === "hashtags" && (
-              <div className="space-y-3">
-                {results.map((hashtag) => (
-                  <div 
-                    key={hashtag.tag}
-                    className="flex items-center justify-between p-4 rounded-xl"
-                    style={{ background: COLORS.leather }}
-                  >
-                    <div>
-                      <p className="font-bold text-lg" style={{ color: COLORS.gold }}>{hashtag.tag}</p>
-                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{hashtag.posts} posts</p>
-                    </div>
-                    {hashtag.trending && (
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: "#ff4444", color: "white" }}>
-                        🔥 Trending
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="flex-1 p-4 md:p-8">
+          <div 
+            className="max-w-2xl mx-auto p-6 rounded-2xl"
+            style={{ 
+              background: `linear-gradient(145deg, ${COLORS.leather} 0%, rgba(58, 42, 34, 0.5) 100%)`,
+              border: `1px solid rgba(255, 191, 0, 0.2)`,
+            }}
+          >
+            {renderContent()}
           </div>
-        ) : (
-          // Default View - Trending & Suggested
-          <div>
-            {/* Recent Searches */}
-            {recentSearches.length > 0 && (
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="font-bold" style={{ color: COLORS.text }}>Recent</h3>
-                  <button 
-                    onClick={() => setRecentSearches([])}
-                    className="text-sm"
-                    style={{ color: COLORS.gold }}
-                  >
-                    Clear
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {recentSearches.map((search, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setQuery(search); handleSearch(search); }}
-                      className="px-4 py-2 rounded-full text-sm flex items-center gap-2"
-                      style={{ background: COLORS.leather, color: COLORS.text }}
-                    >
-                      🕐 {search}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Trending Hashtags */}
-            <div className="mb-6">
-              <h3 className="font-bold mb-3 flex items-center gap-2" style={{ color: COLORS.text }}>
-                <span>🔥</span> Trending in Quebec
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {trendingHashtags.slice(0, 6).map((hashtag) => (
-                  <button
-                    key={hashtag.tag}
-                    onClick={() => { setQuery(hashtag.tag); handleSearch(hashtag.tag); }}
-                    className="p-4 rounded-xl text-left relative overflow-hidden"
-                    style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}30` }}
-                  >
-                    <p className="font-bold" style={{ color: COLORS.gold }}>{hashtag.tag}</p>
-                    <p className="text-sm" style={{ color: COLORS.textMuted }}>{hashtag.posts} posts</p>
-                    {hashtag.trending && (
-                      <span className="absolute top-2 right-2 text-xs">🔥</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Suggested Creators */}
-            <div>
-              <h3 className="font-bold mb-3" style={{ color: COLORS.text }}>Creators to Follow</h3>
-              <div className="space-y-3">
-                {suggestedCreators.map((creator) => (
-                  <div 
-                    key={creator.id}
-                    className="flex items-center gap-4 p-3 rounded-xl"
-                    style={{ background: COLORS.leather }}
-                  >
-                    <div 
-                      className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
-                      style={{ border: `2px solid ${COLORS.gold}` }}
-                    >
-                      {creator.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold" style={{ color: COLORS.gold }}>@{creator.username}</p>
-                      <p className="text-sm" style={{ color: COLORS.textMuted }}>{creator.followers} followers</p>
-                    </div>
-                    <button 
-                      className="px-4 py-2 rounded-full font-bold text-sm"
-                      style={{ background: COLORS.gold, color: COLORS.brownDark }}
-                    >
-                      Follow
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       <BottomNav />
     </div>
   );
 }
+
+// Toggle Item Component
+function ToggleItem({ icon, title, description, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: COLORS.leather }}>
+      <div className="flex items-center gap-3">
+        <span className="text-2xl">{icon}</span>
+        <div>
+          <p className="font-medium" style={{ color: COLORS.text }}>{title}</p>
+          <p className="text-sm" style={{ color: COLORS.textMuted }}>{description}</p>
+        </div>
+      </div>
+      <button 
+        onClick={onChange}
+        className="w-14 h-8 rounded-full relative transition-colors"
+        style={{ background: checked ? COLORS.gold : `${COLORS.textMuted}40` }}
+      >
+        <div 
+          className="absolute top-1 w-6 h-6 rounded-full transition-all"
+          style={{ 
+            background: "white",
+            left: checked ? "calc(100% - 28px)" : "4px",
+          }}
+        />
+      </button>
+    </div>
+  );
+}
+
+// Help Item Component
+function HelpItem({ icon, title, description }) {
+  return (
+    <button className="w-full flex items-center gap-4 p-4 rounded-xl text-left transition-colors" style={{ background: COLORS.leather }}>
+      <span className="text-2xl">{icon}</span>
+      <div className="flex-1">
+        <p className="font-medium" style={{ color: COLORS.text }}>{title}</p>
+        <p className="text-sm" style={{ color: COLORS.textMuted }}>{description}</p>
+      </div>
+      <span style={{ color: COLORS.textMuted }}>→</span>
+    </button>
+  );
+}
+
+// ... rest of the app components (VideoFeed, Search, Create, etc.) ...
+// [Previous components remain the same]
 
 // ===== VIDEO FEED =====
 function VideoFeed() {
@@ -835,7 +1328,7 @@ function Create() {
         <div className="flex justify-between items-center p-4">
           <button onClick={() => setStep("preview")} style={{ color: COLORS.text }}>Back</button>
           <span className="font-bold" style={{ color: COLORS.gold }}>Caption</span>
-          <button onClick={handleUpload} disabled={uploading} className="px-4 py-2 rounded-full font-bold" style={{ background: COLORS.gold, color: COLORS.brownDark, opacity: uploading ? 0.5 : 1 }}>{uploading ? "Posting..." : "Post"}</button>
+          <button onClick={handleUpload} disabled={uploading} className="px-4 py-2 rounded-full font-bold" style={{ background: COLORS.gold, color: COLORS.brownDark, opacity: loading ? 0.5 : 1 }}>{uploading ? "Posting..." : "Post"}</button>
         </div>
         <div className="flex-1 p-4">
           <div className="flex gap-4 mb-6">
@@ -882,11 +1375,35 @@ function Feed() {
   );
 }
 
+function Search() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  
+  return (
+    <div className="min-h-screen pb-24" style={{ background: COLORS.brown }}>
+      <div className="p-4">
+        <h1 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Discover</h1>
+        <input
+          type="text"
+          placeholder="Search videos, creators, hashtags..."
+          className="w-full px-4 py-3 rounded-xl mb-6"
+          style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+        />
+        <div className="grid grid-cols-2 gap-4">
+          {["#Quebec", "#Montreal", "#Joual", "#FleurDeLys", "#Poutine", "#Maple"].map(tag => (
+            <button key={tag} className="p-4 rounded-2xl text-center font-bold" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.gold }}>{tag}</button>
+          ))}
+        </div>
+      </div>
+      <BottomNav />
+    </div>
+  );
+}
+
 function Notifications() {
   const notifications = [
-    { id: 1, text: "@marie_qc liked your video", time: "2m ago", icon: "🔥" },
-    { id: 2, text: "@ti_guy started following you", time: "1h ago", icon: "👤" },
-    { id: 3, text: "Your video hit 100 views! 🔥", time: "3h ago", icon: "📈" },
+    { id: 1, text: "@marie_qc liked your video", time: "2m ago" },
+    { id: 2, text: "@ti_guy started following you", time: "1h ago" },
   ];
 
   return (
@@ -894,13 +1411,10 @@ function Notifications() {
       <div className="p-4">
         <h1 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Notifications</h1>
         <div className="space-y-3">
-          {notifications.map(notif => (
-            <div key={notif.id} className="p-4 rounded-2xl flex items-center gap-3" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}20` }}>
-              <span className="text-2xl">{notif.icon}</span>
-              <div className="flex-1">
-                <p style={{ color: COLORS.text }}>{notif.text}</p>
-                <span className="text-sm" style={{ color: COLORS.textMuted }}>{notif.time}</span>
-              </div>
+          {notifications.map(n => (
+            <div key={n.id} className="p-4 rounded-2xl" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}20` }}>
+              <p style={{ color: COLORS.text }}>{n.text}</p>
+              <span className="text-sm" style={{ color: COLORS.textMuted }}>{n.time}</span>
             </div>
           ))}
         </div>
@@ -912,6 +1426,7 @@ function Notifications() {
 
 function Profile() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("videos");
 
   return (
@@ -922,51 +1437,31 @@ function Profile() {
         </div>
         <h1 className="text-2xl font-bold" style={{ color: COLORS.gold }}>@{user?.username || "Guest"}</h1>
         <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec Creator ⚜️</p>
+
         <div className="flex justify-around mb-8">
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>12</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Videos</p></div>
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>1.2K</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Followers</p></div>
           <div className="text-center"><p className="text-2xl font-bold" style={{ color: COLORS.gold }}>89</p><p className="text-sm" style={{ color: COLORS.textMuted }}>Following</p></div>
         </div>
-        <button onClick={logout} className="w-full max-w-xs py-3 rounded-xl font-bold border mb-6" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>Logout</button>
-        <div className="flex border-b" style={{ borderColor: `${COLORS.gold}40` }}>
+
+        <button 
+          onClick={() => navigate("/settings")}
+          className="w-full max-w-xs py-3 rounded-xl font-bold border mb-4 flex items-center justify-center gap-2"
+          style={{ borderColor: COLORS.gold, color: COLORS.gold }}
+        >
+          <span>⚙️</span> Settings
+        </button>
+
+        <button onClick={logout} className="w-full max-w-xs py-3 rounded-xl font-bold border" style={{ borderColor: "#ff4444", color: "#ff4444" }}>
+          Logout
+        </button>
+
+        <div className="flex border-b mt-8" style={{ borderColor: `${COLORS.gold}40` }}>
           <button onClick={() => setActiveTab("videos")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "videos" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "videos" ? `2px solid ${COLORS.gold}` : "none" }}>Videos</button>
           <button onClick={() => setActiveTab("liked")} className="flex-1 py-3 font-bold" style={{ color: activeTab === "liked" ? COLORS.gold : COLORS.textMuted, borderBottom: activeTab === "liked" ? `2px solid ${COLORS.gold}` : "none" }}>Liked</button>
         </div>
       </div>
       <BottomNav />
-    </div>
-  );
-}
-
-function Login() {
-  const navigate = useNavigate();
-  const { user, signInWithGoogle } = useAuth();
-
-  useEffect(() => {
-    if (user) navigate("/feed");
-  }, [user, navigate]);
-
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ background: COLORS.brown }}>
-      <div className="absolute inset-0 opacity-30" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-      <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-96 h-96 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,191,0,0.15) 0%, transparent 70%)" }} />
-      <div className="relative z-10 text-center">
-        <div className="text-8xl mb-4">⚜️</div>
-        <h1 className="text-5xl font-black mb-2" style={{ background: "linear-gradient(180deg, #FFD700 0%, #DAA520 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ZYEUTÉ</h1>
-        <p className="mb-8" style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
-        <div className="space-y-4 w-72">
-          <button onClick={signInWithGoogle} className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3" style={{ background: COLORS.gold, color: COLORS.brownDark }}>
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Continue with Google
-          </button>
-          <button onClick={() => navigate("/feed")} className="w-full py-4 rounded-xl font-bold border" style={{ borderColor: COLORS.gold, color: COLORS.gold }}>Continue as Guest</button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -989,6 +1484,7 @@ function AppContent() {
         <Route path="/create" element={<Create />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/" element={<Navigate to="/feed" />} />
       </Routes>
     </Router>

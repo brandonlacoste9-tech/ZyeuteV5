@@ -32,7 +32,8 @@ navItems.forEach(item => {
       upload: 'Upload Video',
       analytics: 'Analytics',
       live: 'Live Studio',
-      comments: 'Comments'
+      comments: 'Comments',
+      settings: 'Settings'
     };
     pageTitle.textContent = titles[section] || 'Dashboard';
   });
@@ -165,7 +166,42 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.log('Running in browser');
   }
+  
+  // Initialize Settings Tabs
+  initSettingsTabs();
 });
+
+// Settings Tabs
+function initSettingsTabs() {
+  const settingsTabs = document.querySelectorAll('.settings-tab');
+  const settingsPanels = document.querySelectorAll('.settings-panel');
+  
+  settingsTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabId = tab.dataset.tab;
+      
+      // Handle logout
+      if (tabId === 'logout') {
+        if (confirm('Are you sure you want to log out?')) {
+          window.location.href = 'login.html';
+        }
+        return;
+      }
+      
+      // Update active tab
+      settingsTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      // Show corresponding panel
+      settingsPanels.forEach(panel => {
+        panel.classList.remove('active');
+        if (panel.id === `${tabId}-panel`) {
+          panel.classList.add('active');
+        }
+      });
+    });
+  });
+}
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
