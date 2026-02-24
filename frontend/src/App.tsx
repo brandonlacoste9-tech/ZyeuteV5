@@ -556,7 +556,7 @@ function BottomNav() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50 edge-light edge-bottom"
+      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50 edge-light edge-bottom stitched stitched-double"
       style={{ 
         background: `linear-gradient(180deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 50%, ${COLORS.brown} 100%)`,
         height: "90px",
@@ -676,47 +676,49 @@ function Settings() {
               <button className="text-sm" style={{ color: COLORS.gold }}>Change Photo</button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Username</label>
-                <input 
-                  type="text" 
-                  value={settings.username}
-                  onChange={(e) => setSettings(prev => ({ ...prev, username: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl"
-                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Email</label>
-                <input 
-                  type="email" 
-                  value={settings.email}
-                  onChange={(e) => setSettings(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl"
-                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Phone Number</label>
-                <input 
-                  type="tel" 
-                  value={settings.phone}
-                  onChange={(e) => setSettings(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Add phone number"
-                  className="w-full px-4 py-3 rounded-xl"
-                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Bio</label>
-                <textarea 
-                  value={settings.bio}
-                  onChange={(e) => setSettings(prev => ({ ...prev, bio: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl resize-none"
-                  rows={3}
-                  style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
-                />
+            <div className="p-4 rounded-2xl stitched relative" style={{ background: COLORS.leather }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Username</label>
+                  <input 
+                    type="text" 
+                    value={settings.username}
+                    onChange={(e) => setSettings(prev => ({ ...prev, username: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl"
+                    style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Email</label>
+                  <input 
+                    type="email" 
+                    value={settings.email}
+                    onChange={(e) => setSettings(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl"
+                    style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Phone Number</label>
+                  <input 
+                    type="tel" 
+                    value={settings.phone}
+                    onChange={(e) => setSettings(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Add phone number"
+                    className="w-full px-4 py-3 rounded-xl"
+                    style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: COLORS.textMuted }}>Bio</label>
+                  <textarea 
+                    value={settings.bio}
+                    onChange={(e) => setSettings(prev => ({ ...prev, bio: e.target.value }))}
+                    className="w-full px-4 py-3 rounded-xl resize-none"
+                    rows={3}
+                    style={{ background: COLORS.brown, border: `1px solid ${COLORS.gold}40`, color: COLORS.text }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1605,7 +1607,7 @@ function Search() {
         />
         <div className="grid grid-cols-2 gap-4">
           {["#Quebec", "#Montreal", "#Joual", "#FleurDeLys", "#Poutine", "#Maple"].map(tag => (
-            <button key={tag} className="p-4 rounded-2xl text-center font-bold" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}40`, color: COLORS.gold }}>{tag}</button>
+            <button key={tag} className="p-4 rounded-2xl text-center font-bold stitched relative" style={{ background: COLORS.leather, color: COLORS.gold }}>{tag}</button>
           ))}
         </div>
       </div>
@@ -1626,7 +1628,7 @@ function Notifications() {
         <h1 className="text-2xl font-bold mb-4" style={{ color: COLORS.gold }}>Notifications</h1>
         <div className="space-y-3">
           {notifications.map(n => (
-            <div key={n.id} className="p-4 rounded-2xl" style={{ background: COLORS.leather, border: `1px solid ${COLORS.gold}20` }}>
+            <div key={n.id} className="p-4 rounded-2xl stitched relative" style={{ background: COLORS.leather }}>
               <p style={{ color: COLORS.text }}>{n.text}</p>
               <span className="text-sm" style={{ color: COLORS.textMuted }}>{n.time}</span>
             </div>
