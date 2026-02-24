@@ -108,17 +108,29 @@ function AuthProvider({ children }) {
 
 const useAuth = () => useContext(AuthContext);
 
-// ===== CONSTANTS =====
+// ===== CONSTANTS - ANTIQUE GOLD & RICH LEATHER =====
 const COLORS = {
-  gold: "#FFBF00",
-  goldLight: "#FFD700",
-  goldDark: "#B8860B",
-  brown: "#1a1510",
-  brownLight: "#251a15",
-  brownDark: "#0d0c0b",
-  leather: "#3a2a22",
-  text: "#E8DCC4",
-  textMuted: "#B8A88A",
+  // Antique Gold Palette
+  gold: "#C9A227",
+  goldLight: "#D4AF37",
+  goldDark: "#8B6914",
+  goldAccent: "#E8D5A3",
+  
+  // Rich Leather Browns
+  brown: "#1A0F0A",
+  brownLight: "#2C1810",
+  brownDark: "#0D0705",
+  leather: "#3D2418",
+  leatherLight: "#4A2E20",
+  
+  // Warm Text
+  text: "#F5E6D3",
+  textCream: "#FAF3EB",
+  textMuted: "#A68B7C",
+  
+  // Typography
+  fontDisplay: "'Cormorant Garamond', Georgia, serif",
+  fontBody: "'Inter', -apple-system, sans-serif",
 };
 
 // ===== COMPONENTS =====
@@ -199,20 +211,31 @@ function Login() {
       />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="text-7xl mb-4">⚜️</div>
+        {/* Logo - Louis Vuitton meets Fleur-de-lis */}
+        <div className="text-center mb-10">
+          <div className="text-7xl mb-4" style={{ filter: 'drop-shadow(0 4px 8px rgba(201, 162, 39, 0.3))' }}>⚜️</div>
           <h1 
-            className="text-5xl font-black mb-2"
+            className="mb-3"
             style={{ 
-              background: "linear-gradient(180deg, #FFD700 0%, #DAA520 100%)", 
+              fontFamily: COLORS.fontDisplay,
+              fontSize: '3.5rem',
+              fontWeight: 700,
+              letterSpacing: '0.15em',
+              background: "linear-gradient(180deg, #E8D5A3 0%, #C9A227 50%, #8B6914 100%)", 
               WebkitBackgroundClip: "text", 
-              WebkitTextFillColor: "transparent" 
+              WebkitTextFillColor: "transparent",
+              textShadow: '0 2px 10px rgba(201, 162, 39, 0.2)',
             }}
           >
-            ZYEUTÉ
+            Zyeuté
           </h1>
-          <p style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
+          <p style={{ 
+            fontFamily: COLORS.fontDisplay,
+            fontSize: '1.125rem',
+            fontStyle: 'italic',
+            color: COLORS.textMuted,
+            letterSpacing: '0.05em'
+          }}>L'app sociale du Québec ⚜️</p>
         </div>
 
         {/* Error Message */}
@@ -231,64 +254,89 @@ function Login() {
 
         {/* Login Form */}
         {mode === 'login' && (
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div>
+          <form onSubmit={handleEmailLogin} className="space-y-5">
+            {/* Email Input with Stitching */}
+            <div className="relative">
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-4 rounded-xl"
+                className="w-full px-5 py-5 rounded-xl text-base"
                 style={{ 
-                  background: COLORS.leather, 
-                  border: `1px solid ${COLORS.gold}40`, 
-                  color: COLORS.text 
+                  background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+                  border: `2px dashed ${COLORS.gold}30`,
+                  color: COLORS.text,
+                  fontFamily: COLORS.fontBody,
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03)',
                 }}
               />
             </div>
-            <div>
+            
+            {/* Password Input with Stitching */}
+            <div className="relative">
               <input
                 type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-4 rounded-xl"
+                className="w-full px-5 py-5 rounded-xl text-base"
                 style={{ 
-                  background: COLORS.leather, 
-                  border: `1px solid ${COLORS.gold}40`, 
-                  color: COLORS.text 
+                  background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+                  border: `2px dashed ${COLORS.gold}30`,
+                  color: COLORS.text,
+                  fontFamily: COLORS.fontBody,
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.03)',
                 }}
               />
             </div>
+            
+            {/* Buckle Button - Sign In */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-xl font-bold transition-transform"
+              className="w-full py-5 rounded-lg font-semibold text-base transition-all duration-300 relative overflow-hidden"
               style={{ 
-                background: COLORS.gold, 
-                color: COLORS.brownDark,
-                opacity: loading ? 0.7 : 1
+                background: loading 
+                  ? 'linear-gradient(145deg, #6B4E14 0%, #4A3410 100%)'
+                  : 'linear-gradient(180deg, #D4AF37 0%, #C9A227 50%, #A68317 100%)',
+                color: '#1A0F0A',
+                fontFamily: COLORS.fontDisplay,
+                fontSize: '1.125rem',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                border: '2px solid #6B4E14',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)',
+                opacity: loading ? 0.8 : 1,
               }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {loading ? 'Signing in...' : 'Sign In'}
+              </span>
             </button>
 
-            <div className="flex justify-between text-sm" style={{ color: COLORS.textMuted }}>
+            <div className="flex justify-between text-sm pt-2" style={{ color: COLORS.textMuted }}>
               <button 
                 type="button" 
                 onClick={() => setMode('forgot')}
-                className="hover:underline"
-                style={{ color: COLORS.gold }}
+                className="hover:underline transition-all"
+                style={{ 
+                  color: COLORS.gold,
+                  fontFamily: COLORS.fontBody,
+                }}
               >
                 Forgot password?
               </button>
               <button 
                 type="button" 
                 onClick={() => setMode('signup')}
-                className="hover:underline"
-                style={{ color: COLORS.gold }}
+                className="hover:underline transition-all"
+                style={{ 
+                  color: COLORS.gold,
+                  fontFamily: COLORS.fontBody,
+                }}
               >
                 Create account
               </button>
@@ -410,19 +458,44 @@ function Login() {
           </form>
         )}
 
-        {/* Divider */}
-        <div className="flex items-center gap-4 my-6">
-          <div className="flex-1 h-px" style={{ background: `${COLORS.gold}40` }} />
-          <span style={{ color: COLORS.textMuted }}>or</span>
-          <div className="flex-1 h-px" style={{ background: `${COLORS.gold}40` }} />
+        {/* Belt Bar Divider - Like TI-GUY */}
+        <div className="relative my-8 py-3">
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(180deg, ${COLORS.leatherLight} 0%, ${COLORS.leather} 50%, ${COLORS.brownLight} 100%)`,
+              borderTop: `1px dashed ${COLORS.gold}40`,
+              borderBottom: `1px dashed ${COLORS.gold}40`,
+            }}
+          />
+          <div className="relative flex items-center justify-center">
+            <span 
+              className="px-4 text-sm uppercase tracking-widest"
+              style={{ 
+                color: COLORS.gold,
+                fontFamily: COLORS.fontDisplay,
+                letterSpacing: '0.2em',
+              }}
+            >
+              Or
+            </span>
+          </div>
         </div>
 
         {/* Social Login */}
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Google Button - Leather Style */}
           <button 
             onClick={signInWithGoogle} 
-            className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 border transition-colors"
-            style={{ borderColor: `${COLORS.gold}40`, color: COLORS.text }}
+            className="w-full py-5 rounded-xl flex items-center justify-center gap-3 transition-all duration-300"
+            style={{ 
+              background: `linear-gradient(145deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 100%)`,
+              border: `2px dashed ${COLORS.gold}30`,
+              color: COLORS.text,
+              fontFamily: COLORS.fontBody,
+              fontWeight: 500,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -430,20 +503,36 @@ function Login() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            <span>Continue with Google</span>
           </button>
 
+          {/* Guest Button */}
           <button 
             onClick={handleGuest} 
-            className="w-full py-4 rounded-xl font-bold border transition-colors"
-            style={{ borderColor: `${COLORS.gold}40`, color: COLORS.gold }}
+            className="w-full py-5 rounded-xl transition-all duration-300"
+            style={{ 
+              background: 'transparent',
+              border: `2px dashed ${COLORS.gold}50`,
+              color: COLORS.gold,
+              fontFamily: COLORS.fontDisplay,
+              fontSize: '1rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}
           >
             Continue as Guest
           </button>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs mt-8" style={{ color: COLORS.textMuted }}>
+        <p 
+          className="text-center mt-10 text-xs"
+          style={{ 
+            color: COLORS.textMuted,
+            fontFamily: COLORS.fontBody,
+            letterSpacing: '0.02em',
+          }}
+        >
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>

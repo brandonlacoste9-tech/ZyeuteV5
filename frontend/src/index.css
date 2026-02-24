@@ -1,29 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-gold-50: #FFF9E5;
-  --color-gold-100: #FFF2CC;
-  --color-gold-200: #FFE699;
-  --color-gold-300: #FFD966;
-  --color-gold-400: #FFCC33;
-  --color-gold-500: #FFBF00;
-  --color-gold-600: #E6AC00;
-  --color-gold-700: #CC9900;
-  --color-gold-800: #B38600;
-  --color-gold-900: #997300;
-  --color-gold-950: #664D00;
+  /* ANTIQUE GOLD PALETTE - Louis Vuitton meets Canadian Fur Trader */
+  --color-gold-50: #F9F3E3;
+  --color-gold-100: #F4EAD0;
+  --color-gold-200: #E8D5A3;
+  --color-gold-300: #D4AF37;
+  --color-gold-400: #C9A227;
+  --color-gold-500: #B8941F;
+  --color-gold-600: #A68317;
+  --color-gold-700: #8B6914;
+  --color-gold-800: #6B4E14;
+  --color-gold-900: #4A3410;
+  --color-gold-950: #2A1F0A;
   
-  --color-leather-50: #fdf8f6;
-  --color-leather-100: #f2e8e5;
-  --color-leather-200: #eaddd7;
-  --color-leather-300: #e0cec7;
-  --color-leather-400: #d2bab0;
-  --color-leather-500: #a18e87;
-  --color-leather-600: #84746f;
-  --color-leather-700: #655955;
-  --color-leather-800: #463e3b;
-  --color-leather-900: #2a2523;
-  --color-leather-950: #0d0c0b;
+  /* RICH LEATHER PALETTE - Warm Cognac & Saddle Browns */
+  --color-leather-50: #FAF6F3;
+  --color-leather-100: #F0E6E0;
+  --color-leather-200: #E0CEC4;
+  --color-leather-300: #C4A894;
+  --color-leather-400: #A6846E;
+  --color-leather-500: #8B6B54;
+  --color-leather-600: #6B4E3D;
+  --color-leather-700: #4A3428;
+  --color-leather-800: #2C1810;
+  --color-leather-900: #1A0F0A;
+  --color-leather-950: #0D0705;
   
   --color-rose-50: #FFF0F3;
   --color-rose-100: #FFE0E8;
@@ -51,38 +53,59 @@
 }
 
 :root {
-  /* Factory Theme Variables */
-  --primary-color: #FFBF00;
-  --primary-accent: #FFD966;
-  --bg-main: #0d0c0b;
-  --bg-card: #241d19;
-  --text-main: #FFFFFF;
-  --text-muted: #a18e87;
-  --edge-color: #FFBF00;
-  --glow-intensity: 70%;
-  --glow-color: rgba(255, 191, 0, 0.4);
-  --stitching-color: rgba(218, 165, 32, 0.7);
+  /* PREMIUM ANTIQUE THEME - LV meets Canadian Fur Trader */
+  --primary-color: #C9A227;
+  --primary-accent: #D4AF37;
+  --primary-dark: #8B6914;
+  --bg-main: #0D0705;
+  --bg-card: #1A0F0A;
+  --bg-elevated: #2C1810;
+  --text-main: #F5E6D3;
+  --text-cream: #FAF3EB;
+  --text-muted: #A68B7C;
+  --edge-color: #C9A227;
+  --glow-intensity: 60%;
+  --glow-color: rgba(201, 162, 39, 0.3);
+  --stitching-color: rgba(201, 162, 39, 0.5);
+  --stitching-bright: rgba(212, 175, 55, 0.7);
   
-  --gold-glow: 0 0 30px var(--glow-color), 0 0 60px rgba(255, 191, 0, 0.2), 0 0 100px rgba(255, 191, 0, 0.1);
-  --gold-border: 2px solid var(--edge-color);
-  --gold-accent: var(--primary-color);
+  /* Typography */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Spacing - More Generous */
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  
+  /* Shadows */
+  --gold-glow: 0 0 20px rgba(201, 162, 39, 0.15), 0 0 40px rgba(201, 162, 39, 0.08);
+  --gold-glow-strong: 0 0 30px rgba(201, 162, 39, 0.25), 0 0 60px rgba(201, 162, 39, 0.12);
+  --shadow-deep: 0 4px 20px rgba(0, 0, 0, 0.5), 0 8px 40px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  
+  /* Borders */
+  --gold-border: 1.5px solid var(--edge-color);
+  --stitch-border: 2px dashed var(--stitching-color);
 }
 
 @layer base {
   body {
-    @apply text-white;
-    font-family: var(--font-family, 'Inter', -apple-system, BlinkMacSystemFont, sans-serif);
+    font-family: var(--font-body);
     line-height: 1.6;
     letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg-main);
+    color: var(--text-main);
+    /* Rich leather texture with warm lighting */
     background-image: 
-      radial-gradient(circle at 20% 30%, rgba(30, 25, 20, 0.4) 0%, transparent 50%),
-      radial-gradient(circle at 80% 70%, rgba(20, 15, 10, 0.4) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(25, 20, 15, 0.3) 0%, transparent 60%),
-      url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='pebble'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0 0.03 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23pebble)' opacity='0.15'/%3E%3C/svg%3E"),
-      radial-gradient(circle at 50% 50%, var(--glow-color) 0%, transparent 50%);
+      radial-gradient(ellipse at 30% 20%, rgba(60, 40, 30, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(40, 25, 18, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(44, 24, 16, 0.3) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='leather'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.2'/%3E%3CfeColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.04 0 0 0 0 0.03 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23leather)'/%3E%3C/svg%3E");
   }
 
   /* Critical for virtualization: Ensure root takes full height */
@@ -93,24 +116,26 @@
     overflow: hidden; /* Prevent body scroll, let React control it */
   }
   
-  /* Typography Scale - Inter Font System */
-  h1, h2, h3 {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: -0.02em;
+  /* Typography Scale - Elegant Serif Display + Clean Sans Body */
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    font-feature-settings: "liga" 1, "kern" 1;
   }
   
   h1 {
-    font-size: 2rem;
+    font-size: 2.5rem;
+    font-weight: 700;
   }
   
   h2 {
-    font-size: 1.5rem;
+    font-size: 1.875rem;
   }
   
   h3 {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
   
   p, span, div {
@@ -224,9 +249,9 @@
       url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='leather-subtle'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.03 0 0 0 0 0.02 0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23leather-subtle)'/%3E%3C/svg%3E");
   }
 
-  /* --- GOLDEN STITCHING SYSTEM --- */
+  /* --- PREMIUM GOLD STITCHING SYSTEM --- */
   
-  /* Premium Gold Stitching - visible elegant thread */
+  /* Gold Thread Stitching - Like TI-GUY reference */
   .stitched {
     position: relative;
   }
@@ -234,19 +259,117 @@
   .stitched::before {
     content: '';
     position: absolute;
-    inset: 6px;
+    inset: 8px;
     border: 2px dashed var(--stitching-color);
     border-radius: inherit;
     pointer-events: none;
     box-shadow: 
-      0 0 4px var(--glow-color),
-      inset 0 0 4px var(--glow-color);
-    animation: stitch-glow 3s ease-in-out infinite;
+      0 0 3px rgba(201, 162, 39, 0.3),
+      inset 0 0 3px rgba(201, 162, 39, 0.2);
+    transition: all 0.3s ease;
   }
   
-  @keyframes stitch-glow {
-    0%, 100% { box-shadow: 0 0 4px rgba(255, 215, 0, 0.4), inset 0 0 4px rgba(255, 215, 0, 0.2); }
-    50% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.6), inset 0 0 6px rgba(255, 215, 0, 0.3); }
+  .stitched:hover::before {
+    border-color: var(--stitching-bright);
+    box-shadow: 0 0 6px rgba(201, 162, 39, 0.4);
+  }
+  
+  /* Double Row Stitching - Premium */
+  .stitched-double {
+    position: relative;
+  }
+  
+  .stitched-double::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 2px dashed var(--stitching-color);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  
+  .stitched-double::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border: 1.5px dashed rgba(201, 162, 39, 0.35);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+  
+  /* --- BELT & BUCKLE SYSTEM --- */
+  
+  /* Leather Belt Bar */
+  .belt-bar {
+    background: linear-gradient(180deg, #3D2418 0%, #2C1810 50%, #1A0F0A 100%);
+    border-top: 1px solid rgba(201, 162, 39, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+    box-shadow: 
+      0 -2px 10px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    position: relative;
+  }
+  
+  .belt-bar::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-top: 2px dashed var(--stitching-color);
+    opacity: 0.5;
+  }
+  
+  .belt-bar::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-bottom: 2px dashed var(--stitching-color);
+    opacity: 0.5;
+  }
+  
+  /* Gold Buckle Button */
+  .btn-buckle {
+    background: linear-gradient(145deg, #D4AF37 0%, #B8941F 50%, #8B6914 100%);
+    border: 2px solid #6B4E14;
+    border-radius: 8px;
+    color: #1A0F0A;
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .btn-buckle::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border: 1px dashed rgba(139, 105, 20, 0.5);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  
+  .btn-buckle:hover {
+    background: linear-gradient(145deg, #E8D5A3 0%, #C9A227 50%, #A68317 100%);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(201, 162, 39, 0.2);
+  }
+  
+  .btn-buckle:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.3);
   }
   
   /* Double stitching for sections */
