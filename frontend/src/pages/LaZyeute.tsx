@@ -11,7 +11,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { getCurrentUser, togglePostFire } from "@/services/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
@@ -22,6 +22,7 @@ import type { Post, User } from "@/types";
 
 export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { edgeLighting } = useTheme();
 
   // Infinite scroll hook
@@ -804,19 +805,141 @@ export const LaZyeute: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 z-50 p-4 flex justify-center">
-        <Link
-          to="/"
-          className="bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border text-sm font-medium press-scale transition-all"
-          style={{
-            borderColor: `${edgeLighting}50`,
-            color: edgeLighting,
-          }}
-          data-testid="link-home"
+      {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around px-8 py-3"
+        style={{
+          background:
+            "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
+          borderTop: `1px solid ${edgeLighting}30`,
+        }}
+      >
+        {/* Home */}
+        <button
+          onClick={() => navigate("/feed")}
+          className="flex flex-col items-center gap-1 press-scale"
         >
-          ← Retour au fil
-        </Link>
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={location.pathname === "/feed" ? edgeLighting : "none"}
+            stroke={edgeLighting}
+            strokeWidth={2}
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Home
+          </span>
+        </button>
+
+        {/* Search */}
+        <button
+          onClick={() => navigate("/search")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={edgeLighting}
+            strokeWidth={2}
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Search
+          </span>
+        </button>
+
+        {/* Center create (+) */}
+        <button
+          onClick={() => navigate("/create")}
+          className="relative -top-3 press-scale"
+          aria-label="Create"
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
+              border: "2px solid #8B6914",
+              boxShadow: "0 4px 15px rgba(201, 162, 39, 0.6)",
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="#1A0F0A"
+              stroke="#1A0F0A"
+              strokeWidth={2}
+              strokeLinecap="round"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </div>
+        </button>
+
+        {/* Notifications */}
+        <button
+          onClick={() => navigate("/notifications")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={
+              location.pathname === "/notifications" ? edgeLighting : "none"
+            }
+            stroke={edgeLighting}
+            strokeWidth={2}
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Notifications
+          </span>
+        </button>
+
+        {/* Profile */}
+        <button
+          onClick={() => navigate("/profile")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={location.pathname === "/profile" ? edgeLighting : "none"}
+            stroke={edgeLighting}
+            strokeWidth={2}
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Profile
+          </span>
+        </button>
       </div>
 
       {/* TI-GUY Chat Widget Modal - leather aesthetic */}
