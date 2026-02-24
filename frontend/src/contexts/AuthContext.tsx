@@ -3,6 +3,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useRef,
   ReactNode,
 } from "react";
 import { Session, AuthChangeEvent } from "@supabase/supabase-js";
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const hasInitialized = useRef(false);
 
   // Check guest mode validity
   const checkGuestMode = (): boolean => {
@@ -102,6 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // GUARD: Prevent duplicate initialization
+    if (hasInitialized.current) {
+      console.log("🕯️ [Auth] Already initialized, skipping");
+      return;
+    }
+    hasInitialized.current = true;
+    
     const startTime = Date.now();
     console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;

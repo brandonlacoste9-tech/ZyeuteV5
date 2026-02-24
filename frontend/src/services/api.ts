@@ -20,15 +20,46 @@ const API_BASE_URL = "";
 // [DEDUPLICATION] Prevent duplicate in-flight requests
 const pendingRequests = new Map<string, Promise<any>>();
 
+// [CIRCUIT BREAKER] Track 429 errors to back off
+const circuitBreaker = {
+  failures: 0,
+  lastFailure: 0,
+  isOpen: () => {
+    if (circuitBreaker.failures === 0) return false;
+    const backoff = Math.min(30000, Math.pow(2, circuitBreaker.failures) * 1000);
+    const shouldReset = Date.now() - circuitBreaker.lastFailure > backoff;
+    return !shouldReset;
+  },
+  recordSuccess: () => {
+    circuitBreaker.failures = 0;
+  },
+  recordFailure: (code?: string | number) => {
+    if (code === 429 || code === 'RATE_LIMIT') {
+      circuitBreaker.failures++;
+      circuitBreaker.lastFailure = Date.now();
+    }
+  },
+};
+
 function getRequestKey(endpoint: string, options: RequestInit): string {
   return `${options.method || 'GET'}:${endpoint}:${JSON.stringify(options.body || '')}`;
 }
 
-// Base API call helper with deduplication
+// Base API call helper with deduplication and circuit breaker
 export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
+  // Check circuit breaker (back off if rate limited)
+  if (circuitBreaker.isOpen()) {
+    apiLogger.warn(`Circuit breaker open, rejecting request to ${endpoint}`);
+    return { 
+      data: null, 
+      error: "Rate limited - please wait", 
+      code: 429 
+    };
+  }
+
   const requestKey = getRequestKey(endpoint, options);
   
   // Return existing pending request if exists (prevents duplicate in-flight requests)
@@ -70,9 +101,13 @@ export async function apiCall<T>(
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        const code =
-          (data && data.code) ||
-          (response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED");
+        const code = response.status;
+        
+        // Record 429 failures for circuit breaker
+        if (code === 429) {
+          circuitBreaker.recordFailure(code);
+        }
+        
         if (response.status >= 500) {
           apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
             code,
@@ -90,6 +125,8 @@ export async function apiCall<T>(
         };
       }
 
+      // Success - reset circuit breaker
+      circuitBreaker.recordSuccess();
       return { data, error: null };
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -99,10 +136,10 @@ export async function apiCall<T>(
       apiLogger.error(`API call failed: ${endpoint}`, error);
       return { data: null, error: "Network error", code: "NETWORK_ERROR" };
     } finally {
-      // Clean up pending request after a delay to prevent immediate refetch
+      // Clean up pending request after a longer delay to prevent rapid refetch
       setTimeout(() => {
         pendingRequests.delete(requestKey);
-      }, 100);
+      }, 500);
     }
   })();
   
