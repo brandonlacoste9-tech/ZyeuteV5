@@ -812,6 +812,37 @@ function SettingsScreen({ navigation }) {
               value={settings.reducedMotion}
               onToggle={() => handleToggle('reducedMotion')}
             />
+            
+            {/* Edge Color Picker */}
+            <GoldStitching style={settingsStyles.cardWrapper}>
+              <View style={settingsStyles.card}>
+                <Text style={settingsStyles.inputLabel}>Edge Lighting Color</Text>
+                <View style={settingsStyles.colorGrid}>
+                  {[
+                    { color: '#C9A227', name: 'Gold' },
+                    { color: '#0066CC', name: 'Blue' },
+                    { color: '#00AA44', name: 'Green' },
+                    { color: '#CC0000', name: 'Red' },
+                    { color: '#8833CC', name: 'Purple' },
+                    { color: '#CC3377', name: 'Pink' },
+                    { color: '#FF6600', name: 'Orange' },
+                    { color: '#00AAAA', name: 'Teal' },
+                  ].map(({ color, name }) => (
+                    <TouchableOpacity
+                      key={color}
+                      style={settingsStyles.colorOption}
+                      onPress={() => {
+                        // Store in AsyncStorage or global state
+                        global.edgeColor = color;
+                      }}
+                    >
+                      <View style={[settingsStyles.colorCircle, { backgroundColor: color }]} />
+                      <Text style={settingsStyles.colorName}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </GoldStitching>
           </View>
         );
 
@@ -1370,6 +1401,36 @@ const settingsStyles = StyleSheet.create({
     marginTop: 48,
     fontSize: 12,
     letterSpacing: 1,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+  },
+  colorOption: {
+    alignItems: 'center',
+    width: '22%',
+    marginBottom: 12,
+  },
+  colorCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: COLORS.gold + '40',
+    shadowColor: COLORS.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  colorName: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'center',
   },
 });
 
