@@ -922,6 +922,20 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  position: relative;
+}
+
+.settings-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 1px dashed var(--stitch-color);
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 .settings-tab {
