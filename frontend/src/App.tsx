@@ -540,53 +540,62 @@ function Login() {
   );
 }
 
-// ===== BOTTOM NAVIGATION =====
+// ===== BOTTOM NAVIGATION - Belt Bar Style =====
 function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const navItems = [
-    { path: "/feed", icon: "🏠", label: "Home" },
-    { path: "/search", icon: "🔍", label: "Search" },
-    { path: "/create", icon: "➕", label: "Create", isCenter: true },
-    { path: "/notifications", icon: "🔔", label: "Notifications" },
-    { path: "/profile", icon: "👤", label: "Profile" },
+    { path: "/feed", icon: "ph-house", label: "Home" },
+    { path: "/search", icon: "ph-magnifying-glass", label: "Search" },
+    { path: "/create", icon: "ph-plus", label: "Create", isCenter: true },
+    { path: "/notifications", icon: "ph-bell", label: "Notifications" },
+    { path: "/profile", icon: "ph-user", label: "Profile" },
   ];
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-4 z-50"
+      className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-6 z-50"
       style={{ 
-        background: `linear-gradient(to top, ${COLORS.brownDark} 0%, ${COLORS.brownDark}ee 80%, transparent 100%)`,
-        height: "80px",
-        paddingBottom: "20px",
+        background: `linear-gradient(180deg, ${COLORS.leather} 0%, ${COLORS.brownLight} 50%, ${COLORS.brown} 100%)`,
+        borderTop: `1px dashed ${COLORS.gold}30`,
+        height: "90px",
+        paddingBottom: "24px",
+        boxShadow: '0 -4px 20px rgba(0,0,0,0.4)',
       }}
     >
       {navItems.map((item) => (
         <button
           key={item.path}
           onClick={() => navigate(item.path)}
-          className={`flex flex-col items-center justify-center ${item.isCenter ? "relative -top-4" : ""}`}
+          className={`flex flex-col items-center justify-center transition-all duration-300 ${item.isCenter ? "relative -top-5" : ""}`}
           style={{ 
             color: currentPath === item.path ? COLORS.gold : COLORS.textMuted,
-            opacity: currentPath === item.path ? 1 : 0.7,
+            opacity: currentPath === item.path ? 1 : 0.6,
           }}
         >
           {item.isCenter ? (
             <div 
-              className="w-14 h-14 rounded-full flex items-center justify-center text-2xl"
+              className="w-16 h-16 rounded-full flex items-center justify-center"
               style={{
-                background: `linear-gradient(135deg, ${COLORS.gold} 0%, ${COLORS.goldDark} 100%)`,
-                boxShadow: `0 4px 20px ${COLORS.gold}50`,
+                background: `linear-gradient(145deg, ${COLORS.goldLight} 0%, ${COLORS.gold} 50%, ${COLORS.goldDark} 100%)`,
+                border: `2px solid ${COLORS.goldDark}`,
+                boxShadow: `0 4px 15px rgba(201, 162, 39, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)`,
               }}
             >
-              {item.icon}
+              <i className={`${item.icon} text-2xl`} style={{ color: COLORS.brownDark }}></i>
             </div>
           ) : (
             <>
-              <span className="text-xl mb-1">{item.icon}</span>
-              <span className="text-xs">{item.label}</span>
+              <i className={`${item.icon} text-2xl mb-1`} style={{ 
+                filter: currentPath === item.path ? 'drop-shadow(0 0 4px rgba(201, 162, 39, 0.5))' : 'none'
+              }}></i>
+              <span className="text-xs" style={{ 
+                fontFamily: COLORS.fontBody,
+                letterSpacing: '0.02em',
+                fontWeight: currentPath === item.path ? 500 : 400,
+              }}>{item.label}</span>
             </>
           )}
         </button>
@@ -632,13 +641,13 @@ function Settings() {
   };
 
   const menuItems = [
-    { id: "account", icon: "👤", label: "Account" },
-    { id: "privacy", icon: "🔒", label: "Privacy" },
-    { id: "notifications", icon: "🔔", label: "Notifications" },
-    { id: "appearance", icon: "🎨", label: "Appearance" },
-    { id: "language", icon: "🌐", label: "Language" },
-    { id: "help", icon: "❓", label: "Help & Support" },
-    { id: "about", icon: "ℹ️", label: "About" },
+    { id: "account", icon: "ph-user", label: "Account" },
+    { id: "privacy", icon: "ph-lock-key", label: "Privacy" },
+    { id: "notifications", icon: "ph-bell", label: "Notifications" },
+    { id: "appearance", icon: "ph-palette", label: "Appearance" },
+    { id: "language", icon: "ph-globe", label: "Language" },
+    { id: "help", icon: "ph-question", label: "Help & Support" },
+    { id: "about", icon: "ph-info", label: "About" },
   ];
 
   const renderContent = () => {
@@ -715,28 +724,28 @@ function Settings() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Privacy Settings</h2>
             <ToggleItem 
-              icon="🔒"
+              icon="ph-lock-key"
               title="Private Account"
               description="Only approved followers can see your content"
               checked={settings.privateAccount}
               onChange={() => handleToggle("privateAccount")}
             />
             <ToggleItem 
-              icon="💬"
+              icon="ph-chat-circle"
               title="Allow Comments"
               description="Let others comment on your videos"
               checked={settings.allowComments}
               onChange={() => handleToggle("allowComments")}
             />
             <ToggleItem 
-              icon="🎭"
+              icon="ph-users"
               title="Allow Duets"
               description="Others can duet with your videos"
               checked={settings.allowDuet}
               onChange={() => handleToggle("allowDuet")}
             />
             <ToggleItem 
-              icon="⬇️"
+              icon="ph-download"
               title="Allow Downloads"
               description="Others can download your videos"
               checked={settings.allowDownload}
@@ -758,14 +767,14 @@ function Settings() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Notification Settings</h2>
             <ToggleItem 
-              icon="🔔"
+              icon="ph-bell"
               title="Push Notifications"
               description="Receive push notifications"
               checked={settings.pushNotifications}
               onChange={() => handleToggle("pushNotifications")}
             />
             <ToggleItem 
-              icon="📧"
+              icon="ph-envelope"
               title="Email Notifications"
               description="Receive email updates"
               checked={settings.emailNotifications}
@@ -774,28 +783,28 @@ function Settings() {
             <div className="pt-4 border-t" style={{ borderColor: `${COLORS.gold}30` }}>
               <h3 className="font-bold mb-4" style={{ color: COLORS.textMuted }}>Activity Notifications</h3>
               <ToggleItem 
-                icon="🔥"
+                icon="ph-fire"
                 title="Likes"
                 description="When someone likes your video"
                 checked={settings.likeNotifications}
                 onChange={() => handleToggle("likeNotifications")}
               />
               <ToggleItem 
-                icon="💬"
+                icon="ph-chat-circle"
                 title="Comments"
                 description="When someone comments on your video"
                 checked={settings.commentNotifications}
                 onChange={() => handleToggle("commentNotifications")}
               />
               <ToggleItem 
-                icon="👥"
+                icon="ph-users"
                 title="New Followers"
                 description="When someone follows you"
                 checked={settings.followNotifications}
                 onChange={() => handleToggle("followNotifications")}
               />
               <ToggleItem 
-                icon="🔴"
+                icon="ph-video-camera"
                 title="Live Streams"
                 description="When accounts you follow go live"
                 checked={settings.liveNotifications}
@@ -810,21 +819,21 @@ function Settings() {
           <div className="space-y-6">
             <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Appearance</h2>
             <ToggleItem 
-              icon="🌙"
+              icon="ph-moon"
               title="Dark Mode"
               description="Use dark theme throughout the app"
               checked={settings.darkMode}
               onChange={() => handleToggle("darkMode")}
             />
             <ToggleItem 
-              icon="👁️"
+              icon="ph-eye"
               title="High Contrast"
               description="Increase contrast for better visibility"
               checked={settings.highContrast}
               onChange={() => handleToggle("highContrast")}
             />
             <ToggleItem 
-              icon="🎬"
+              icon="ph-film-strip"
               title="Reduced Motion"
               description="Minimize animations throughout the app"
               checked={settings.reducedMotion}
@@ -877,22 +886,22 @@ function Settings() {
         return (
           <div className="space-y-4">
             <h2 className="text-xl font-bold mb-6" style={{ color: COLORS.gold }}>Help & Support</h2>
-            <HelpItem icon="📖" title="Help Center" description="Find answers to common questions" />
-            <HelpItem icon="💬" title="Contact Us" description="Get in touch with our support team" />
-            <HelpItem icon="🐛" title="Report a Problem" description="Let us know if something's not working" />
-            <HelpItem icon="💡" title="Feature Request" description="Suggest new features for Zyeute" />
-            <HelpItem icon="📋" title="Community Guidelines" description="Rules for keeping Zyeute safe" />
-            <HelpItem icon="⚖️" title="Terms of Service" description="Legal terms and conditions" />
-            <HelpItem icon="🔒" title="Privacy Policy" description="How we handle your data" />
+            <HelpItem icon="ph-book-open" title="Help Center" description="Find answers to common questions" />
+            <HelpItem icon="ph-chat-circle" title="Contact Us" description="Get in touch with our support team" />
+            <HelpItem icon="ph-bug" title="Report a Problem" description="Let us know if something's not working" />
+            <HelpItem icon="ph-lightbulb" title="Feature Request" description="Suggest new features for Zyeute" />
+            <HelpItem icon="ph-scroll" title="Community Guidelines" description="Rules for keeping Zyeute safe" />
+            <HelpItem icon="ph-scales" title="Terms of Service" description="Legal terms and conditions" />
+            <HelpItem icon="ph-shield" title="Privacy Policy" description="How we handle your data" />
           </div>
         );
 
       case "about":
         return (
           <div className="text-center py-8">
-            <div className="text-6xl mb-4">⚜️</div>
-            <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.gold }}>Zyeute</h2>
-            <p className="mb-6" style={{ color: COLORS.textMuted }}>Quebec's TikTok 🦫⚜️</p>
+            <img src="/zyeute-beaver.svg" alt="Zyeuté" className="w-24 h-24 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2" style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}>Zyeuté</h2>
+            <p className="mb-6" style={{ color: COLORS.textMuted, fontFamily: COLORS.fontDisplay, fontStyle: 'italic' }}>L'app sociale du Québec</p>
             <div className="space-y-3 text-left max-w-xs mx-auto">
               <div className="flex justify-between py-2" style={{ borderBottom: `1px solid ${COLORS.gold}20` }}>
                 <span style={{ color: COLORS.textMuted }}>Version</span>
@@ -907,8 +916,10 @@ function Settings() {
                 <span style={{ color: COLORS.text }}>Web</span>
               </div>
             </div>
-            <p className="mt-8 text-sm" style={{ color: COLORS.textMuted }}>
-              Made with ❤️ in Quebec
+            <p className="mt-8 text-sm flex items-center justify-center gap-2" style={{ color: COLORS.textMuted }}>
+              <i className="ph ph-map-pin" style={{ color: COLORS.gold }}></i>
+              Made in Quebec, for Quebec
+              <img src="/zyeute-icon.svg" alt="⚜️" className="w-4 h-4 inline" />
             </p>
           </div>
         );
@@ -939,13 +950,13 @@ function Settings() {
               onClick={() => setActiveSection(item.id)}
               className="w-full flex items-center gap-3 p-3 rounded-xl mb-2 transition-colors"
               style={{ 
-                background: activeSection === item.id ? `${COLORS.gold}20` : "transparent",
+                background: activeSection === item.id ? `${COLORS.gold}15` : "transparent",
                 color: activeSection === item.id ? COLORS.gold : COLORS.text,
-                border: activeSection === item.id ? `1px solid ${COLORS.gold}40` : "1px solid transparent",
+                border: activeSection === item.id ? `2px dashed ${COLORS.gold}40` : "2px dashed transparent",
               }}
             >
-              <span>{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
+              <i className={`ph ${item.icon} text-lg`}></i>
+              <span className="font-medium" style={{ fontFamily: COLORS.fontBody }}>{item.label}</span>
             </button>
           ))}
           <div className="mt-8 pt-6 border-t" style={{ borderColor: `${COLORS.gold}20` }}>
@@ -953,7 +964,7 @@ function Settings() {
               onClick={logout}
               className="w-full flex items-center gap-3 p-3 rounded-xl text-red-500"
             >
-              <span>🚪</span>
+              <i className="ph ph-sign-out text-xl"></i>
               <span className="font-medium">Log Out</span>
             </button>
           </div>
@@ -993,11 +1004,11 @@ function Settings() {
 // Toggle Item Component
 function ToggleItem({ icon, title, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: COLORS.leather }}>
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{icon}</span>
+    <div className="flex items-center justify-between p-5 rounded-xl" style={{ background: COLORS.leather, border: `2px dashed ${COLORS.gold}20` }}>
+      <div className="flex items-center gap-4">
+        <i className={`ph ${icon} text-2xl`} style={{ color: COLORS.gold }}></i>
         <div>
-          <p className="font-medium" style={{ color: COLORS.text }}>{title}</p>
+          <p className="font-medium" style={{ color: COLORS.text, fontFamily: COLORS.fontBody }}>{title}</p>
           <p className="text-sm" style={{ color: COLORS.textMuted }}>{description}</p>
         </div>
       </div>
@@ -1021,10 +1032,10 @@ function ToggleItem({ icon, title, description, checked, onChange }) {
 // Help Item Component
 function HelpItem({ icon, title, description }) {
   return (
-    <button className="w-full flex items-center gap-4 p-4 rounded-xl text-left transition-colors" style={{ background: COLORS.leather }}>
-      <span className="text-2xl">{icon}</span>
+    <button className="w-full flex items-center gap-4 p-5 rounded-xl text-left transition-colors" style={{ background: COLORS.leather, border: `2px dashed ${COLORS.gold}20` }}>
+      <i className={`ph ${icon} text-2xl`} style={{ color: COLORS.gold }}></i>
       <div className="flex-1">
-        <p className="font-medium" style={{ color: COLORS.text }}>{title}</p>
+        <p className="font-medium" style={{ color: COLORS.text, fontFamily: COLORS.fontBody }}>{title}</p>
         <p className="text-sm" style={{ color: COLORS.textMuted }}>{description}</p>
       </div>
       <span style={{ color: COLORS.textMuted }}>→</span>
