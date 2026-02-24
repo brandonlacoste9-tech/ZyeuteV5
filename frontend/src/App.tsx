@@ -1248,7 +1248,9 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
           className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
           style={{ animation: "heartPop 0.8s ease-out forwards" }}
         >
-          <i className="ph-fill ph-fire text-8xl" style={{ color: COLORS.gold, filter: `drop-shadow(0 0 20px ${COLORS.gold})` }}></i>
+          <svg width="120" height="120" viewBox="0 0 24 24" fill={COLORS.gold} style={{ filter: `drop-shadow(0 0 20px ${COLORS.gold})` }}>
+            <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"/>
+          </svg>
         </div>
       )}
 
@@ -1299,7 +1301,11 @@ function VideoCard({ post, isActive, onDoubleTap, onShowComments, onShowProfile,
       <div className="absolute left-4 bottom-32 right-24">
         <p className="text-lg mb-2" style={{ color: COLORS.text }}>{post.caption}</p>
         <p className="text-sm flex items-center gap-1" style={{ color: COLORS.textMuted }}>
-          <i className="ph-fill ph-music-note" style={{ color: COLORS.gold }}></i>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={COLORS.gold}>
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
+          </svg>
           Original Sound - {post.user?.username}
         </p>
       </div>
