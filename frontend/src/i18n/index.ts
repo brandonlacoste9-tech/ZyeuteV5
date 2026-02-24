@@ -316,11 +316,15 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
   },
 };
 
+import { useCallback, useMemo } from "react";
+
 export function useTranslation() {
-  const locale = AppConfig.identity.locale;
-  const t = (key: string) => {
+  // Memoize locale to prevent re-renders from unstable references
+  const locale = useMemo(() => AppConfig.identity.locale, []);
+  
+  const t = useCallback((key: string) => {
     return TRANSLATIONS[locale]?.[key] || TRANSLATIONS["fr-CA"][key] || key;
-  };
+  }, [locale]);
 
   return { t, locale };
 }
