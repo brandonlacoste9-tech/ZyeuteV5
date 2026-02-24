@@ -8,7 +8,7 @@ import type { Post, User, Story, Comment, Notification } from "@/types";
 
 const apiLogger = logger.withContext("API");
 
-import { supabase } from "@/lib/supabase";
+import { getSessionWithTimeout } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
 // [CONFIG] API Base URL
@@ -24,10 +24,7 @@ export async function apiCall<T>(
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
   try {
     // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
-    // Get current session token
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const { data: { session } } = await getSessionWithTimeout(3000);
     const token = session?.access_token;
 
     // Prepare headers with Authorization if token exists

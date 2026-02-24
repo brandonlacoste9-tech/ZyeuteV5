@@ -12,7 +12,7 @@ import { useInView } from "react-intersection-observer";
 import { useEffect, useMemo } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed } from "@/services/api";
-import { supabase } from "@/lib/supabase";
+import { getSessionWithTimeout } from "@/lib/supabase";
 
 interface FeedResponse {
   posts: Post[];
@@ -24,9 +24,7 @@ interface FeedResponse {
 export type FeedType = "feed" | "explore" | "smart";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await getSessionWithTimeout(3000);
   const token = session?.access_token;
   return {
     "Content-Type": "application/json",
