@@ -54,7 +54,8 @@ import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 const feedLogger = logger.withContext("ContinuousFeed");
-import { AppConfig } from "@/config/factory";
+// HARDCODED: Always use Quebec hive to prevent switching loops
+const HIVE_ID = "quebec";
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
 // Added in FE-06 for offline support
@@ -384,7 +385,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     try {
       // Fetch first page with Hive filtering
-      const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
+      const data = await getExplorePosts(0, 10, HIVE_ID);
       feedLogger.info(
         `fetchVideoFeed: API returned ${data?.length || 0} posts`,
       );
@@ -448,7 +449,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       const data = await getExplorePosts(
         nextPage,
         10,
-        AppConfig.identity.hiveId,
+        HIVE_ID,
       );
 
       if (data && data.length > 0) {
