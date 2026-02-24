@@ -24,7 +24,9 @@ interface FeedResponse {
 export type FeedType = "feed" | "explore" | "smart";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await getSessionWithTimeout(3000);
+  const {
+    data: { session },
+  } = await getSessionWithTimeout(3000);
   const token = session?.access_token;
   return {
     "Content-Type": "application/json",
@@ -51,6 +53,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
+        hive: "quebec",
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
@@ -153,6 +156,7 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
+        hive: "quebec",
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 

@@ -542,13 +542,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getExplorePosts(
-    _page: number,
+    page: number,
     limit: number,
     hiveId?: string,
   ): Promise<(Post & { user: User })[]> {
     return traceDatabase("EXPLORE", "posts", async () => {
       const startTime = Date.now();
       const targetHive = hiveId || "quebec";
+      const pageNum = Math.max(0, page);
+      // Fetch enough rows to rank and slice the requested page (ranking is in-memory)
+      const fetchSize = Math.min(200, (pageNum + 1) * limit + 50);
 
       // Use raw SQL via pool - resilient to schema diffs between envs
       // Only selects columns guaranteed to exist in all DB versions
@@ -583,8 +586,8 @@ export class DatabaseStorage implements IStorage {
             AND p.deleted_at IS NULL
             AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
           ORDER BY p.created_at DESC
-          LIMIT 100`,
-          [targetHive],
+          LIMIT $2`,
+          [targetHive, fetchSize],
         );
 
         console.log(
@@ -729,8 +732,9 @@ export class DatabaseStorage implements IStorage {
           console.warn(`[SENTRY] Slow Explore Ranking: ${duration}ms`);
         }
 
+        const start = pageNum * limit;
         return ranked
-          .slice(0, limit)
+          .slice(start, start + limit)
           .map((r) => ({ ...r.post, user: r.user! }));
       } finally {
         client.release();

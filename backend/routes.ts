@@ -721,6 +721,41 @@ export async function registerRoutes(
     }
   });
 
+  // [UNIFIED FEED] /api/explore - alias for getExplorePosts (page-based)
+  app.get("/api/explore", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 0;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const hive = (req.query.hive as string) || "quebec";
+      const posts = await storage.getExplorePosts(page, limit, hive);
+      res.json({ posts });
+    } catch (error) {
+      console.error("Get explore error:", error);
+      res.status(500).json({ error: "Failed to get explore" });
+    }
+  });
+
+  // [UNIFIED FEED] /api/feed/infinite - cursor-based for useInfiniteFeed
+  app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const cursor = req.query.cursor as string | undefined;
+      const page = cursor ? parseInt(cursor, 10) : 0;
+      const hive = (req.query.hive as string) || "quebec";
+      const posts = await storage.getExplorePosts(
+        isNaN(page) ? 0 : page,
+        limit,
+        hive,
+      );
+      const hasMore = posts.length >= limit;
+      const nextCursor = hasMore ? String(page + 1) : null;
+      res.json({ posts, nextCursor, hasMore, feedType: "explore" });
+    } catch (error) {
+      console.error("Get feed infinite error:", error);
+      res.status(500).json({ error: "Failed to get feed" });
+    }
+  });
+
   // Get nearby posts
   app.get("/api/posts/nearby", optionalAuth, async (req, res) => {
     try {

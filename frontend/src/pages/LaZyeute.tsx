@@ -33,6 +33,7 @@ export const LaZyeute: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showEdgeGlow, setShowEdgeGlow] = useState(false);
+  const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const touchStartY = useRef<number>(0);
@@ -74,7 +75,7 @@ export const LaZyeute: React.FC = () => {
       if (postIndex === currentIndex) {
         video.currentTime = 0;
         if (isPlaying) {
-          video.play().catch(() => { });
+          video.play().catch(() => {});
           setShowEdgeGlow(true);
         } else {
           video.pause();
@@ -203,8 +204,9 @@ export const LaZyeute: React.FC = () => {
     <div className="fixed inset-0 bg-black">
       {/* Dynamic Edge Lighting Effect */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow ? "opacity-100" : "opacity-0"
-          }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
+          showEdgeGlow ? "opacity-100" : "opacity-0"
+        }`}
         style={{
           boxShadow: `
             inset 0 0 60px ${edgeLighting}40,
@@ -216,10 +218,11 @@ export const LaZyeute: React.FC = () => {
 
       {/* Animated Edge Border */}
       <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${showEdgeGlow && currentPost?.type === "video"
-          ? "opacity-100"
-          : "opacity-0"
-          }`}
+        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
+          showEdgeGlow && currentPost?.type === "video"
+            ? "opacity-100"
+            : "opacity-0"
+        }`}
         style={{
           border: `2px solid ${edgeLighting}60`,
           boxShadow: `
@@ -353,14 +356,21 @@ export const LaZyeute: React.FC = () => {
             {/* Media */}
             <div
               className="absolute inset-0 bg-black"
-              onClick={post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video') ? togglePlayPause : undefined}
+              onClick={
+                (post.media_url || post.mediaUrl)?.includes(".mp4") ||
+                (post.media_url || post.mediaUrl)?.includes("video")
+                  ? togglePlayPause
+                  : undefined
+              }
             >
               {post.type === "video" ? (
                 (post as Post).mux_playback_id ? (
                   <MuxVideoPlayer
                     playbackId={(post as Post).mux_playback_id || ""}
                     thumbnailUrl={
-                      getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                      getProxiedMediaUrl(
+                        post.thumbnail_url || post.media_url,
+                      ) ||
                       post.thumbnail_url ||
                       post.media_url
                     }
@@ -374,9 +384,7 @@ export const LaZyeute: React.FC = () => {
                     ref={(el) => {
                       if (el) videoRefs.current.set(post.id, el);
                     }}
-                    src={
-                      getProxiedMediaUrl(post.media_url) || post.media_url
-                    }
+                    src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     className="w-full h-full object-cover"
                     loop
                     playsInline
@@ -389,8 +397,9 @@ export const LaZyeute: React.FC = () => {
                   <img
                     src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     alt={post.caption || "Post image"}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? "scale-110" : "scale-100"
-                      }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
+                      index === currentIndex ? "scale-110" : "scale-100"
+                    }`}
                   />
                 </div>
               )}
@@ -398,10 +407,12 @@ export const LaZyeute: React.FC = () => {
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${post.mediaUrl?.includes('.mp4') || post.mediaUrl?.includes('video')
-                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                    }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
+                    (post.media_url || post.mediaUrl)?.includes(".mp4") ||
+                    (post.media_url || post.mediaUrl)?.includes("video")
+                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  }`}
                 >
                   {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
                 </div>
@@ -427,117 +438,6 @@ export const LaZyeute: React.FC = () => {
 
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
-
-            {/* Right Side Actions */}
-            <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-20">
-              {/* Profile */}
-              <Link
-                to={`/profile/${post.user?.username || post.user?.id}`}
-                className="relative press-scale"
-                data-testid={`link-profile-${post.id}`}
-              >
-                <div
-                  className="w-12 h-12 rounded-full border-2 overflow-hidden shadow-lg transition-all duration-300"
-                  style={{
-                    borderColor: edgeLighting,
-                    boxShadow: showEdgeGlow
-                      ? `0 0 15px ${edgeLighting}50`
-                      : "none",
-                  }}
-                >
-                  <img
-                    src={post.user?.avatar_url || "/default-avatar.png"}
-                    alt={post.user?.displayName || "User"}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div
-                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: edgeLighting }}
-                >
-                  <span className="text-black text-xs font-bold">+</span>
-                </div>
-              </Link>
-
-              {/* Fire */}
-              <button
-                onClick={() => handleFireToggle(post.id)}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`button-fire-${post.id}`}
-              >
-                <div
-                  className={`p-2 rounded-full transition-all duration-300 ${post.is_fired
-                    ? "bg-orange-500/30 scale-110"
-                    : "bg-black/40 hover:bg-black/60"
-                    }`}
-                  style={
-                    post.is_fired
-                      ? { boxShadow: "0 0 20px rgba(255,100,0,0.5)" }
-                      : {}
-                  }
-                >
-                  <span
-                    className={`text-2xl transition-transform duration-200 ${post.is_fired ? "animate-bounce" : ""
-                      }`}
-                  >
-                    🔥
-                  </span>
-                </div>
-                <span className="text-white text-xs font-bold">
-                  {post.fireCount || 0}
-                </span>
-              </button>
-
-              {/* Comments */}
-              <Link
-                to={`/p/${post.id}`}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`link-comments-${post.id}`}
-              >
-                <div className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors">
-                  <svg
-                    className="w-7 h-7 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-white text-xs font-bold">
-                  {post.commentCount || 0}
-                </span>
-              </Link>
-
-              {/* Share */}
-              <button
-                onClick={() => handleShare(post.id)}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`button-share-${post.id}`}
-              >
-                <div className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors">
-                  <svg
-                    className="w-7 h-7 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-white text-xs font-bold">Partager</span>
-              </button>
-            </div>
 
             {/* Bottom Info */}
             <div className="absolute bottom-6 left-4 right-20 z-20">
@@ -662,6 +562,228 @@ export const LaZyeute: React.FC = () => {
         )}
       </div>
 
+      {/* Right Side Actions - FIXED overlay, does not scroll with videos */}
+      {posts.length > 0 && currentPost && (
+        <div className="fixed right-3 bottom-32 flex flex-col items-center gap-5 z-30">
+          {/* TI-GUY Chat Widget */}
+          <button
+            onClick={() => setShowTiGuyChat(true)}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid="button-tiguy-chat"
+            aria-label="Jase avec Ti-Guy"
+          >
+            <div
+              className="w-12 h-12 rounded-full border-2 overflow-hidden flex items-center justify-center transition-all duration-300"
+              style={{
+                borderColor: edgeLighting,
+                boxShadow: `0 0 12px ${edgeLighting}50, inset 0 0 8px ${edgeLighting}20`,
+                background: "linear-gradient(145deg, #1A0F0A 0%, #2C1810 100%)",
+              }}
+            >
+              <img
+                src="/zyeute-beaver.svg"
+                alt="Ti-Guy"
+                className="w-8 h-8 object-contain"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement;
+                  img.style.display = "none";
+                  const fallback =
+                    img.parentElement?.querySelector(".tiguy-fallback");
+                  if (fallback) fallback.classList.remove("hidden");
+                }}
+              />
+              <span
+                className="tiguy-fallback hidden text-xl font-bold"
+                style={{ color: edgeLighting }}
+              >
+                🦫
+              </span>
+            </div>
+            <span
+              className="text-xs font-bold"
+              style={{
+                color: edgeLighting,
+                textShadow: `0 0 8px ${edgeLighting}50`,
+              }}
+            >
+              Ti-Guy
+            </span>
+          </button>
+
+          {/* Profile - current post's creator */}
+          <Link
+            to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
+            className="relative press-scale flex flex-col items-center gap-1"
+            data-testid={`link-profile-${currentPost.id}`}
+          >
+            <div
+              className="w-12 h-12 rounded-full border-2 overflow-hidden transition-all duration-300"
+              style={{
+                borderColor: edgeLighting,
+                boxShadow: `0 0 12px ${edgeLighting}50, inset 0 0 8px ${edgeLighting}20`,
+              }}
+            >
+              <img
+                src={currentPost.user?.avatar_url || "/default-avatar.png"}
+                alt={currentPost.user?.displayName || "User"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div
+              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center border-2"
+              style={{
+                backgroundColor: edgeLighting,
+                borderColor: edgeLighting,
+              }}
+            >
+              <span className="text-black text-xs font-bold">+</span>
+            </div>
+          </Link>
+
+          {/* Fire */}
+          <button
+            onClick={() => handleFireToggle(currentPost.id)}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`button-fire-${currentPost.id}`}
+          >
+            <div
+              className="p-2 rounded-full transition-all duration-300"
+              style={{
+                boxShadow: (currentPost as any).is_fired
+                  ? `0 0 16px ${edgeLighting}80, 0 0 24px rgba(255,140,0,0.4)`
+                  : `0 0 10px ${edgeLighting}40`,
+              }}
+            >
+              <svg
+                className="w-7 h-7"
+                viewBox="0 0 24 24"
+                fill={(currentPost as any).is_fired ? "#FF8C00" : "none"}
+                stroke={edgeLighting}
+                strokeWidth={(currentPost as any).is_fired ? 0 : 1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
+              >
+                <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
+              </svg>
+            </div>
+            <span
+              className="text-xs font-bold"
+              style={{
+                color: edgeLighting,
+                textShadow: `0 0 8px ${edgeLighting}50`,
+              }}
+            >
+              {(currentPost as any).fireCount ??
+                (currentPost as any).fire_count ??
+                0}
+            </span>
+          </button>
+
+          {/* Comments */}
+          <Link
+            to={`/p/${currentPost.id}`}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`link-comments-${currentPost.id}`}
+          >
+            <div
+              className="p-2 rounded-full transition-all duration-300"
+              style={{ boxShadow: `0 0 10px ${edgeLighting}40` }}
+            >
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                stroke={edgeLighting}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
+              >
+                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <span
+              className="text-xs font-bold"
+              style={{
+                color: edgeLighting,
+                textShadow: `0 0 8px ${edgeLighting}50`,
+              }}
+            >
+              {(currentPost as any).commentCount ??
+                (currentPost as any).comment_count ??
+                0}
+            </span>
+          </Link>
+
+          {/* Share */}
+          <button
+            onClick={() => handleShare(currentPost.id)}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`button-share-${currentPost.id}`}
+          >
+            <div
+              className="p-2 rounded-full transition-all duration-300"
+              style={{ boxShadow: `0 0 10px ${edgeLighting}40` }}
+            >
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                stroke={edgeLighting}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
+              >
+                <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </div>
+            <span
+              className="text-xs font-bold"
+              style={{
+                color: edgeLighting,
+                textShadow: `0 0 8px ${edgeLighting}50`,
+              }}
+            >
+              Partager
+            </span>
+          </button>
+
+          {/* Music */}
+          <div className="flex flex-col items-center gap-1">
+            <div
+              className="p-2 rounded-full transition-all duration-300"
+              style={{ boxShadow: `0 0 10px ${edgeLighting}40` }}
+            >
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                stroke={edgeLighting}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+                style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
+              >
+                <path d="M9 18V5l12-2v13M9 9l12-2" />
+                <circle cx="6" cy="18" r="3" />
+                <circle cx="18" cy="16" r="3" />
+              </svg>
+            </div>
+            <span
+              className="text-xs font-bold"
+              style={{
+                color: edgeLighting,
+                textShadow: `0 0 8px ${edgeLighting}50`,
+              }}
+            >
+              Son
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Swipe Hint (shows briefly on first load) */}
       <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 animate-bounce opacity-70">
         <div className="flex flex-col items-center text-white/60">
@@ -696,6 +818,167 @@ export const LaZyeute: React.FC = () => {
           ← Retour au fil
         </Link>
       </div>
+
+      {/* TI-GUY Chat Widget Modal - leather aesthetic */}
+      {showTiGuyChat && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.8)" }}
+          onClick={() => setShowTiGuyChat(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(180deg, #2C1810 0%, #1A0F0A 50%, #0D0705 100%)",
+              border: `2px dashed ${edgeLighting}40`,
+              boxShadow: `0 0 30px ${edgeLighting}20, inset 0 0 60px rgba(0,0,0,0.5)`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between p-5"
+              style={{
+                background: "linear-gradient(180deg, #3D2418 0%, #2C1810 100%)",
+                borderBottom: `1px dashed ${edgeLighting}40`,
+              }}
+            >
+              <span className="text-sm" style={{ color: "#A68B7C" }}>
+                Chats/DMs
+              </span>
+              <div className="text-center">
+                <h2
+                  className="text-lg font-bold"
+                  style={{
+                    color: edgeLighting,
+                    fontFamily: "'Cormorant Garamond', serif",
+                  }}
+                >
+                  Ti-Guy
+                </h2>
+                <span className="text-xs" style={{ color: "#4ade80" }}>
+                  EN LIGNE
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <span
+                  className="px-2 py-1 rounded text-xs"
+                  style={{
+                    border: `1px solid ${edgeLighting}60`,
+                    color: edgeLighting,
+                  }}
+                >
+                  MODE
+                </span>
+                <span
+                  className="px-2 py-1 rounded text-xs"
+                  style={{
+                    border: `1px solid ${edgeLighting}60`,
+                    color: edgeLighting,
+                  }}
+                >
+                  VIP
+                </span>
+              </div>
+            </div>
+
+            {/* Central Ti-Guy emblem */}
+            <div className="flex justify-center py-8">
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center border-2"
+                style={{
+                  borderColor: edgeLighting,
+                  boxShadow: `0 0 20px ${edgeLighting}50, inset 0 0 20px rgba(0,0,0,0.8)`,
+                  background: "#1A0F0A",
+                }}
+              >
+                <img
+                  src="/zyeute-beaver.svg"
+                  alt="Ti-Guy"
+                  className="w-14 h-14 object-contain"
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    img.style.display = "none";
+                    const fallback = img.parentElement?.querySelector(
+                      ".tiguy-modal-fallback",
+                    );
+                    if (fallback) fallback.classList.remove("hidden");
+                  }}
+                />
+                <span className="tiguy-modal-fallback hidden text-4xl">🦫</span>
+              </div>
+            </div>
+
+            {/* Chat input - leather strap style */}
+            <div
+              className="flex items-center gap-2 p-4"
+              style={{
+                background:
+                  "linear-gradient(180deg, #4A2E20 0%, #3D2418 50%, #2C1810 100%)",
+                borderTop: `1px dashed ${edgeLighting}40`,
+              }}
+            >
+              <button
+                className="p-2 rounded-lg"
+                style={{
+                  background: "#1A0F0A",
+                  border: `1px solid ${edgeLighting}40`,
+                }}
+              >
+                <span className="text-lg">🦫</span>
+              </button>
+              <button
+                className="p-2 rounded-lg"
+                style={{
+                  background: "#1A0F0A",
+                  border: `1px solid ${edgeLighting}40`,
+                }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke={edgeLighting}
+                  strokeWidth={2}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                </svg>
+              </button>
+              <input
+                type="text"
+                placeholder="Jase avec moi..."
+                className="flex-1 px-4 py-3 rounded-xl text-sm"
+                style={{
+                  background: "#1A0F0A",
+                  border: `2px solid ${edgeLighting}40`,
+                  color: "#F5E6D3",
+                }}
+              />
+              <button
+                onClick={() => setShowTiGuyChat(false)}
+                className="p-2 rounded-full"
+                style={{
+                  border: `2px solid ${edgeLighting}`,
+                  color: edgeLighting,
+                }}
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
