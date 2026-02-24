@@ -1,60 +1,41 @@
-// FINAL TEST: Bypass Feed, test API directly
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { NotificationProvider } from "@/contexts/NotificationContext";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { GuestModeProvider } from "@/contexts/GuestModeContext";
-import { RBACProvider } from "@/contexts/RBACContext";
-import { ColonyProvider } from "@/components/providers/colony-provider";
-import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
-import { NetworkQueueProvider } from "@/contexts/NetworkQueueContext";
-import { MediaSessionProvider } from "@/contexts/MediaSessionContext";
-import { BorderColorProvider } from "@/contexts/BorderColorContext";
-import { HiveProvider } from "@/contexts/HiveContext";
-import { Login } from "@/pages/Login";
+// ULTRA SIMPLE - Test if login navigation works
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 
-// Simple placeholder instead of Feed
-function FeedPlaceholder() {
+// Ultra simple login
+function SimpleLogin() {
+  const navigate = useNavigate();
   return (
-    <div style={{ padding: 50, textAlign: "center", background: "#000", color: "#fff", minHeight: "100vh" }}>
-      <h1>🐝 FEED PLACEHOLDER</h1>
-      <p>Login worked! But Feed component is bypassed.</p>
-      <p>The issue is in the Feed/Video components.</p>
-      <button onClick={() => window.location.href = "/login"}>Back to Login</button>
+    <div style={{ padding: 50, textAlign: "center", background: "#111", color: "#fff", minHeight: "100vh" }}>
+      <h1>🐝 ZYEUTE LOGIN TEST</h1>
+      <button 
+        onClick={() => navigate("/feed")}
+        style={{ padding: "15px 30px", fontSize: 18, cursor: "pointer" }}
+      >
+        GO TO FEED (No Auth)
+      </button>
+    </div>
+  );
+}
+
+// Ultra simple feed
+function SimpleFeed() {
+  return (
+    <div style={{ padding: 50, textAlign: "center", background: "#111", color: "#fff", minHeight: "100vh" }}>
+      <h1>🐝 FEED LOADED!</h1>
+      <p>Navigation works! No freeze!</p>
+      <button onClick={() => window.location.href = "/login"}>Back</button>
     </div>
   );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <NotificationProvider>
-        <AuthProvider>
-          <GuestModeProvider>
-            <RBACProvider>
-              <ColonyProvider>
-                <NavigationStateProvider>
-                  <NetworkQueueProvider>
-                    <MediaSessionProvider>
-                      <BorderColorProvider>
-                        <BrowserRouter>
-                          <HiveProvider>
-                            <Routes>
-                              <Route path="/login" element={<Login />} />
-                              <Route path="/feed" element={<FeedPlaceholder />} />
-                              <Route path="*" element={<Navigate to="/login" />} />
-                            </Routes>
-                          </HiveProvider>
-                        </BrowserRouter>
-                      </BorderColorProvider>
-                    </MediaSessionProvider>
-                  </NetworkQueueProvider>
-                </NavigationStateProvider>
-              </ColonyProvider>
-            </RBACProvider>
-          </GuestModeProvider>
-        </AuthProvider>
-      </NotificationProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<SimpleLogin />} />
+        <Route path="/feed" element={<SimpleFeed />} />
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
