@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zyeute Studio - Creator Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">⚜️</span>
+        <span class="logo-text">Zyeute Studio</span>
+      </div>
+      
+      <nav class="nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="content">
+          <span class="nav-icon">🎬</span>
+          <span class="nav-text">Content</span>
+        </a>
+        <a href="#" class="nav-item" data-section="upload">
+          <span class="nav-icon">⬆️</span>
+          <span class="nav-text">Upload</span>
+        </a>
+        <a href="#" class="nav-item" data-section="analytics">
+          <span class="nav-icon">📈</span>
+          <span class="nav-text">Analytics</span>
+        </a>
+        <a href="#" class="nav-item" data-section="live">
+          <span class="nav-icon">🔴</span>
+          <span class="nav-text">Go Live</span>
+        </a>
+        <a href="#" class="nav-item" data-section="comments">
+          <span class="nav-icon">💬</span>
+          <span class="nav-text">Comments</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar">Y</div>
+          <div class="user-details">
+            <span class="user-name">Your Channel</span>
+            <span class="user-handle">@yourusername</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary">Help</button>
+          <button class="btn btn-primary" id="uploadBtn">
+            <span>⬆️</span> Upload Video
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Section -->
+      <section id="dashboard-section" class="section active">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👁️</div>
+            <div class="stat-info">
+              <span class="stat-value">1.2M</span>
+              <span class="stat-label">Total Views</span>
+              <span class="stat-change positive">+12.5%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-info">
+              <span class="stat-value">45.2K</span>
+              <span class="stat-label">Total Likes</span>
+              <span class="stat-change positive">+8.3%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-value">12.5K</span>
+              <span class="stat-label">Followers</span>
+              <span class="stat-change positive">+234</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-info">
+              <span class="stat-value">3.8K</span>
+              <span class="stat-label">Comments</span>
+              <span class="stat-change positive">+5.1%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Videos -->
+        <div class="content-section">
+          <div class="section-header">
+            <h2>Recent Videos</h2>
+            <a href="#" class="view-all">View All →</a>
+          </div>
+          <div class="video-grid">
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">0:45</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Quebec winters hit different ❄️</h3>
+                <div class="video-stats">
+                  <span>👁️ 45.2K</span>
+                  <span>🔥 2.1K</span>
+                </div>
+                <span class="video-date">Posted 2 hours ago</span>
+              </div>
+            </div>
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">1:23</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Poutine time! 🧀</h3>
+                <div class="video-stats">
+                  <span>👁️ 89.1K</span>
+                  <span>🔥 5.6K</span>
+                </div>
+                <span class="video-date">Posted 1 day ago</span>
+              </div>
+            </div>
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">0:32</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Fleur-de-lys forever ⚜️</h3>
+                <div class="video-stats">
+                  <span>👁️ 156K</span>
+                  <span>🔥 12.3K</span>
+                </div>
+                <span class="video-date">Posted 3 days ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="content-section">
+          <div class="section-header">
+            <h2>Performance (Last 7 Days)</h2>
+          </div>
+          <div class="chart-container">
+            <div class="chart-placeholder">
+              <div class="chart-bars">
+                <div class="chart-bar" style="height: 40%"><span>Mon</span></div>
+                <div class="chart-bar" style="height: 65%"><span>Tue</span></div>
+                <div class="chart-bar" style="height: 45%"><span>Wed</span></div>
+                <div class="chart-bar" style="height: 80%"><span>Thu</span></div>
+                <div class="chart-bar" style="height: 55%"><span>Fri</span></div>
+                <div class="chart-bar" style="height: 90%"><span>Sat</span></div>
+                <div class="chart-bar" style="height: 70%"><span>Sun</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Upload Section -->
+      <section id="upload-section" class="section">
+        <div class="upload-area">
+          <div class="upload-zone" id="dropZone">
+            <span class="upload-icon">📁</span>
+            <h2>Drag & drop your videos here</h2>
+            <p>or <button class="btn-link" id="selectFilesBtn">browse files</button></p>
+            <p class="upload-hint">Supports MP4, MOV, AVI (up to 500MB)</p>
+          </div>
+          
+          <div class="upload-options">
+            <h3>Upload Settings</h3>
+            <div class="form-group">
+              <label>Caption</label>
+              <textarea class="form-textarea" placeholder="Describe your video... #Quebec #Joual"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Visibility</label>
+              <select class="form-select">
+                <option>Public</option>
+                <option>Followers only</option>
+                <option>Private</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" checked> Allow comments
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox"> Allow duets
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analytics Section -->
+      <section id="analytics-section" class="section">
+        <div class="analytics-grid">
+          <div class="analytics-card large">
+            <h3>Audience Demographics</h3>
+            <div class="demographics">
+              <div class="demo-item">
+                <span class="demo-label">Quebec</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 65%"></div></div>
+                <span class="demo-value">65%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">Ontario</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 20%"></div></div>
+                <span class="demo-value">20%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">Other Canada</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 10%"></div></div>
+                <span class="demo-value">10%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">International</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 5%"></div></div>
+                <span class="demo-value">5%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="analytics-card">
+            <h3>Top Traffic Sources</h3>
+            <div class="traffic-sources">
+              <div class="source-item">
+                <span>For You Page</span>
+                <strong>68%</strong>
+              </div>
+              <div class="source-item">
+                <span>Following</span>
+                <strong>22%</strong>
+              </div>
+              <div class="source-item">
+                <span>Search</span>
+                <strong>7%</strong>
+              </div>
+              <div class="source-item">
+                <span>Shares</span>
+                <strong>3%</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="analytics-card">
+            <h3>Best Performing Times</h3>
+            <div class="best-times">
+              <div class="time-item">
+                <span>🌅 6-9 PM</span>
+                <span class="time-label">Peak</span>
+              </div>
+              <div class="time-item">
+                <span>🌙 9-11 PM</span>
+                <span class="time-label">High</span>
+              </div>
+              <div class="time-item">
+                <span>☀️ 12-2 PM</span>
+                <span class="time-label">Medium</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Section -->
+      <section id="live-section" class="section">
+        <div class="live-studio">
+          <div class="live-preview">
+            <div class="live-preview-area">
+              <span class="live-placeholder">🎥</span>
+              <p>Camera preview will appear here</p>
+            </div>
+            <div class="live-controls">
+              <button class="btn btn-live" id="startLiveBtn">
+                <span class="live-dot"></span> Go Live
+              </button>
+              <button class="btn btn-secondary">Stream Settings</button>
+            </div>
+          </div>
+          
+          <div class="live-sidebar">
+            <div class="live-chat-preview">
+              <h3>Live Chat</h3>
+              <div class="chat-messages">
+                <div class="chat-message">
+                  <strong>@marie_qc:</strong> Can't wait! 🔥
+                </div>
+                <div class="chat-message">
+                  <strong>@ti_guy:</strong> Let's goooo
+                </div>
+                <div class="chat-message">
+                  <strong>@sarah_mtl:</strong> ⚜️⚜️⚜️
+                </div>
+              </div>
+            </div>
+            
+            <div class="live-stats">
+              <div class="live-stat">
+                <span class="live-stat-value">0</span>
+                <span class="live-stat-label">Viewers</span>
+              </div>
+              <div class="live-stat">
+                <span class="live-stat-value">0</span>
+                <span class="live-stat-label">Likes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
