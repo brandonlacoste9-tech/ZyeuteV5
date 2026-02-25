@@ -15,6 +15,29 @@ export interface ValidationResult {
 }
 
 /**
+ * Common XSS/injection patterns to check for in user inputs
+ * Detects script tags, javascript:, event handlers, and embedded content
+ */
+const SUSPICIOUS_XSS_PATTERNS = [
+  /<script/i,
+  /javascript:/i,
+  /onerror=/i,
+  /onload=/i,
+  /onclick=/i,
+  /onmouseover=/i,
+  /<iframe/i,
+  /<embed/i,
+  /<object/i,
+];
+
+/**
+ * Helper function to check text for suspicious XSS patterns
+ */
+function containsSuspiciousPatterns(text: string): boolean {
+  return SUSPICIOUS_XSS_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/**
  * Validate comment input
  * Checks length and scans for suspicious patterns (XSS attempts)
  */
@@ -30,23 +53,8 @@ export function validateComment(text: string): ValidationResult {
     };
   }
 
-  // Check for suspicious patterns (script tags, javascript:, event handlers)
-  const suspiciousPatterns = [
-    /<script/i,
-    /javascript:/i,
-    /onerror=/i,
-    /onload=/i,
-    /onclick=/i,
-    /onmouseover=/i,
-    /<iframe/i,
-    /<embed/i,
-    /<object/i,
-  ];
-
-  for (const pattern of suspiciousPatterns) {
-    if (pattern.test(text)) {
-      return { valid: false, error: "Contenu suspect détecté" };
-    }
+  if (containsSuspiciousPatterns(text)) {
+    return { valid: false, error: "Contenu suspect détecté" };
   }
 
   return { valid: true };
@@ -68,19 +76,8 @@ export function validatePostCaption(text: string): ValidationResult {
     };
   }
 
-  // Check for suspicious patterns
-  const suspiciousPatterns = [
-    /<script/i,
-    /javascript:/i,
-    /onerror=/i,
-    /onload=/i,
-    /<iframe/i,
-  ];
-
-  for (const pattern of suspiciousPatterns) {
-    if (pattern.test(text)) {
-      return { valid: false, error: "Contenu suspect détecté" };
-    }
+  if (containsSuspiciousPatterns(text)) {
+    return { valid: false, error: "Contenu suspect détecté" };
   }
 
   return { valid: true };
@@ -102,18 +99,8 @@ export function validateBio(text: string): ValidationResult {
     };
   }
 
-  // Check for suspicious patterns
-  const suspiciousPatterns = [
-    /<script/i,
-    /javascript:/i,
-    /onerror=/i,
-    /<iframe/i,
-  ];
-
-  for (const pattern of suspiciousPatterns) {
-    if (pattern.test(text)) {
-      return { valid: false, error: "Contenu suspect détecté" };
-    }
+  if (containsSuspiciousPatterns(text)) {
+    return { valid: false, error: "Contenu suspect détecté" };
   }
 
   return { valid: true };

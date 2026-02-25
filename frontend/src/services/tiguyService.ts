@@ -1,20 +1,31 @@
 const API_BASE = "/api/tiguy";
 
+/**
+ * Helper to make API calls with consistent error handling
+ */
+async function tiguyFetch<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!response.ok) throw new Error("TI-GUY unavailable");
+  return response.json();
+}
+
 export const tiguyService = {
   async sendMessage(message: string, image?: string) {
-    const response = await fetch(`${API_BASE}/chat`, {
+    return tiguyFetch("/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message, image }),
     });
-    if (!response.ok) throw new Error("TI-GUY unavailable");
-    return response.json();
   },
 
   async getJoke() {
-    const response = await fetch(`${API_BASE}/joke`);
-    if (!response.ok) throw new Error("TI-GUY unavailable");
-    return response.json();
+    return tiguyFetch("/joke");
   },
 
   async checkStatus() {

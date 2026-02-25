@@ -19,7 +19,7 @@ import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
 import { useVideoVision } from "@/hooks/useVideoVision";
-import { validatePostType } from "@/utils/validatePostType";
+import { validatePostType } from "@shared/utils/validatePostType";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { RemixModal } from "./RemixModal";
 import { getRemixInfo } from "@/services/api";
