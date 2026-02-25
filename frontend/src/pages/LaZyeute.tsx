@@ -180,10 +180,12 @@ export const LaZyeute: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
-          <p className="text-white">Chargement de La Zyeute...</p>
+      <div className="fixed inset-0 bg-black flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
+            <p className="text-white">Chargement de La Zyeute...</p>
+          </div>
         </div>
       </div>
     );
@@ -191,7 +193,7 @@ export const LaZyeute: React.FC = () => {
 
   // Empty state - lightweight inline message, NOT a full-screen replacement
   const emptyFeedContent = posts.length === 0 && (
-    <div className="px-4 pt-6 pb-24 min-h-[calc(100vh-200px)] flex items-center justify-center">
+    <div className="px-4 pt-6 pb-6 min-h-full flex items-center justify-center">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-sm w-full">
         <div className="text-4xl mb-3">🦫</div>
         <p className="text-lg font-semibold text-white">Aucune publication pour l'instant</p>
@@ -215,7 +217,7 @@ export const LaZyeute: React.FC = () => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div className="fixed inset-0 bg-black flex flex-col">
       {/* Dynamic Edge Lighting Effect */}
       <div
         className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
@@ -248,7 +250,7 @@ export const LaZyeute: React.FC = () => {
       />
 
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+      <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <button
           onClick={() => navigate(-1)}
           className="text-white p-2 press-scale"
@@ -329,14 +331,14 @@ export const LaZyeute: React.FC = () => {
         </div>
       </div>
 
-      {/* Vertical Snap Scroll Container */}
+      {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        className="flex-1 min-h-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
         style={{ scrollSnapType: "y mandatory" }}
       >
         {emptyFeedContent}
@@ -843,7 +845,7 @@ export const LaZyeute: React.FC = () => {
 
       {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around"
+        className="flex-shrink-0 z-40 flex items-center justify-around"
         style={{
           background:
             "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
