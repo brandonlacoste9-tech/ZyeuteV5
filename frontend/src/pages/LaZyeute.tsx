@@ -17,8 +17,18 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
+import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import type { Post, User } from "@/types";
+
+/** Post with optional engagement fields from API */
+interface PostWithEngagement extends Post {
+  is_fired?: boolean;
+  fire_count?: number;
+  fireCount?: number;
+  comment_count?: number;
+  commentCount?: number;
+}
 
 export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
@@ -650,10 +660,10 @@ export const LaZyeute: React.FC = () => {
             <div
               className="p-2.5 rounded-full transition-all duration-300"
               style={{
-                boxShadow: (currentPost as any).is_fired
+                boxShadow: (currentPost as PostWithEngagement).is_fired
                   ? "0 0 24px rgba(255,120,80,0.9), 0 0 32px rgba(255,80,40,0.7)"
                   : `0 0 12px ${edgeLighting}60`,
-                background: (currentPost as any).is_fired
+                background: (currentPost as PostWithEngagement).is_fired
                   ? "radial-gradient(circle at 30% 10%, #FFE8C2 0%, #FF9F6E 35%, #FF5A3C 70%, rgba(0,0,0,0.8) 100%)"
                   : "radial-gradient(circle at 30% 10%, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
               }}
@@ -662,10 +672,18 @@ export const LaZyeute: React.FC = () => {
                 className="w-8 h-8"
                 viewBox="0 0 24 24"
                 fill={
-                  (currentPost as any).is_fired ? "url(#flameGradient)" : "none"
+                  (currentPost as PostWithEngagement).is_fired
+                    ? "url(#flameGradient)"
+                    : "none"
                 }
-                stroke={(currentPost as any).is_fired ? "none" : edgeLighting}
-                strokeWidth={(currentPost as any).is_fired ? 0 : 1.6}
+                stroke={
+                  (currentPost as PostWithEngagement).is_fired
+                    ? "none"
+                    : edgeLighting
+                }
+                strokeWidth={
+                  (currentPost as PostWithEngagement).is_fired ? 0 : 1.6
+                }
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 style={{ filter: `drop-shadow(0 0 4px ${edgeLighting}60)` }}
@@ -725,8 +743,8 @@ export const LaZyeute: React.FC = () => {
                 textShadow: `0 0 8px ${edgeLighting}50`,
               }}
             >
-              {(currentPost as any).commentCount ??
-                (currentPost as any).comment_count ??
+              {(currentPost as PostWithEngagement).commentCount ??
+                (currentPost as PostWithEngagement).comment_count ??
                 0}
             </span>
           </Link>
@@ -959,166 +977,12 @@ export const LaZyeute: React.FC = () => {
         </button>
       </div>
 
-      {/* TI-GUY Chat Widget Modal - leather aesthetic */}
-      {showTiGuyChat && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.8)" }}
-          onClick={() => setShowTiGuyChat(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl overflow-hidden"
-            style={{
-              background:
-                "linear-gradient(180deg, #2C1810 0%, #1A0F0A 50%, #0D0705 100%)",
-              border: `2px dashed ${edgeLighting}40`,
-              boxShadow: `0 0 30px ${edgeLighting}20, inset 0 0 60px rgba(0,0,0,0.5)`,
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between p-5"
-              style={{
-                background: "linear-gradient(180deg, #3D2418 0%, #2C1810 100%)",
-                borderBottom: `1px dashed ${edgeLighting}40`,
-              }}
-            >
-              <span className="text-sm" style={{ color: "#A68B7C" }}>
-                Chats/DMs
-              </span>
-              <div className="text-center">
-                <h2
-                  className="text-lg font-bold"
-                  style={{
-                    color: edgeLighting,
-                    fontFamily: "'Cormorant Garamond', serif",
-                  }}
-                >
-                  Ti-Guy
-                </h2>
-                <span className="text-xs" style={{ color: "#4ade80" }}>
-                  EN LIGNE
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <span
-                  className="px-2 py-1 rounded text-xs"
-                  style={{
-                    border: `1px solid ${edgeLighting}60`,
-                    color: edgeLighting,
-                  }}
-                >
-                  MODE
-                </span>
-                <span
-                  className="px-2 py-1 rounded text-xs"
-                  style={{
-                    border: `1px solid ${edgeLighting}60`,
-                    color: edgeLighting,
-                  }}
-                >
-                  VIP
-                </span>
-              </div>
-            </div>
-
-            {/* Central Ti-Guy emblem */}
-            <div className="flex justify-center py-8">
-              <div
-                className="w-24 h-24 rounded-full flex items-center justify-center border-2"
-                style={{
-                  borderColor: edgeLighting,
-                  boxShadow: `0 0 20px ${edgeLighting}50, inset 0 0 20px rgba(0,0,0,0.8)`,
-                  background: "#1A0F0A",
-                }}
-              >
-                <img
-                  src="/zyeute-beaver.svg"
-                  alt="Ti-Guy"
-                  className="w-14 h-14 object-contain"
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    img.style.display = "none";
-                    const fallback = img.parentElement?.querySelector(
-                      ".tiguy-modal-fallback",
-                    );
-                    if (fallback) fallback.classList.remove("hidden");
-                  }}
-                />
-                <span className="tiguy-modal-fallback hidden text-4xl">🦫</span>
-              </div>
-            </div>
-
-            {/* Chat input - leather strap style */}
-            <div
-              className="flex items-center gap-2 p-4"
-              style={{
-                background:
-                  "linear-gradient(180deg, #4A2E20 0%, #3D2418 50%, #2C1810 100%)",
-                borderTop: `1px dashed ${edgeLighting}40`,
-              }}
-            >
-              <button
-                className="p-2 rounded-lg"
-                style={{
-                  background: "#1A0F0A",
-                  border: `1px solid ${edgeLighting}40`,
-                }}
-              >
-                <span className="text-lg">🦫</span>
-              </button>
-              <button
-                className="p-2 rounded-lg"
-                style={{
-                  background: "#1A0F0A",
-                  border: `1px solid ${edgeLighting}40`,
-                }}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke={edgeLighting}
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                </svg>
-              </button>
-              <input
-                type="text"
-                placeholder="Jase avec moi..."
-                className="flex-1 px-4 py-3 rounded-xl text-sm"
-                style={{
-                  background: "#1A0F0A",
-                  border: `2px solid ${edgeLighting}40`,
-                  color: "#F5E6D3",
-                }}
-              />
-              <button
-                onClick={() => setShowTiGuyChat(false)}
-                className="p-2 rounded-full"
-                style={{
-                  border: `2px solid ${edgeLighting}`,
-                  color: edgeLighting,
-                }}
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* TI-GUY Messaging – Voyageur Luxury (dropdown: DMs, Last Chats, File upload, etc.) */}
+      <TiGuyMessaging
+        key={showTiGuyChat ? "open" : "closed"}
+        open={showTiGuyChat}
+        onClose={() => setShowTiGuyChat(false)}
+      />
     </div>
   );
 };
