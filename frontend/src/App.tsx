@@ -23,7 +23,12 @@ import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScr
 import { LaZyeute } from "./pages/LaZyeute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { supabase, getSessionWithTimeout } from "@/lib/supabase";
-import { TIGuyChat, TIGuyButton, useTIGuy } from "@/components/tiguy";
+import {
+  TIGuyChat,
+  TIGuyFullScreen,
+  TIGuyButton,
+  useTIGuy,
+} from "@/components/tiguy";
 
 // ===== AUTH CONTEXT =====
 const AuthContext = createContext(null);
@@ -2321,7 +2326,12 @@ function AppContent() {
       {user && (
         <>
           {!isOpen && <TIGuyButton onClick={openChat} />}
-          <TIGuyChat isOpen={isOpen} onClose={closeChat} userId={user.id} />
+          <TIGuyFullScreen
+            isOpen={isOpen}
+            onClose={closeChat}
+            userId={user.id}
+            username={user?.username}
+          />
         </>
       )}
     </Router>

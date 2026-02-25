@@ -3,6 +3,7 @@
  */
 
 export { TIGuyChat } from "./TIGuyChat";
+export { TIGuyFullScreen } from "./TIGuyFullScreen";
 export { TIGuyButton } from "./TIGuyButton";
 export { useTIGuy } from "./useTIGuy";
 
