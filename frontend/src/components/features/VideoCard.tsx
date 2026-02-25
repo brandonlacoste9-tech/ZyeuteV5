@@ -241,19 +241,24 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                   {isHLS ? (
                     <VideoPlayer
                       src={videoSrc}
+                      poster={
+                        getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
+                        post.thumbnail_url ?? post.thumbnailUrl ?? 
+                        post.media_url ?? post.mediaUrl
+                      }
                       autoPlay={autoPlay}
                       muted={muted}
                       loop
                       priority={priority}
                     />
                   ) : (
-                    <SmartVideoPlayer
+                    <SimpleVideoPlayer
                       src={videoSrc}
+                      poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
                       autoPlay={autoPlay}
                       muted={muted}
                       loop
-                      className="w-full h-full"
-                      onError={() => console.log("[VideoCard] Bad video filtered out:", videoSrc)}
+                      priority={priority}
                     />
                   )}
                 </VideoErrorBoundary>

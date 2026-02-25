@@ -65,7 +65,7 @@ export async function validateVideoSource(url: string): Promise<VideoValidationR
     video.muted = true;
     video.crossOrigin = "anonymous";
     
-    let timeoutId: NodeJS.Timeout;
+    const timeoutId: NodeJS.Timeout;
     let resolved = false;
     
     const cleanup = () => {
@@ -159,18 +159,30 @@ export function useVideoValidation(url: string | undefined) {
   const [isValidating, setIsValidating] = useState(false);
   
   useEffect(() => {
-    if (!url) {
-      setResult(null);
-      return;
-    }
+    let cancelled = false;
     
-    setIsValidating(true);
-    setResult({ url, quality: "checking", canPlay: false });
+    const validate = async () => {
+      if (!url) {
+        if (!cancelled) setResult(null);
+        return;
+      }
+      
+      if (!cancelled) {
+        setIsValidating(true);
+        setResult({ url, quality: "checking", canPlay: false });
+      }
+      
+      const validation = await validateVideoSource(url);
+      
+      if (!cancelled) {
+        setResult(validation);
+        setIsValidating(false);
+      }
+    };
     
-    validateVideoSource(url).then((validation) => {
-      setResult(validation);
-      setIsValidating(false);
-    });
+    validate();
+    
+    return () => { cancelled = true; };
   }, [url]);
   
   return { result, isValidating };

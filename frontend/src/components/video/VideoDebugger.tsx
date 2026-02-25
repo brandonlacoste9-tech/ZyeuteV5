@@ -17,6 +17,11 @@ export function VideoDebugger() {
   const [logs, setLogs] = useState<string[]>([]);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Define addLog first
+  const addLog = (msg: string) => {
+    setLogs((prev) => [...prev.slice(-20), `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  };
+
   useEffect(() => {
     // Check if debug mode is enabled
     const params = new URLSearchParams(window.location.search);
@@ -63,10 +68,6 @@ export function VideoDebugger() {
 
     return () => clearInterval(interval);
   }, [isVisible]);
-
-  const addLog = (msg: string) => {
-    setLogs((prev) => [...prev.slice(-20), `[${new Date().toLocaleTimeString()}] ${msg}`]);
-  };
 
   const testVideoPlayback = async () => {
     const videos = document.querySelectorAll("video");

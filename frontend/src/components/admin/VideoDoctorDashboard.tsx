@@ -102,8 +102,11 @@ export const VideoDoctorDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchStats();
-    runHealthCheck();
+    const timer = setTimeout(() => {
+      fetchStats();
+      runHealthCheck();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const getStatusColor = (status: string) => {

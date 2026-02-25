@@ -901,10 +901,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         </Suspense>
       )}
-      {/* Video Element - NO POSTER to prevent stuck images */}
+      {/* Video Element */}
+      {priority && poster && (
+        <img
+          src={poster}
+          alt=""
+          className="hidden"
+          fetchPriority="high"
+          onError={() => { }}
+        />
+      )}
       <video
         ref={videoRef}
         src={effectiveSrc}
+        poster={poster}
         playsInline // CRITICAL for iOS production
         muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
         autoPlay={autoPlay} // Explicit attribute + useEffect sync for better compatibility

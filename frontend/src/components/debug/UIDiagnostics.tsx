@@ -9,14 +9,7 @@ export function UIDiagnostics() {
   const [isVisible, setIsVisible] = useState(false);
   const [checks, setChecks] = useState<{ name: string; status: "ok" | "error" | "warning"; message: string }[]>([]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("ui-debug") === "1") {
-      setIsVisible(true);
-      runDiagnostics();
-    }
-  }, []);
-
+  // Define runDiagnostics first
   const runDiagnostics = () => {
     const results: { name: string; status: "ok" | "error" | "warning"; message: string }[] = [];
 
@@ -70,6 +63,15 @@ export function UIDiagnostics() {
 
     setChecks(results);
   };
+
+  // Run diagnostics when component mounts
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("ui-debug") === "1") {
+      setIsVisible(true);
+      runDiagnostics();
+    }
+  }, []);
 
   if (!isVisible) return null;
 
