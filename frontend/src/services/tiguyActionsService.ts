@@ -6,6 +6,22 @@
 
 const API_BASE = "/api/tiguy";
 
+/**
+ * Helper to make API calls with consistent error handling
+ * Returns the raw JSON response
+ */
+async function tiguyFetch<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  return response.json();
+}
+
 export interface TiGuyCapability {
   name: string;
   description: string;
@@ -83,39 +99,30 @@ export const tiguyActionsService = {
   async generateImage(
     request: ImageGenerationRequest,
   ): Promise<ImageGenerationResponse> {
-    const response = await fetch(`${API_BASE}/image/generate`, {
+    return tiguyFetch("/image/generate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify(request),
     });
-    return response.json();
   },
 
   async generateAvatar(
     description: string,
     style: "realistic" | "cartoon" = "cartoon",
   ): Promise<ImageGenerationResponse> {
-    const response = await fetch(`${API_BASE}/image/avatar`, {
+    return tiguyFetch("/image/avatar", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ description, style }),
     });
-    return response.json();
   },
 
   async generateThumbnail(
     topic: string,
     mood: "exciting" | "calm" | "funny" = "exciting",
   ): Promise<ImageGenerationResponse> {
-    const response = await fetch(`${API_BASE}/image/thumbnail`, {
+    return tiguyFetch("/image/thumbnail", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ topic, mood }),
     });
-    return response.json();
   },
 
   async getImageIdeas(): Promise<{
@@ -123,10 +130,7 @@ export const tiguyActionsService = {
     ideas: string[];
     response: string;
   }> {
-    const response = await fetch(`${API_BASE}/image/ideas`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/image/ideas");
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -138,13 +142,10 @@ export const tiguyActionsService = {
     duration: "5" | "10" = "5",
     aspectRatio: "16:9" | "9:16" | "1:1" = "9:16",
   ): Promise<VideoGenerationResponse> {
-    const response = await fetch(`${API_BASE}/video/generate`, {
+    return tiguyFetch("/video/generate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ prompt, duration, aspectRatio }),
     });
-    return response.json();
   },
 
   async getVideoIdeas(): Promise<{
@@ -152,10 +153,7 @@ export const tiguyActionsService = {
     ideas: string[];
     response: string;
   }> {
-    const response = await fetch(`${API_BASE}/video/ideas`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/video/ideas");
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -163,49 +161,37 @@ export const tiguyActionsService = {
   // ═══════════════════════════════════════════════════════════════
 
   async navigateTo(url: string): Promise<BrowserActionResponse> {
-    const response = await fetch(`${API_BASE}/browser/navigate`, {
+    return tiguyFetch("/browser/navigate", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ url }),
     });
-    return response.json();
   },
 
   async search(
     query: string,
     platform: "google" | "youtube" | "tiktok" = "google",
   ): Promise<BrowserActionResponse> {
-    const response = await fetch(`${API_BASE}/browser/search`, {
+    return tiguyFetch("/browser/search", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ query, platform }),
     });
-    return response.json();
   },
 
   async screenshot(url?: string): Promise<BrowserActionResponse> {
-    const response = await fetch(`${API_BASE}/browser/screenshot`, {
+    return tiguyFetch("/browser/screenshot", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ url }),
     });
-    return response.json();
   },
 
   async extractContent(
     url: string,
     selector?: string,
   ): Promise<BrowserActionResponse> {
-    const response = await fetch(`${API_BASE}/browser/extract`, {
+    return tiguyFetch("/browser/extract", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ url, selector }),
     });
-    return response.json();
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -213,24 +199,15 @@ export const tiguyActionsService = {
   // ═══════════════════════════════════════════════════════════════
 
   async getHockeyStandings(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/hockey/standings`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/hockey/standings");
   },
 
   async getNextHabsGame(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/hockey/next-game`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/hockey/next-game");
   },
 
   async getHabsFact(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/hockey/facts`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/hockey/facts");
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -238,11 +215,7 @@ export const tiguyActionsService = {
   // ═══════════════════════════════════════════════════════════════
 
   async getWeather(city: string = "Montreal"): Promise<QuebecInfoResponse> {
-    const response = await fetch(
-      `${API_BASE}/weather/${encodeURIComponent(city)}`,
-      { credentials: "include" },
-    );
-    return response.json();
+    return tiguyFetch(`/weather/${encodeURIComponent(city)}`);
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -250,34 +223,22 @@ export const tiguyActionsService = {
   // ═══════════════════════════════════════════════════════════════
 
   async getPoutineSpots(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/food/poutine`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/food/poutine");
   },
 
   async getSmokedMeatSpots(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/food/smoked-meat`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/food/smoked-meat");
   },
 
   async getBagelSpots(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/food/bagels`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/food/bagels");
   },
 
   async getFoodRecommendation(craving: string): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/food/recommend`, {
+    return tiguyFetch("/food/recommend", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ craving }),
     });
-    return response.json();
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -285,24 +246,15 @@ export const tiguyActionsService = {
   // ═══════════════════════════════════════════════════════════════
 
   async getFestivals(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/culture/festivals`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/culture/festivals");
   },
 
   async getQuebecMusic(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/culture/music`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/culture/music");
   },
 
   async getQuebecExpressions(): Promise<QuebecInfoResponse> {
-    const response = await fetch(`${API_BASE}/culture/expressions`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/culture/expressions");
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -313,21 +265,17 @@ export const tiguyActionsService = {
     text: string,
     voice: "quebec-male" | "quebec-female" | "ti-guy" = "ti-guy",
   ): Promise<{ success: boolean; audioBase64?: string; response: string }> {
-    const response = await fetch(`${API_BASE}/voice/speak`, {
+    return tiguyFetch("/voice/speak", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ text, voice }),
     });
-    return response.json();
   },
 
   async getPronunciation(word?: string): Promise<QuebecInfoResponse> {
-    const url = word
-      ? `${API_BASE}/voice/pronunciation/${encodeURIComponent(word)}`
-      : `${API_BASE}/voice/pronunciation`;
-    const response = await fetch(url, { credentials: "include" });
-    return response.json();
+    const endpoint = word
+      ? `/voice/pronunciation/${encodeURIComponent(word)}`
+      : "/voice/pronunciation";
+    return tiguyFetch(endpoint);
   },
 
   // ═══════════════════════════════════════════════════════════════
@@ -338,23 +286,17 @@ export const tiguyActionsService = {
     message: string,
     type?: string,
   ): Promise<SmartActionResponse> {
-    const response = await fetch(`${API_BASE}/action`, {
+    return tiguyFetch("/action", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ message, type }),
     });
-    return response.json();
   },
 
   async getCapabilities(): Promise<{
     response: string;
     capabilities: TiGuyCapability[];
   }> {
-    const response = await fetch(`${API_BASE}/capabilities`, {
-      credentials: "include",
-    });
-    return response.json();
+    return tiguyFetch("/capabilities");
   },
 
   // ═══════════════════════════════════════════════════════════════
