@@ -5,6 +5,23 @@
 
 const API_BASE = "/api/messaging";
 
+/**
+ * Helper to make API calls with consistent error handling
+ * Returns the raw JSON response
+ */
+async function messagingFetch<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!response.ok) throw new Error(`Messaging API error: ${response.statusText}`);
+  return response.json();
+}
+
 export interface User {
   id: string;
   username: string;
@@ -48,23 +65,15 @@ export interface Message {
 export const messagingService = {
   // Get all conversations
   async getConversations(): Promise<{ conversations: Conversation[] }> {
-    const response = await fetch(`${API_BASE}/conversations`, {
-      credentials: 'include',
-    });
-    if (!response.ok) throw new Error('Failed to fetch conversations');
-    return response.json();
+    return messagingFetch("/conversations");
   },
 
   // Get or create direct conversation with user
   async getOrCreateDirectConversation(otherUserId: string): Promise<{ conversationId: string }> {
-    const response = await fetch(`${API_BASE}/conversations/direct`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+    return messagingFetch("/conversations/direct", {
+      method: "POST",
       body: JSON.stringify({ otherUserId }),
     });
-    if (!response.ok) throw new Error('Failed to create conversation');
-    return response.json();
   },
 
   // Get messages in a conversation
@@ -76,12 +85,11 @@ export const messagingService = {
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.before) params.append('before', options.before);
     
-    const response = await fetch(
-      `${API_BASE}/conversations/${conversationId}/messages?${params}`,
-      { credentials: 'include' }
-    );
-    if (!response.ok) throw new Error('Failed to fetch messages');
-    return response.json();
+    const endpoint = params.toString() 
+      ? `/conversations/${conversationId}/messages?${params}`
+      : `/conversations/${conversationId}/messages`;
+    
+    return messagingFetch(endpoint);
   },
 
   // Send a message
@@ -95,65 +103,49 @@ export const messagingService = {
       ephemeralDuration?: number;
     }
   ): Promise<{ message: Message }> {
-    const response = await fetch(
-      `${API_BASE}/conversations/${conversationId}/messages`,
+    return messagingFetch(
+      `/conversations/${conversationId}/messages`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
         body: JSON.stringify(data),
       }
     );
-    if (!response.ok) throw new Error('Failed to send message');
-    return response.json();
   },
 
   // Add reaction to message
   async addReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/messages/${messageId}/reactions`,
+    await messagingFetch(
+      `/messages/${messageId}/reactions`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "POST",
         body: JSON.stringify({ emoji }),
       }
     );
-    if (!response.ok) throw new Error('Failed to add reaction');
   },
 
   // Remove reaction
   async removeReaction(messageId: string, emoji: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
+    await messagingFetch(
+      `/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`,
       {
-        method: 'DELETE',
-        credentials: 'include',
+        method: "DELETE",
       }
     );
-    if (!response.ok) throw new Error('Failed to remove reaction');
   },
 
   // Mark message as read
   async markAsRead(messageId: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE}/messages/${messageId}/read`,
+    await messagingFetch(
+      `/messages/${messageId}/read`,
       {
-        method: 'POST',
-        credentials: 'include',
+        method: "POST",
       }
     );
-    if (!response.ok) throw new Error('Failed to mark as read');
   },
 
   // Search users
   async searchUsers(query: string): Promise<{ users: User[] }> {
-    const response = await fetch(
-      `${API_BASE}/users/search?q=${encodeURIComponent(query)}`,
-      { credentials: 'include' }
-    );
-    if (!response.ok) throw new Error('Failed to search users');
-    return response.json();
+    return messagingFetch(`/users/search?q=${encodeURIComponent(query)}`);
   },
 };
 
