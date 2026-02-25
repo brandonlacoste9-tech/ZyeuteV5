@@ -873,6 +873,8 @@ export const LaZyeute: React.FC = () => {
             fill={location.pathname === "/feed" ? edgeLighting : "none"}
             stroke={edgeLighting}
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <polyline points="9 22 9 12 15 12 15 22" />
@@ -897,6 +899,8 @@ export const LaZyeute: React.FC = () => {
             fill="none"
             stroke={edgeLighting}
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
             <circle cx="11" cy="11" r="7" />
             <path d="m21 21-4.35-4.35" />
@@ -952,6 +956,8 @@ export const LaZyeute: React.FC = () => {
             }
             stroke={edgeLighting}
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
             <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
@@ -976,6 +982,8 @@ export const LaZyeute: React.FC = () => {
             fill={location.pathname === "/profile" ? edgeLighting : "none"}
             stroke={edgeLighting}
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
