@@ -236,11 +236,24 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         </div>
       )}
 
+      {/* Poster crossfade overlay */}
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-[1] pointer-events-none"
+          style={{
+            opacity: isPlaying && !isLoading ? 0 : 1,
+            transition: "opacity 350ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+            transform: "translate3d(0, 0, 0)",
+          }}
+          onError={() => {}}
+        />
+      )}
       {/* Video element — GPU-accelerated with crisp rendering */}
       <video
         ref={videoRef}
         src={src}
-        poster={poster}
         className="w-full h-full object-cover video-container-crisp"
         style={{
           transform: "translate3d(0, 0, 0)",
