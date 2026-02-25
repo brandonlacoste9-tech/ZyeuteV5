@@ -79,7 +79,14 @@ export function MuxVideoPlayer({
   }
 
   return (
-    <div className={cn("relative", className)} style={style}>
+    <div
+      className={cn("relative video-motion-smooth", className)}
+      style={{
+        ...style,
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
+    >
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 rounded-xl z-10">
           <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />

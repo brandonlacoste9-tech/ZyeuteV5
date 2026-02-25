@@ -434,18 +434,26 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     return (
       <div
         ref={videoRef}
-        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none"
+        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none video-motion-smooth video-stabilized"
+        style={{
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        } as React.CSSProperties}
         onClick={handleSingleTap}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Swipe Direction Indicator */}
+        {/* Swipe Direction Indicator — smooth momentum overlay */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm swipe-overlay-smooth ${swipeDirection === "left" ? "animate-pulse" : ""
               }`}
+            style={{
+              animation: "fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -507,10 +515,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             isActive={isActive}
           />
         )}
-        {/* Full-screen Media */}
-        {/* MEMORY OPTIMIZATION: Unmount video player when off-screen (>2 items away) */}
-        {/* This prevents DOM/video decoder bloat after scrolling through many videos */}
-        <div className="absolute inset-0 w-full h-full">
+        {/* Full-screen Media — GPU-composited layer for smooth playback */}
+        <div className="absolute inset-0 w-full h-full video-container-crisp">
           {!isActive && !priority ? (
             // Off-screen: Show static thumbnail only (no video element)
             <div className="w-full h-full bg-zinc-900">
@@ -657,8 +663,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           </div>
         )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+        {/* Gradient Overlay — hardware accelerated for zero jank */}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"
+          style={{ transform: "translate3d(0, 0, 0)" }}
+        />
 
         {/* Québec Or emblem — top right of video screen, small */}
         <img

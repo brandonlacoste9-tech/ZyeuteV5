@@ -580,17 +580,124 @@
   .scrollbar-hide, .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar, .no-scrollbar::-webkit-scrollbar { display: none; }
 
+  /* ============ ULTRA-SMOOTH MOTION SYSTEM ============ */
+
   /* TikTok-style feed: GPU-composited slides for buttery smooth scrolling */
   .feed-root {
-    overscroll-behavior: none; /* Prevent pull-to-refresh interference */
-    -webkit-overflow-scrolling: touch; /* iOS momentum scrolling */
-    touch-action: pan-y; /* Only allow vertical touch gestures */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scroll-behavior: smooth;
   }
+
   .feed-root [data-video-index] {
     will-change: transform;
-    transform: translateZ(0); /* Promote to GPU layer */
+    transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
-    contain: layout style paint; /* CSS containment for perf */
+    contain: layout style paint;
+    -webkit-transform: translate3d(0, 0, 0);
+    perspective: 1000px;
+  }
+
+  /* Video element rendering optimization — crisp detail + smooth playback */
+  video {
+    image-rendering: auto;
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Active video container: full GPU compositing */
+  .video-motion-smooth {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    -webkit-font-smoothing: subpixel-antialiased;
+  }
+
+  .video-gpu-accelerated {
+    will-change: transform, filter, opacity;
+    contain: layout style paint;
+  }
+
+  /* During fast scroll: reduce compositing overhead */
+  .video-fast-scroll video {
+    will-change: auto;
+    contain: strict;
+  }
+
+  /* Smooth transition phase */
+  .video-transitioning {
+    transition: filter 180ms cubic-bezier(0.25, 0.1, 0.25, 1),
+                transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+                opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  /* Snap scroll with smooth deceleration */
+  .snap-smooth-decel {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+  }
+
+  .snap-smooth-decel > * {
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+
+  /* Video reveal with motion-aware easing */
+  .video-enter-active {
+    animation: video-smooth-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes video-smooth-enter {
+    0% {
+      opacity: 0;
+      transform: scale(0.97) translate3d(0, 0, 0);
+      filter: blur(2px);
+    }
+    60% {
+      opacity: 1;
+      filter: blur(0.5px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translate3d(0, 0, 0);
+      filter: blur(0px);
+    }
+  }
+
+  /* Video exit with soft fade */
+  .video-exit-active {
+    animation: video-smooth-exit 250ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  @keyframes video-smooth-exit {
+    0% {
+      opacity: 1;
+      transform: scale(1) translate3d(0, 0, 0);
+      filter: blur(0px);
+    }
+    100% {
+      opacity: 0.4;
+      transform: scale(0.98) translate3d(0, 0, 0);
+      filter: blur(1px);
+    }
+  }
+
+  /* Stabilized video container — counters micro-jitter from scroll inertia */
+  .video-stabilized {
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Smooth progress bar for video timeline */
+  .video-progress-smooth {
+    transition: width 100ms linear;
+    will-change: width;
   }
 
   /* Mobile Responsiveness Utilities */
@@ -915,17 +1022,22 @@
   }
 }
 
-/* Video reveal animation */
+/* Video reveal animation — cinematic with motion blur dissolve */
 @keyframes video-reveal {
   0% {
     clip-path: inset(100% 0 0 0);
-    transform: scale(0.95);
+    transform: scale(0.96) translate3d(0, 0, 0);
     opacity: 0;
+    filter: blur(3px);
+  }
+  50% {
+    filter: blur(1px);
   }
   100% {
     clip-path: inset(0 0 0 0);
-    transform: scale(1);
+    transform: scale(1) translate3d(0, 0, 0);
     opacity: 1;
+    filter: blur(0px);
   }
 }
 
@@ -986,9 +1098,25 @@
   100% { transform: translateX(100%) translateY(100%); }
 }
 
-/* Generated content reveal */
+/* Generated content reveal — polished cinematic entry */
 .generated-reveal {
-  animation: video-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: video-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Swipe transition overlay — smooth directional momentum */
+.swipe-overlay-smooth {
+  transition: opacity 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+              backdrop-filter 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+              transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Video container with sub-pixel rendering for crisp edges */
+.video-container-crisp {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 /* Press feedback for buttons */
@@ -1000,14 +1128,17 @@
   transform: scale(0.95);
 }
 
-/* Video player hover glow */
+/* Video player hover glow — smooth cubic-bezier for premium feel */
 .video-hover-glow {
-  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  transition: box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+              transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
 }
 
 .video-hover-glow:hover {
   box-shadow: 0 0 30px rgba(255, 191, 0, 0.3), 0 0 60px rgba(255, 191, 0, 0.1);
-  transform: scale(1.01);
+  transform: scale(1.005) translate3d(0, 0, 0);
 }
 
 /* Haptic pulse animation */

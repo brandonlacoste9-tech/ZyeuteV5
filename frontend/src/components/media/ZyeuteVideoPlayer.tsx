@@ -61,10 +61,17 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   };
 
   return (
-    <div className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20">
+    <div
+      className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20 video-motion-smooth"
+      style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
+    >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover video-container-crisp"
+        style={{
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+        }}
         poster={poster}
         onTimeUpdate={handleTimeUpdate}
         onClick={togglePlay}
@@ -96,7 +103,7 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="w-full h-[2px] bg-white/20 mb-4 cursor-pointer relative">
           <div
-            className="h-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37]"
+            className="h-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37] video-progress-smooth"
             style={{ width: `${progress}%` }}
           />
         </div>

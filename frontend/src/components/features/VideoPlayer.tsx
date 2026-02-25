@@ -859,10 +859,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <div
       className={cn(
-        "relative group video-hover-glow rounded-xl overflow-hidden",
+        "relative group video-hover-glow video-motion-smooth rounded-xl overflow-hidden",
         className,
       )}
-      style={style}
+      style={{
+        ...style,
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => {
         setShowControls(false);
@@ -916,14 +920,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ref={videoRef}
         src={effectiveSrc}
         poster={poster}
-        playsInline // CRITICAL for iOS production
-        muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
-        autoPlay={autoPlay} // Explicit attribute + useEffect sync for better compatibility
-        loop={loop} // Explicit attribute for continuous playback
+        playsInline
+        muted={muted}
+        autoPlay={autoPlay}
+        loop={loop}
         preload={preload}
-        fetchPriority={priority ? "high" : "low"} // Next/active: prioritize over thumbnails (Chrome 102+)
-        className="w-full h-full object-cover"
-        style={videoStyle}
+        fetchPriority={priority ? "high" : "low"}
+        className="w-full h-full object-cover video-container-crisp"
+        style={{
+          ...videoStyle,
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
         onError={handleError}
         onCanPlay={handleCanPlay}
         onLoadStart={handleLoadStart}
@@ -931,9 +940,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onWaiting={handleWaiting}
         onProgress={handleProgress}
       />
-      {/* Loading / Buffering State */}
+      {/* Loading / Buffering State — smooth fade overlay */}
       {readiness === "loading" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 video-transitioning">
           <div className="text-center">
             {/* Circular progress indicator */}
             <div className="relative w-14 h-14 mx-auto mb-3">
@@ -1019,7 +1028,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             max={duration || 0}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer video-progress-smooth"
             style={{
               background: `linear-gradient(to right, var(--edge-color) 0%, var(--edge-color) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) 100%)`,
             }}

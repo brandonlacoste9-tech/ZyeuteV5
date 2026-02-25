@@ -1,71 +1,123 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 interface ScrollVelocityReturn {
-  velocity: number; // Pixels per millisecond
-  isFast: boolean; // > 1.5 px/ms
-  isMedium: boolean; // 0.5 - 1.5 px/ms
-  isSlow: boolean; // < 0.5 px/ms
+  velocity: number;
+  smoothVelocity: number;
+  isFast: boolean;
+  isMedium: boolean;
+  isSlow: boolean;
+  isDecelerating: boolean;
   handleScroll: (scrollTop: number) => void;
 }
 
-// ~2000 px/s = fast scroll (prevents premature prefetch/play during overshoot)
-const FAST_THRESHOLD = 2.0; // px/ms
+const FAST_THRESHOLD = 2.0;
 const MEDIUM_THRESHOLD = 0.5;
 
+// EMA (Exponential Moving Average) smoothing factor.
+// Lower = smoother/slower response. Higher = snappier/noisier.
+const EMA_ALPHA = 0.25;
+
+// Deceleration detection: if velocity drops by >40% between samples
+const DECEL_RATIO = 0.6;
+
 /**
- * Hook to track scroll velocity manually (e.g., for react-window).
- * Velocity in px/ms; isFast when > 2 px/ms (~2000 px/s).
+ * Hook to track scroll velocity with EMA smoothing.
+ * Eliminates jittery velocity spikes for ultra-smooth motion decisions.
+ * Returns both raw and smoothed velocity, plus deceleration state.
  */
 export function useScrollVelocity(): ScrollVelocityReturn {
   const [velocity, setVelocity] = useState(0);
+  const [smoothVelocity, setSmoothVelocity] = useState(0);
+  const [isDecelerating, setIsDecelerating] = useState(false);
+
   const lastScrollTop = useRef(0);
-  const lastScrollTime = useRef(Date.now());
+  const lastScrollTime = useRef(0);
+  const emaVelocity = useRef(0);
+  const prevRawVelocity = useRef(0);
   const velocityTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
+  const decayRaf = useRef<number>(0);
 
-  const isFast = Math.abs(velocity) > FAST_THRESHOLD;
+  const isFast = Math.abs(smoothVelocity) > FAST_THRESHOLD;
   const isMedium =
-    Math.abs(velocity) > MEDIUM_THRESHOLD &&
-    Math.abs(velocity) <= FAST_THRESHOLD;
-  const isSlow = Math.abs(velocity) <= MEDIUM_THRESHOLD;
+    Math.abs(smoothVelocity) > MEDIUM_THRESHOLD &&
+    Math.abs(smoothVelocity) <= FAST_THRESHOLD;
+  const isSlow = Math.abs(smoothVelocity) <= MEDIUM_THRESHOLD;
 
-  const handleScroll = useCallback((scrollTop: number) => {
-    const now = Date.now();
-    const timeDelta = now - lastScrollTime.current;
+  // Smooth decay to zero using rAF for buttery deceleration curve
+  const startDecay = useCallback(() => {
+    if (decayRaf.current) cancelAnimationFrame(decayRaf.current);
 
-    if (timeDelta > 0) {
-      // Avoid divide by zero
-      const distance = scrollTop - lastScrollTop.current;
-      const vel = distance / timeDelta;
+    const decay = () => {
+      emaVelocity.current *= 0.85; // Exponential decay
 
-      // Smoothing could be applied here if needed
-      setVelocity(vel);
+      if (Math.abs(emaVelocity.current) < 0.01) {
+        emaVelocity.current = 0;
+        setVelocity(0);
+        setSmoothVelocity(0);
+        setIsDecelerating(false);
+        return;
+      }
 
+      setSmoothVelocity(emaVelocity.current);
+      setIsDecelerating(true);
+      decayRaf.current = requestAnimationFrame(decay);
+    };
+
+    decayRaf.current = requestAnimationFrame(decay);
+  }, []);
+
+  const handleScroll = useCallback(
+    (scrollTop: number) => {
+      const now = Date.now();
+      const timeDelta = lastScrollTime.current === 0 ? 0 : now - lastScrollTime.current;
+
+      if (timeDelta > 0) {
+        const distance = scrollTop - lastScrollTop.current;
+        const rawVel = distance / timeDelta;
+
+        emaVelocity.current =
+          EMA_ALPHA * rawVel + (1 - EMA_ALPHA) * emaVelocity.current;
+
+        const isDecel =
+          Math.abs(rawVel) < Math.abs(prevRawVelocity.current) * DECEL_RATIO &&
+          Math.abs(prevRawVelocity.current) > MEDIUM_THRESHOLD;
+        setIsDecelerating(isDecel);
+        prevRawVelocity.current = rawVel;
+
+        setVelocity(rawVel);
+        setSmoothVelocity(emaVelocity.current);
+      }
+
+      // Always update position/time (handles first-call initialization)
       lastScrollTop.current = scrollTop;
       lastScrollTime.current = now;
 
-      // Reset velocity to 0 if scrolling stops
-      if (velocityTimeout.current) {
-        clearTimeout(velocityTimeout.current);
+      if (timeDelta > 0) {
+        if (velocityTimeout.current) clearTimeout(velocityTimeout.current);
+        if (decayRaf.current) cancelAnimationFrame(decayRaf.current);
+
+        velocityTimeout.current = setTimeout(() => {
+          startDecay();
+        }, 80);
       }
+    },
+    [startDecay],
+  );
 
-      velocityTimeout.current = setTimeout(() => {
-        setVelocity(0);
-      }, 100); // 100ms idle means stopped
-    }
-  }, []);
-
-  // Cleanup
   useEffect(() => {
     return () => {
       if (velocityTimeout.current) clearTimeout(velocityTimeout.current);
+      if (decayRaf.current) cancelAnimationFrame(decayRaf.current);
     };
   }, []);
 
   return {
     velocity,
+    smoothVelocity,
     isFast,
     isMedium,
     isSlow,
+    isDecelerating,
     handleScroll,
   };
 }
