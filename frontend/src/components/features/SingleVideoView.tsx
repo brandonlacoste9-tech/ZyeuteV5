@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
+import TikTokVideoPlayer from "@/components/video/TikTokVideoPlayer";
 import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -590,7 +591,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   onProgress={isActive ? onVideoProgress : undefined}
                 />
               ) : (
-                <SimpleVideoPlayer
+                <TikTokVideoPlayer
                   src={videoSrc}
                   poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
                   autoPlay={isActive}
@@ -599,7 +600,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   className="w-full h-full"
                   style={filterStyle}
                   priority={priority}
-                  preload={isActive ? "auto" : preload}
                   onProgress={isActive ? onVideoProgress : undefined}
                   onError={(err) => setVideoError(err)}
                 />
