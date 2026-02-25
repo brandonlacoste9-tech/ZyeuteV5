@@ -23,6 +23,7 @@ import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScr
 import { LaZyeute } from "./pages/LaZyeute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { supabase, getSessionWithTimeout } from "@/lib/supabase";
+import { TIGuyChat, TIGuyButton, useTIGuy } from "@/components/tiguy";
 
 // ===== AUTH CONTEXT =====
 const AuthContext = createContext(null);
@@ -2284,6 +2285,15 @@ function AuthCallback() {
 // ===== APP =====
 function AppContent() {
   const { loading, user } = useAuth();
+  const {
+    isOpen,
+    isExpanded,
+    openChat,
+    closeChat,
+    minimizeChat,
+    expandChat,
+    userId,
+  } = useTIGuy(user?.id);
 
   // Beautiful black opening with gold emblem while auth loads
   if (loading) {
@@ -2306,6 +2316,14 @@ function AppContent() {
           element={<Navigate to={user ? "/feed" : "/login"} replace />}
         />
       </Routes>
+
+      {/* 🦫 TI-GUY Chat - Available on all pages when logged in */}
+      {user && (
+        <>
+          {!isOpen && <TIGuyButton onClick={openChat} />}
+          <TIGuyChat isOpen={isOpen} onClose={closeChat} userId={user.id} />
+        </>
+      )}
     </Router>
   );
 }
