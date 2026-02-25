@@ -189,27 +189,26 @@ export const LaZyeute: React.FC = () => {
     );
   }
 
-  if (posts.length === 0) {
-    return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="text-6xl mb-4">🦫</div>
-          <h2 className="text-gold-400 text-xl font-bold mb-2">
-            Rien à zyeuter!
-          </h2>
-          <p className="text-stone-400 mb-6">
-            Suis des créateurs pour voir leur contenu ici
-          </p>
-          <Link
-            to="/explore"
-            className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold"
-          >
-            Découvrir
-          </Link>
-        </div>
+  // Empty state - shown inside the layout, not as full-screen replacement
+  const emptyFeedContent = posts.length === 0 && (
+    <div className="h-screen snap-start snap-always flex items-center justify-center">
+      <div className="text-center p-8">
+        <div className="text-6xl mb-4">🦫</div>
+        <h2 className="text-gold-400 text-xl font-bold mb-2">
+          Rien à zyeuter!
+        </h2>
+        <p className="text-stone-400 mb-6">
+          Suis des créateurs pour voir leur contenu ici
+        </p>
+        <Link
+          to="/explore"
+          className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold"
+        >
+          Découvrir
+        </Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black">
@@ -336,6 +335,7 @@ export const LaZyeute: React.FC = () => {
         className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
         style={{ scrollSnapType: "y mandatory" }}
       >
+        {emptyFeedContent}
         {posts.map((post, index) => (
           <div
             key={post.id}
