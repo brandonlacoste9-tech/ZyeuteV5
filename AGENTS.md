@@ -47,6 +47,8 @@ Monorepo with a single root `package.json`. Frontend lives in `frontend/`, backe
 - The `prepare` script in `package.json` runs Husky on `npm install` — this is fine and sets up the pre-commit hook.
 - Vite's root is `frontend/` (configured in `vite.config.ts`), so `index.html` lives at `frontend/index.html`.
 - The backend loads `.env` then `.env.local` via `dotenv` in `backend/preload.ts`.
+- The `DATABASE_URL` uses Supabase's connection pooler. The format from `.env.example` uses port 6543 (transaction mode). The backend's `pg` pool forces SSL with `ssl: { rejectUnauthorized: false }`.
+- Supabase REST API (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`) is used by the frontend client SDK and works independently from `DATABASE_URL` (which is used by the backend's Drizzle ORM via `pg` pool).
 
 [byterover-mcp]
 
