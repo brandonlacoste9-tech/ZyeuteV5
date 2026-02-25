@@ -29,6 +29,9 @@ import {
   TIGuyButton,
   useTIGuy,
 } from "@/components/tiguy";
+import { VideoDoctorDashboard } from "@/components/admin/VideoDoctorDashboard";
+import { VideoDebugger } from "@/components/video/VideoDebugger";
+import { UIDiagnostics } from "@/components/debug/UIDiagnostics";
 
 // ===== AUTH CONTEXT =====
 const AuthContext = createContext(null);
@@ -2316,6 +2319,7 @@ function AppContent() {
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/admin/video-doctor" element={<VideoDoctorDashboard />} />
         <Route
           path="/"
           element={<Navigate to={user ? "/feed" : "/login"} replace />}
@@ -2334,6 +2338,12 @@ function AppContent() {
           />
         </>
       )}
+
+      {/* 🎬 Video Debugger - Add ?debug=1 to URL to enable */}
+      <VideoDebugger />
+
+      {/* 🔍 UI Diagnostics - Add ?ui-debug=1 to URL to enable */}
+      <UIDiagnostics />
     </Router>
   );
 }

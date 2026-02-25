@@ -86,7 +86,6 @@ export function PexelsVideoPlayer({
       <video
         ref={videoRef}
         src={videoUrl}
-        poster={thumbnail}
         className="w-full h-full object-cover rounded-xl"
         loop
         playsInline

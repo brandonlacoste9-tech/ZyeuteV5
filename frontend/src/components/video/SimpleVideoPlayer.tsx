@@ -183,15 +183,6 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         )}
         style={style}
       >
-        {/* Layer 3: Thumbnail placeholder */}
-        {poster && (
-          <img 
-            src={poster} 
-            alt="" 
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
-          />
-        )}
-        
         {/* Error message overlay */}
         <div className="relative z-10 text-center p-4">
           <AlertCircle className="w-10 h-10 text-white/60 mx-auto mb-3" />
@@ -232,11 +223,10 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Video element */}
+      {/* Video element - NO POSTER to prevent stuck images */}
       <video
         ref={videoRef}
         src={src}
-        poster={poster}
         className="w-full h-full object-cover"
         loop={loop}
         playsInline
