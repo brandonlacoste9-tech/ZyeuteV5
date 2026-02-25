@@ -2,6 +2,9 @@
    INDEX CSS - ZYEUTE V5
    ============================================ */
 
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
 /* Edge Accent Text */
 .text-edge {
   color: var(--edge-color);
