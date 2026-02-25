@@ -189,23 +189,27 @@ export const LaZyeute: React.FC = () => {
     );
   }
 
-  // Empty state - shown inside the layout, not as full-screen replacement
+  // Empty state - lightweight inline message, NOT a full-screen replacement
   const emptyFeedContent = posts.length === 0 && (
-    <div className="h-screen snap-start snap-always flex items-center justify-center">
-      <div className="text-center p-8">
-        <div className="text-6xl mb-4">🦫</div>
-        <h2 className="text-gold-400 text-xl font-bold mb-2">
-          Rien à zyeuter!
-        </h2>
-        <p className="text-stone-400 mb-6">
-          Suis des créateurs pour voir leur contenu ici
-        </p>
-        <Link
-          to="/explore"
-          className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold"
-        >
-          Découvrir
-        </Link>
+    <div className="px-4 pt-6 pb-24 min-h-[calc(100vh-200px)] flex items-center justify-center">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-sm w-full">
+        <div className="text-4xl mb-3">🦫</div>
+        <p className="text-lg font-semibold text-white">Aucune publication pour l'instant</p>
+        <p className="mt-1 text-sm text-white/70">Sois le premier à publier du contenu québécois!</p>
+        <div className="mt-4 flex gap-2">
+          <Link
+            to="/create"
+            className="flex-1 bg-gold-500 text-black px-4 py-2 rounded-xl font-bold text-center text-sm"
+          >
+            Créer un post
+          </Link>
+          <Link
+            to="/explore"
+            className="flex-1 border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-center text-sm hover:bg-white/5"
+          >
+            Explorer
+          </Link>
+        </div>
       </div>
     </div>
   );
