@@ -40,6 +40,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(muted);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [bufferProgress, setBufferProgress] = useState(0);
   const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -50,14 +51,15 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
     const timer = setTimeout(() => {
       setIsLoading(true);
       setHasError(false);
+      setErrorMessage("");
       setBufferProgress(0);
-      
+
       // Preload optimization
       if (videoRef.current) {
         videoRef.current.load();
       }
     }, 0);
-    
+
     return () => clearTimeout(timer);
   }, [src]);
 
@@ -117,7 +119,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     if (containerRef.current) {
@@ -134,23 +136,29 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
       videoRef.current.pause();
       setIsPlaying(false);
     } else {
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch((err) => {
-        console.error("[TikTokVideoPlayer] Play failed:", err);
-        onError?.(err);
-      });
+      videoRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch((err) => {
+          console.error("[TikTokVideoPlayer] Play failed:", err);
+          onError?.(err);
+        });
     }
   }, [isPlaying, hasError, onError]);
 
-  const toggleMute = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!videoRef.current) return;
-    
-    const newMuted = !isMuted;
-    videoRef.current.muted = newMuted;
-    setIsMuted(newMuted);
-  }, [isMuted]);
+  const toggleMute = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!videoRef.current) return;
+
+      const newMuted = !isMuted;
+      videoRef.current.muted = newMuted;
+      setIsMuted(newMuted);
+    },
+    [isMuted],
+  );
 
   const handleLoadedData = useCallback(() => {
     setIsLoading(false);
@@ -158,25 +166,53 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
   }, [onLoaded]);
 
   const handleError = useCallback(() => {
+    const video = videoRef.current;
+    let errorMsg = "Video failed to load";
+
+    if (video?.error) {
+      switch (video.error.code) {
+        case MediaError.MEDIA_ERR_ABORTED:
+          errorMsg = "Video loading aborted";
+          break;
+        case MediaError.MEDIA_ERR_NETWORK:
+          errorMsg = "Network error - check connection";
+          break;
+        case MediaError.MEDIA_ERR_DECODE:
+          errorMsg = "Video format not supported";
+          break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          errorMsg = "Video source not supported (codec/format)";
+          break;
+        default:
+          errorMsg = `Video error: ${video.error.message || "Unknown"}`;
+      }
+    }
+
+    console.error("[TikTokVideoPlayer] Error:", errorMsg, {
+      src,
+      error: video?.error,
+    });
+    setErrorMessage(errorMsg);
     setHasError(true);
     setIsLoading(false);
-    onError?.(new Error("Video failed to load"));
-  }, [onError]);
+    onError?.(new Error(errorMsg));
+  }, [onError, src]);
 
   const handleTimeUpdate = useCallback(() => {
     if (!videoRef.current) return;
-    
-    const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+
+    const progress =
+      (videoRef.current.currentTime / videoRef.current.duration) * 100;
     onProgress?.(progress);
   }, [onProgress]);
 
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
-    
+
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
-    
+
     controlsTimeoutRef.current = setTimeout(() => {
       setShowControls(false);
     }, 2000);
@@ -188,7 +224,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
       className={cn(
         "relative w-full h-full overflow-hidden bg-black",
         "gpu-accelerated", // Hardware acceleration
-        className
+        className,
       )}
       style={{
         ...style,
@@ -266,7 +302,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
           "absolute bottom-0 left-0 right-0 p-4",
           "bg-gradient-to-t from-black/60 to-transparent",
           "transition-opacity duration-300",
-          showControls ? "opacity-100" : "opacity-0"
+          showControls ? "opacity-100" : "opacity-0",
         )}
       >
         <div className="flex items-center justify-between">
@@ -301,22 +337,37 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
 
       {/* Error State */}
       {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center text-white p-4">
-            <p className="text-sm opacity-80">Failed to load video</p>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setHasError(false);
-                setIsLoading(true);
-                if (videoRef.current) {
-                  videoRef.current.load();
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-blue-500 rounded-full text-sm"
-            >
-              Retry
-            </button>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+          <div className="text-center text-white p-6 max-w-xs">
+            <div className="text-4xl mb-3">🎬</div>
+            <p className="text-sm opacity-90 mb-1">Video unavailable</p>
+            <p className="text-xs opacity-50 mb-4">
+              {errorMessage || "Check console for details"}
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHasError(false);
+                  setIsLoading(true);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                  }
+                }}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-full text-sm transition-colors"
+              >
+                Retry
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(src, "_blank");
+                }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-full text-sm transition-colors"
+              >
+                Open Source
+              </button>
+            </div>
           </div>
         </div>
       )}
