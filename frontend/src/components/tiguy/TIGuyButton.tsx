@@ -15,21 +15,25 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
   unreadCount,
 }) => {
   return (
-    <button onClick={onClick} className="fixed bottom-6 right-6 z-40 group">
-      {/* Outer ring with stitching */}
+    <button
+      onClick={onClick}
+      className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 group"
+      aria-label="Parler avec TI-GUY"
+    >
+      {/* Outer ring with stitching - smaller on mobile */}
       <div
-        className="w-20 h-20 rounded-full flex items-center justify-center relative"
+        className="w-14 h-14 md:w-20 md:h-20 rounded-full flex items-center justify-center relative transition-all"
         style={{
           background:
             "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
           boxShadow:
             "0 8px 30px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.1)",
-          border: "3px solid #D4AF37",
+          border: "2px solid #D4AF37",
         }}
       >
         {/* Stitching effect */}
         <div
-          className="absolute inset-2 rounded-full"
+          className="absolute inset-1.5 md:inset-2 rounded-full"
           style={{
             border: "2px dashed rgba(212,175,55,0.5)",
           }}
@@ -37,7 +41,7 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
 
         {/* Inner button */}
         <div
-          className="w-14 h-14 rounded-full flex items-center justify-center relative overflow-hidden"
+          className="w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center relative overflow-hidden"
           style={{
             background:
               "linear-gradient(145deg, #8B4513 0%, #5D3A1A 50%, #3D2314 100%)",
@@ -46,31 +50,31 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
         >
           {/* Shine effect */}
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-4 rounded-full opacity-30"
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-6 md:w-8 h-3 md:h-4 rounded-full opacity-30"
             style={{
               background:
                 "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)",
             }}
           />
 
-          {/* Beaver icon */}
-          <span className="text-3xl relative z-10 group-hover:scale-110 transition-transform">
+          {/* Beaver icon - smaller on mobile */}
+          <span className="text-2xl md:text-3xl relative z-10 group-hover:scale-110 transition-transform">
             🦫
           </span>
         </div>
 
-        {/* Fleur-de-lis decorations */}
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-amber-500 text-xs">
+        {/* Fleur-de-lis decorations - hidden on mobile */}
+        <div className="hidden md:block absolute -top-1 left-1/2 -translate-x-1/2 text-amber-500 text-xs">
           ⚜️
         </div>
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-amber-500 text-xs">
+        <div className="hidden md:block absolute -bottom-1 left-1/2 -translate-x-1/2 text-amber-500 text-xs">
           ⚜️
         </div>
       </div>
 
-      {/* Label */}
+      {/* Label - hidden on mobile, show on desktop */}
       <div
-        className="absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full whitespace-nowrap"
+        className="hidden md:block absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full whitespace-nowrap"
         style={{
           background: "linear-gradient(145deg, #D4AF37 0%, #B8960B 100%)",
           boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
@@ -79,10 +83,10 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
         <span className="text-amber-900 text-xs font-bold">TI-GUY</span>
       </div>
 
-      {/* Unread badge */}
+      {/* Unread badge - smaller on mobile */}
       {unreadCount && unreadCount > 0 && (
         <div
-          className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+          className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-[10px] md:text-xs font-bold"
           style={{
             background: "linear-gradient(145deg, #DC2626 0%, #991B1B 100%)",
             boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
