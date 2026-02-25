@@ -2290,6 +2290,19 @@ function AuthCallback() {
   return <LoadingScreen />;
 }
 
+// ===== LOGOUT =====
+function Logout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    logout();
+    navigate("/login");
+  }, [logout, navigate]);
+
+  return <LoadingScreen message="Logging out..." />;
+}
+
 // ===== APP =====
 function AppContent() {
   const { loading, user } = useAuth();
@@ -2312,6 +2325,7 @@ function AppContent() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/feed" element={<LaZyeute />} />
         <Route path="/search" element={<Search />} />
