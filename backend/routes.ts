@@ -45,6 +45,8 @@ import debugRoutes from "./routes/debug.js";
 import adminRoutes from "./routes/admin.js";
 import moderationRoutes from "./routes/moderation.js";
 import healthRoutes from "./routes/health.js";
+import genaiBuilderRoutes from "./routes/genai-builder.routes.js";
+import genaiSearchRoutes from "./routes/genai-search.routes.js";
 
 import { surgicalUploadRouter } from "./routes/upload-surgical.js";
 import { presenceRouter } from "./routes/presence.js";
@@ -56,6 +58,7 @@ import muxRoutes from "./routes/mux.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
 import sentryDebugRoutes from "./routes/sentry-debug.js";
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
+import tiguyRoutes from "./routes/tiguy-routes.js";
 import dialogflowTiguyRoutes from "./routes/dialogflow-tiguy.js";
 import dialogflowWebhookRoutes from "./routes/dialogflow-webhook.js";
 import maxApiRoutes from "./routes/max-api.js";
@@ -255,11 +258,18 @@ export async function registerRoutes(
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);
 
+  // ============ GENAI APP BUILDER ROUTES (Uses $1,367.95 credits) ============
+  app.use("/api/genai", genaiBuilderRoutes);
+  app.use("/api/genai", genaiSearchRoutes);
+
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
 
+  // ============ TI-GUY CHAT (Uses Dialogflow CX - $813.16 credits) ============
+  app.use("/api/tiguy", tiguyRoutes);
+
   // ============ TI-GUY ENHANCED ACTIONS (Browser, Image Gen, etc.) ============
-  app.use("/api/tiguy", tiguyActionsRoutes);
+  app.use("/api/tiguy/actions", tiguyActionsRoutes);
 
   // ============ DIALOGFLOW CX TI-GUY VOICE (Uses Dialogflow CX Credits $813.16) ============
   app.use("/api/dialogflow", dialogflowTiguyRoutes);

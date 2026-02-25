@@ -28,7 +28,7 @@ load_dotenv("../.env.colony")
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - [NEUROSPHERE] - %(levelname)s - %(message)s'
+    format="%(asctime)s - [NEUROSPHERE] - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ NEUROSPHERE_PORT = int(os.getenv("NEUROSPHERE_PORT", "8000"))
 # ENDPOINTS
 # ═══════════════════════════════════════════════════════════════
 
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -51,33 +52,24 @@ async def root():
         "description": "Colony OS Central Coordination Kernel",
         "phase": "Phase 2 - Foundation",
         "registered_bees": [
-            {
-                "name": "Finance Bee",
-                "port": 8001,
-                "status": "deployed"
-            },
-            {
-                "name": "Guardian Bee",
-                "port": 8002,
-                "status": "deployed"
-            }
+            {"name": "Finance Bee", "port": 8001, "status": "deployed"},
+            {"name": "Guardian Bee", "port": 8002, "status": "deployed"},
         ],
-        "endpoints": {
-            "health": "/health",
-            "bees": "/bees"
-        }
+        "endpoints": {"health": "/health", "bees": "/bees"},
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return JSONResponse(content={
-        "status": "healthy",
-        "kernel": "Neurosphere",
-        "version": "2.0.0",
-        "timestamp": datetime.now().isoformat()
-    })
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "kernel": "Neurosphere",
+            "version": "2.0.0",
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
 
 
 @app.get("/bees")
@@ -90,17 +82,17 @@ async def list_bees():
                 "name": "Finance Bee",
                 "type": "revenue_intelligence",
                 "port": 8001,
-                "endpoint": "http://localhost:8001"
+                "endpoint": "http://localhost:8001",
             },
             {
                 "id": "guardian-bee",
                 "name": "Guardian Bee",
                 "type": "security_sentinel",
                 "port": 8002,
-                "endpoint": "http://localhost:8002"
-            }
+                "endpoint": "http://localhost:8002",
+            },
         ],
-        "count": 2
+        "count": 2,
     }
 
 
@@ -108,19 +100,15 @@ async def list_bees():
 # MAIN
 # ═══════════════════════════════════════════════════════════════
 
+
 def main():
     """Start the Neurosphere kernel"""
     logger.info("🧠 Neurosphere kernel initializing...")
     logger.info(f"   Port: {NEUROSPHERE_PORT}")
-    logger.info(f"   Phase: 2 - Foundation")
+    logger.info("   Phase: 2 - Foundation")
     logger.info("🚀 Neurosphere is now operational...")
-    
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=NEUROSPHERE_PORT,
-        log_level="info"
-    )
+
+    uvicorn.run(app, host="0.0.0.0", port=NEUROSPHERE_PORT, log_level="info")
 
 
 if __name__ == "__main__":

@@ -3,8 +3,7 @@
 import asyncio
 import heapq
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-from datetime import datetime, timezone
+from typing import Dict, List, Optional
 
 from colonyos.core.types import Task, TaskStatus
 
@@ -54,14 +53,14 @@ class PriorityTaskQueue:
         async with self._lock:
             if task_id not in self._tasks_by_id:
                 return None
-            
+
             # Rebuild queue without the removed item. O(N)
             # Efficient enough for "mini-kernel" scale
             task = self._tasks_by_id.pop(task_id)
             self._queue = [pt for pt in self._queue if pt.task.id != task_id]
             heapq.heapify(self._queue)
             return task
-            
+
     def size(self) -> int:
         return len(self._queue)
 

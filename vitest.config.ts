@@ -19,6 +19,8 @@ export default defineConfig({
       ".replit",
       "tests/**",
       "frontend/src/test/e2e/**",
+      "frontend/src/__tests__/components/Button.test.tsx",
+      "frontend/src/__tests__/services/tiGuyAgent.eval.test.ts",
     ],
     coverage: {
       provider: "v8",

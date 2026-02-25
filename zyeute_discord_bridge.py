@@ -27,12 +27,10 @@ Requirements:
 
 import os
 import sys
-import json
 import logging
 import asyncio
 import discord
 import requests
-import re
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass
@@ -547,11 +545,11 @@ async def on_ready():
             f"🎭 Server '{guild.name}' cultural content: {guild_cultural_content} messages"
         )
 
-    logger.info(f"\n🎉 Cultural discovery complete!")
+    logger.info("\n🎉 Cultural discovery complete!")
     logger.info(
         f"📊 Total Quebec cultural content discovered: {total_cultural_content} messages"
     )
-    logger.info(f"🏴 Quebec digital sovereignty mission advanced!")
+    logger.info("🏴 Quebec digital sovereignty mission advanced!")
 
     # Keep running for real-time monitoring
     logger.info("🔄 Switching to real-time cultural monitoring mode...")
@@ -604,7 +602,6 @@ async def on_message(message: discord.Message):
             and analyzed_messages[0].cultural_analysis.quebec_score
             >= CULTURAL_THRESHOLD
         ):
-
             await bridge._send_to_zyeute([analyzed_messages[0]])
 
             analysis = analyzed_messages[0].cultural_analysis

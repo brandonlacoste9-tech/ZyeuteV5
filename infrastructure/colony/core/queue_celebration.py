@@ -1,14 +1,12 @@
-
 import os
-import sys
 from dotenv import load_dotenv
 from supabase import create_client
 
 # Path setup to load env
 script_dir = os.path.dirname(os.path.abspath(__file__))
 # Load from .env.colony or root .env
-load_dotenv(os.path.join(script_dir, '../../.env.colony'))
-load_dotenv(os.path.join(script_dir, '../../../.env'))
+load_dotenv(os.path.join(script_dir, "../../.env.colony"))
+load_dotenv(os.path.join(script_dir, "../../../.env"))
 
 url = os.environ.get("VITE_SUPABASE_URL")
 key = os.environ.get("SUPABASE_SERVICE_KEY")
@@ -27,14 +25,14 @@ try:
         "command": "generate_image",
         "metadata": {
             "prompt": "A legendary cyberpunk party in Montreal, neon lights, Mount Royal at night, 8k resolution v3",
-            "target_bee": "fal_bee" 
+            "target_bee": "fal_bee",
         },
-        "status": "pending"
+        "status": "pending",
     }
 
     print("🚀 Queuing celebration task...")
     data = supabase.table("colony_tasks").insert(task).execute()
-    
+
     if data.data:
         print(f"✅ Queued task ID: {data.data[0]['id']}")
         print(f"   Command: {data.data[0]['command']}")

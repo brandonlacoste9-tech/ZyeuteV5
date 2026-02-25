@@ -1,9 +1,9 @@
 import asyncio
 import os
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-from typing import List, Optional
-from browser_use import Agent, Browser, Controller
+from pydantic import BaseModel
+from typing import List
+from browser_use import Agent, Browser
 from langchain_openai import ChatOpenAI
 
 load_dotenv()

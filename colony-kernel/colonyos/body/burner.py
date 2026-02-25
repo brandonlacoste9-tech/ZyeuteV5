@@ -4,7 +4,6 @@ import signal
 import sys
 import logging
 import psycopg2
-from datetime import datetime, timezone
 # from colonies import Colonies # Assuming this acts as the "Client" to the local ColonyOS kernel if needed, or we can just run standalone for now.
 
 # --- CONFIGURATION ---
@@ -21,19 +20,20 @@ DB_PASS = os.getenv("POSTGRES_PASSWORD", "password")
 # --- LOGGING SETUP ---
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - [EXECUTIONER] - %(levelname)s - %(message)s'
+    format="%(asctime)s - [EXECUTIONER] - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
 
 class BurnerBee:
     def __init__(self):
         self.conn = None
-        # self.colonies = Colonies(COLONIES_HOST, COLONIES_PORT, COLONIES_TLS) 
+        # self.colonies = Colonies(COLONIES_HOST, COLONIES_PORT, COLONIES_TLS)
         self.running = True
-        
+
         # Connect to DB
         self.connect_db()
-        
+
         # Register Signal Handlers
         signal.signal(signal.SIGINT, self.shutdown)
         signal.signal(signal.SIGTERM, self.shutdown)
@@ -41,10 +41,7 @@ class BurnerBee:
     def connect_db(self):
         try:
             self.conn = psycopg2.connect(
-                host=DB_HOST,
-                database=DB_NAME,
-                user=DB_USER,
-                password=DB_PASS
+                host=DB_HOST, database=DB_NAME, user=DB_USER, password=DB_PASS
             )
             logger.info("Connected to Zyeuté Database.")
         except Exception as e:
@@ -66,7 +63,7 @@ class BurnerBee:
         """
         try:
             cur = self.conn.cursor()
-            
+
             # The Selection Query
             query = """
                 SELECT id, user_id, content 
@@ -114,9 +111,9 @@ class BurnerBee:
                 title = '[BURNED]' -- Warning: 'title' column might not exist in schema.ts, handled via try/catch in real runtime or schema update.
             WHERE id = %s;
         """
-        # Note: Checked schema.ts, 'title' does NOT exist on posts table. 
+        # Note: Checked schema.ts, 'title' does NOT exist on posts table.
         # I will remove 'title' update to prevent SQL errors based on my knowledge of schema.ts.
-        
+
         burn_query_adjusted = """
             UPDATE posts 
             SET 
@@ -125,7 +122,7 @@ class BurnerBee:
                 media_url = NULL
             WHERE id = %s;
         """
-        
+
         cur.execute(burn_query_adjusted, (post_id,))
         logger.info(f"🔥 INCINERATED Post {post_id} (User: {user_id})")
 
@@ -135,6 +132,7 @@ class BurnerBee:
             self.scan_and_burn()
             # Pulse interval (check every 5 seconds)
             time.sleep(5)
+
 
 if __name__ == "__main__":
     bee = BurnerBee()

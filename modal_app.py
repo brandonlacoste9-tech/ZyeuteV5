@@ -6,10 +6,10 @@ from colonyos.body.kernel import ColonyKernel
 app = modal.App("zyeute-kernel")
 
 # Configure the environment
-image = (
-    modal.Image.debian_slim()
-    .pip_install("fastapi", "uvicorn", "pillow", "numpy", "requests", "pydantic")
+image = modal.Image.debian_slim().pip_install(
+    "fastapi", "uvicorn", "pillow", "numpy", "requests", "pydantic"
 )
+
 
 @app.function(image=image)
 @modal.asgi_app()

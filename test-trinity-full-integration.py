@@ -11,7 +11,6 @@ Steps:
 
 import os
 import sys
-import json
 import asyncio
 from loguru import logger
 
@@ -33,9 +32,9 @@ COLORS = {
 
 
 def print_header(title, emoji):
-    print(f"\n{COLORS['BOLD']}{COLORS['BLUE']}{'='*60}{COLORS['END']}")
+    print(f"\n{COLORS['BOLD']}{COLORS['BLUE']}{'=' * 60}{COLORS['END']}")
     print(f"{COLORS['BOLD']}{COLORS['BLUE']}{emoji} {title} {emoji}{COLORS['END']}")
-    print(f"{COLORS['BOLD']}{COLORS['BLUE']}{'='*60}{COLORS['END']}\n")
+    print(f"{COLORS['BOLD']}{COLORS['BLUE']}{'=' * 60}{COLORS['END']}\n")
 
 
 async def run_trinity_test():

@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from colonyos.body.queue import PriorityTaskQueue, TaskScheduler
 from colonyos.body.workers import WorkerPool
@@ -46,7 +45,7 @@ class ColonyKernel:
 
         # Layers
         from colonyos.core.types import IdentityManager
-        
+
         self.identity_manager = IdentityManager()
         self.neurasphere = Neurasphere(
             self.config, self.memory, self.event_bus, self.identity_manager
@@ -66,7 +65,11 @@ class ColonyKernel:
         self._running = True
         await self.event_bus.start()
         await self.scheduler.start()
-        await self.event_bus.publish("kernel_started", {"timestamp": datetime.now(timezone.utc).isoformat()}, "kernel")
+        await self.event_bus.publish(
+            "kernel_started",
+            {"timestamp": datetime.now(timezone.utc).isoformat()},
+            "kernel",
+        )
 
     async def stop(self) -> None:
         """Shutdown the kernel."""
@@ -77,11 +80,13 @@ class ColonyKernel:
         await self.scheduler.stop()
         await self.event_bus.stop()
 
-    async def submit_task(self, description: str, created_by: str, **kwargs: Any) -> Task:
+    async def submit_task(
+        self, description: str, created_by: str, **kwargs: Any
+    ) -> Task:
         """Submit a new task to the kernel."""
-        
+
         task = Task.create(description=description, created_by=created_by, **kwargs)
-        
+
         # 1. Safety Check (Guardian)
         approved, violations = await self.neurasphere.validate_task(task)
         if not approved:
@@ -93,13 +98,15 @@ class ColonyKernel:
         # 2. Planning/Routing (Mind)
         # For now, just enqueue
         await self.queue.enqueue(task)
-        
+
         await self.event_bus.publish("task_submitted", {"task_id": task.id}, "kernel")
         return task
 
     async def register_worker(self, worker: Worker) -> None:
         self.worker_pool.register(worker)
-        await self.event_bus.publish("worker_registered", {"worker_id": worker.id}, "kernel")
+        await self.event_bus.publish(
+            "worker_registered", {"worker_id": worker.id}, "kernel"
+        )
 
     def get_stats(self) -> Dict[str, Any]:
         return {
