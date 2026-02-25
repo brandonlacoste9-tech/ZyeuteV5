@@ -7,7 +7,7 @@
     "dev:check": "npm run check:env && npm run dev",
     "build": "vite build && esbuild backend/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs --external:sharp --external:pg --external:vite --external:./vite.js --define:process.env.NODE_ENV=\\\"production\\\"",
     "build:vercel": "vite build",
-    "start": "node dist/index.cjs",
+    "start": "node --max-old-space-size=512 dist/index.cjs",
     "check": "tsc",
     "check:env": "tsx scripts/check-env.ts",
     "verify": "npm run verify:secrets && npm run verify:gcs && npm run verify:service-account",
