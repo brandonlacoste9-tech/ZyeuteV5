@@ -65,7 +65,7 @@ const estimatedRemaining: Record<string, number> = {
   "vertex-ai": 0,
 };
 
-const warningSent = {
+const warningSent: Record<string, boolean> = {
   "dialogflow-cx": false,
   "genai-app-builder": false,
   "vertex-ai": false,

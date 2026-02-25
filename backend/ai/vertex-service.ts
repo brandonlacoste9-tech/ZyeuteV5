@@ -499,6 +499,37 @@ export async function generateImage(
 }
 
 /**
+ * Analyze image and generate metadata
+ */
+export async function analyzeImage(
+  imageUrl: string,
+  options?: { generateJoual?: boolean; location?: string },
+): Promise<{
+  tags: string[];
+  description: string;
+  location?: string;
+  vibe?: string;
+}> {
+  try {
+    // Use the video thumbnail analyzer for images too
+    const result = await analyzeVideoThumbnail(imageUrl);
+    
+    return {
+      tags: result.tags || [],
+      description: result.caption_fr || result.description || "",
+      location: result.location || options?.location,
+      vibe: result.vibe,
+    };
+  } catch (error) {
+    logger.error("[VertexAI] analyzeImage error:", error);
+    return {
+      tags: [],
+      description: "",
+    };
+  }
+}
+
+/**
  * Language Detection Helper
  */
 function detectLanguage(text: string): "fr" | "en" {

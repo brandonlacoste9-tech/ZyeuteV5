@@ -472,7 +472,7 @@ function buildPersonalizedQuery(prefs: any): string {
   return parts.join(" ");
 }
 
-async function getTrendingContent(limit: number): Promise<SearchResult[]> {
+export async function getTrendingContent(limit: number): Promise<SearchResult[]> {
   try {
     const result = await pool.query(
       `
