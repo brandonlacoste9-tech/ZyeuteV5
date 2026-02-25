@@ -193,11 +193,15 @@ export const LaZyeute: React.FC = () => {
 
   // Empty state - lightweight inline message, NOT a full-screen replacement
   const emptyFeedContent = posts.length === 0 && (
-    <div className="px-4 pt-6 pb-6 min-h-full flex items-center justify-center">
+    <div className="px-4 pt-6 pb-6 h-full min-h-full flex items-center justify-center snap-start">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-sm w-full">
         <div className="text-4xl mb-3">🦫</div>
-        <p className="text-lg font-semibold text-white">Aucune publication pour l'instant</p>
-        <p className="mt-1 text-sm text-white/70">Sois le premier à publier du contenu québécois!</p>
+        <p className="text-lg font-semibold text-white">
+          Aucune publication pour l'instant
+        </p>
+        <p className="mt-1 text-sm text-white/70">
+          Sois le premier à publier du contenu québécois!
+        </p>
         <div className="mt-4 flex gap-2">
           <Link
             to="/create"
@@ -823,25 +827,27 @@ export const LaZyeute: React.FC = () => {
         </div>
       )}
 
-      {/* Swipe Hint (shows briefly on first load) */}
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 animate-bounce opacity-70">
-        <div className="flex flex-col items-center text-white/60">
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 15l7-7 7 7"
-            />
-          </svg>
-          <span className="text-xs">Glisse vers le haut</span>
+      {/* Swipe Hint (shows briefly on first load) - Hidden when feed is empty */}
+      {posts.length > 0 && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 animate-bounce opacity-70">
+          <div className="flex flex-col items-center text-white/60">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+            <span className="text-xs">Glisse vers le haut</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
       <div
