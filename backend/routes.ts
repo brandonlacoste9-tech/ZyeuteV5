@@ -618,7 +618,7 @@ export async function registerRoutes(
 
   // [NEW] Infinite Scroll Feed - Cursor-based Pagination using Supabase HTTP API
   // This bypasses DATABASE_URL issues by using Supabase HTTP API directly
-  app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
+  app.get("/api/feed/infinite", async (req, res) => {
     try {
       const supabaseUrl =
         process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -699,13 +699,11 @@ export async function registerRoutes(
       });
     } catch (error: any) {
       console.error("[FeedInfinite] Catch error:", error);
-      res
-        .status(500)
-        .json({
-          error: "Failed to load feed",
-          details: error.message,
-          stack: error.stack,
-        });
+      res.status(500).json({
+        error: "Failed to load feed",
+        details: error.message,
+        stack: error.stack,
+      });
     }
   });
 
