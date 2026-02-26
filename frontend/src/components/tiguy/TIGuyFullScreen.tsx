@@ -148,6 +148,19 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
     scrollToBottom();
   }, [messages]);
 
+  // Auto-play voice messages when they arrive
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.sender === "tiguy" && lastMessage?.audioUrl) {
+      // Try to play automatically (may be blocked by browser policy)
+      const audio = new Audio(lastMessage.audioUrl);
+      audio.play().catch(() => {
+        // Auto-play blocked, user will need to click the play button
+        console.log("Auto-play blocked by browser");
+      });
+    }
+  }, [messages]);
+
   // Load chat history on mount
   useEffect(() => {
     if (isOpen) {
@@ -505,10 +518,11 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
               {CELEBRITY_VOICES.map((voice) => (
                 <button
                   key={voice.id}
-                  onClick={() => {
+                  onClick={async () => {
                     setSelectedVoice(voice.id);
                     setShowVoiceSelector(false);
-                    // Play test message
+
+                    // Test messages for each voice
                     const testMessages: Record<string, string> = {
                       "ti-guy": "Salut, c'est TI-GUY!",
                       celine: "Mon dieu, c'est fantastique!",
@@ -519,15 +533,62 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
                       mike: "Ben là, t'es pas sérieux?",
                       mario: "Écoutons donc, il faut réfléchir...",
                     };
-                    setMessages((prev) => [
-                      ...prev,
-                      {
-                        id: Date.now().toString(),
-                        text: `🎭 ${voice.name}: "${testMessages[voice.id]}"`,
-                        sender: "tiguy",
-                        timestamp: new Date(),
-                      },
-                    ]);
+
+                    const testText = testMessages[voice.id];
+
+                    // Generate audio for the test message
+                    try {
+                      const response = await fetch("/api/tiguy/voice/test", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${localStorage.getItem("token")}`,
+                        },
+                        body: JSON.stringify({
+                          text: testText,
+                          voice: voice.id,
+                        }),
+                      });
+
+                      if (response.ok) {
+                        const data = await response.json();
+                        setMessages((prev) => [
+                          ...prev,
+                          {
+                            id: Date.now().toString(),
+                            text: `🎭 ${voice.name}: "${testText}"`,
+                            sender: "tiguy",
+                            timestamp: new Date(),
+                            type: "voice",
+                            audioUrl: data.audio
+                              ? `data:audio/mp3;base64,${data.audio}`
+                              : undefined,
+                          },
+                        ]);
+                      } else {
+                        // Fallback to text only
+                        setMessages((prev) => [
+                          ...prev,
+                          {
+                            id: Date.now().toString(),
+                            text: `🎭 ${voice.name}: "${testText}"\n(Mode texte - audio indisponible)`,
+                            sender: "tiguy",
+                            timestamp: new Date(),
+                          },
+                        ]);
+                      }
+                    } catch (error) {
+                      console.error("Voice test error:", error);
+                      setMessages((prev) => [
+                        ...prev,
+                        {
+                          id: Date.now().toString(),
+                          text: `🎭 ${voice.name}: "${testText}"`,
+                          sender: "tiguy",
+                          timestamp: new Date(),
+                        },
+                      ]);
+                    }
                   }}
                   className="flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-105 text-left"
                   style={{
@@ -712,13 +773,44 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
                 />
               )}
 
-              {/* Voice Message */}
+              {/* Voice Message with Custom Player */}
               {message.audioUrl && (
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-black/20">
+                  <button
+                    onClick={() => {
+                      const audio = new Audio(message.audioUrl);
+                      audio.play().catch((err) => {
+                        console.error("Audio play failed:", err);
+                        alert("Cliquez pour écouter le message vocal");
+                      });
+                    }}
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95"
+                    style={{
+                      background:
+                        "linear-gradient(145deg, #D4AF37 0%, #B8960B 100%)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    <svg
+                      className="w-5 h-5 text-amber-900 ml-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                  <div className="flex-1">
+                    <div className="text-amber-300 text-xs font-bold">
+                      Message vocal 🎙️
+                    </div>
+                    <div className="text-amber-500/70 text-xs">
+                      Cliquez pour écouter
+                    </div>
+                  </div>
                   <audio
                     src={message.audioUrl}
                     controls
-                    className="max-w-[200px] h-8"
+                    className="w-24 h-8 opacity-70"
                   />
                 </div>
               )}

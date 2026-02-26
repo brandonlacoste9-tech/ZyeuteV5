@@ -288,6 +288,55 @@ router.post("/chat", async (req, res) => {
       });
     }
 
+    // 5.5 VOICE TEST (Direct TTS without STT) 🎤
+    if (skill === "voice-test" || req.path === "/voice/test") {
+      const { text, voice = "ti-guy" } = req.body;
+
+      if (!text) {
+        return res
+          .status(400)
+          .json({ error: "Texte requis pour le test vocal" });
+      }
+
+      // Validate voice
+      const validVoices = [
+        "ti-guy",
+        "celine",
+        "ginette",
+        "denis",
+        "jean",
+        "julie",
+        "mike",
+        "mario",
+      ];
+      const selectedVoice = validVoices.includes(voice) ? voice : "ti-guy";
+
+      // Générer l'audio TTS directement
+      const tts = await voiceBee.textToSpeech({
+        text,
+        voice: selectedVoice as any,
+        speed: 1.0,
+        emotion: "happy",
+      });
+
+      if (!tts.success) {
+        return res.status(500).json({
+          error: "TTS failed",
+          response: "Désolé, je ne peux pas parler pour le moment!",
+        });
+      }
+
+      return res.json({
+        text,
+        audio: tts.audioBase64,
+        voice: selectedVoice,
+        voiceLabel:
+          voiceBee.getCelebrityVoices().find((v) => v.id === selectedVoice)
+            ?.name || "TI-GUY",
+        type: "voice-test",
+      });
+    }
+
     // 6. GENERAL CHAT (Default)
     const { text } = await generateText({
       model: getTIGuyModel(),
