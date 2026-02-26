@@ -51,6 +51,66 @@ const TIGUY_SKILLS = [
   { icon: "📸", label: "Screenshot", command: "Prends une capture de..." },
 ];
 
+// 🎭 Célébrités Québécoises pour la voix
+const CELEBRITY_VOICES = [
+  {
+    id: "ti-guy",
+    name: "TI-GUY",
+    description: "Le castor québécois",
+    emoji: "🦫",
+    color: "#D4AF37",
+  },
+  {
+    id: "celine",
+    name: "Céline",
+    description: "Style diva: 'Mon dieu!'",
+    emoji: "🎤",
+    color: "#FFD700",
+  },
+  {
+    id: "ginette",
+    name: "Ginette",
+    description: "La maman du Québec",
+    emoji: "❤️",
+    color: "#FF69B4",
+  },
+  {
+    id: "denis",
+    name: "Denis L.",
+    description: "Animateur TVA: 'Alors là!'",
+    emoji: "📺",
+    color: "#4169E1",
+  },
+  {
+    id: "jean",
+    name: "Jean L.",
+    description: "Humoriste charismatique",
+    emoji: "😄",
+    color: "#32CD32",
+  },
+  {
+    id: "julie",
+    name: "Julie",
+    description: "Énergie débordante",
+    emoji: "⚡",
+    color: "#FF1493",
+  },
+  {
+    id: "mike",
+    name: "Mike",
+    description: "Comédien sarcastique",
+    emoji: "🎭",
+    color: "#8B4513",
+  },
+  {
+    id: "mario",
+    name: "Mario",
+    description: "Voix posée politique",
+    emoji: "🏛️",
+    color: "#708090",
+  },
+];
+
 export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   isOpen,
   onClose,
@@ -70,6 +130,8 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showVoiceSelector, setShowVoiceSelector] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("ti-guy");
   const [chatHistory, setChatHistory] = useState<
     { date: string; preview: string }[]
   >([]);
@@ -140,6 +202,7 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
         body: JSON.stringify({
           message: text.trim(),
           audio: audioBase64,
+          voice: selectedVoice, // 🎭 Voix célébrité sélectionnée
           context: { userId },
         }),
       });
@@ -361,8 +424,26 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           <span className="text-xs text-amber-500/70">Ton guide québécois</span>
         </div>
 
-        {/* Right: History & Menu */}
+        {/* Right: Voice, History & Skills */}
         <div className="flex items-center gap-2">
+          {/* Voice Selector Button */}
+          <button
+            onClick={() => setShowVoiceSelector(!showVoiceSelector)}
+            className="w-10 h-10 rounded-full flex items-center justify-center relative overflow-hidden"
+            style={{
+              background: showVoiceSelector
+                ? `linear-gradient(145deg, ${CELEBRITY_VOICES.find((v) => v.id === selectedVoice)?.color || "#D4AF37"} 0%, #B8960B 100%)`
+                : "linear-gradient(145deg, #6B4423 0%, #4A3018 100%)",
+              border: `2px solid ${CELEBRITY_VOICES.find((v) => v.id === selectedVoice)?.color || "#D4AF37"}`,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+            }}
+            title={`Voix: ${CELEBRITY_VOICES.find((v) => v.id === selectedVoice)?.name || "TI-GUY"}`}
+          >
+            <span className="text-lg">
+              {CELEBRITY_VOICES.find((v) => v.id === selectedVoice)?.emoji ||
+                "🦫"}
+            </span>
+          </button>
           <button
             onClick={() => setShowHistory(!showHistory)}
             className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -404,6 +485,80 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           }}
         />
       </header>
+
+      {/* Voice Selector Panel */}
+      {showVoiceSelector && (
+        <div
+          className="absolute top-20 left-4 right-4 z-40 rounded-2xl overflow-hidden max-h-80 overflow-y-auto"
+          style={{
+            background: "linear-gradient(145deg, #4A3018 0%, #3D2314 100%)",
+            border: "2px solid #D4AF37",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="p-4">
+            <h3 className="text-amber-300 font-bold mb-3 flex items-center gap-2">
+              <span className="text-xl">🎭</span>
+              Choisir une voix célèbre
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              {CELEBRITY_VOICES.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => {
+                    setSelectedVoice(voice.id);
+                    setShowVoiceSelector(false);
+                    // Play test message
+                    const testMessages: Record<string, string> = {
+                      "ti-guy": "Salut, c'est TI-GUY!",
+                      celine: "Mon dieu, c'est fantastique!",
+                      ginette: "Mon chum, je suis là pour toi!",
+                      denis: "Alors là! Qu'est-ce qui se passe?",
+                      jean: "Hé hé, ça va bien mon ami?",
+                      julie: "Wooo! C'est incroyable ça!",
+                      mike: "Ben là, t'es pas sérieux?",
+                      mario: "Écoutons donc, il faut réfléchir...",
+                    };
+                    setMessages((prev) => [
+                      ...prev,
+                      {
+                        id: Date.now().toString(),
+                        text: `🎭 ${voice.name}: "${testMessages[voice.id]}"`,
+                        sender: "tiguy",
+                        timestamp: new Date(),
+                      },
+                    ]);
+                  }}
+                  className="flex items-center gap-3 p-3 rounded-xl transition-all hover:scale-105 text-left"
+                  style={{
+                    background:
+                      selectedVoice === voice.id
+                        ? `linear-gradient(145deg, ${voice.color}40 0%, ${voice.color}20 100%)`
+                        : "linear-gradient(145deg, #5D3A1A 0%, #4A3018 100%)",
+                    border:
+                      selectedVoice === voice.id
+                        ? `2px solid ${voice.color}`
+                        : "1px solid #D4AF37",
+                  }}
+                >
+                  <span className="text-2xl">{voice.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-amber-300 text-sm">
+                      {voice.name}
+                    </div>
+                    <div className="text-amber-500/70 text-xs truncate">
+                      {voice.description}
+                    </div>
+                  </div>
+                  {selectedVoice === voice.id && (
+                    <span className="text-lg">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Skills Panel */}
       {showSkills && (

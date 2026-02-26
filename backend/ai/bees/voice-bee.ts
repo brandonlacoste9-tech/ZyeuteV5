@@ -2,21 +2,107 @@
  * 🎤 Voice Bee (Version Souveraine - Google Cloud)
  * Text-to-Speech et Speech-to-Text pour Ti-Guy
  * Branchement sur Google Cloud pour un accent québécois authentique.
+ *
+ * 🌟 VOIX CÉLÈBRES DU QUÉBEC:
+ * - "celine" → Céline Dion (style diva)
+ * - "ginette" → Ginette Reno (style maman Québécoise)
+ * - "denis" → Denis Lévesque (style animateur TVA)
+ * - "jean" → Jean Lapointe (style humoriste)
+ * - "ti-guy" → Notre castor national 🦫
  */
 
 import { z } from "zod";
 import { SpeechClient } from "@google-cloud/speech";
 import { TextToSpeechClient } from "@google-cloud/text-to-speech";
 
-// Schéma de génération vocale
+// Schéma de génération vocale avec voix célèbres
 export const VoiceGenerationSchema = z.object({
   text: z.string().min(1).max(5000),
-  voice: z.enum(["quebec-male", "quebec-female", "ti-guy"]).default("ti-guy"),
+  voice: z
+    .enum([
+      "ti-guy",
+      "celine", // Céline Dion style
+      "ginette", // Ginette Reno style
+      "denis", // Denis Lévesque style
+      "jean", // Jean Lapointe style
+      "julie", // Julie Snyder style
+      "mike", // Mike Ward style
+      "mario", // Mario Dumont style
+    ])
+    .default("ti-guy"),
   speed: z.number().optional().default(1.0),
   emotion: z.string().optional().default("happy"),
 });
 
 export type VoiceGenerationRequest = z.infer<typeof VoiceGenerationSchema>;
+
+// 🌟 Configuration des voix célèbres
+const CELEBRITY_VOICES: Record<
+  string,
+  {
+    name: string;
+    gender: string;
+    pitch: number;
+    speakingRate: number;
+    effects?: string;
+  }
+> = {
+  "ti-guy": {
+    name: "fr-CA-Standard-D",
+    gender: "MALE",
+    pitch: 0,
+    speakingRate: 1.0,
+  },
+  celine: {
+    name: "fr-CA-Standard-A", // Voix féminine
+    gender: "FEMALE",
+    pitch: 2.5, // Plus aigu comme Céline
+    speakingRate: 0.9, // Un peu plus lent (dramatique)
+    effects: "Céline Dion style: 'Mon dieu, c'est fantastique!'",
+  },
+  ginette: {
+    name: "fr-CA-Standard-C",
+    gender: "FEMALE",
+    pitch: -1.5, // Plus grave (maman)
+    speakingRate: 1.1,
+    effects: "Ginette Reno style: chaleureuse et maternelle",
+  },
+  denis: {
+    name: "fr-CA-Standard-D",
+    gender: "MALE",
+    pitch: -2, // Grave comme animateur
+    speakingRate: 1.2, // Rapide comme au journal
+    effects: "Denis Lévesque style: journaliste dynamique",
+  },
+  jean: {
+    name: "fr-CA-Standard-B",
+    gender: "MALE",
+    pitch: -1,
+    speakingRate: 0.95,
+    effects: "Jean Lapointe style: humoriste charismatique",
+  },
+  julie: {
+    name: "fr-CA-Standard-A",
+    gender: "FEMALE",
+    pitch: 1.5,
+    speakingRate: 1.3, // Très rapide
+    effects: "Julie Snyder style: énergique et rapide",
+  },
+  mike: {
+    name: "fr-CA-Standard-D",
+    gender: "MALE",
+    pitch: -0.5,
+    speakingRate: 1.1,
+    effects: "Mike Ward style: comédien sarcastique",
+  },
+  mario: {
+    name: "fr-CA-Standard-B",
+    gender: "MALE",
+    pitch: 0.5,
+    speakingRate: 0.9, // Lent et posé
+    effects: "Mario Dumont style: politique calme",
+  },
+};
 
 export class VoiceBee {
   private clientSTT: SpeechClient;
@@ -25,6 +111,67 @@ export class VoiceBee {
   constructor() {
     this.clientSTT = new SpeechClient();
     this.clientTTS = new TextToSpeechClient();
+  }
+
+  /**
+   * 🎭 Get available celebrity voices
+   */
+  getCelebrityVoices(): Array<{
+    id: string;
+    name: string;
+    description: string;
+    emoji: string;
+  }> {
+    return [
+      {
+        id: "ti-guy",
+        name: "TI-GUY",
+        description: "Le castor québécois",
+        emoji: "🦫",
+      },
+      {
+        id: "celine",
+        name: "Céline",
+        description: "Style diva internationale",
+        emoji: "🎤",
+      },
+      {
+        id: "ginette",
+        name: "Ginette",
+        description: "La maman du Québec",
+        emoji: "❤️",
+      },
+      {
+        id: "denis",
+        name: "Denis",
+        description: "Animateur TVA dynamique",
+        emoji: "📺",
+      },
+      {
+        id: "jean",
+        name: "Jean",
+        description: "Humoriste charismatique",
+        emoji: "😄",
+      },
+      {
+        id: "julie",
+        name: "Julie",
+        description: "Énergie débordante",
+        emoji: "⚡",
+      },
+      {
+        id: "mike",
+        name: "Mike",
+        description: "Comédien sarcastique",
+        emoji: "🎭",
+      },
+      {
+        id: "mario",
+        name: "Mario",
+        description: "Voix posée politique",
+        emoji: "🏛️",
+      },
+    ];
   }
 
   getPronunciationGuide(): Record<string, string> {
@@ -40,26 +187,44 @@ export class VoiceBee {
   }
 
   /**
-   * 🗣️ TEXT-TO-SPEECH (Génération de la voix de Ti-Guy)
+   * 🗣️ TEXT-TO-SPEECH (Génération de la voix de Ti-Guy ou Célébrités)
    */
   async textToSpeech(request: VoiceGenerationRequest): Promise<{
     success: boolean;
     audioBase64?: string;
+    voiceUsed?: string;
     error?: string;
   }> {
     try {
+      const voiceConfig =
+        CELEBRITY_VOICES[request.voice] || CELEBRITY_VOICES["ti-guy"];
+
       console.log(
-        `🎙️ Synthèse vocale pour : "${request.text.substring(0, 50)}..."`,
+        `🎙️ Synthèse vocale [${request.voice}] pour : "${request.text.substring(0, 50)}..."`,
       );
 
+      // Ajouter une signature vocale selon la célébrité
+      let textToSpeak = request.text;
+      if (request.voice === "celine" && !textToSpeak.includes("mon dieu")) {
+        textToSpeak = textToSpeak + "! Mon dieu!";
+      } else if (request.voice === "ginette") {
+        textToSpeak = "Mon chum, " + textToSpeak;
+      } else if (request.voice === "denis") {
+        textToSpeak = "Alors là! " + textToSpeak;
+      }
+
       const [response] = await this.clientTTS.synthesizeSpeech({
-        input: { text: request.text },
+        input: { text: textToSpeak },
         voice: {
           languageCode: "fr-CA",
-          name: "fr-CA-Standard-D", // Voix masculine québécoise robuste
-          ssmlGender: "MALE",
+          name: voiceConfig.name,
+          ssmlGender: voiceConfig.gender as any,
         },
-        audioConfig: { audioEncoding: "MP3" },
+        audioConfig: {
+          audioEncoding: "MP3",
+          pitch: voiceConfig.pitch,
+          speakingRate: voiceConfig.speakingRate * request.speed,
+        },
       });
 
       if (!response.audioContent) {
@@ -73,6 +238,7 @@ export class VoiceBee {
       return {
         success: true,
         audioBase64: base64,
+        voiceUsed: request.voice,
       };
     } catch (erreur) {
       console.error("❌ Échec TTS Google Cloud :", erreur);

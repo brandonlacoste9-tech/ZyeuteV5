@@ -18,6 +18,23 @@ import {
   VideoGenerationSchema,
 } from "../ai/bees/video-generator.js";
 import { voiceBee, VoiceGenerationSchema } from "../ai/bees/voice-bee.js";
+
+// ═══════════════════════════════════════════════════════════════
+// 🎭 CELEBRITY VOICES ENDPOINT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/tiguy/voices
+ * Get available celebrity voices
+ */
+router.get("/voices", async (req, res) => {
+  const voices = voiceBee.getCelebrityVoices();
+  res.json({
+    success: true,
+    voices,
+    message: "Choisis ta voix québécoise préférée! 🎤",
+  });
+});
 import {
   hockeyBee,
   weatherBee,
@@ -213,8 +230,21 @@ router.post("/chat", async (req, res) => {
 
     // 5. VOICE SKILL (Hearing & Speaking) 🎤
     if (skill === "voice" || req.path === "/voice") {
-      const { audio } = req.body;
+      const { audio, voice = "ti-guy" } = req.body;
       if (!audio) return res.status(400).json({ error: "Audio requis" });
+
+      // Validate voice choice
+      const validVoices = [
+        "ti-guy",
+        "celine",
+        "ginette",
+        "denis",
+        "jean",
+        "julie",
+        "mike",
+        "mario",
+      ];
+      const selectedVoice = validVoices.includes(voice) ? voice : "ti-guy";
 
       // Écoute (STT)
       const stt = await voiceBee.speechToText(audio);
@@ -237,10 +267,10 @@ router.post("/chat", async (req, res) => {
         maxSteps: 5, // Permet l'exécution séquentielle d'outils
       } as any);
 
-      // Parole (TTS - Basé sur la réponse finale)
+      // Parole (TTS - avec voix célèbre sélectionnée)
       const tts = await voiceBee.textToSpeech({
         text,
-        voice: "ti-guy",
+        voice: selectedVoice as any,
         speed: 1.0,
         emotion: "happy",
       });
@@ -249,6 +279,10 @@ router.post("/chat", async (req, res) => {
         transcription: audio ? transcription : undefined,
         response: text,
         audio: tts.audioBase64,
+        voice: selectedVoice,
+        voiceLabel:
+          voiceBee.getCelebrityVoices().find((v) => v.id === selectedVoice)
+            ?.name || "TI-GUY",
         toolResults: toolResults.length > 0 ? toolResults : undefined,
         type: "voice",
       });
