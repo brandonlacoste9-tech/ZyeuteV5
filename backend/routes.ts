@@ -616,66 +616,78 @@ export async function registerRoutes(
     }
   });
 
-  // [NEW] Infinite Scroll Feed - Cursor-based Pagination with Hive Filtering
+  // [NEW] Infinite Scroll Feed - Cursor-based Pagination using Supabase HTTP API
+  // This bypasses DATABASE_URL issues by using Supabase HTTP API directly
   app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 20;
-      const cursor = req.query.cursor as string | undefined;
-      const feedType = (req.query.type as string) || "explore"; // 'feed', 'explore', 'smart'
-      const hiveId =
-        (req.query.hive as string) ||
-        (req.userId ? await storage.getUserHive(req.userId) : "quebec");
+      const supabaseUrl =
+        process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
-      let posts: any[] = [];
-
-      // Determine which feed to fetch
-      if (req.userId && feedType === "feed") {
-        // User's personalized feed
-        const page = cursor ? parseInt(cursor) : 0;
-        posts = await storage.getFeedPosts(req.userId, page, limit + 1, hiveId);
-      } else if (feedType === "smart" && req.userId) {
-        // Smart recommendations (if user provides embedding)
-        const embedding = req.query.embedding
-          ? JSON.parse(req.query.embedding as string)
-          : null;
-        if (embedding) {
-          posts = await storage.getSmartRecommendations(
-            embedding,
-            limit + 1,
-            hiveId,
-          );
-        } else {
-          posts = await storage.getExplorePosts(
-            cursor ? parseInt(cursor) : 0,
-            limit + 1,
-            hiveId,
-          );
-        }
-      } else {
-        // Explore/public feed (default)
-        const page = cursor ? parseInt(cursor) : 0;
-        posts = await storage.getExplorePosts(page, limit + 1, hiveId);
+      if (!supabaseUrl || !supabaseKey) {
+        return res
+          .status(500)
+          .json({ error: "Missing Supabase configuration" });
       }
 
-      // Check if there are more posts
-      const hasMore = posts.length > limit;
-      const items = hasMore ? posts.slice(0, -1) : posts;
+      // Dynamically import to avoid top-level issues
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Calculate next cursor
-      const nextCursor = hasMore
-        ? (cursor ? parseInt(cursor) + 1 : 1).toString()
-        : null;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const cursor = req.query.cursor as string | undefined;
+      const feedType = (req.query.type as string) || "explore";
+
+      let query = supabase
+        .from("publications")
+        .select(
+          `
+          *,
+          user:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `,
+        )
+        .eq("visibility", "public")
+        .eq("est_masque", false)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(limit + 1);
+
+      if (cursor) {
+        query = query.lt("created_at", cursor);
+      }
+
+      const { data: posts, error } = await query;
+
+      if (error) {
+        console.error("Supabase feed error:", error);
+        return res
+          .status(500)
+          .json({ error: "Database error", details: error.message });
+      }
+
+      const items = posts?.slice(0, limit) || [];
+      const hasMore = (posts?.length || 0) > limit;
+      const nextCursor =
+        hasMore && items.length > 0 ? items[items.length - 1].created_at : null;
 
       res.json({
         posts: items,
         nextCursor,
         hasMore,
         feedType,
-        hiveId,
+        source: "supabase-http",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Get infinite feed error:", error);
-      res.status(500).json({ error: "Failed to load feed" });
+      res
+        .status(500)
+        .json({ error: "Failed to load feed", details: error.message });
     }
   });
 
@@ -746,27 +758,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get explore error:", error);
       res.status(500).json({ error: "Failed to get explore" });
-    }
-  });
-
-  // [UNIFIED FEED] /api/feed/infinite - cursor-based for useInfiniteFeed
-  app.get("/api/feed/infinite", optionalAuth, async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 20;
-      const cursor = req.query.cursor as string | undefined;
-      const page = cursor ? parseInt(cursor, 10) : 0;
-      const hive = (req.query.hive as string) || "quebec";
-      const posts = await storage.getExplorePosts(
-        isNaN(page) ? 0 : page,
-        limit,
-        hive,
-      );
-      const hasMore = posts.length >= limit;
-      const nextCursor = hasMore ? String(page + 1) : null;
-      res.json({ posts, nextCursor, hasMore, feedType: "explore" });
-    } catch (error) {
-      console.error("Get feed infinite error:", error);
-      res.status(500).json({ error: "Failed to get feed" });
     }
   });
 
