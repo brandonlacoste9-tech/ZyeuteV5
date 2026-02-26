@@ -586,28 +586,7 @@ export const LaZyeute: React.FC = () => {
       {/* Right Side Actions - Leather style matching bottom nav */}
       {posts.length > 0 && currentPost && (
         <div className="fixed right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-30">
-          {/* TI-GUY */}
-          <button
-            onClick={() => setShowTiGuyChat(true)}
-            className="flex flex-col items-center gap-1 press-scale"
-            data-testid="button-tiguy-chat"
-            aria-label="Jase avec Ti-Guy"
-          >
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
-              style={{
-                background:
-                  "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                border: `2px solid ${edgeLighting}`,
-                boxShadow: `0 4px 15px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)`,
-              }}
-            >
-              <span className="text-2xl">🦫</span>
-            </div>
-            <span className="text-[10px] font-bold text-white/80">TI-GUY</span>
-          </button>
-
-          {/* Profile */}
+          {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
           <Link
             to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
             className="flex flex-col items-center gap-1 press-scale"

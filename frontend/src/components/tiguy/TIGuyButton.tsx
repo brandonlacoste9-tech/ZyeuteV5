@@ -17,7 +17,7 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-28 right-4 md:bottom-6 md:right-6 z-40 group flex flex-col items-center"
+      className="fixed bottom-28 right-3 md:bottom-6 md:right-3 z-40 group flex flex-col items-center"
       aria-label="Parler avec TI-GUY"
     >
       {/* Label above button - matching bottom nav gold */}
