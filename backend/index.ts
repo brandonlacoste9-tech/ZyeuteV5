@@ -207,6 +207,10 @@ app.use((req, res, next) => {
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
 
+    // Debug feed route
+    const { default: debugFeedRouter } = await import("./routes/debug-feed.js");
+    app.use("/api/debug/feed", debugFeedRouter);
+
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
 
