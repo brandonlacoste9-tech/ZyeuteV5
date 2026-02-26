@@ -207,6 +207,34 @@ app.use((req, res, next) => {
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
 
+    // Debug DB connection test
+    app.get("/api/debug/db-test", async (req, res) => {
+      try {
+        const pool = (await import("./storage.js")).pool;
+        const client = await pool.connect();
+        const result = await client.query(
+          "SELECT NOW() as time, current_database() as db",
+        );
+        client.release();
+        res.json({
+          success: true,
+          db: result.rows[0],
+          env: process.env.DATABASE_URL
+            ? "DATABASE_URL is set"
+            : "DATABASE_URL is MISSING",
+        });
+      } catch (error: any) {
+        res.json({
+          success: false,
+          error: error.message,
+          code: error.code,
+          env: process.env.DATABASE_URL
+            ? "DATABASE_URL is set"
+            : "DATABASE_URL is MISSING",
+        });
+      }
+    });
+
     // Debug feed route (PUBLIC - no auth required for troubleshooting)
     app.get("/api/debug/feed", async (req, res) => {
       try {
