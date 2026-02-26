@@ -55,6 +55,7 @@
     "test:e2e": "playwright test",
     "test:e2e:external": "playwright test --config=playwright.config.external.ts",
     "populate:feed": "tsx scripts/populate-feed.ts",
+    "generate:videos": "tsx scripts/generate-quebec-videos.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:walkthrough": "playwright test tests/walkthrough/",
     "test:vitals": "playwright test tests/vital-signs/",
