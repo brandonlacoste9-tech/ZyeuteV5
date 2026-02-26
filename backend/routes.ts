@@ -625,7 +625,14 @@ export async function registerRoutes(
       const supabaseKey =
         process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
+      console.log("[FeedInfinite] Request received", {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey,
+        urlPreview: supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : null,
+      });
+
       if (!supabaseUrl || !supabaseKey) {
+        console.error("[FeedInfinite] Missing Supabase config");
         return res
           .status(500)
           .json({ error: "Missing Supabase configuration" });
@@ -638,6 +645,8 @@ export async function registerRoutes(
       const limit = parseInt(req.query.limit as string) || 20;
       const cursor = req.query.cursor as string | undefined;
       const feedType = (req.query.type as string) || "explore";
+
+      console.log("[FeedInfinite] Query params", { limit, cursor, feedType });
 
       let query = supabase
         .from("publications")
@@ -664,6 +673,11 @@ export async function registerRoutes(
 
       const { data: posts, error } = await query;
 
+      console.log("[FeedInfinite] Supabase result", {
+        postsCount: posts?.length,
+        hasError: !!error,
+      });
+
       if (error) {
         console.error("Supabase feed error:", error);
         return res
@@ -681,13 +695,17 @@ export async function registerRoutes(
         nextCursor,
         hasMore,
         feedType,
-        source: "supabase-http",
+        source: "supabase-http-v2",
       });
     } catch (error: any) {
-      console.error("Get infinite feed error:", error);
+      console.error("[FeedInfinite] Catch error:", error);
       res
         .status(500)
-        .json({ error: "Failed to load feed", details: error.message });
+        .json({
+          error: "Failed to load feed",
+          details: error.message,
+          stack: error.stack,
+        });
     }
   });
 
