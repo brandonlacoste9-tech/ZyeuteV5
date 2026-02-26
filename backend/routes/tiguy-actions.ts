@@ -1414,4 +1414,72 @@ router.post("/tts", async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════
+// 🍁 FEED POPULATION (Admin Only)
+// ═══════════════════════════════════════════════════════════════
+
+import { feedAutoGenerator } from "../services/feed-auto-generator.js";
+
+/**
+ * POST /api/tiguy/admin/populate-feed
+ * Manually trigger feed population with Quebec videos
+ * Requires admin role
+ */
+router.post("/admin/populate-feed", async (req: any, res) => {
+  try {
+    // Check admin role
+    if (req.userRole !== "admin" && req.userRole !== "moderator") {
+      return res.status(403).json({
+        error: "Admin access required",
+        message: "Seuls les admins peuvent peupler le feed",
+      });
+    }
+
+    const { count = 5, useAI = true } = req.body;
+
+    console.log(`🍁 Admin ${req.userId} triggered feed population`);
+
+    // Trigger AI generation
+    const result = await feedAutoGenerator.generateNow(count);
+
+    res.json({
+      success: true,
+      message: "Feed population triggered",
+      generated: result.generated,
+      errors: result.errors,
+      requested: count,
+      useAI,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("❌ Feed population error:", error);
+    res.status(500).json({
+      error: error.message,
+      message: "Failed to populate feed",
+    });
+  }
+});
+
+/**
+ * GET /api/tiguy/admin/feed-status
+ * Get feed auto-generator status
+ */
+router.get("/admin/feed-status", async (req: any, res) => {
+  try {
+    if (req.userRole !== "admin" && req.userRole !== "moderator") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const status = feedAutoGenerator.getStatus();
+
+    res.json({
+      success: true,
+      status,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
