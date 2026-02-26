@@ -200,7 +200,6 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
         body: JSON.stringify({
           message: text.trim(),
           audio: audioBase64,
-          voice: selectedVoice, // 🎭 Voix célébrité sélectionnée
           context: { userId },
         }),
       });
