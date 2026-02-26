@@ -1,10 +1,21 @@
 /**
  * 🦫 TI-GUY Full-Screen Mobile Chat
  * Full cell phone size with vintage Quebec leather UI
+ * Features: Chat, Voice, File Upload, Skills, History
  */
 
-import React, { useState, useRef, useEffect } from "react";
-import { Send, Settings, X, ChevronDown, MoreVertical } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import {
+  Send,
+  X,
+  ChevronDown,
+  MoreVertical,
+  Mic,
+  Paperclip,
+  Image as ImageIcon,
+  Sparkles,
+  History,
+} from "lucide-react";
 
 interface Message {
   id: string;
@@ -12,6 +23,9 @@ interface Message {
   sender: "user" | "tiguy";
   timestamp: Date;
   intent?: string;
+  type?: "text" | "voice" | "image" | "file";
+  audioUrl?: string;
+  imageUrl?: string;
 }
 
 interface TIGuyFullScreenProps {
@@ -20,6 +34,22 @@ interface TIGuyFullScreenProps {
   userId: string;
   username?: string;
 }
+
+// TI-GUY Skills/Commands
+const TIGUY_SKILLS = [
+  { icon: "🎨", label: "Image", command: "Crée une image de..." },
+  { icon: "🎬", label: "Vidéo", command: "Génère un vidéo de..." },
+  { icon: "🏒", label: "Hockey", command: "Quoi de neuf avec les Habs?" },
+  { icon: "🌤️", label: "Météo", command: "Quel temps fait-il?" },
+  { icon: "🍟", label: "Bouffe", command: "Où manger une poutine?" },
+  {
+    icon: "🎵",
+    label: "Musique",
+    command: "Recommande-moi de la musique québécoise",
+  },
+  { icon: "🔍", label: "Chercher", command: "Cherche sur Google..." },
+  { icon: "📸", label: "Screenshot", command: "Prends une capture de..." },
+];
 
 export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   isOpen,
@@ -30,14 +60,23 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Salut! Moi c'est TI-GUY, ton guide québécois! Pose-moi des questions sur le Québec, la culture, ou cherche du contenu! 🦫⚜️",
+      text: "Salut! Moi c'est TI-GUY, ton guide québécois! 🦫⚜️\n\nJe peux:\n🎨 Générer des images\n🎬 Créer des vidéos\n🏒 Parler des Habs\n🌤️ Donner la météo\n🍟 Trouver des restos\n🎵 Recommander de la musique\n🔍 Chercher sur le web\n🎙️ Discuter en audio",
       sender: "tiguy",
       timestamp: new Date(),
     },
   ]);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [showSkills, setShowSkills] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [chatHistory, setChatHistory] = useState<
+    { date: string; preview: string }[]
+  >([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,15 +86,45 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || isLoading) return;
+  // Load chat history on mount
+  useEffect(() => {
+    if (isOpen) {
+      loadChatHistory();
+    }
+  }, [isOpen]);
+
+  const loadChatHistory = async () => {
+    try {
+      const response = await fetch("/api/tiguy/history", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setChatHistory(data.history || []);
+      }
+    } catch (error) {
+      console.error("Failed to load history:", error);
+    }
+  };
+
+  const sendMessage = async (
+    text: string = inputText,
+    type: "text" | "voice" | "image" = "text",
+    audioBase64?: string,
+  ) => {
+    if ((!text.trim() && !audioBase64) || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputText.trim(),
+      text: text.trim(),
       sender: "user",
       timestamp: new Date(),
+      type,
     };
+
+    if (type === "voice" && audioBase64) {
+      userMessage.audioUrl = `data:audio/webm;base64,${audioBase64}`;
+    }
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
@@ -69,7 +138,8 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          message: userMessage.text,
+          message: text.trim(),
+          audio: audioBase64,
           context: { userId },
         }),
       });
@@ -82,6 +152,10 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           sender: "tiguy",
           timestamp: new Date(),
           intent: data.intent,
+          type: data.audio ? "voice" : "text",
+          audioUrl: data.audio
+            ? `data:audio/mp3;base64,${data.audio}`
+            : undefined,
         };
         setMessages((prev) => [...prev, tiguyMessage]);
       } else {
@@ -110,12 +184,112 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
     }
   };
 
-  const quickReplies = [
-    "Quoi de neuf?",
-    "Montre-moi du contenu",
-    "Raconte-moi une joke",
-    "Où manger?",
-  ];
+  // Voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(",")[1];
+          await sendMessage("🎙️ Message vocal", "voice", base64Audio);
+        };
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Microphone access denied:", error);
+      alert("J'ai besoin d'accéder à ton micro! 🎤");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream
+        .getTracks()
+        .forEach((track) => track.stop());
+      setIsRecording(false);
+    }
+  };
+
+  // File upload
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+      const base64File = (reader.result as string).split(",")[1];
+
+      // Add file message
+      const fileMessage: Message = {
+        id: Date.now().toString(),
+        text: `📎 ${file.name}`,
+        sender: "user",
+        timestamp: new Date(),
+        type: "file",
+      };
+
+      if (file.type.startsWith("image/")) {
+        fileMessage.imageUrl = reader.result as string;
+        fileMessage.type = "image";
+      }
+
+      setMessages((prev) => [...prev, fileMessage]);
+      setIsLoading(true);
+
+      try {
+        const response = await fetch("/api/tiguy/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            message: `Analyse ce fichier: ${file.name}`,
+            image: file.type.startsWith("image/") ? base64File : undefined,
+            context: { userId },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 1).toString(),
+              text: data.response,
+              sender: "tiguy",
+              timestamp: new Date(),
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error("File upload error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  };
+
+  const quickReplies = ["Quoi de neuf?", "Génère une image", "Météo", "Blague"];
 
   if (!isOpen) return null;
 
@@ -187,17 +361,39 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           <span className="text-xs text-amber-500/70">Ton guide québécois</span>
         </div>
 
-        {/* Right: Settings */}
-        <button
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{
-            background: "linear-gradient(145deg, #6B4423 0%, #4A3018 100%)",
-            border: "2px solid #D4AF37",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-          }}
-        >
-          <MoreVertical className="w-5 h-5 text-amber-400" />
-        </button>
+        {/* Right: History & Menu */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{
+              background: showHistory
+                ? "linear-gradient(145deg, #D4AF37 0%, #B8960B 100%)"
+                : "linear-gradient(145deg, #6B4423 0%, #4A3018 100%)",
+              border: "2px solid #D4AF37",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+            }}
+          >
+            <History
+              className={`w-5 h-5 ${showHistory ? "text-amber-900" : "text-amber-400"}`}
+            />
+          </button>
+          <button
+            onClick={() => setShowSkills(!showSkills)}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{
+              background: showSkills
+                ? "linear-gradient(145deg, #D4AF37 0%, #B8960B 100%)"
+                : "linear-gradient(145deg, #6B4423 0%, #4A3018 100%)",
+              border: "2px solid #D4AF37",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+            }}
+          >
+            <Sparkles
+              className={`w-5 h-5 ${showSkills ? "text-amber-900" : "text-amber-400"}`}
+            />
+          </button>
+        </div>
 
         {/* Bottom stitching */}
         <div
@@ -208,6 +404,86 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           }}
         />
       </header>
+
+      {/* Skills Panel */}
+      {showSkills && (
+        <div
+          className="absolute top-20 left-4 right-4 z-40 rounded-2xl overflow-hidden"
+          style={{
+            background: "linear-gradient(145deg, #4A3018 0%, #3D2314 100%)",
+            border: "2px solid #D4AF37",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="p-4">
+            <h3 className="text-amber-300 font-bold mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Mes talents
+            </h3>
+            <div className="grid grid-cols-4 gap-2">
+              {TIGUY_SKILLS.map((skill, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setInputText(skill.command);
+                    setShowSkills(false);
+                  }}
+                  className="flex flex-col items-center gap-1 p-2 rounded-xl transition-all hover:scale-105"
+                  style={{
+                    background:
+                      "linear-gradient(145deg, #5D3A1A 0%, #4A3018 100%)",
+                    border: "1px solid #D4AF37",
+                  }}
+                >
+                  <span className="text-xl">{skill.icon}</span>
+                  <span className="text-[10px] text-amber-300">
+                    {skill.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Panel */}
+      {showHistory && (
+        <div
+          className="absolute top-20 left-4 right-4 z-40 rounded-2xl overflow-hidden max-h-64 overflow-y-auto"
+          style={{
+            background: "linear-gradient(145deg, #4A3018 0%, #3D2314 100%)",
+            border: "2px solid #D4AF37",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="p-4">
+            <h3 className="text-amber-300 font-bold mb-3 flex items-center gap-2">
+              <History className="w-4 h-4" />
+              Conversations récentes
+            </h3>
+            {chatHistory.length === 0 ? (
+              <p className="text-amber-500/70 text-sm">
+                Aucune conversation sauvegardée
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {chatHistory.map((chat, idx) => (
+                  <button
+                    key={idx}
+                    className="w-full text-left p-2 rounded-lg text-sm"
+                    style={{
+                      background: "rgba(212,175,55,0.1)",
+                    }}
+                  >
+                    <span className="text-amber-300">{chat.date}</span>
+                    <p className="text-amber-100/70 truncate">{chat.preview}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative">
@@ -271,13 +547,36 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
                 </div>
               )}
 
+              {/* Image Message */}
+              {message.imageUrl && (
+                <img
+                  src={message.imageUrl}
+                  alt="Shared"
+                  className="max-w-full rounded-lg mb-2"
+                  style={{ maxHeight: "200px" }}
+                />
+              )}
+
+              {/* Voice Message */}
+              {message.audioUrl && (
+                <div className="flex items-center gap-2 mb-2">
+                  <audio
+                    src={message.audioUrl}
+                    controls
+                    className="max-w-[200px] h-8"
+                  />
+                </div>
+              )}
+
               {/* Message text */}
-              <p
-                className="text-amber-100 relative z-10 leading-relaxed"
-                style={{ fontFamily: "Georgia, serif", fontSize: "16px" }}
-              >
-                {message.text}
-              </p>
+              {message.text && (
+                <p
+                  className="text-amber-100 relative z-10 leading-relaxed whitespace-pre-wrap"
+                  style={{ fontFamily: "Georgia, serif", fontSize: "16px" }}
+                >
+                  {message.text}
+                </p>
+              )}
 
               {/* Timestamp */}
               <div className="mt-1 text-right">
@@ -367,20 +666,49 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
           }}
         />
 
-        <div className="flex items-center gap-3">
-          {/* Fleur-de-lis buckle */}
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+        <div className="flex items-center gap-2">
+          {/* File Upload Button */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
             style={{
-              background:
-                "linear-gradient(145deg, #D4AF37 0%, #B8960B 50%, #8B6914 100%)",
-              boxShadow:
-                "0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)",
-              border: "2px solid #5D3A1A",
+              background: "linear-gradient(145deg, #5D3A1A 0%, #4A3018 100%)",
+              border: "2px solid #D4AF37",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
             }}
           >
-            <span className="text-amber-900 text-xl">⚜️</span>
-          </div>
+            <Paperclip className="w-5 h-5 text-amber-400" />
+          </button>
+
+          {/* Voice Record Button */}
+          <button
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isLoading}
+            className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
+            style={{
+              background: isRecording
+                ? "linear-gradient(145deg, #DC2626 0%, #991B1B 100%)"
+                : "linear-gradient(145deg, #5D3A1A 0%, #4A3018 100%)",
+              border: "2px solid #D4AF37",
+              boxShadow: isRecording
+                ? "0 0 15px rgba(220,38,38,0.5)"
+                : "0 2px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            {isRecording ? (
+              <span className="w-3 h-3 bg-white rounded-sm animate-pulse" />
+            ) : (
+              <Mic className="w-5 h-5 text-amber-400" />
+            )}
+          </button>
 
           {/* Text input */}
           <div className="flex-1">
@@ -389,27 +717,42 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Écris ton message ici..."
-              disabled={isLoading}
-              className="w-full px-4 py-3.5 rounded-xl bg-amber-950/50 border-2 border-amber-700/50 text-amber-100 placeholder-amber-600/50 focus:outline-none focus:border-amber-500/50"
+              placeholder={
+                isRecording ? "Enregistrement..." : "Écris ton message..."
+              }
+              disabled={isLoading || isRecording}
+              className="w-full px-4 py-3 rounded-xl bg-amber-950/50 border-2 border-amber-700/50 text-amber-100 placeholder-amber-600/50 focus:outline-none focus:border-amber-500/50"
               style={{ fontFamily: "Georgia, serif", fontSize: "16px" }}
             />
           </div>
 
           {/* Send button */}
           <button
-            onClick={sendMessage}
-            disabled={isLoading || !inputText.trim()}
-            className="w-12 h-12 rounded-xl flex items-center justify-center disabled:opacity-40 transition-all active:scale-95"
+            onClick={() => sendMessage()}
+            disabled={isLoading || isRecording || !inputText.trim()}
+            className="w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-40 transition-all active:scale-95"
             style={{
               background:
                 "linear-gradient(145deg, #D4AF37 0%, #B8960B 50%, #8B6914 100%)",
               boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
             }}
           >
-            <Send size={22} className="text-amber-900" />
+            <Send size={20} className="text-amber-900" />
           </button>
         </div>
+
+        {/* Recording indicator */}
+        {isRecording && (
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-red-400 text-xs">
+              Enregistrement en cours...
+            </span>
+            <span className="text-red-400 text-xs">
+              (Clique le micro pour arrêter)
+            </span>
+          </div>
+        )}
 
         {/* Credit indicator */}
         <div className="mt-2 text-center">
