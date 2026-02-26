@@ -80,6 +80,79 @@ router.get("/feed/supabase", async (req, res) => {
 });
 
 /**
+ * GET /api/feed/infinite/supabase - Infinite scroll feed using Supabase
+ */
+router.get("/feed/infinite/supabase", async (req, res) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({
+        error: "Missing Supabase configuration",
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const limit = parseInt(req.query.limit as string) || 20;
+    const cursor = req.query.cursor as string | undefined;
+
+    let query = supabase
+      .from("publications")
+      .select(
+        `
+        *,
+        user:user_id (
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .eq("visibility", "public")
+      .eq("est_masque", false)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(limit + 1);
+
+    if (cursor) {
+      query = query.lt("created_at", cursor);
+    }
+
+    const { data: posts, error } = await query;
+
+    if (error) {
+      return res.status(500).json({
+        error: "Database error",
+        details: error.message,
+      });
+    }
+
+    const items = posts?.slice(0, limit) || [];
+    const hasMore = (posts?.length || 0) > limit;
+    const nextCursor =
+      hasMore && items.length > 0 ? items[items.length - 1].created_at : null;
+
+    res.json({
+      posts: items,
+      nextCursor,
+      hasMore,
+      feedType: "explore",
+    });
+  } catch (error: any) {
+    console.error("Infinite feed error:", error);
+    res.status(500).json({
+      error: "Feed failed",
+      details: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/explore/supabase - Explore feed using Supabase
  */
 router.get("/explore/supabase", async (req, res) => {
