@@ -610,7 +610,7 @@ export const LaZyeute: React.FC = () => {
             <span className="text-[10px] font-bold text-white/80">Profil</span>
           </Link>
 
-          {/* Fire - Golden when not fired, Orange when fired */}
+          {/* Fire - Gold/Red gradient always visible, brighter when fired */}
           <button
             onClick={() => handleFireToggle(currentPost.id)}
             className="flex flex-col items-center gap-1 press-scale"
@@ -620,12 +620,12 @@ export const LaZyeute: React.FC = () => {
               className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
               style={{
                 background: (currentPost as PostWithEngagement).is_fired
-                  ? "linear-gradient(145deg, #FFE8C2 0%, #FF9F6E 50%, #FF5A3C 100%)"
-                  : "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF5A3C" : edgeLighting}`,
+                  ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
+                  : "linear-gradient(145deg, #D4AF37 0%, #B8860B 50%, #8B4513 100%)",
+                border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : "#D4AF37"}`,
                 boxShadow: (currentPost as PostWithEngagement).is_fired
-                  ? "0 0 20px rgba(255,90,60,0.6)"
-                  : `0 4px 15px rgba(0,0,0,0.4)`,
+                  ? "0 0 25px rgba(255,61,61,0.8), 0 0 10px rgba(255,215,0,0.5)"
+                  : "0 0 15px rgba(212,175,55,0.5), 0 4px 15px rgba(0,0,0,0.4)",
               }}
             >
               <svg
@@ -633,22 +633,30 @@ export const LaZyeute: React.FC = () => {
                 viewBox="0 0 24 24"
                 fill={
                   (currentPost as PostWithEngagement).is_fired
-                    ? "#C62828"
-                    : "none"
+                    ? "#FF3D3D"
+                    : "#FFD700"
                 }
                 stroke={
                   (currentPost as PostWithEngagement).is_fired
-                    ? "none"
-                    : edgeLighting
+                    ? "#FFD700"
+                    : "#8B4513"
                 }
-                strokeWidth={2}
+                strokeWidth={1.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
                 <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
               </svg>
             </div>
-            <span className="text-[10px] font-bold text-white/80">
+            <span
+              className="text-[10px] font-bold"
+              style={{
+                color: (currentPost as PostWithEngagement).is_fired
+                  ? "#FFD700"
+                  : "#D4AF37",
+                textShadow: "0 1px 2px rgba(0,0,0,0.5)",
+              }}
+            >
               {(currentPost as any).fireCount ??
                 (currentPost as any).fire_count ??
                 0}
