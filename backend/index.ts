@@ -235,6 +235,11 @@ app.use((req, res, next) => {
       }
     });
 
+    // Feed routes using Supabase HTTP API (works without DATABASE_URL)
+    const { default: feedSupabaseRouter } =
+      await import("./routes/feed-supabase.js");
+    app.use("/api", feedSupabaseRouter);
+
     // Debug feed route (PUBLIC - no auth required for troubleshooting)
     app.get("/api/debug/feed", async (req, res) => {
       try {
