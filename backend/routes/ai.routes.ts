@@ -3,6 +3,7 @@ import { getColonyEngine } from "../ai/colony-os-engine";
 import { getSwarmBridge } from "../ai/swarm-bridge";
 import { analyzeImageWithGenAI } from "../ai/genai-app-builder.js";
 import { creditCheckMiddleware } from "../ai/credit-manager.js";
+import { generateVideo } from "../ai/media/video-engine.js";
 
 const router = Router();
 
@@ -173,6 +174,51 @@ router.get("/health", (req, res) => {
     budget_engine: "active",
     timestamp: new Date().toISOString(),
   });
+});
+
+// 7. Generate Video (Image-to-Video using Kling)
+// Requires FAL_API_KEY to be set
+router.post("/generate-video", requireAuth, async (req: any, res) => {
+  try {
+    const { imageUrl, prompt, duration = 5, aspectRatio = "9:16" } = req.body;
+
+    if (!imageUrl) {
+      return res.status(400).json({ error: "Image URL required" });
+    }
+
+    console.log(
+      `[AI Routes] Generating video from image: ${imageUrl.substring(0, 50)}...`,
+    );
+
+    const result = await generateVideo({
+      prompt: prompt || "Animate this image with natural motion",
+      imageUrl,
+      duration,
+    });
+
+    if (result.model === "placeholder" || !result.url) {
+      return res.status(503).json({
+        error: "Video generation not available",
+        message: "FAL_API_KEY not configured or video generation failed",
+        videoUrl: null,
+      });
+    }
+
+    res.json({
+      videoUrl: result.url,
+      cost: result.cost,
+      model: result.model,
+      duration: result.duration,
+      success: true,
+    });
+  } catch (error: any) {
+    console.error("[AI Routes] Video generation error:", error.message);
+    res.status(500).json({
+      error: "Failed to generate video",
+      message: error.message,
+      videoUrl: null,
+    });
+  }
 });
 
 export default router;
