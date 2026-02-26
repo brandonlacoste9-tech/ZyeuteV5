@@ -207,9 +207,45 @@ app.use((req, res, next) => {
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
 
-    // Debug feed route
-    const { default: debugFeedRouter } = await import("./routes/debug-feed.js");
-    app.use("/api/debug/feed", debugFeedRouter);
+    // Debug feed route (PUBLIC - no auth required for troubleshooting)
+    app.get("/api/debug/feed", async (req, res) => {
+      try {
+        const pool = (await import("./storage.js")).pool;
+        const client = await pool.connect();
+
+        // Check posts
+        const postsResult = await client.query(`
+          SELECT COUNT(*) as total,
+            COUNT(CASE WHEN visibility = 'public' AND (est_masque = false OR est_masque IS NULL) AND deleted_at IS NULL THEN 1 END) as visible
+          FROM publications
+        `);
+
+        // Check users
+        const usersResult = await client.query(`
+          SELECT COUNT(*) as count FROM user_profiles
+        `);
+
+        // Sample posts without join
+        const postsOnly = await client.query(`
+          SELECT id, caption, media_url, user_id, created_at, visibility, est_masque, deleted_at
+          FROM publications
+          WHERE visibility = 'public' AND (est_masque = false OR est_masque IS NULL) AND deleted_at IS NULL
+          ORDER BY created_at DESC
+          LIMIT 3
+        `);
+
+        client.release();
+
+        res.json({
+          stats: postsResult.rows[0],
+          users: usersResult.rows[0],
+          postsOnly: postsOnly.rows,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message, stack: error.stack });
+      }
+    });
 
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
