@@ -224,13 +224,13 @@ app.use((req, res, next) => {
             : "DATABASE_URL is MISSING",
         });
       } catch (error: any) {
+        const dbUrl = process.env.DATABASE_URL || "";
+        const maskedUrl = dbUrl.replace(/:([^@]+)@/, ":***@");
         res.json({
           success: false,
           error: error.message,
           code: error.code,
-          env: process.env.DATABASE_URL
-            ? "DATABASE_URL is set"
-            : "DATABASE_URL is MISSING",
+          url: maskedUrl,
         });
       }
     });
