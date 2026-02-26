@@ -239,4 +239,38 @@ router.post(
   },
 );
 
+// ═══════════════════════════════════════════════════════════════
+// 📜 CHAT HISTORY
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/tiguy/history
+ * Get user's TI-GUY chat history
+ */
+router.get("/history", requireAuth, async (req: any, res) => {
+  try {
+    // In production, fetch from database
+    // For now, return mock history
+    const history = [
+      {
+        date: "Aujourd'hui",
+        preview: "Salut! Moi c'est TI-GUY...",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    res.json({
+      status: "ok",
+      history,
+      message: "Historique chargé! 🦫",
+    });
+  } catch (error) {
+    logger.error("[TI-GUY] History error:", error);
+    res.status(500).json({
+      error: "Failed to load history",
+      history: [],
+    });
+  }
+});
+
 export default router;
