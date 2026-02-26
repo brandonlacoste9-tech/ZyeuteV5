@@ -263,9 +263,10 @@ export async function getExplorePosts(
   if (hiveId) query.append("hive", hiveId);
 
   // Use Supabase HTTP API endpoint (works without DATABASE_URL)
-  const { data, error } = await apiCall<{ posts: Post[] }>(
-    `/explore/supabase?${query.toString()}`,
-  );
+  const url = `/explore/supabase?${query.toString()}`;
+  console.log("[Feed] Fetching:", url);
+  const { data, error } = await apiCall<{ posts: Post[] }>(url);
+  console.log("[Feed] Response:", { posts: data?.posts?.length || 0, error });
   if (error || !data) return [];
   return (data.posts || [])
     .map(mapBackendPost)
