@@ -61,6 +61,7 @@ import tiguyActionsRoutes from "./routes/tiguy-actions.js";
 import tiguyRoutes from "./routes/tiguy-routes.js";
 import dialogflowTiguyRoutes from "./routes/dialogflow-tiguy.js";
 import dialogflowWebhookRoutes from "./routes/dialogflow-webhook.js";
+import feedSupabaseRoutes from "./routes/feed-supabase.js";
 import maxApiRoutes from "./routes/max-api.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
 import { validatePostType } from "../shared/utils/validatePostType.js";
@@ -677,6 +678,9 @@ export async function registerRoutes(
       res.status(500).json({ error: "Failed to load feed" });
     }
   });
+
+  // Feed routes using Supabase HTTP API (works without DATABASE_URL)
+  app.use("/api", feedSupabaseRoutes);
 
   // Get explore posts (public, popular) with Hive filtering
   // On DB error we return 200 + [] so the frontend can fall back to Pexels instead of showing a hard error

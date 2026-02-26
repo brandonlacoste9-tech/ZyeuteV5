@@ -148,7 +148,9 @@ export const Explore: React.FC = () => {
             className="flex items-center gap-2 px-4 py-1.5 bg-black/40 border border-gold-500/40 rounded-full hover:bg-gold-500/10 transition-all group"
           >
             <span className="text-lg">📡</span>
-            <span className="text-xs font-bold text-gold-400 group-hover:text-gold-200 uppercase tracking-widest">Vision Ruche</span>
+            <span className="text-xs font-bold text-gold-400 group-hover:text-gold-200 uppercase tracking-widest">
+              Vision Ruche
+            </span>
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-500"></span>
@@ -188,7 +190,10 @@ export const Explore: React.FC = () => {
           {/* Quick Pexels Filter */}
           <div className="mt-3 flex justify-end">
             <button
-              onClick={() => { setSearchQuery("Pexels"); toast.success("Affichage du stock Pexels ✨"); }}
+              onClick={() => {
+                setSearchQuery("Pexels");
+                toast.success("Affichage du stock Pexels ✨");
+              }}
               className="text-xs text-gold-500/80 hover:text-gold-400 underline decoration-dotted"
             >
               Voir la collection Pexels &rarr;
@@ -222,8 +227,9 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: #${newTag}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected ? "btn-gold" : "btn-leather"
-                    }`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                    isSelected ? "btn-gold" : "btn-leather"
+                  }`}
                 >
                   {tag}
                 </button>
@@ -247,8 +253,9 @@ export const Explore: React.FC = () => {
                   toast.info("Filtre régional retiré");
                 }
               }}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${selectedRegion === "" ? "btn-gold" : "btn-leather"
-                }`}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                selectedRegion === "" ? "btn-gold" : "btn-leather"
+              }`}
             >
               Toutes
             </button>
@@ -266,8 +273,9 @@ export const Explore: React.FC = () => {
                       toast.info(`Filtre: ${region.name}`);
                     }
                   }}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${isSelected ? "btn-gold" : "btn-leather"
-                    }`}
+                  className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                    isSelected ? "btn-gold" : "btn-leather"
+                  }`}
                 >
                   {region.emoji} {region.name}
                 </button>
@@ -350,6 +358,12 @@ export const Explore: React.FC = () => {
                     src={post.thumbnail_url || post.media_url}
                     alt={post.caption || "Post"}
                     className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      // Fallback to a default Quebec-themed placeholder if image fails
+                      e.currentTarget.src =
+                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%231a1a1a' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='60' fill='%23D4AF37'%3E⚜️%3C/text%3E%3C/svg%3E";
+                    }}
                   />
 
                   {/* Overlay on hover */}
