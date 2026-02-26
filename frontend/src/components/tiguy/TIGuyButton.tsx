@@ -17,12 +17,24 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
   return (
     <button
       onClick={onClick}
-      className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 group"
+      className="fixed bottom-28 right-4 md:bottom-6 md:right-6 z-40 group flex flex-col items-center"
       aria-label="Parler avec TI-GUY"
     >
+      {/* Label above button */}
+      <div
+        className="mb-2 px-2 py-1 rounded-full text-[10px] font-bold whitespace-nowrap animate-pulse"
+        style={{
+          background: "linear-gradient(145deg, #D4AF37 0%, #B8960B 100%)",
+          color: "#1A0F0A",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+        }}
+      >
+        TI-GUY 🦫
+      </div>
+
       {/* Outer ring with stitching - smaller on mobile */}
       <div
-        className="w-14 h-14 md:w-20 md:h-20 rounded-full flex items-center justify-center relative transition-all"
+        className="w-14 h-14 md:w-20 md:h-20 rounded-full flex items-center justify-center relative transition-all group-hover:scale-110"
         style={{
           background:
             "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -86,7 +98,7 @@ export const TIGuyButton: React.FC<TIGuyButtonProps> = ({
       {/* Unread badge - smaller on mobile */}
       {unreadCount && unreadCount > 0 && (
         <div
-          className="absolute -top-0.5 -right-0.5 md:-top-1 md:-right-1 w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-[10px] md:text-xs font-bold"
+          className="absolute -top-6 -right-0.5 md:-top-1 md:-right-1 w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-[10px] md:text-xs font-bold"
           style={{
             background: "linear-gradient(145deg, #DC2626 0%, #991B1B 100%)",
             boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
