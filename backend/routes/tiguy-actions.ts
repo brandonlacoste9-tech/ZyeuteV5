@@ -19,22 +19,6 @@ import {
 } from "../ai/bees/video-generator.js";
 import { voiceBee, VoiceGenerationSchema } from "../ai/bees/voice-bee.js";
 
-// ═══════════════════════════════════════════════════════════════
-// 🎭 CELEBRITY VOICES ENDPOINT
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * GET /api/tiguy/voices
- * Get available celebrity voices
- */
-router.get("/voices", async (req, res) => {
-  const voices = voiceBee.getCelebrityVoices();
-  res.json({
-    success: true,
-    voices,
-    message: "Choisis ta voix québécoise préférée! 🎤",
-  });
-});
 import {
   hockeyBee,
   weatherBee,
@@ -74,6 +58,23 @@ const getTIGuyModel = () => {
 };
 
 const router = express.Router();
+
+// ═══════════════════════════════════════════════════════════════
+// 🎭 CELEBRITY VOICES ENDPOINT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/tiguy/voices
+ * Get available celebrity voices
+ */
+router.get("/voices", async (req, res) => {
+  const voices = voiceBee.getCelebrityVoices();
+  res.json({
+    success: true,
+    voices,
+    message: "Choisis ta voix québécoise préférée! 🎤",
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════
 // 💬 CHAT & ORCHESTRATION ENDPOINT
