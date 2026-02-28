@@ -63,23 +63,20 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
     return () => clearTimeout(timer);
   }, [src]);
 
-  // Handle autoplay with retry logic
+  // Handle autoplay with canplay event (no artificial delay)
   useEffect(() => {
-    const attemptPlay = async () => {
-      if (autoPlay && videoRef.current && !hasError) {
-        try {
-          await videoRef.current.play();
-          setIsPlaying(true);
-        } catch (err) {
-          // Autoplay blocked - wait for user interaction
-          setIsPlaying(false);
-        }
-      }
+    const video = videoRef.current;
+    if (!video || !autoPlay || hasError) return;
+
+    const handleCanPlay = () => {
+      video.play().catch(() => {
+        // Autoplay blocked - wait for user interaction
+        setIsPlaying(false);
+      });
     };
 
-    // Small delay to ensure video is ready
-    const timer = setTimeout(attemptPlay, 100);
-    return () => clearTimeout(timer);
+    video.addEventListener('canplay', handleCanPlay, { once: true });
+    return () => video.removeEventListener('canplay', handleCanPlay);
   }, [autoPlay, hasError]);
 
   // Monitor buffer progress
@@ -101,33 +98,6 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
     video.addEventListener("progress", handleProgress);
     return () => video.removeEventListener("progress", handleProgress);
   }, []);
-
-  // Visibility check - pause when not visible (saves resources)
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting && isPlaying) {
-            video.pause();
-            setIsPlaying(false);
-          } else if (entry.isIntersecting && autoPlay && !hasError) {
-            video.play().catch(() => {});
-            setIsPlaying(true);
-          }
-        });
-      },
-      { threshold: 0.5 },
-    );
-
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
-
-    return () => observer.disconnect();
-  }, [autoPlay, hasError, isPlaying]);
 
   const togglePlay = useCallback(() => {
     if (!videoRef.current || hasError) return;
@@ -228,8 +198,9 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
       )}
       style={{
         ...style,
-        transform: "translateZ(0)", // Force GPU layer
-        willChange: "transform", // Optimize for animations
+        // GPU layer only on active video (priority prop)
+        transform: priority ? 'translateZ(0)' : 'none',
+        willChange: priority ? 'transform' : 'auto',
       }}
       onClick={togglePlay}
       onMouseMove={showControlsTemporarily}
@@ -248,15 +219,14 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
         x5-video-player-type="h5"
         x5-video-player-fullscreen="false"
         preload={priority ? "auto" : "metadata"}
-        crossOrigin="anonymous"
         disablePictureInPicture
         disableRemotePlayback
         className="absolute inset-0 w-full h-full object-cover"
         style={{
           objectFit: "cover",
           objectPosition: "center",
-          // Hardware acceleration hints
-          transform: "translateZ(0)",
+          // Hardware acceleration only on active video
+          transform: priority ? 'translateZ(0)' : 'none',
           backfaceVisibility: "hidden",
           perspective: 1000,
         }}

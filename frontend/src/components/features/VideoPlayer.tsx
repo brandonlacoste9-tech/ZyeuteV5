@@ -139,6 +139,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         backBufferLength: 90,
         enableWorker: true,
         capLevelToPlayerSize: true,
+        maxBufferLength: 30,        // 3x bigger: 10s → 30s
+        maxMaxBufferLength: 60,     // 3x bigger: 30s → 60s
+        startFragPrefetch: true,    // Prefetch before media attach
+        abrBandWidthFactor: 0.9,    // Conservative: fewer quality drops
+        abrBandWidthUpFactor: 0.7,  // Stable quality selection
       });
       hlsRef.current = hls;
       hls.loadSource(src);

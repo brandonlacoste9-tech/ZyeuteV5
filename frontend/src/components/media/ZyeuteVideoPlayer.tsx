@@ -28,6 +28,12 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       hls = new Hls({
         capLevelToPlayerSize: true,
         autoStartLoad: true,
+        maxBufferLength: 30,        // 3x bigger: 10s → 30s
+        maxMaxBufferLength: 60,     // 3x bigger: 30s → 60s
+        startFragPrefetch: true,    // Prefetch before media attach
+        enableWorker: true,         // Off-main-thread demux
+        fragLoadingMaxRetry: 6,     // More resilient: 3 → 6 retries
+        fragLoadingTimeOut: 8000,   // Longer timeout: 5s → 8s
       });
       hls.loadSource(src);
       hls.attachMedia(video);

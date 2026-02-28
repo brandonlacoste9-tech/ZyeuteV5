@@ -103,7 +103,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       }
     }, [post.id, post.type, isActive]);
 
-    // Trigger Vision Analysis if missing
+    // Trigger Vision Analysis if missing (deferred to idle time)
     useEffect(() => {
       if (
         isActive &&
@@ -112,21 +112,28 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         !isAnalyzing &&
         post.type === "video"
       ) {
-        const timer = setTimeout(async () => {
+        // Defer AI Vision to browser idle time (doesn't block video decoder)
+        const idleCallbackId = requestIdleCallback(() => {
           if (videoRef.current) {
             // Try to find the actual video tag inside the container
             const videoEl = videoRef.current.querySelector("video");
             if (videoEl) {
               console.log("[VideoVision] Analyzing frame for", post.id);
               setHasAnalyzed(true); // Prevent loop
-              const result = await analyzeFrame(videoEl);
-              if (result) {
-                setLocalAiDescription(result.description);
-              }
+              analyzeFrame(videoEl).then((result) => {
+                if (result) {
+                  setLocalAiDescription(result.description);
+                }
+              });
             }
           }
-        }, 3000); // Wait 3s for meaningful frame
-        return () => clearTimeout(timer);
+        });
+        
+        return () => {
+          if ('cancelIdleCallback' in window) {
+            cancelIdleCallback(idleCallbackId);
+          }
+        };
       }
     }, [
       isActive,
