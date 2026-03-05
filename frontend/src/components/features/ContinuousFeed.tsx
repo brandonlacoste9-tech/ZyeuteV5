@@ -96,7 +96,7 @@ const FeedRow = memo(
 
     const post = posts[index];
     const isPriority = index === currentIndex;
-    const isPredictive = Math.abs(index - currentIndex) === 1;
+    const isNext = index === currentIndex + 1;
 
     // Determine Video Source — skip prefetch for Mux (MuxVideoPlayer handles its own streaming)
     const hasMux = !!(post as Post).mux_playback_id;
@@ -119,7 +119,7 @@ const FeedRow = memo(
       isMediumScrolling,
       isSlowScrolling,
       isPriority,
-      isPredictive,
+      isNext,
     );
 
     // Circuit Breaker: If system is overloaded (high latency), kill prefetching
@@ -143,6 +143,7 @@ const FeedRow = memo(
         className="w-full h-full"
       >
         <UnifiedMediaCard
+          key={post.id}
           post={post}
           user={post.user}
           isActive={shouldPlay && isPageVisible}
@@ -151,8 +152,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Adjacent videos (n±1): aggressively buffer for instant swipe
-            isPredictive && !isFastScrolling
+            // Adjacent video (Next): aggressively buffer for instant swipe
+            isNext && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -163,7 +164,7 @@ const FeedRow = memo(
           videoSource={source}
           isCached={isCached}
           debug={debug}
-          shouldPrefetch={isPredictive}
+          shouldPrefetch={isNext}
           onVideoProgress={isPriority ? onVideoProgress : undefined}
         />
       </div>
@@ -200,11 +201,9 @@ const FeedRow = memo(
     const nextIsPriority = nextProps.index === nextData.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
-    const prevIsPredictive =
-      Math.abs(prevProps.index - prevData.currentIndex) === 1;
-    const nextIsPredictive =
-      Math.abs(nextProps.index - nextData.currentIndex) === 1;
-    if (prevIsPredictive !== nextIsPredictive) return false;
+    const prevIsNext = prevProps.index === prevData.currentIndex + 1;
+    const nextIsNext = nextProps.index === nextData.currentIndex + 1;
+    if (prevIsNext !== nextIsNext) return false;
 
     if (prevData.isPageVisible !== nextData.isPageVisible) return false;
 

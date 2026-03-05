@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useInView } from "react-intersection-observer";
 import { PreloadTier } from "./usePrefetchVideo";
-import { useNetworkStatus } from "./useNetworkStatus";
 
 interface VideoActivationResult {
   ref: (node?: Element | null) => void;
@@ -18,26 +17,47 @@ export function useVideoActivation(
   isMediumScrolling: boolean,
   isSlowScrolling: boolean, // For detecting idle/predictive moments
   priority: boolean = false, // Focused item
-  predictive: boolean = false, // Item before/after focus
+  isNext: boolean = false, // Item strictly AFTER focus
 ): VideoActivationResult {
-  const isOnline = useNetworkStatus();
-
   // Intersection Observer to track visibility
-  const { ref, inView, entry } = useInView({
+  const { ref, entry } = useInView({
     threshold: [0, 0.25, 0.5, 0.75, 1.0],
-    rootMargin: "300px 0px 300px 0px", // Increased buffer for predictive
+    rootMargin: "50px 0px 50px 0px", // Reduced buffer for strict current+next
   });
 
-  const [shouldPlay, setShouldPlay] = useState(false);
-  const [preloadTier, setPreloadTier] = useState<PreloadTier>(0);
   const [isEngaged, setIsEngaged] = useState(false);
   const engagementTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const visibilityRatio = entry?.intersectionRatio || 0;
-  const isActuallyVisible = visibilityRatio > 0;
-  // 50% viewability: trigger play when half the video is visible (TikTok-style)
-  const VIEWABILITY_PLAY_THRESHOLD = 0.5;
+  // 70% viewability: trigger play when most of the video is visible (Strict)
+  const VIEWABILITY_PLAY_THRESHOLD = 0.7;
   const isFocused = visibilityRatio >= VIEWABILITY_PLAY_THRESHOLD;
+
+  // Derive playback logic (Don't use state if we can derive from props + visibility)
+  // STRICT TIKTOK RULE: Only ONE video plays at a time to prevent hardware decoder contention.
+  let shouldPlay = false;
+  if (!isFastScrolling) {
+    if (priority && visibilityRatio >= 0.3) {
+      shouldPlay = true;
+    } else if (!priority && visibilityRatio > 0.8) {
+      shouldPlay = true;
+    }
+  }
+
+  // Derive Preload Tiering Logic (strictly Current + Next)
+  let preloadTier: PreloadTier;
+  if (isFastScrolling) {
+    preloadTier = 0;
+  } else if (isEngaged && isFocused) {
+    preloadTier = 2;
+  } else if (isFocused || priority) {
+    preloadTier = 1;
+  } else if (isNext && isSlowScrolling) {
+    // PREP Stage for next video
+    preloadTier = 1;
+  } else {
+    preloadTier = 0;
+  }
 
   // Engagement Tracker
   useEffect(() => {
@@ -52,61 +72,16 @@ export function useVideoActivation(
         clearTimeout(engagementTimerRef.current);
         engagementTimerRef.current = null;
       }
-      setIsEngaged(false);
+      // Defer state update to next tick to avoid React cascading render warning
+      if (isEngaged) {
+        const timer = setTimeout(() => setIsEngaged(false), 0);
+        return () => clearTimeout(timer);
+      }
     }
     return () => {
       if (engagementTimerRef.current) clearTimeout(engagementTimerRef.current);
     };
-  }, [shouldPlay, isFocused]);
-
-  useEffect(() => {
-    // 1. Playback Logic
-    // STRICT TIKTOK RULE: Only ONE video plays at a time to prevent hardware decoder contention.
-    let nextShouldPlay = false;
-    if (!isFastScrolling) {
-      // Only play if it is the designated priority (current index) and is mostly visible,
-      // OR if it happens to be fully visible (e.g., initial load).
-      if (priority && visibilityRatio >= 0.3) {
-        nextShouldPlay = true;
-      } else if (!priority && visibilityRatio > 0.8) {
-        // If not priority, wait until it's overwhelmingly obvious it's the main video
-        nextShouldPlay = true;
-      }
-    }
-    setShouldPlay(nextShouldPlay);
-
-    // 2. Preload Tiering Logic (reduced aggressiveness to prevent freeze)
-    let nextTier: PreloadTier = 0;
-
-    if (isFastScrolling) {
-      nextTier = 0;
-    } else if (isEngaged && isFocused) {
-      // Full prefetch only after 3s engagement - prevents initial freeze
-      nextTier = 2;
-    } else if (isFocused || priority) {
-      // Start with partial chunks (Tier 1) - avoid full blob on first paint
-      nextTier = 1;
-    } else if (isActuallyVisible || inView) {
-      nextTier = 1;
-    } else if (predictive && isSlowScrolling) {
-      // Neighbors: light prefetch only
-      nextTier = 1;
-    } else {
-      nextTier = 0;
-    }
-
-    setPreloadTier(nextTier);
-  }, [
-    isFastScrolling,
-    isMediumScrolling,
-    isSlowScrolling,
-    isFocused,
-    isActuallyVisible,
-    inView,
-    priority,
-    predictive,
-    isEngaged,
-  ]);
+  }, [shouldPlay, isFocused, isEngaged]);
 
   return {
     ref,
