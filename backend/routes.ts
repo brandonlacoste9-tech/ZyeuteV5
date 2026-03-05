@@ -56,6 +56,7 @@ import notificationRoutes from "./routes/notifications.js";
 import supportRoutes from "./routes/support.js";
 import aiVertexRoutes from "./routes/ai-vertex.js";
 import searchRoutes from "./routes/search.js";
+import videoDoctorRoutes from "./routes/video-doctor.routes.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
 
 // Rate limiters for different endpoint types
@@ -165,6 +166,7 @@ export async function registerRoutes(
 
   app.use("/api/pexels", pexelsRoutes);
   app.use("/api/mux", muxRoutes);
+  app.use("/api/video-doctor", videoDoctorRoutes);
 
   // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
   app.use("/api/media-proxy", mediaProxyRoutes);

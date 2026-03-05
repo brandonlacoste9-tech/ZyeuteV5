@@ -31,7 +31,6 @@ import {
 } from "@/components/tiguy";
 import { VideoDoctorDashboard } from "@/components/admin/VideoDoctorDashboard";
 
-
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 // ===== CONSTANTS - ANTIQUE GOLD & RICH LEATHER =====
@@ -92,7 +91,10 @@ function Login() {
     setLoading(true);
     setError("");
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) throw error;
       navigate("/feed");
     } catch (err: any) {
@@ -689,10 +691,7 @@ function Settings() {
       const r = parseInt(savedColor.slice(1, 3), 16);
       const g = parseInt(savedColor.slice(3, 5), 16);
       const b = parseInt(savedColor.slice(5, 7), 16);
-      document.documentElement.style.setProperty(
-        "--edge-glow",
-        "transparent",
-      );
+      document.documentElement.style.setProperty("--edge-glow", "transparent");
     }
   }, []);
 
@@ -845,7 +844,10 @@ function Settings() {
                   <textarea
                     value={settings.bio}
                     onChange={(e) =>
-                      setSettings((prev: any) => ({ ...prev, bio: e.target.value }))
+                      setSettings((prev: any) => ({
+                        ...prev,
+                        bio: e.target.value,
+                      }))
                     }
                     className="w-full px-4 py-3 rounded-xl resize-none"
                     rows={3}
@@ -1383,7 +1385,19 @@ function Settings() {
 }
 
 // Toggle Item Component
-function ToggleItem({ icon, title, description, checked, onChange }: { icon: string, title: string, description: string, checked: boolean, onChange: () => void }) {
+function ToggleItem({
+  icon,
+  title,
+  description,
+  checked,
+  onChange,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
   return (
     <div
       className="flex items-center justify-between p-5 rounded-xl"
@@ -1424,7 +1438,15 @@ function ToggleItem({ icon, title, description, checked, onChange }: { icon: str
 }
 
 // Help Item Component
-function HelpItem({ icon, title, description }: { icon: string, title: string, description: string }) {
+function HelpItem({
+  icon,
+  title,
+  description,
+}: {
+  icon: string;
+  title: string;
+  description: string;
+}) {
   return (
     <button
       className="w-full flex items-center gap-4 p-5 rounded-xl text-left transition-colors"
@@ -1454,7 +1476,13 @@ function HelpItem({ icon, title, description }: { icon: string, title: string, d
 // [Previous components remain the same]
 
 // ===== COMMENTS MODAL =====
-function CommentsModal({ postId, onClose }: { postId?: number, onClose: () => void }) {
+function CommentsModal({
+  postId,
+  onClose,
+}: {
+  postId?: number;
+  onClose: () => void;
+}) {
   const [comments, setComments] = useState([
     { id: 1, user: "marie_qc", text: "C'est ben beau!", avatar: "M" },
     { id: 2, user: "ti_guy_514", text: "Tabarnac c'est nice", avatar: "T" },
@@ -1546,7 +1574,13 @@ function CommentsModal({ postId, onClose }: { postId?: number, onClose: () => vo
 }
 
 // ===== PROFILE MODAL =====
-function ProfileModal({ user, onClose }: { user?: { username?: string }, onClose: () => void }) {
+function ProfileModal({
+  user,
+  onClose,
+}: {
+  user?: { username?: string };
+  onClose: () => void;
+}) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -1932,7 +1966,12 @@ function Create() {
           </button>
 
           <div className="flex flex-wrap gap-2 justify-center">
-            {["Winter in Quebec", "Montreal at night", "Maple forest", "Funny beaver"].map(hint => (
+            {[
+              "Winter in Quebec",
+              "Montreal at night",
+              "Maple forest",
+              "Funny beaver",
+            ].map((hint) => (
               <button
                 key={hint}
                 onClick={() => setCaption(hint)}
@@ -2438,6 +2477,7 @@ function AppContent() {
         <Route path="/logout" element={<Logout />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/feed" element={<LaZyeute />} />
+        <Route path="/explore" element={<LaZyeute />} />
         <Route path="/search" element={<Search />} />
         <Route path="/create" element={<Create />} />
         <Route path="/notifications" element={<Notifications />} />
@@ -2449,7 +2489,6 @@ function AppContent() {
           element={<Navigate to={user ? "/feed" : "/login"} replace />}
         />
       </Routes>
-
       {/* 🦫 TI-GUY Chat - Available on all pages when logged in */}
       {user && (
         <>
@@ -2461,7 +2500,8 @@ function AppContent() {
             username={user?.username}
           />
         </>
-      )}    </Router>
+      )}{" "}
+    </Router>
   );
 }
 

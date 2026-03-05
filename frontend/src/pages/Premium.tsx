@@ -4,10 +4,8 @@
  * Beaver leather, gold embossing, stitched elegance
  */
 
-import React, { useState } from "react";
-import { Header } from "../components/Header";
+import React from "react";
 import { BottomNav } from "../components/BottomNav";
-import { Button } from "../components/Button";
 import { subscribeToPremium } from "../services/stripeService";
 import { usePremium } from "../hooks/usePremium";
 import { toast } from "../components/Toast";
@@ -20,7 +18,6 @@ type SubscriptionTier = "free" | "bronze" | "silver" | "gold";
 
 export default function Premium() {
   const { tier: currentTier, isLoading } = usePremium();
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>("gold");
   const { tap } = useHaptics();
 
   const tiers = [
@@ -82,7 +79,7 @@ export default function Premium() {
 
     try {
       await subscribeToPremium(tier);
-    } catch (error: any) {
+    } catch (error) {
       premiumLogger.error("Subscription error:", error);
       toast.error("Erreur lors de l'abonnement. Réessaie plus tard.");
     }
@@ -147,8 +144,9 @@ export default function Premium() {
             return (
               <div
                 key={tier.id}
-                className={`leather-card rounded-2xl p-6 stitched relative overflow-hidden transition-all hover:scale-105 ${tier.popular ? "ring-2 ring-gold-500" : ""
-                  }`}
+                className={`leather-card rounded-2xl p-6 stitched relative overflow-hidden transition-all hover:scale-105 ${
+                  tier.popular ? "ring-2 ring-gold-500" : ""
+                }`}
               >
                 {/* Popular Badge */}
                 {tier.popular && (
@@ -202,12 +200,13 @@ export default function Premium() {
                     handleSubscribe(tier.id);
                   }}
                   disabled={isCurrentTier}
-                  className={`w-full py-3 rounded-xl font-bold transition-all ${isCurrentTier
+                  className={`w-full py-3 rounded-xl font-bold transition-all ${
+                    isCurrentTier
                       ? "bg-leather-700 text-leather-400 cursor-not-allowed"
                       : tier.id === "gold"
                         ? "btn-gold border-gold-500"
                         : "btn-leather hover:btn-gold"
-                    }`}
+                  }`}
                 >
                   {isCurrentTier
                     ? "✓ Ton plan actuel"

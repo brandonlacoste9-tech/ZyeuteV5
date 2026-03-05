@@ -66,7 +66,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
   idleTimeoutMillis: 30000,
-  ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
+  ssl: {
+    rejectUnauthorized: false, // Allow self-signed certificates from Supabase/Railway
+  },
 });
 
 // Database error handling - prevent crashes on connection failures

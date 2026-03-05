@@ -1,25 +1,20 @@
-#!/usr/bin/env tsx
-/**
- * ⚜️ Populate Quebec Feed
- * Adds high-quality Quebec-themed videos to the feed
- * Uses a mix of sample videos and AI generation
- */
-
-import { config } from "dotenv";
-import { join } from "path";
-config({ path: join(__dirname, "../.env") });
-
-import { feedAutoGenerator } from "../backend/services/feed-auto-generator.js";
-import { storage, pool } from "../backend/storage.js";
-import { logger } from "../backend/utils/logger.js";
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 import { randomUUID } from "crypto";
 
-const log = logger.withContext("PopulateQuebec");
+dotenv.config();
 
-/**
- * Curated Quebec video content
- * Mix of public domain videos and AI-generated content themes
- */
+const VITE_SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("❌ Missing SUPABASE_SERVICE_ROLE_KEY in .env");
+  process.exit(1);
+}
+
+const supabase = createClient(VITE_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
 const QUEBEC_VIDEOS = [
   // Nature & Landscapes
   {
@@ -54,7 +49,6 @@ const QUEBEC_VIDEOS = [
     tags: ["hiver", "neige", "montreal"],
     reactions: 750,
   },
-
   // Culture & Food
   {
     caption:
@@ -88,7 +82,6 @@ const QUEBEC_VIDEOS = [
     tags: ["carnaval", "hiver", "fete"],
     reactions: 1800,
   },
-
   // Urban & City Life
   {
     caption: "🌃 Montréal la nuit, c'est magique. La skyline qui s'illumine ✨",
@@ -121,7 +114,6 @@ const QUEBEC_VIDEOS = [
     tags: ["art", "street", "culture"],
     reactions: 820,
   },
-
   // Sports & Activities
   {
     caption: "🏒 Le hockey, c'est notre religion au Québec! Go Habs Go! 🔴🔵⚪",
@@ -153,29 +145,6 @@ const QUEBEC_VIDEOS = [
     tags: ["patin", "hiver", "lac"],
     reactions: 780,
   },
-
-  // Music & Festivals
-  {
-    caption: "🎵 Festival d'été de Québec! La meilleure ambiance de l'été ☀️",
-    content: "Festival d'été Québec",
-    mediaUrl:
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    thumbnailUrl:
-      "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=720",
-    tags: ["festival", "musique", "ete"],
-    reactions: 1450,
-  },
-  {
-    caption: "🎸 Osheaga! Le plus grand festival de musique de Montréal 🎶",
-    content: "Festival Osheaga",
-    mediaUrl:
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    thumbnailUrl:
-      "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=720",
-    tags: ["osheaga", "musique", "festival"],
-    reactions: 1300,
-  },
-
   // Language & Identity
   {
     caption:
@@ -201,89 +170,50 @@ const QUEBEC_VIDEOS = [
   },
 ];
 
-async function populateFeed() {
-  console.log("⚜️ Populating Zyeuté with Quebec Videos...\n");
+async function populate() {
+  console.log("⚜️ Populating Zyeuté Quebec Feed via HTTP API...\n");
 
   try {
-    // Get or create system user
-    let systemUserId = await storage.getSystemUserId();
-    if (!systemUserId) {
-      const systemUser = await storage.createUser({
-        id: randomUUID(),
-        username: "zyeute_quebec",
-        email: "quebec@zyeute.com",
-        displayName: "Zyeuté Québec ⚜️",
-        role: "citoyen",
+    // Use existing ti_guy_bot user
+    const systemUserId = "9175f19b-5d49-4aa5-afba-c5dfa53e086d";
+    console.log(`👤 Using system user (ti_guy_bot): ${systemUserId}`);
+
+    // 2. Insert videos
+    console.log(`📊 Adding ${QUEBEC_VIDEOS.length} videos...`);
+
+    for (const v of QUEBEC_VIDEOS) {
+      // Create new UUID for post
+      const postId = randomUUID();
+
+      const { error: postError } = await supabase.from("publications").insert({
+        id: postId,
+        user_id: systemUserId,
+        media_url: v.mediaUrl,
+        thumbnail_url: v.thumbnailUrl,
+        type: "video",
+        caption: v.caption,
+        content: v.content,
+        visibility: "public",
+        hive_id: "quebec",
+        processing_status: "completed",
+        ai_generated: false,
+        aspect_ratio: "16:9",
+        duration: 15,
+        reactions_count: v.reactions,
+        created_at: new Date().toISOString(),
       });
-      systemUserId = systemUser.id;
-      await storage.setSystemUserId(systemUserId);
-      log.info(`Created system user: ${systemUserId}`);
-    }
 
-    console.log(`📊 Adding ${QUEBEC_VIDEOS.length} Quebec videos...\n`);
-
-    let added = 0;
-    let errors = 0;
-
-    for (const video of QUEBEC_VIDEOS) {
-      try {
-        // Check if caption already exists to avoid duplicates
-        const { rows } = await pool.query(
-          "SELECT id FROM publications WHERE caption = $1 LIMIT 1",
-          [video.caption],
-        );
-
-        if (rows.length > 0) {
-          console.log(
-            `⏭️  Skipping existing: ${video.caption.substring(0, 50)}...`,
-          );
-          continue;
-        }
-
-        // Create post
-        await storage.createPost({
-          userId: systemUserId,
-          mediaUrl: video.mediaUrl,
-          thumbnailUrl: video.thumbnailUrl,
-          type: "video",
-          caption: video.caption,
-          content: video.content,
-          visibility: "public",
-          hiveId: "quebec",
-          processingStatus: "completed",
-          aiGenerated: false,
-          aspectRatio: "16:9",
-          duration: 30,
-          reactionsCount: video.reactions,
-          createdAt: new Date(
-            Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000,
-          ), // Random time in last 7 days
-        } as any);
-
-        console.log(`✅ Added: ${video.caption.substring(0, 50)}...`);
-        added++;
-      } catch (error: any) {
-        console.log(`❌ Error adding video: ${error.message}`);
-        errors++;
+      if (postError) {
+        console.error(`❌ Error adding "${v.caption}":`, postError.message);
+      } else {
+        console.log(`✅ Added: ${v.caption.substring(0, 40)}...`);
       }
     }
 
-    console.log(`\n🎉 Done! Added ${added} videos, ${errors} errors`);
-
-    // Also trigger AI generation for more variety
-    console.log("\n🤖 Triggering AI video generation...");
-    const genResult = await feedAutoGenerator.generateNow(3);
-    console.log(
-      `   Generated: ${genResult.generated}, Errors: ${genResult.errors}`,
-    );
-
-    console.log("\n✨ Quebec feed populated successfully!");
-    console.log("   Check the feed at: /feed");
-  } catch (error: any) {
-    log.error("Failed to populate feed:", error);
-    console.error("\n❌ Error:", error.message);
-    process.exit(1);
+    console.log("\n✨ Done! Quebec feed populated.");
+  } catch (err: any) {
+    console.error("❌ Fatal error:", err.message);
   }
 }
 
-populateFeed();
+populate();

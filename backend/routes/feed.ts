@@ -145,9 +145,10 @@ router.get("/infinite", async (req: Request, res: Response) => {
       source: "supabase-http-v2",
     });
   } catch (error) {
-    console.error("[FeedInfinite] Catch error:", error);
     res.status(500).json({
       error: "Failed to load feed",
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
     });
   }
 });

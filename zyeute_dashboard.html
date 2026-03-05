@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zyeute | Colony OS Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            colors: {
+              brand: {
+                black: "#0a0a0a",
+                dark: "#121212",
+                gray: "#1e1e1e",
+                accent: "#3b82f6",
+              },
+            },
+            animation: {
+              "pulse-fast": "pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #050505;
+        color: #e5e5e5;
+      }
+      .glass-panel {
+        background: rgba(30, 30, 30, 0.6);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #121212;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 3px;
+      }
+
+      .scanline {
+        width: 100%;
+        height: 100px;
+        z-index: 10;
+        background: linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(59, 130, 246, 0.05) 50%,
+          rgba(0, 0, 0, 0) 100%
+        );
+        opacity: 0.1;
+        position: absolute;
+        bottom: 100%;
+        animation: scanline 10s linear infinite;
+        pointer-events: none;
+      }
+      @keyframes scanline {
+        0% {
+          bottom: 100%;
+        }
+        100% {
+          bottom: -100%;
+        }
+      }
+      .asset-card:hover {
+        border-color: #3b82f6;
+        background-color: rgba(59, 130, 246, 0.1);
+      }
+      .status-dot {
+        transition: all 0.3s ease;
+      }
+      .status-online {
+        background-color: #10b981;
+        box-shadow: 0 0 10px #10b981;
+      }
+      .status-offline {
+        background-color: #ef4444;
+        box-shadow: 0 0 5px #ef4444;
+      }
+    </style>
+  </head>
+  <body
+    class="h-screen flex overflow-hidden selection:bg-blue-500 selection:text-white"
+  >
+    <!-- SIDEBAR -->
+    <aside
+      class="w-64 bg-brand-black border-r border-white/10 flex flex-col z-20"
+    >
+      <div class="p-6 flex items-center gap-3">
+        <div
+          class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]"
+        >
+          Z
+        </div>
+        <div>
+          <h1 class="font-bold text-lg tracking-tight">ZYEUTE</h1>
+          <p class="text-[10px] text-gray-500 font-mono">COLONY OS v1.0</p>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-3 space-y-1 mt-4">
+        <button
+          onclick="switchTab('studio')"
+          id="nav-studio"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-blue-600/10 text-blue-400 border border-blue-500/20"
+        >
+          <i data-lucide="layout-grid" class="w-4 h-4"></i>
+          Mission Control
+        </button>
+        <button
+          onclick="switchTab('video')"
+          id="nav-video"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+        >
+          <i data-lucide="film" class="w-4 h-4"></i>
+          Video Studio
+        </button>
+        <button
+          onclick="switchTab('expression')"
+          id="nav-expression"
+          class="nav-item w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+        >
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+          Expression Core
+        </button>
+      </nav>
+
+      <div class="p-4 border-t border-white/10">
+        <div class="bg-brand-dark rounded-lg p-3 border border-white/5">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs text-gray-400">Kernel Memory</span>
+            <span class="text-xs font-mono text-emerald-400"
+              >8GB ALLOCATED</span
+            >
+          </div>
+          <div class="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+            <div class="bg-emerald-500 h-full w-[80%]"></div>
+          </div>
+          <div
+            class="mt-2 text-[10px] text-gray-500 font-mono text-center flex justify-between"
+          >
+            <span>L4: ONLINE</span>
+            <span>T4: ONLINE</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 flex flex-col relative bg-[#050505]">
+      <div class="scanline"></div>
+
+      <!-- Header -->
+      <header
+        class="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-brand-black/50 backdrop-blur-sm z-10"
+      >
+        <div class="flex items-center gap-4">
+          <div
+            class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10"
+            id="kernel-status-badge"
+          >
+            <div
+              id="status-dot"
+              class="w-2 h-2 rounded-full status-offline"
+            ></div>
+            <span id="status-text" class="text-xs font-mono text-gray-500"
+              >KERNEL: OFFLINE</span
+            >
+          </div>
+          <span class="text-gray-600">/</span>
+          <span id="current-view-title" class="text-sm font-medium text-white"
+            >Mission Control</span
+          >
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative group">
+            <button
+              class="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
+            >
+              <i data-lucide="globe" class="w-4 h-4 text-blue-500"></i>
+              <span>Target: Global</span>
+              <i data-lucide="chevron-down" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <div id="content-area" class="flex-1 overflow-y-auto p-6 relative z-0">
+        <!-- VIEW: STUDIO (Assets) -->
+        <div id="view-studio" class="space-y-6 animate-fade-in">
+          <div class="glass-panel rounded-xl p-6 border border-white/10">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold flex items-center gap-2">
+                <i data-lucide="folder-search" class="text-blue-500"></i>
+                Media Vault (Local)
+              </h3>
+              <span
+                class="text-xs bg-blue-500/10 text-blue-400 px-2 py-1 rounded border border-blue-500/20"
+                >Ready to Process</span
+              >
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <!-- Asset 1: TI-GUY -->
+              <div
+                class="asset-card p-3 rounded-lg bg-black/40 border border-white/5 cursor-pointer transition-all"
+                onclick="selectAsset('TI-GUY_NEW_SHARP_1765502209998.jpg')"
+              >
+                <div
+                  class="aspect-video bg-gray-800 rounded mb-2 overflow-hidden relative group"
+                >
+                  <img
+                    src="attached_assets/TI-GUY_NEW_SHARP_1765502209998.jpg"
+                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  />
+                  <div
+                    class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50"
+                  >
+                    <i data-lucide="scan-eye" class="w-8 h-8 text-white"></i>
+                  </div>
+                </div>
+                <p class="text-xs text-gray-300 font-mono truncate">
+                  TI-GUY.jpg
+                </p>
+              </div>
+
+              <!-- Asset 2: Dashboard -->
+              <div
+                class="asset-card p-3 rounded-lg bg-black/40 border border-white/5 cursor-pointer transition-all"
+                onclick="selectAsset('dashboard_z_1765502156582.jpg')"
+              >
+                <div
+                  class="aspect-video bg-gray-800 rounded mb-2 overflow-hidden relative group"
+                >
+                  <img
+                    src="attached_assets/dashboard_z_1765502156582.jpg"
+                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  />
+                </div>
+                <p class="text-xs text-gray-300 font-mono truncate">
+                  dashboard_z.jpg
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: VIDEO STUDIO -->
+        <div
+          id="view-video"
+          class="hidden h-full flex flex-col glass-panel rounded-xl overflow-hidden"
+        >
+          <!-- Video Monitor -->
+          <div
+            class="flex-1 bg-black/50 flex items-center justify-center relative border-b border-white/10"
+          >
+            <div
+              class="text-center p-8 border-2 border-dashed border-white/10 rounded-xl hover:border-blue-500/50 transition-colors cursor-pointer"
+            >
+              <i
+                data-lucide="film"
+                class="w-12 h-12 text-gray-600 mx-auto mb-4"
+              ></i>
+              <h3 class="text-lg font-bold text-gray-300">Video Ingest</h3>
+              <p class="text-sm text-gray-500">Drag & Drop .MP4 or .MOV here</p>
+              <p class="text-xs text-blue-500 mt-2">
+                Processed by NVIDIA Tesla T4
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: EXPRESSION (Chat) -->
+        <div
+          id="view-expression"
+          class="hidden h-full flex flex-col glass-panel rounded-xl overflow-hidden"
+        >
+          <div
+            class="p-4 border-b border-white/10 flex justify-between items-center bg-black/20"
+          >
+            <div class="flex items-center gap-2">
+              <div
+                class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"
+              ></div>
+              <span class="font-mono text-sm text-purple-400"
+                >DeepSeek Brain + Gemma Core</span
+              >
+            </div>
+          </div>
+          <div class="flex-1 p-6 overflow-y-auto space-y-4" id="chat-history">
+            <div class="flex gap-4">
+              <div
+                class="w-8 h-8 rounded bg-purple-600/20 flex items-center justify-center flex-shrink-0 text-purple-400"
+              >
+                <i data-lucide="brain-circuit" class="w-4 h-4"></i>
+              </div>
+              <div class="space-y-1">
+                <p class="text-sm font-bold text-purple-400">Colony Brain</p>
+                <p class="text-sm text-gray-300">
+                  DeepSeek Nucleus Active. QA Firewall Enabled. Ready for
+                  prompts.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="p-4 bg-black/40 border-t border-white/10">
+            <div class="relative">
+              <input
+                type="text"
+                id="chat-input"
+                placeholder="Ask the Colony to generate copy..."
+                class="w-full bg-black/50 border border-white/10 rounded-lg pl-4 pr-12 py-3 text-sm focus:outline-none focus:border-blue-500/50 text-white"
+                onkeypress="if (event.key === 'Enter') sendChat();"
+              />
+              <button
+                onclick="sendChat()"
+                class="absolute right-2 top-2 p-1 bg-blue-600 hover:bg-blue-700 rounded transition-colors text-white"
+              >
+                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      lucide.createIcons();
+
+      const KERNEL_URL = "http://localhost:3000"; // Standard Kernel Port
+      let isKernelOnline = false;
+
+      // 1. HEARTBEAT SYSTEM
+      async function checkKernelHeartbeat() {
+        try {
+          // In a real scenario we fetch /health, here we just assume the port is open if fetch works
+          // We use mode: 'no-cors' to allow the check even if strict CORS is on, just to see if it's alive
+          await fetch(KERNEL_URL, { mode: "no-cors" });
+          setOnline(true);
+        } catch (e) {
+          setOnline(false);
+        }
+      }
+
+      function setOnline(online) {
+        isKernelOnline = online;
+        const dot = document.getElementById("status-dot");
+        const text = document.getElementById("status-text");
+
+        if (online) {
+          dot.className = "w-2 h-2 rounded-full status-online";
+          text.innerText = "KERNEL: ONLINE";
+          text.className = "text-xs font-mono text-emerald-400";
+        } else {
+          dot.className = "w-2 h-2 rounded-full status-offline";
+          text.innerText = "KERNEL: OFFLINE";
+          text.className = "text-xs font-mono text-red-500";
+        }
+      }
+
+      // Poll every 5 seconds
+      setInterval(checkKernelHeartbeat, 5000);
+      checkKernelHeartbeat(); // Initial check
+
+      // 2. CHAT SYSTEM
+      async function sendChat() {
+        const input = document.getElementById("chat-input");
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        // Add User Message
+        addToChat("User", msg, "user");
+        input.value = "";
+
+        if (!isKernelOnline) {
+          addToChat(
+            "System",
+            '❌ Kernel is offline. Run "npm run dev" in terminal.',
+            "system"
+          );
+          return;
+        }
+
+        try {
+          // Sending to Kernel
+          addToChat("System", "Thinking...", "system-loading");
+
+          // Note: You need to implement the /api/chat route in your server.ts
+          // or use the existing tool endpoint
+          const response = await fetch(`${KERNEL_URL}/api/chat`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg }),
+          });
+
+          const data = await response.json();
+
+          // Remove loading
+          document.getElementById("system-loading")?.remove();
+
+          addToChat("Colony Brain", data.reply || "Command processed.", "ai");
+        } catch (e) {
+          document.getElementById("system-loading")?.remove();
+          addToChat("System", `Error: ${e.message}`, "error");
+        }
+      }
+
+      function addToChat(name, text, type) {
+        const history = document.getElementById("chat-history");
+        const div = document.createElement("div");
+        div.className = "flex gap-4 animate-fade-in";
+        if (type === "system-loading") div.id = "system-loading";
+
+        let icon = "user";
+        let color = "text-gray-300";
+        let bg = "bg-gray-700/50";
+
+        if (type === "ai") {
+          icon = "brain-circuit";
+          color = "text-purple-400";
+          bg = "bg-purple-600/20";
+        }
+        if (type === "system" || type === "error") {
+          icon = "alert-circle";
+          color = "text-red-400";
+          bg = "bg-red-900/20";
+        }
+
+        div.innerHTML = `
+                <div class="w-8 h-8 rounded ${bg} flex items-center justify-center flex-shrink-0 ${color}">
+                    <i data-lucide="${icon}" class="w-4 h-4"></i>
+                </div>
+                <div class="space-y-1">
+                    <p class="text-sm font-bold ${color}">${name}</p>
+                    <p class="text-sm text-gray-300">${text}</p>
+                </div>
+            `;
+        history.appendChild(div);
+        history.scrollTop = history.scrollHeight;
+        lucide.createIcons();
+      }
+
+      // Navigation Logic
+      function switchTab(tabId) {
+        document.querySelectorAll(".nav-item").forEach((el) => {
+          el.classList.remove(
+            "bg-blue-600/10",
+            "text-blue-400",
+            "border",
+            "border-blue-500/20"
+          );
+          el.classList.add("text-gray-400");
+        });
+        document
+          .getElementById(`nav-${tabId}`)
+          .classList.add(
+            "bg-blue-600/10",
+            "text-blue-400",
+            "border",
+            "border-blue-500/20"
+          );
+        document
+          .querySelectorAll("#content-area > div")
+          .forEach((el) => el.classList.add("hidden"));
+        document.getElementById(`view-${tabId}`).classList.remove("hidden");
+
+        const titles = {
+          studio: "Mission Control",
+          video: "Video Studio (T4 GPU)",
+          expression: "Expression Core",
+        };
+        document.getElementById("current-view-title").innerText = titles[tabId];
+      }
+
+      async function selectAsset(name) {
+        if (!isKernelOnline) {
+          alert("⚠️ Kernel Offline. Cannot analyze asset.");
+          return;
+        }
+
+        addToChat("System", `Requesting analysis for: ${name}...`, "system");
+
+        try {
+          const response = await fetch(`${KERNEL_URL}/api/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ asset: name }),
+          });
+
+          const data = await response.json();
+          addToChat("Colony Brain", data.analysis || "Analysis complete.", "ai");
+        } catch (e) {
+          addToChat("System", `Analysis Error: ${e.message}`, "error");
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,4 +1,8 @@
 import "./preload.js";
+// [SSL SECURITY BYPASS] Required for development to allow the server to connect to Supabase/Railway certificates
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes.js";

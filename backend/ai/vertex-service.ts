@@ -14,6 +14,7 @@ import { SpeechClient, protos } from "@google-cloud/speech";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { logger } from "../utils/logger.js";
 import { traceExternalAPI, addSpanAttributes } from "../tracer.js";
+import { fal } from "@fal-ai/client";
 
 // Configuration
 const project =
@@ -22,7 +23,12 @@ const location = process.env.GOOGLE_CLOUD_REGION || "us-central1";
 const apiKey = process.env.GOOGLE_API_KEY || process.env.VERTEX_API_KEY;
 
 // Initialize Vertex AI with proper authentication
-let vertexAIConfig: any = { project, location };
+const vertexAIConfig: any = { project, location };
+
+// Configure FAL
+if (process.env.FAL_API_KEY) {
+  fal.config({ credentials: process.env.FAL_API_KEY });
+}
 
 if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
   try {
@@ -241,7 +247,7 @@ Context: Zyeuté is "Branché sur le monde, enraciné ici."`;
         });
 
         // Prepare content parts
-        let parts: any[] = [{ text: prompt }];
+        const parts: any[] = [{ text: prompt }];
 
         if (client === "vertex") {
           // Vertex AI format
@@ -493,9 +499,48 @@ export async function transcribeAudio(
 export async function generateImage(
   request: ImageGenerationRequest,
 ): Promise<ImageGenerationResponse> {
-  const { prompt, aspectRatio = "1:1", style, language } = request;
+  const { prompt, aspectRatio = "1:1", style } = request;
 
-  // Placeholder implementation
+  if (process.env.FAL_API_KEY) {
+    try {
+      logger.info(
+        `[VertexService] Generating real image with FAL: ${prompt.substring(0, 50)}`,
+      );
+
+      const result = await fal.subscribe("fal-ai/flux/schnell", {
+        input: {
+          prompt: prompt + (style ? `, style: ${style}` : ""),
+          image_size:
+            aspectRatio === "9:16"
+              ? "portrait_4_3"
+              : aspectRatio === "16:9"
+                ? "landscape_4_3"
+                : "square",
+          num_inference_steps: 4,
+        },
+        logs: true,
+      });
+
+      const imageUrl = (result.data as any)?.images?.[0]?.url;
+      if (imageUrl) {
+        return {
+          imageUrl,
+          prompt,
+          metadata: {
+            aspectRatio,
+            style,
+            generatedAt: new Date().toISOString(),
+          },
+        };
+      }
+    } catch (error: any) {
+      logger.error(
+        `[VertexService] FAL Image generation failed: ${error.message}`,
+      );
+    }
+  }
+
+  // Placeholder fallback
   return {
     imageUrl: `https://via.placeholder.com/512x512?text=${encodeURIComponent(prompt.substring(0, 50))}`,
     prompt,
