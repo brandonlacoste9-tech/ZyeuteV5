@@ -131,7 +131,7 @@ export default function Premium() {
               </span>
             </div>
             <p className="text-leather-300 mt-4">
-              Merci de supporter Zyeuté! 🇨🇦⚜️
+              Merci de supporter Zyeuté! ⚜️
             </p>
           </div>
         )}
@@ -147,9 +147,8 @@ export default function Premium() {
             return (
               <div
                 key={tier.id}
-                className={`leather-card rounded-2xl p-6 stitched relative overflow-hidden transition-all hover:scale-105 ${
-                  tier.popular ? "ring-2 ring-gold-500 glow-gold" : ""
-                }`}
+                className={`leather-card rounded-2xl p-6 stitched relative overflow-hidden transition-all hover:scale-105 ${tier.popular ? "ring-2 ring-gold-500" : ""
+                  }`}
               >
                 {/* Popular Badge */}
                 {tier.popular && (
@@ -160,7 +159,7 @@ export default function Premium() {
 
                 {/* Tier Icon */}
                 <div
-                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4 glow-gold-subtle`}
+                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4`}
                 >
                   <span className="text-3xl">{tier.emoji}</span>
                 </div>
@@ -203,13 +202,12 @@ export default function Premium() {
                     handleSubscribe(tier.id);
                   }}
                   disabled={isCurrentTier}
-                  className={`w-full py-3 rounded-xl font-bold transition-all ${
-                    isCurrentTier
+                  className={`w-full py-3 rounded-xl font-bold transition-all ${isCurrentTier
                       ? "bg-leather-700 text-leather-400 cursor-not-allowed"
                       : tier.id === "gold"
-                        ? "btn-gold glow-gold"
+                        ? "btn-gold border-gold-500"
                         : "btn-leather hover:btn-gold"
-                  }`}
+                    }`}
                 >
                   {isCurrentTier
                     ? "✓ Ton plan actuel"
@@ -393,7 +391,7 @@ export default function Premium() {
         <p className="flex items-center justify-center gap-2">
           <span className="text-gold-500">⚜️</span>
           <span>Supporte les créateurs québécois</span>
-          <span className="text-gold-500">🇨🇦</span>
+          <span className="text-gold-500">⚜️</span>
         </p>
       </div>
 

@@ -16,6 +16,7 @@ interface TikTokVideoPlayerProps {
   className?: string;
   style?: React.CSSProperties;
   priority?: boolean;
+  preload?: "auto" | "metadata" | "none";
   onError?: (error: Error) => void;
   onProgress?: (progress: number) => void;
   onLoaded?: () => void;
@@ -30,6 +31,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
   className = "",
   style,
   priority = false,
+  preload = "metadata",
   onError,
   onProgress,
   onLoaded,
@@ -68,15 +70,21 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
     const video = videoRef.current;
     if (!video || !autoPlay || hasError) return;
 
-    const handleCanPlay = () => {
-      video.play().catch(() => {
-        // Autoplay blocked - wait for user interaction
+    const playVideo = () => {
+      video.play().catch((err) => {
+        console.warn("[TikTokVideoPlayer] Autoplay blocked:", err);
         setIsPlaying(false);
       });
     };
 
-    video.addEventListener('canplay', handleCanPlay, { once: true });
-    return () => video.removeEventListener('canplay', handleCanPlay);
+    // If already buffered enough, play right away
+    if (video.readyState >= 3) {
+      playVideo();
+    } else {
+      // Wait for it to become playable
+      video.addEventListener('canplay', playVideo, { once: true });
+      return () => video.removeEventListener('canplay', playVideo);
+    }
   }, [autoPlay, hasError]);
 
   // Monitor buffer progress
@@ -218,7 +226,7 @@ export const TikTokVideoPlayer: React.FC<TikTokVideoPlayerProps> = ({
         x5-playsinline="true"
         x5-video-player-type="h5"
         x5-video-player-fullscreen="false"
-        preload={priority ? "auto" : "metadata"}
+        preload={preload}
         disablePictureInPicture
         disableRemotePlayback
         className="absolute inset-0 w-full h-full object-cover"

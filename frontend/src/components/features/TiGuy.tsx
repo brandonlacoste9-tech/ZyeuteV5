@@ -231,9 +231,9 @@ export const TiGuy: React.FC = () => {
     }, 1000);
   }, []);
 
-    // Listen for Hive Events (Q-emplois, AdGenXAI)
+  // Listen for Hive Events (Q-emplois, AdGenXAI)
   useEffect(() => {
-    const unsubscribe = colonyLink.on("hive_event", (event: any) => {
+    const handler = (event: any) => {
       console.log("Hive event received:", event);
 
       // Notification visuelle rapide dans le chat
@@ -248,314 +248,384 @@ export const TiGuy: React.FC = () => {
       // Si priorite haute, Ti-Guy prend la parole pour l'annoncer
       if (event.payload.priority === 'high' && !isSpeaking) {
         PhysicalFeedback.vibrateMomentum();
-        PhysicalFeedback.triggerStrobe(5000);
+        (PhysicalFeedback as any).triggerStrobe?.(5000);
         handleVoiceAction(null as any, `Heille! Une nouvelle de la Ruche: ${event.payload.message}`);
       }
-    });
+    };
+
+    (colonyLink as any).on("hive_event", handler);
 
     return () => {
-      unsubscribe();
+      if (typeof (colonyLink as any).off === 'function') {
+        (colonyLink as any).off("hive_event", handler);
+      }
     };
   }, [isSpeaking]);
 
-// Initialize with greeting
-useEffect(() => {
-  if (isOpen && messages.length === 0) {
-    setTimeout(() => {
-      addTiGuyMessage("greeting");
-    }, 500);
-  }
-}, [isOpen, messages.length, addTiGuyMessage]);
-
-// Handle user message - now uses DeepSeek AI with enhanced actions
-const handleSendMessage = async (text?: string, forceAction?: string) => {
-  const messageText = text || inputText.trim();
-  if (!messageText) return;
-
-  // Add user message
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    text: messageText,
-    sender: "user",
-    timestamp: new Date(),
-  };
-  setMessages((prev) => [...prev, userMessage]);
-  setInputText("");
-
-  // Show typing indicator
-  setIsTyping(true);
-  setGenerating(true);
-  setProgress(0);
-
-  const progressInterval = setInterval(() => {
-    setProgress((prev) => Math.min(prev + 5, 90));
-  }, 200);
-
-  try {
-    // Check if this is an enhanced action request
-    const actionType =
-      forceAction || tiguyActionsService.detectActionType(messageText);
-
-    if (actionType) {
-      // Handle enhanced actions (image gen, browser, etc.)
-      const actionResult = await tiguyActionsService.smartAction(
-        messageText,
-        actionType,
-      );
-
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: actionResult.response,
-        sender: "tiguy",
-        timestamp: new Date(),
-        imageUrl: actionResult.imageUrl,
-        actionType: actionResult.action,
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
-    } else {
-      // Standard chat - Call DeepSeek AI via backend
-      const serializedHistory = messages.slice(-10).map((msg) => ({
-        text: msg.text,
-        sender: msg.sender,
-      }));
-
-      const response = await fetch("/api/ai/tiguy-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          message: messageText,
-          conversationHistory: serializedHistory,
-        }),
-      });
-
-      const data = await response.json();
-
-      // Validate AI response
-      const validatedData = TiGuyChatResponseSchema.safeParse(data);
-
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      const aiResponse = validatedData.success
-        ? validatedData.data.response
-        : data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫";
-
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        text: aiResponse,
-        sender: "tiguy",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
+  // Initialize with greeting
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setTimeout(() => {
+        addTiGuyMessage("greeting");
+      }, 500);
     }
-  } catch (error) {
-    clearInterval(progressInterval);
-    console.error("Ti-Guy API error:", error);
+  }, [isOpen, messages.length, addTiGuyMessage]);
 
-    // Show error message instead of silent fallback
-    const newMessage: Message = {
+  // Handle user message - now uses DeepSeek AI with enhanced actions
+  const handleSendMessage = async (text?: string, forceAction?: string) => {
+    const messageText = text || inputText.trim();
+    if (!messageText) return;
+
+    // Add user message
+    const userMessage: Message = {
       id: Date.now().toString(),
-      text: "Oups, j'ai eu un p'tit problème de connexion là! 🦫 Réessaie dans une minute, tsé?",
-      sender: "tiguy",
+      text: messageText,
+      sender: "user",
       timestamp: new Date(),
     };
-    setMessages((prev) => [...prev, newMessage]);
-  } finally {
-    setIsTyping(false);
-    setGenerating(false);
-    setTimeout(() => setProgress(0), 500);
-  }
-};
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
 
-// Handle quick action
-const handleQuickAction = (key: string, label: string) => {
-  handleSendMessage(label);
-};
-
-// Handle enhanced action (image gen, search, etc.)
-const handleEnhancedAction = async (
-  actionKey: string,
-  actionType: string,
-) => {
-  if (actionKey === "ideas") {
-    // Get image ideas
+    // Show typing indicator
     setIsTyping(true);
     setGenerating(true);
-    setProgress(50);
+    setProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + 5, 90));
+    }, 200);
 
     try {
-      const ideas = await tiguyActionsService.getImageIdeas();
-      setProgress(100);
+      // Check if this is an enhanced action request
+      const actionType =
+        forceAction || tiguyActionsService.detectActionType(messageText);
 
+      if (actionType) {
+        // Handle enhanced actions (image gen, browser, etc.)
+        const actionResult = await tiguyActionsService.smartAction(
+          messageText,
+          actionType,
+        );
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text: actionResult.response,
+          sender: "tiguy",
+          timestamp: new Date(),
+          imageUrl: actionResult.imageUrl,
+          actionType: actionResult.action,
+        };
+
+        setMessages((prev) => [...prev, newMessage]);
+      } else {
+        // Standard chat - Call DeepSeek AI via backend
+        const serializedHistory = messages.slice(-10).map((msg) => ({
+          text: msg.text,
+          sender: msg.sender,
+        }));
+
+        const response = await fetch("/api/ai/tiguy-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            message: messageText,
+            conversationHistory: serializedHistory,
+          }),
+        });
+
+        const data = await response.json();
+
+        // Validate AI response
+        const validatedData = TiGuyChatResponseSchema.safeParse(data);
+
+        clearInterval(progressInterval);
+        setProgress(100);
+
+        const aiResponse = validatedData.success
+          ? validatedData.data.response
+          : data.error || "Oups! J'ai eu un petit bug. Réessaie! 🦫";
+
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text: aiResponse,
+          sender: "tiguy",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, newMessage]);
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error("Ti-Guy API error:", error);
+
+      // Show error message instead of silent fallback
       const newMessage: Message = {
         id: Date.now().toString(),
-        text:
-          ideas.response +
-          "\n\n" +
-          ideas.ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n"),
+        text: "Oups, j'ai eu un p'tit problème de connexion là! 🦫 Réessaie dans une minute, tsé?",
         sender: "tiguy",
         timestamp: new Date(),
-        actionType: "ideas",
       };
       setMessages((prev) => [...prev, newMessage]);
-    } catch (error) {
-      console.error("Ideas error:", error);
     } finally {
       setIsTyping(false);
       setGenerating(false);
       setTimeout(() => setProgress(0), 500);
     }
-  } else if (actionKey === "avatar") {
-    // Prompt user for avatar description
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: "Décris-moi ton avatar! Par exemple: 'un castor cool avec des lunettes de soleil' ou 'une fille avec des cheveux bleus style anime' 🎨🦫",
-      sender: "tiguy",
-      timestamp: new Date(),
-      actionType: "avatar-prompt",
-    };
-    setMessages((prev) => [...prev, newMessage]);
-  } else if (actionKey === "image") {
-    // Prompt user for image prompt
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: "Qu'est-ce que tu veux que je dessine? Décris-moi ton image! 🎨",
-      sender: "tiguy",
-      timestamp: new Date(),
-      actionType: "image-prompt",
-    };
-    setMessages((prev) => [...prev, newMessage]);
-  } else if (actionKey === "search") {
-    // Prompt user for search query
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: "Qu'est-ce que tu veux que je cherche sur le web? 🔍",
-      sender: "tiguy",
-      timestamp: new Date(),
-      actionType: "search-prompt",
-    };
-    setMessages((prev) => [...prev, newMessage]);
-  } else if (actionKey === "knowledge") {
-    // Prompt user for knowledge search
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      text: "Quelle question as-tu sur Zyeuté ou mes archives? Je vais chercher dans mes docs! 📚",
-      sender: "tiguy",
-      timestamp: new Date(),
-      actionType: "knowledge-prompt",
-    };
-    setMessages((prev) => [...prev, newMessage]);
-  }
-};
+  };
 
-return (
-  <>
-    {/* Floating button removed - using ChatButton component instead */}
-    {/* The ChatButton opens ChatModal which uses TiGuy chat functionality */}
+  // Handle quick action
+  const handleQuickAction = (key: string, label: string) => {
+    handleSendMessage(label);
+  };
 
-    {/* Chat window - Luxury Leather Emblem Design */}
-    {isOpen && (
-      <div
-        className="fixed bottom-24 right-4 z-[60] w-80 max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(135deg, #1a1512 0%, #0d0a08 50%, #1a1512 100%)",
-          border: "3px solid #4a3b22",
-          boxShadow:
-            "0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(255, 191, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
-        }}
-      >
-        {/* Header - Emblem Style with Beaver Logo */}
+  // Handle enhanced action (image gen, search, etc.)
+  const handleEnhancedAction = async (
+    actionKey: string,
+    actionType: string,
+  ) => {
+    if (actionKey === "ideas") {
+      // Get image ideas
+      setIsTyping(true);
+      setGenerating(true);
+      setProgress(50);
+
+      try {
+        const ideas = await tiguyActionsService.getImageIdeas();
+        setProgress(100);
+
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          text:
+            ideas.response +
+            "\n\n" +
+            ideas.ideas.map((idea, i) => `${i + 1}. ${idea}`).join("\n"),
+          sender: "tiguy",
+          timestamp: new Date(),
+          actionType: "ideas",
+        };
+        setMessages((prev) => [...prev, newMessage]);
+      } catch (error) {
+        console.error("Ideas error:", error);
+      } finally {
+        setIsTyping(false);
+        setGenerating(false);
+        setTimeout(() => setProgress(0), 500);
+      }
+    } else if (actionKey === "avatar") {
+      // Prompt user for avatar description
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Décris-moi ton avatar! Par exemple: 'un castor cool avec des lunettes de soleil' ou 'une fille avec des cheveux bleus style anime' 🎨🦫",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "avatar-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "image") {
+      // Prompt user for image prompt
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Qu'est-ce que tu veux que je dessine? Décris-moi ton image! 🎨",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "image-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "search") {
+      // Prompt user for search query
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Qu'est-ce que tu veux que je cherche sur le web? 🔍",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "search-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "knowledge") {
+      // Prompt user for knowledge search
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Quelle question as-tu sur Zyeuté ou mes archives? Je vais chercher dans mes docs! 📚",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "knowledge-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    }
+  };
+
+  return (
+    <>
+      {/* Floating button removed - using ChatButton component instead */}
+      {/* The ChatButton opens ChatModal which uses TiGuy chat functionality */}
+
+      {/* Chat window - Luxury Leather Emblem Design */}
+      {isOpen && (
         <div
-          className="p-4 flex items-center justify-between relative"
-          style={{
-            background: "linear-gradient(180deg, #2d2218 0%, #1a1512 100%)",
-            borderBottom: "2px solid #4a3b22",
-          }}
-        >
-          <div className="flex items-center gap-3">
-            {/* Circular Emblem Avatar */}
-            <div
-              className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0"
-              style={{
-                border: "3px solid #B38600",
-                boxShadow:
-                  "0 0 15px rgba(255, 191, 0, 0.3), inset 0 0 10px rgba(0,0,0,0.5)",
-              }}
-            >
-              <img
-                src={tiGuyEmblem}
-                alt="Ti-Guy"
-                className={cn(
-                  "w-full h-full object-cover",
-                  isSpeaking && "animate-pulse scale-110"
-                )}
-                style={{ transition: "transform 0.3s ease" }}
-              />
-            </div>
-            <div>
-              <h3
-                className="font-bold text-lg"
-                style={{
-                  background:
-                    "linear-gradient(180deg, #FFD966 0%, #B38600 100%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  textShadow: "0 2px 4px rgba(0,0,0,0.5)",
-                }}
-              >
-                Ti-Guy
-              </h3>
-              <p
-                className="text-xs font-bold tracking-wider"
-                style={{ color: "#8B7355" }}
-              >
-                QUEBEC CA 🦫
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-2 rounded-full transition-colors"
-            style={{
-              background: "rgba(179, 134, 0, 0.2)",
-            }}
-          >
-            <svg
-              className="w-5 h-5"
-              style={{ color: "#B38600" }}
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Messages - Dark Leather Background */}
-        <div
-          className="h-96 overflow-y-auto p-4 space-y-3"
+          className="fixed bottom-24 right-4 z-[60] w-80 max-w-[calc(100vw-2rem)] rounded-2xl shadow-2xl overflow-hidden"
           style={{
             background:
-              "linear-gradient(180deg, #0d0a08 0%, #1a1512 50%, #0d0a08 100%)",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E")`,
+              "linear-gradient(135deg, #1a1512 0%, #0d0a08 50%, #1a1512 100%)",
+            border: "3px solid #4a3b22",
+            boxShadow:
+              "0 0 30px rgba(0,0,0,0.8), 0 0 15px rgba(255, 191, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
           }}
         >
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "flex gap-2",
-                message.sender === "user" ? "justify-end" : "justify-start",
-              )}
+          {/* Header - Emblem Style with Beaver Logo */}
+          <div
+            className="p-4 flex items-center justify-between relative"
+            style={{
+              background: "linear-gradient(180deg, #2d2218 0%, #1a1512 100%)",
+              borderBottom: "2px solid #4a3b22",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              {/* Circular Emblem Avatar */}
+              <div
+                className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0"
+                style={{
+                  border: "3px solid #B38600",
+                  boxShadow:
+                    "0 0 15px rgba(255, 191, 0, 0.3), inset 0 0 10px rgba(0,0,0,0.5)",
+                }}
+              >
+                <img
+                  src={tiGuyEmblem}
+                  alt="Ti-Guy"
+                  className={cn(
+                    "w-full h-full object-cover",
+                    isSpeaking && "animate-pulse scale-110"
+                  )}
+                  style={{ transition: "transform 0.3s ease" }}
+                />
+              </div>
+              <div>
+                <h3
+                  className="font-bold text-lg"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, #FFD966 0%, #B38600 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    textShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  Ti-Guy
+                </h3>
+                <p
+                  className="text-xs font-bold tracking-wider"
+                  style={{ color: "#8B7355" }}
+                >
+                  QUEBEC CA 🦫
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-2 rounded-full transition-colors"
+              style={{
+                background: "rgba(179, 134, 0, 0.2)",
+              }}
             >
-              {message.sender === "tiguy" && (
+              <svg
+                className="w-5 h-5"
+                style={{ color: "#B38600" }}
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Messages - Dark Leather Background */}
+          <div
+            className="h-96 overflow-y-auto p-4 space-y-3"
+            style={{
+              background:
+                "linear-gradient(180deg, #0d0a08 0%, #1a1512 50%, #0d0a08 100%)",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E")`,
+            }}
+          >
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  "flex gap-2",
+                  message.sender === "user" ? "justify-end" : "justify-start",
+                )}
+              >
+                {message.sender === "tiguy" && (
+                  <div
+                    className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
+                    style={{
+                      border: "2px solid #B38600",
+                      boxShadow: "0 0 8px rgba(255, 191, 0, 0.3)",
+                    }}
+                  >
+                    <img
+                      src={tiGuyEmblem}
+                      alt="Ti-Guy"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div
+                  className={cn(
+                    "max-w-[70%] p-3 rounded-2xl text-sm",
+                    message.sender === "user"
+                      ? "text-black font-medium"
+                      : "text-white",
+                  )}
+                  style={
+                    message.sender === "user"
+                      ? {
+                        background:
+                          "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
+                        boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
+                      }
+                      : {
+                        background:
+                          "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
+                        border: "1px solid #4a3b22",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                      }
+                  }
+                >
+                  {message.text}
+                  {/* Display generated image if present */}
+                  {message.imageUrl && (
+                    <div className="mt-2">
+                      <img
+                        src={message.imageUrl}
+                        alt="Generated by Ti-Guy"
+                        className="rounded-lg max-w-full h-auto"
+                        style={{
+                          border: "2px solid #B38600",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                        }}
+                      />
+                      <a
+                        href={message.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs mt-1 block hover:underline"
+                        style={{ color: "#B38600" }}
+                      >
+                        📥 Télécharger l'image
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex gap-2 items-center">
                 <div
                   className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
                   style={{
@@ -566,313 +636,247 @@ return (
                   <img
                     src={tiGuyEmblem}
                     alt="Ti-Guy"
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover",
+                      isSpeaking && "animate-pulse"
+                    )}
                   />
                 </div>
-              )}
-              <div
-                className={cn(
-                  "max-w-[70%] p-3 rounded-2xl text-sm",
-                  message.sender === "user"
-                    ? "text-black font-medium"
-                    : "text-white",
-                )}
-                style={
-                  message.sender === "user"
-                    ? {
-                      background:
-                        "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
-                      boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
-                    }
-                    : {
-                      background:
-                        "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
-                      border: "1px solid #4a3b22",
-                      boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
-                    }
-                }
-              >
-                {message.text}
-                {/* Display generated image if present */}
-                {message.imageUrl && (
-                  <div className="mt-2">
-                    <img
-                      src={message.imageUrl}
-                      alt="Generated by Ti-Guy"
-                      className="rounded-lg max-w-full h-auto"
-                      style={{
-                        border: "2px solid #B38600",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                      }}
-                    />
-                    <a
-                      href={message.imageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs mt-1 block hover:underline"
-                      style={{ color: "#B38600" }}
-                    >
-                      📥 Télécharger l'image
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isTyping && (
-            <div className="flex gap-2 items-center">
-              <div
-                className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0"
-                style={{
-                  border: "2px solid #B38600",
-                  boxShadow: "0 0 8px rgba(255, 191, 0, 0.3)",
-                }}
-              >
-                <img
-                  src={tiGuyEmblem}
-                  alt="Ti-Guy"
-                  className={cn(
-                    "w-full h-full object-cover",
-                    isSpeaking && "animate-pulse"
-                  )}
-                />
-              </div>
-              <div
-                className="p-3 rounded-2xl flex-1"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
-                  border: "1px solid #4a3b22",
-                }}
-              >
-                {generating && progress > 0 ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span style={{ color: "#B38600" }}>
-                        Ti-Guy réfléchit...
-                      </span>
-                      <span style={{ color: "#8B7355" }}>{progress}%</span>
-                    </div>
-                    <div
-                      className="h-2 rounded-full overflow-hidden"
-                      style={{
-                        background: "rgba(0,0,0,0.3)",
-                        border: "1px solid #4a3b22",
-                      }}
-                    >
+                <div
+                  className="p-3 rounded-2xl flex-1"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
+                    border: "1px solid #4a3b22",
+                  }}
+                >
+                  {generating && progress > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span style={{ color: "#B38600" }}>
+                          Ti-Guy réfléchit...
+                        </span>
+                        <span style={{ color: "#8B7355" }}>{progress}%</span>
+                      </div>
                       <div
-                        className="h-full transition-all duration-100 ease-out"
+                        className="h-2 rounded-full overflow-hidden"
                         style={{
-                          width: `${progress}%`,
-                          background:
-                            "linear-gradient(90deg, #B38600 0%, #FFD966 100%)",
-                          boxShadow: "0 0 10px rgba(255, 191, 0, 0.5)",
+                          background: "rgba(0,0,0,0.3)",
+                          border: "1px solid #4a3b22",
+                        }}
+                      >
+                        <div
+                          className="h-full transition-all duration-100 ease-out"
+                          style={{
+                            width: `${progress}%`,
+                            background:
+                              "linear-gradient(90deg, #B38600 0%, #FFD966 100%)",
+                            boxShadow: "0 0 10px rgba(255, 191, 0, 0.5)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1">
+                      <span
+                        className="w-2 h-2 rounded-full animate-bounce"
+                        style={{
+                          backgroundColor: "#B38600",
+                          animationDelay: "0ms",
+                        }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full animate-bounce"
+                        style={{
+                          backgroundColor: "#B38600",
+                          animationDelay: "150ms",
+                        }}
+                      />
+                      <span
+                        className="w-2 h-2 rounded-full animate-bounce"
+                        style={{
+                          backgroundColor: "#B38600",
+                          animationDelay: "300ms",
                         }}
                       />
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-1">
-                    <span
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{
-                        backgroundColor: "#B38600",
-                        animationDelay: "0ms",
-                      }}
-                    />
-                    <span
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{
-                        backgroundColor: "#B38600",
-                        animationDelay: "150ms",
-                      }}
-                    />
-                    <span
-                      className="w-2 h-2 rounded-full animate-bounce"
-                      style={{
-                        backgroundColor: "#B38600",
-                        animationDelay: "300ms",
-                      }}
-                    />
-                  </div>
-                )}
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick actions - Leather Buttons */}
+          {messages.length <= 2 && (
+            <div
+              className="p-3"
+              style={{
+                background: "linear-gradient(180deg, #1a1512 0%, #2d2218 100%)",
+                borderTop: "1px solid #4a3b22",
+              }}
+            >
+              <div className="flex flex-wrap gap-2 mb-2">
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action.key}
+                    onClick={() => handleQuickAction(action.key, action.label)}
+                    className="px-4 py-2 rounded-full text-xs font-medium transition-all hover:scale-105"
+                    style={{
+                      background: "rgba(26, 21, 18, 0.8)",
+                      border: "1px solid #B38600",
+                      color: "#B38600",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+              {/* Enhanced AI Actions */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-[#4a3b22]">
+                {ENHANCED_ACTIONS.map((action) => (
+                  <button
+                    key={action.key}
+                    onClick={() =>
+                      handleEnhancedAction(action.key, action.action)
+                    }
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #B38600 0%, #FFD966 100%)",
+                      color: "#1a1512",
+                      boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Quick actions - Leather Buttons */}
-        {messages.length <= 2 && (
+          {/* Input - Premium Gold Accent */}
           <div
             className="p-3"
             style={{
-              background: "linear-gradient(180deg, #1a1512 0%, #2d2218 100%)",
+              background: "linear-gradient(180deg, #2d2218 0%, #1a1512 100%)",
+              borderTop: "2px solid #4a3b22",
+              paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+            }}
+          >
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onFocus={() => {
+                  // Ensure visible on focus for mobile
+                  window.scrollTo(0, document.body.scrollHeight);
+                }}
+                placeholder="Pose une question..."
+                className="w-full px-4 py-3 rounded-xl text-sm transition-all"
+                style={{
+                  background: "rgba(0,0,0,0.4)",
+                  border: "1px solid #4a3b22",
+                  color: "#FFD966",
+                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={!inputText.trim()}
+                className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-transform"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
+                  boxShadow: "0 0 10px rgba(255, 191, 0, 0.3)",
+                }}
+              >
+                <svg
+                  className="w-5 h-5 text-black"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+
+              {/* 🎤 MICROPHONE SOUVERAIN */}
+              <button
+                type="button"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={stopRecording}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={cn(
+                  "p-3 rounded-full transition-all duration-300 relative group overflow-hidden",
+                  isRecording ? "scale-125" : "hover:scale-110"
+                )}
+                style={{
+                  background: isRecording
+                    ? "radial-gradient(circle, #FFD966 0%, #B38600 100%)"
+                    : "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
+                  border: isRecording ? "2px solid #FFD966" : "1px solid #4a3b22",
+                  boxShadow: isRecording
+                    ? "0 0 20px #FFD966, inset 0 0 10px rgba(0,0,0,0.5)"
+                    : "0 0 10px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Effet de lueur pulsante */}
+                {isRecording && (
+                  <div className="absolute inset-0 animate-ping opacity-30 bg-gold-400 rounded-full" />
+                )}
+
+                <svg
+                  className={cn(
+                    "w-6 h-6 transition-colors",
+                    isRecording ? "text-black" : "text-gold-500"
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
+                </svg>
+              </button>
+            </form>
+          </div>
+
+          {/* Quebec Pride Footer */}
+          <div
+            className="px-4 py-2"
+            style={{
+              background: "linear-gradient(180deg, #1a1512 0%, #0d0a08 100%)",
               borderTop: "1px solid #4a3b22",
             }}
           >
-            <div className="flex flex-wrap gap-2 mb-2">
-              {QUICK_ACTIONS.map((action) => (
-                <button
-                  key={action.key}
-                  onClick={() => handleQuickAction(action.key, action.label)}
-                  className="px-4 py-2 rounded-full text-xs font-medium transition-all hover:scale-105"
-                  style={{
-                    background: "rgba(26, 21, 18, 0.8)",
-                    border: "1px solid #B38600",
-                    color: "#B38600",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-            {/* Enhanced AI Actions */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-[#4a3b22]">
-              {ENHANCED_ACTIONS.map((action) => (
-                <button
-                  key={action.key}
-                  onClick={() =>
-                    handleEnhancedAction(action.key, action.action)
-                  }
-                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #B38600 0%, #FFD966 100%)",
-                    color: "#1a1512",
-                    boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
-                  }}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
+            <p
+              className="text-center text-xs flex items-center justify-center gap-1"
+              style={{ color: "#8B7355" }}
+            >
+              <span style={{ color: "#B38600" }}>⚜️</span>
+              <span>Powered by Quebec AI</span>
+              <span style={{ color: "#B38600" }}>🦫</span>
+            </p>
           </div>
-        )}
-
-        {/* Input - Premium Gold Accent */}
-        <div
-          className="p-3"
-          style={{
-            background: "linear-gradient(180deg, #2d2218 0%, #1a1512 100%)",
-            borderTop: "2px solid #4a3b22",
-            paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-          }}
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onFocus={() => {
-                // Ensure visible on focus for mobile
-                window.scrollTo(0, document.body.scrollHeight);
-              }}
-              placeholder="Pose une question..."
-              className="w-full px-4 py-3 rounded-xl text-sm transition-all"
-              style={{
-                background: "rgba(0,0,0,0.4)",
-                border: "1px solid #4a3b22",
-                color: "#FFD966",
-                boxShadow: "inset 0 2px 4px rgba(0,0,0,0.5)",
-              }}
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim()}
-              className="p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-transform"
-              style={{
-                background:
-                  "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
-                boxShadow: "0 0 10px rgba(255, 191, 0, 0.3)",
-              }}
-            >
-              <svg
-                className="w-5 h-5 text-black"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
-
-            {/* 🎤 MICROPHONE SOUVERAIN */}
-            <button
-              type="button"
-              onMouseDown={startRecording}
-              onMouseUp={stopRecording}
-              onMouseLeave={stopRecording}
-              onTouchStart={startRecording}
-              onTouchEnd={stopRecording}
-              className={cn(
-                "p-3 rounded-full transition-all duration-300 relative group overflow-hidden",
-                isRecording ? "scale-125" : "hover:scale-110"
-              )}
-              style={{
-                background: isRecording
-                  ? "radial-gradient(circle, #FFD966 0%, #B38600 100%)"
-                  : "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
-                border: isRecording ? "2px solid #FFD966" : "1px solid #4a3b22",
-                boxShadow: isRecording
-                  ? "0 0 20px #FFD966, inset 0 0 10px rgba(0,0,0,0.5)"
-                  : "0 0 10px rgba(0,0,0,0.3)",
-              }}
-            >
-              {/* Effet de lueur pulsante */}
-              {isRecording && (
-                <div className="absolute inset-0 animate-ping opacity-30 bg-gold-400 rounded-full" />
-              )}
-
-              <svg
-                className={cn(
-                  "w-6 h-6 transition-colors",
-                  isRecording ? "text-black" : "text-gold-500"
-                )}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
-            </button>
-          </form>
         </div>
-
-        {/* Quebec Pride Footer */}
-        <div
-          className="px-4 py-2"
-          style={{
-            background: "linear-gradient(180deg, #1a1512 0%, #0d0a08 100%)",
-            borderTop: "1px solid #4a3b22",
-          }}
-        >
-          <p
-            className="text-center text-xs flex items-center justify-center gap-1"
-            style={{ color: "#8B7355" }}
-          >
-            <span style={{ color: "#B38600" }}>⚜️</span>
-            <span>Powered by Quebec AI</span>
-            <span style={{ color: "#B38600" }}>🦫</span>
-          </p>
-        </div>
-      </div>
-    )}
-  </>
-);
+      )}
+    </>
+  );
 };
 
 export default TiGuy;

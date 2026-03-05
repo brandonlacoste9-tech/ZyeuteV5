@@ -187,7 +187,7 @@ export function useDeviceBattery() {
 
     let battery: any;
 
-    navigator.getBattery().then((bat) => {
+    (navigator as any).getBattery().then((bat: any) => {
       battery = bat;
       setLevel(bat.level);
       setIsCharging(bat.charging);

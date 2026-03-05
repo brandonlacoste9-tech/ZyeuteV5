@@ -5,10 +5,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
-import { 
-  Send, 
-  Paperclip, 
-  Mic, 
+import {
+  Send,
+  Paperclip,
+  Mic,
   MicOff,
   Image as ImageIcon,
   Lock,
@@ -38,7 +38,7 @@ import {
 // Components
 import { ChatControlCenter } from "./ChatControlCenter";
 import { ChatMediaUploader } from "./ChatMediaUploader";
-import { Avatar } from "./Avatar";
+import { Avatar } from "../Avatar";
 import { OVHCloudBadge } from "./OVHCloudBadge";
 
 // Voice recording hook
@@ -122,7 +122,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
 }) => {
   const { id: conversationId } = useParams<{ id: string }>();
   const { user } = useAuth();
-  
+
   // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
@@ -132,7 +132,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   const [conversation, setConversation] = useState<Conversation | undefined>(
     initialConversation
   );
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -167,14 +167,14 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   // Load messages on mount
   useEffect(() => {
     if (!conversationId && !conversation?.id) return;
-    
+
     loadMessages();
   }, [conversationId, conversation?.id]);
 
   const loadMessages = async () => {
     const id = conversationId || conversation?.id;
     if (!id) return;
-    
+
     setIsLoading(true);
     try {
       const msgs = await getMessages(id);
@@ -194,10 +194,10 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   // Send text message
   const handleSend = async () => {
     if (!inputText.trim() || !conversation?.id) return;
-    
+
     const text = inputText.trim();
     setInputText("");
-    
+
     try {
       await sendTextMessage(conversation.id, text);
       sendTypingStop(conversation.id);
@@ -209,7 +209,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   // Handle input changes (typing indicator)
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
-    
+
     if (conversation?.id && e.target.value) {
       sendTypingStart(conversation.id);
     }
@@ -218,21 +218,21 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   // Send voice message
   const handleSendVoice = async () => {
     if (!audioBlob || !conversation?.id) return;
-    
+
     try {
       // Upload voice file
       const { url, metadata } = await uploadChatFile(
         conversation.id,
         new File([audioBlob], "voice-message.webm", { type: "audio/webm" }),
-        () => {} // Progress callback
+        () => { } // Progress callback
       );
-      
+
       // Send as voice message
       await sendMediaMessage(conversation.id, "voice", url, {
         duration: recordingTime,
         ...metadata,
       });
-      
+
       clearRecording();
     } catch (err) {
       console.error("Failed to send voice:", err);
@@ -242,21 +242,21 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
   // Handle file upload
   const handleFileUpload = async (files: any[]) => {
     if (!conversation?.id) return;
-    
+
     for (const file of files) {
       try {
         const { url, metadata } = await uploadChatFile(
           conversation.id,
           file.file,
-          () => {}
+          () => { }
         );
-        
+
         await sendMediaMessage(conversation.id, file.type, url, metadata);
       } catch (err) {
         console.error("Failed to upload file:", err);
       }
     }
-    
+
     setShowUploader(false);
   };
 
@@ -293,13 +293,13 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
               ←
             </button>
           )}
-          
+
           <Avatar
             src={conversation.otherUser.avatarUrl}
             size="md"
             isVerified={conversation.otherUser.isVerified}
           />
-          
+
           <div>
             <h3 className="font-semibold text-white">
               {conversation.otherUser.displayName}
@@ -319,7 +319,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {conversation.encryptionEnabled && (
             <Lock className="w-4 h-4 text-green-400" />
@@ -330,7 +330,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
           <button className="p-2 hover:bg-white/5 rounded-full">
             <Video className="w-5 h-5 text-stone-400" />
           </button>
-          <button 
+          <button
             onClick={() => setShowControlCenter(true)}
             className="p-2 hover:bg-white/5 rounded-full"
           >
@@ -349,7 +349,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
           messages.map((msg, idx) => {
             const isMe = msg.senderId === user?.id;
             const isTI_GUY = msg.senderId === "00000000-0000-0000-0000-000000000001";
-            
+
             return (
               <div
                 key={msg.id || idx}
@@ -364,8 +364,8 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
                     isMe
                       ? "bg-gold-500 text-black"
                       : isTI_GUY
-                      ? "bg-purple-500/20 border border-purple-500/30 text-white"
-                      : "bg-stone-800 text-white"
+                        ? "bg-purple-500/20 border border-purple-500/30 text-white"
+                        : "bg-stone-800 text-white"
                   )}
                 >
                   {isTI_GUY && (
@@ -373,11 +373,11 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
                       <span>🦫</span> TI-GUY
                     </div>
                   )}
-                  
+
                   {msg.contentType === "text" && (
                     <p>{msg.contentText}</p>
                   )}
-                  
+
                   {msg.contentType === "image" && (
                     <img
                       src={msg.contentUrl}
@@ -385,11 +385,11 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
                       className="rounded-lg max-w-full"
                     />
                   )}
-                  
+
                   {msg.contentType === "voice" && (
                     <audio controls src={msg.contentUrl} className="max-w-full" />
                   )}
-                  
+
                   <div className="flex items-center justify-end gap-1 mt-1 text-xs opacity-60">
                     <span>{formatTime(msg.createdAt)}</span>
                     {isMe && (
@@ -451,7 +451,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
             >
               <Paperclip className="w-5 h-5 text-stone-400" />
             </button>
-            
+
             <input
               ref={inputRef}
               type="text"
@@ -461,14 +461,14 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
               placeholder="Écris un message..."
               className="flex-1 bg-stone-800 rounded-full px-4 py-3 text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-gold-500/50"
             />
-            
+
             <button
               onClick={startRecording}
               className="p-3 hover:bg-white/5 rounded-full"
             >
               <Mic className="w-5 h-5 text-stone-400" />
             </button>
-            
+
             <button
               onClick={handleSend}
               disabled={!inputText.trim()}
@@ -489,7 +489,7 @@ export const ChatZyeute: React.FC<ChatZyeuteProps> = ({
       <ChatControlCenter
         isOpen={showControlCenter}
         onClose={() => setShowControlCenter(false)}
-        conversation={conversation}
+        conversation={conversation as any}
         onUpdateSettings={(settings) => {
           setConversation((prev) => prev ? { ...prev, ...settings } : prev);
         }}

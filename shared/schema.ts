@@ -459,7 +459,7 @@ export const gifts = pgTable(
       .references(() => posts.id, { onDelete: "cascade" }),
     giftType: giftTypeEnum("gift_type").notNull(),
     amount: integer("amount").notNull(), // in cents
-    stripePaymentId: text("stripe_payment_id"),
+    stripePaymentId: text("stripe_payment_id").unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

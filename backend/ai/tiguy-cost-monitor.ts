@@ -63,10 +63,13 @@ class TIGuyCostMonitor {
   recordQuery(): { allowed: boolean; warning?: string } {
     // Check hard cap
     if (this.metrics.monthlyCost >= CRITICAL_THRESHOLD) {
-      console.error(`[TI-GUY Cost] HARD CAP REACHED: $${this.metrics.monthlyCost.toFixed(2)}`);
+      console.error(
+        `[TI-GUY Cost] HARD CAP REACHED: $${this.metrics.monthlyCost.toFixed(2)}`,
+      );
       return {
         allowed: false,
-        warning: "TI-GUY désactivé: limite de dépenses atteinte. Contacte l'admin.",
+        warning:
+          "TI-GUY désactivé: limite de dépenses atteinte. Contacte l'admin.",
       };
     }
 
@@ -77,10 +80,13 @@ class TIGuyCostMonitor {
     this.metrics.monthlyCost += COST_PER_QUERY;
 
     // Check warning threshold
-    if (this.metrics.monthlyCost >= WARNING_THRESHOLD && !this.alertsSent.has("warning")) {
+    if (
+      this.metrics.monthlyCost >= WARNING_THRESHOLD &&
+      !this.alertsSent.has("warning")
+    ) {
       this.alertsSent.add("warning");
       this.sendAlert("warning");
-      
+
       return {
         allowed: true,
         warning: `⚠️ ALERTE: TI-GUY a atteint $${this.metrics.monthlyCost.toFixed(2)} / $${WARNING_THRESHOLD} (${((this.metrics.monthlyCost / WARNING_THRESHOLD) * 100).toFixed(1)}%)`,
@@ -89,7 +95,10 @@ class TIGuyCostMonitor {
 
     // Check 90% threshold
     const ninetyPercent = WARNING_THRESHOLD * 0.9;
-    if (this.metrics.monthlyCost >= ninetyPercent && !this.alertsSent.has("ninety")) {
+    if (
+      this.metrics.monthlyCost >= ninetyPercent &&
+      !this.alertsSent.has("ninety")
+    ) {
       this.alertsSent.add("ninety");
       this.sendAlert("ninety");
     }
@@ -108,19 +117,13 @@ class TIGuyCostMonitor {
     };
 
     console.error(`[TI-GUY Cost Alert] ${messages[level]}`);
-    
+
+    let threshold = 0.9;
+    if (level === "warning") threshold = 1.0;
+    if (level === "critical") threshold = 1.25;
+
     // Send Slack/email notification
-    await sendCostAlert(
-      level,
-      "TI-GUY (Dialogflow)",
-      this.metrics.monthlyCost,
-      WARNING_THRESHOLD,
-      {
-        dailyQueries: this.metrics.dailyQueries,
-        monthlyQueries: this.metrics.monthlyQueries,
-        queriesUntilWarning: this.getReport().queriesUntilWarning,
-      }
-    );
+    await sendCostAlert(this.metrics.monthlyCost, WARNING_THRESHOLD, threshold);
   }
 
   /**
@@ -131,7 +134,9 @@ class TIGuyCostMonitor {
       ...this.metrics,
       percentOfCap: (this.metrics.monthlyCost / WARNING_THRESHOLD) * 100,
       remainingBudget: WARNING_THRESHOLD - this.metrics.monthlyCost,
-      queriesUntilWarning: Math.floor((WARNING_THRESHOLD - this.metrics.monthlyCost) / COST_PER_QUERY),
+      queriesUntilWarning: Math.floor(
+        (WARNING_THRESHOLD - this.metrics.monthlyCost) / COST_PER_QUERY,
+      ),
     };
   }
 
@@ -162,7 +167,7 @@ export function checkCostLimit(): { allowed: boolean; warning?: string } {
  */
 export function getSpendingDashboard() {
   const report = costMonitor.getReport();
-  
+
   return {
     currentSpending: report.monthlyCost.toFixed(2),
     cap: WARNING_THRESHOLD,
@@ -171,10 +176,11 @@ export function getSpendingDashboard() {
     queriesThisMonth: report.monthlyQueries,
     queriesToday: report.dailyQueries,
     estimatedQueriesLeft: report.queriesUntilWarning,
-    status: report.monthlyCost >= WARNING_THRESHOLD 
-      ? "warning" 
-      : report.percentOfCap >= 90 
-        ? "caution" 
-        : "healthy",
+    status:
+      report.monthlyCost >= WARNING_THRESHOLD
+        ? "warning"
+        : report.percentOfCap >= 90
+          ? "caution"
+          : "healthy",
   };
 }

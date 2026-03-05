@@ -76,13 +76,18 @@ if (!vertexAI && apiKey) {
 }
 
 // Helper to get a model from either client
-function getModel(modelName: string = "gemini-2.5-flash-lite", systemInstruction?: string) {
+function getModel(
+  modelName: string = "gemini-2.5-flash-lite",
+  systemInstruction?: string,
+) {
   if (vertexAI) {
     return {
       client: "vertex",
       model: vertexAI.getGenerativeModel({
         model: modelName,
-        systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+        systemInstruction: systemInstruction
+          ? { parts: [{ text: systemInstruction }] }
+          : undefined,
       }),
     };
   }
@@ -239,26 +244,28 @@ Context: Zyeuté is "Branché sur le monde, enraciné ici."`;
         let parts: any[] = [{ text: prompt }];
 
         if (client === "vertex") {
-           // Vertex AI format
-           if (imageUrl.startsWith("gs://")) {
-             parts.push({ fileData: { mimeType: "image/jpeg", fileUri: imageUrl } });
-           } else {
-             parts.push({ text: `Image URL: ${imageUrl}` });
-           }
-             // For Vertex, we call generateContent
-            const response = await (model as any).generateContent({
-              contents: [{ role: "user", parts }],
+          // Vertex AI format
+          if (imageUrl.startsWith("gs://")) {
+            parts.push({
+              fileData: { mimeType: "image/jpeg", fileUri: imageUrl },
             });
-            return response;
+          } else {
+            parts.push({ text: `Image URL: ${imageUrl}` });
+          }
+          // For Vertex, we call generateContent
+          const response = await (model as any).generateContent({
+            contents: [{ role: "user", parts }],
+          });
+          return response;
         } else {
-           // GenAI (Studio) format
-           // Note: Studio doesn't support gs:// directly or remote URLs easily in this simplified flow
-           // We'll pass the URL as text for the model to "imagine" or fetch if it can,
-           // or ideally we'd fetch the bytes. For now, we rely on the prompt context.
-            parts.push({ text: `Image Analysis Target: ${imageUrl}` });
+          // GenAI (Studio) format
+          // Note: Studio doesn't support gs:// directly or remote URLs easily in this simplified flow
+          // We'll pass the URL as text for the model to "imagine" or fetch if it can,
+          // or ideally we'd fetch the bytes. For now, we rely on the prompt context.
+          parts.push({ text: `Image Analysis Target: ${imageUrl}` });
 
-            const response = await (model as any).generateContent(parts);
-            return response;
+          const response = await (model as any).generateContent(parts);
+          return response;
         }
       },
     );
@@ -268,14 +275,13 @@ Context: Zyeuté is "Branché sur le monde, enraciné ici."`;
       const response = await result.response;
       text = response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
     } else {
-       // GenAI response object
-       text = result.response.text();
+      // GenAI response object
+      text = result.response.text();
     }
 
     // Sanitize JSON
     const jsonStr = text.replace(/```json|```/g, "").trim();
     return JSON.parse(jsonStr) as QuebecVideoMetadata;
-
   } catch (error: any) {
     logger.error(`[CaptioningBee] Error: ${error.message}`);
     return {
@@ -326,22 +332,22 @@ export async function generateWithTIGuy(
         });
 
         if (client === "vertex") {
-            const response = await (model as any).generateContent(fullMessage);
-            return response;
+          const response = await (model as any).generateContent(fullMessage);
+          return response;
         } else {
-            const response = await (model as any).generateContent(fullMessage);
-            return response;
+          const response = await (model as any).generateContent(fullMessage);
+          return response;
         }
       },
     );
 
     let text = "";
-     if (client === "vertex") {
-        const response = await result.response;
-        text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-     } else {
-        text = result.response.text();
-     }
+    if (client === "vertex") {
+      const response = await result.response;
+      text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } else {
+      text = result.response.text();
+    }
 
     // Detect language if auto
     const detectedLanguage =
@@ -385,12 +391,12 @@ export async function moderateContent(
 
     let text = "";
     if (client === "vertex") {
-        const result = await (model as any).generateContent(prompt);
-        const response = await result.response;
-        text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const result = await (model as any).generateContent(prompt);
+      const response = await result.response;
+      text = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
     } else {
-        const result = await (model as any).generateContent(prompt);
-        text = result.response.text();
+      const result = await (model as any).generateContent(prompt);
+      text = result.response.text();
     }
 
     // Parse JSON response
@@ -423,7 +429,10 @@ export async function transcribeAudio(
   language: "fr-CA" | "fr-FR" | "en-US" = "fr-CA",
 ): Promise<TranscriptionResult> {
   try {
-    if (!speechClient) throw new Error("Speech client not initialized (Requires Google Cloud Credentials)");
+    if (!speechClient)
+      throw new Error(
+        "Speech client not initialized (Requires Google Cloud Credentials)",
+      );
 
     const audio = {
       content: audioBuffer.toString("base64"),
@@ -513,12 +522,12 @@ export async function analyzeImage(
   try {
     // Use the video thumbnail analyzer for images too
     const result = await analyzeVideoThumbnail(imageUrl);
-    
+
     return {
-      tags: result.tags || [],
-      description: result.caption_fr || result.description || "",
-      location: result.location || options?.location,
-      vibe: result.vibe,
+      tags: (result as any).tags || [],
+      description: result.caption_fr || (result as any).description || "",
+      location: (result as any).location || options?.location,
+      vibe: (result as any).vibe,
     };
   } catch (error) {
     logger.error("[VertexAI] analyzeImage error:", error);

@@ -10,7 +10,7 @@ export const HIVE_CONFIG = {
   identity: {
     name: "Zyeuté",
     slogan: "Le radar de ton quartier",
-    giftEmoji: "🍁",
+    giftEmoji: "⚜️",
     primaryColor: "#E12127", // Quebec Red
   },
 } as const;

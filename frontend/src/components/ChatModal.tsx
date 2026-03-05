@@ -132,9 +132,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
       const responseText =
         typeof response === "string"
           ? response
-          : response.response ||
-            response.message ||
-            "Je n'ai pas de réponse pour ça, tsé?";
+          : (response as any).response ||
+          (response as any).message ||
+          "Je n'ai pas de réponse pour ça, tsé?";
       addMessage({ sender: "tiGuy", text: responseText });
     } catch (error: any) {
       console.error("Chat error:", error);

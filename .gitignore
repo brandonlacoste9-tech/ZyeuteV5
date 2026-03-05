@@ -71,3 +71,19 @@ tools/
 video-diag-output.txt
 .claude/
 .env*.local
+
+# Phase 4 Sweep Additions
+/*.sql
+/*.png
+*.tgz
+*.vsix
+*.mp4
+/test-*.js
+/test_*.js
+/verify-*.js
+/repair_db_schema*.js
+/check_db_schema*.js
+/1
+/Home.tsx
+/QUICK_START_CLAUDE_CODE.txt
+/.empty-commit-placeholder

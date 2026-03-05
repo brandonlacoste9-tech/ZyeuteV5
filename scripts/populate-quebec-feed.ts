@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * 🍁 Populate Quebec Feed
+ * ⚜️ Populate Quebec Feed
  * Adds high-quality Quebec-themed videos to the feed
  * Uses a mix of sample videos and AI generation
  */
@@ -34,7 +34,7 @@ const QUEBEC_VIDEOS = [
     reactions: 1200,
   },
   {
-    caption: "🍁 L'automne québécois est magique. Regarde ces couleurs! 🍂",
+    caption: "🌲 L'automne québécois est magique. Regarde ces couleurs! 🍂",
     content: "Forêt québécoise en automne",
     mediaUrl:
       "https://player.vimeo.com/external/434045526.sd.mp4?s=c27eecc69a77dbc4f0b8c8f6e8e7f8a9b0c1d2e3&profile_id=164&oauth2_token_id=57447761",
@@ -179,7 +179,7 @@ const QUEBEC_VIDEOS = [
   // Language & Identity
   {
     caption:
-      "🗣️ Le joual, c'est notre identité! Tabarnouche qu'on est fiers! 🍁",
+      "🗣️ Le joual, c'est notre identité! Tabarnouche qu'on est fiers! ⚜️",
     content: "Fierté québécoise",
     mediaUrl:
       "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
@@ -190,7 +190,7 @@ const QUEBEC_VIDEOS = [
   },
   {
     caption:
-      "⚜️ Fleurdelisé! Notre drapeau, notre fierté. Vive le Québec libre! 🍁",
+      "⚜️ Fleurdelisé! Notre drapeau, notre fierté. Vive le Québec libre! ⚜️",
     content: "Drapeau du Québec",
     mediaUrl:
       "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
@@ -202,7 +202,7 @@ const QUEBEC_VIDEOS = [
 ];
 
 async function populateFeed() {
-  console.log("🍁 Populating Zyeuté with Quebec Videos...\n");
+  console.log("⚜️ Populating Zyeuté with Quebec Videos...\n");
 
   try {
     // Get or create system user
@@ -212,7 +212,7 @@ async function populateFeed() {
         id: randomUUID(),
         username: "zyeute_quebec",
         email: "quebec@zyeute.com",
-        displayName: "Zyeuté Québec 🍁",
+        displayName: "Zyeuté Québec ⚜️",
         role: "citoyen",
       });
       systemUserId = systemUser.id;

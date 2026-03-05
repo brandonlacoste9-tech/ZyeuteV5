@@ -206,7 +206,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
         {/* Double Tap Fire Animation */}
         {showFireAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 animate-heart-pump">
-            <div className="text-[120px] drop-shadow-[0_0_30px_rgba(255,100,0,0.9)] animate-pulse">
+            <div className="text-[120px] animate-pulse">
               🔥
             </div>
           </div>
@@ -229,7 +229,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
             onClick={tap}
             className="relative"
           >
-            <div className="absolute inset-0 rounded-full border border-gold-500/50 blur-[2px]" />
+            <div className="absolute inset-0 rounded-full border border-gold-500/50" />
             <Avatar
               src={user.avatar_url}
               size="md"
@@ -246,7 +246,7 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
             >
               {user.display_name || user.username}
               {user.is_verified && (
-                <span className="text-gold-500 drop-shadow-[0_0_3px_rgba(255,191,0,0.8)]">
+                <span className="text-gold-500">
                   ✓
                 </span>
               )}
@@ -261,8 +261,8 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
 
           {/* Live Viewer Count */}
           {viewerCount > 0 && (
-            <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.4)]">
-              <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_white]" />
+            <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
               <span className="text-white text-[10px] font-bold uppercase tracking-wider">
                 {viewerCount} {viewerCount > 1 ? "Zyeuteurs" : "Zyeuteur"}
               </span>
@@ -339,16 +339,14 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${
-                isLiked ? "scale-110" : ""
-              }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
+                }`}
             >
               <div
-                className={`text-4xl transition-all ${
-                  isLiked
-                    ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                className={`text-4xl transition-all ${isLiked
+                    ? "animate-pulse"
                     : "grayscale opacity-80"
-                }`}
+                  }`}
               >
                 🔥
               </div>

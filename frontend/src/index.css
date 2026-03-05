@@ -8,32 +8,387 @@
 /* Edge Accent Text */
 .text-edge {
   color: var(--edge-color);
-  text-shadow: 
-    0 0 5px var(--edge-glow-soft),
-    0 0 10px var(--edge-glow-soft);
 }
 
 /* Edge Icon Glow */
 .icon-edge {
   color: var(--edge-color);
-  filter: drop-shadow(0 0 3px var(--edge-glow)) drop-shadow(0 0 6px var(--edge-glow-soft));
 }
 
 /* Edge Progress Bar */
 .edge-progress {
   background: linear-gradient(90deg, var(--edge-color), var(--edge-color));
-  box-shadow: 0 0 10px var(--edge-glow);
 }
 
 /* Color Theme Variants */
-[data-theme="gold"] { --edge-color: #C9A227; --edge-glow: rgba(201, 162, 39, 0.6); }
-[data-theme="blue"] { --edge-color: #0066CC; --edge-glow: rgba(0, 102, 204, 0.6); }
-[data-theme="red"] { --edge-color: #CC0000; --edge-glow: rgba(204, 0, 0, 0.6); }
-[data-theme="green"] { --edge-color: #00AA44; --edge-glow: rgba(0, 170, 68, 0.6); }
-[data-theme="purple"] { --edge-color: #8833CC; --edge-glow: rgba(136, 51, 204, 0.6); }
-[data-theme="pink"] { --edge-color: #CC3377; --edge-glow: rgba(204, 51, 119, 0.6); }
-[data-theme="orange"] { --edge-color: #FF6600; --edge-glow: rgba(255, 102, 0, 0.6); }
-[data-theme="teal"] { --edge-color: #00AAAA; --edge-glow: rgba(0, 170, 170, 0.6); }
+[data-theme="gold"] {
+  --edge-color: #c9a227;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="blue"] {
+  --edge-color: #0066cc;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="red"] {
+  --edge-color: #cc0000;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="green"] {
+  --edge-color: #00aa44;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="purple"] {
+  --edge-color: #8833cc;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="pink"] {
+  --edge-color: #cc3377;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="orange"] {
+  --edge-color: #ff6600;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="teal"] {
+  --edge-color: #00aaaa;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+
+/* ============================================
+   ⚜ CUIR LUXE — Luxury Leather Theme
+   Warm mahogany, antique gold, double stitching
+   ============================================ */
+[data-theme="leather"] {
+  --edge-color: #c5a055;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+
+  /* Leather palette */
+  --leather-bg: #1a0f0a;
+  --leather-surface: #3a2218;
+  --leather-raised: #4a3228;
+  --leather-gold: #c5a055;
+  --leather-stitch: rgba(197, 160, 85, 0.4);
+  --leather-text: #f0e6d3;
+  --leather-muted: #a89080;
+}
+
+/* Leather base styling */
+[data-theme="leather"] body,
+[data-theme="leather"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
+}
+
+/* Leather cards — double stitching + vignette */
+[data-theme="leather"] .rounded-xl,
+[data-theme="leather"] .rounded-2xl,
+[data-theme="leather"] [class*="card"] {
+  background: linear-gradient(
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
+}
+
+/* Gold stitching on cards */
+[data-theme="leather"] .rounded-xl::before,
+[data-theme="leather"] .rounded-2xl::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--leather-stitch);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Leather backgrounds for zinc-* colors */
+[data-theme="leather"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
+}
+[data-theme="leather"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
+}
+[data-theme="leather"] .bg-black {
+  background-color: var(--leather-bg) !important;
+}
+
+/* Leather text colors */
+[data-theme="leather"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather"] .text-gold-500,
+[data-theme="leather"] .text-gold-400 {
+  color: var(--leather-gold) !important;
+}
+
+/* Gold gradient buttons */
+[data-theme="leather"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather"] .to-gold-400 {
+  --tw-gradient-to: #d4b76a !important;
+}
+
+/* Leather border treatments */
+[data-theme="leather"] .border-zinc-800,
+[data-theme="leather"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+
+/* Leather input fields */
+[data-theme="leather"] input,
+[data-theme="leather"] textarea,
+[data-theme="leather"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+
+[data-theme="leather"] input:focus,
+[data-theme="leather"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(197, 160, 85, 0.3) !important;
+}
+
+/* Leather scrollbar */
+[data-theme="leather"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
+}
+
+/* Fleur-de-lis accent for leather theme */
+[data-theme="leather"] .text-edge::before,
+[data-theme="leather-green"] .text-edge::before,
+[data-theme="leather-purple"] .text-edge::before {
+  content: "⚜ ";
+  opacity: 0.7;
+}
+
+/* ============================================
+   🌲 CUIR FORÊT — Green Leather
+   Deep forest green, antique gold stitching
+   ============================================ */
+[data-theme="leather-green"] {
+  --edge-color: #7ec98a;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+  --leather-bg: #0a1a0f;
+  --leather-surface: #1a2e1a;
+  --leather-raised: #253d25;
+  --leather-gold: #7ec98a;
+  --leather-stitch: rgba(126, 201, 138, 0.4);
+  --leather-text: #d3f0d8;
+  --leather-muted: #80a888;
+}
+
+[data-theme="leather-green"] body,
+[data-theme="leather-green"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
+}
+
+[data-theme="leather-green"] .rounded-xl,
+[data-theme="leather-green"] .rounded-2xl,
+[data-theme="leather-green"] [class*="card"] {
+  background: linear-gradient(
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
+}
+
+[data-theme="leather-green"] .rounded-xl::before,
+[data-theme="leather-green"] .rounded-2xl::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--leather-stitch);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="leather-green"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-green"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
+}
+[data-theme="leather-green"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
+}
+[data-theme="leather-green"] .bg-black {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-green"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-green"] .text-gold-500,
+[data-theme="leather-green"] .text-gold-400 {
+  color: var(--leather-gold) !important;
+}
+[data-theme="leather-green"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather-green"] .to-gold-400 {
+  --tw-gradient-to: #a8ddb0 !important;
+}
+[data-theme="leather-green"] .border-zinc-800,
+[data-theme="leather-green"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+[data-theme="leather-green"] input,
+[data-theme="leather-green"] textarea,
+[data-theme="leather-green"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-green"] input:focus,
+[data-theme="leather-green"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(126, 201, 138, 0.3) !important;
+}
+[data-theme="leather-green"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather-green"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather-green"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
+}
+
+/* ============================================
+   👑 CUIR ROYAL — Purple Leather
+   Deep royal purple, silver-lavender stitching
+   ============================================ */
+[data-theme="leather-purple"] {
+  --edge-color: #b48ad4;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+  --leather-bg: #120a1a;
+  --leather-surface: #2a1a3a;
+  --leather-raised: #3a254a;
+  --leather-gold: #b48ad4;
+  --leather-stitch: rgba(180, 138, 212, 0.4);
+  --leather-text: #e8d3f0;
+  --leather-muted: #9880a8;
+}
+
+[data-theme="leather-purple"] body,
+[data-theme="leather-purple"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
+}
+
+[data-theme="leather-purple"] .rounded-xl,
+[data-theme="leather-purple"] .rounded-2xl,
+[data-theme="leather-purple"] [class*="card"] {
+  background: linear-gradient(
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
+}
+
+[data-theme="leather-purple"] .rounded-xl::before,
+[data-theme="leather-purple"] .rounded-2xl::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--leather-stitch);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="leather-purple"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-purple"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
+}
+[data-theme="leather-purple"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
+}
+[data-theme="leather-purple"] .bg-black {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-purple"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-purple"] .text-gold-500,
+[data-theme="leather-purple"] .text-gold-400 {
+  color: var(--leather-gold) !important;
+}
+[data-theme="leather-purple"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather-purple"] .to-gold-400 {
+  --tw-gradient-to: #cca8e8 !important;
+}
+[data-theme="leather-purple"] .border-zinc-800,
+[data-theme="leather-purple"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+[data-theme="leather-purple"] input,
+[data-theme="leather-purple"] textarea,
+[data-theme="leather-purple"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-purple"] input:focus,
+[data-theme="leather-purple"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(180, 138, 212, 0.3) !important;
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
+}
 
 /* ============================================
    VIDEO PERFORMANCE OPTIMIZATIONS
@@ -62,16 +417,16 @@ video {
   /* Hardware acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  
+
   /* Prevent layout shifts */
   will-change: transform;
-  
+
   /* Smooth rendering */
   image-rendering: -webkit-optimize-contrast;
-  
+
   /* Prevent default iOS styling */
   -webkit-tap-highlight-color: transparent;
-  
+
   /* Optimize for compositing */
   contain: layout style paint;
 }
@@ -95,7 +450,9 @@ video::-webkit-media-controls-enclosure {
 
 /* Smooth transitions for video switching */
 .video-transition {
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
 }
 
 /* Mobile-specific optimizations */

@@ -84,8 +84,8 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         (new URLSearchParams(window.location.search).get("debug") === "1" ||
           localStorage.getItem("debug") === "true")
       ) {
-        const muxCount = posts.filter((p) => p.mux_playback_id).length;
-        const withMedia = posts.filter((p) => p.media_url).length;
+        const muxCount = posts.filter((p: any) => p.mux_playback_id).length;
+        const withMedia = posts.filter((p: any) => p.media_url).length;
         console.log("[FeedDiagnostic]", {
           rawPosts: rawCount,
           afterFilter: posts.length,

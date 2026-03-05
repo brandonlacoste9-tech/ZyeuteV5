@@ -7,27 +7,16 @@ import { logger } from "@/lib/logger";
 
 const emailServiceLogger = logger.withContext("EmailService");
 
-// API Keys
-const deepSeekApiKey =
-  import.meta.env.VITE_DEEPSEEK_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export const generateMarketingEmail = async (
   prompt: string,
 ): Promise<{ subject: string; body: string }> => {
-  if (!deepSeekApiKey) {
-    // Mock response if no API key
-    return {
-      subject: "🔥 Nouvelles de Zyeuté!",
-      body: `<h1>Salut la gang!</h1><p>Voici ce qui se passe sur Zyeuté...</p><p>(Contenu généré par IA non disponible sans clé API)</p>`,
-    };
-  }
-
   try {
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetch(`${BACKEND_URL}/api/ai/proxy/deepseek`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${deepSeekApiKey}`,
       },
       body: JSON.stringify({
         model: "deepseek-chat",
@@ -46,10 +35,11 @@ export const generateMarketingEmail = async (
       }),
     });
 
-    if (!response.ok) throw new Error(`DeepSeek API error: ${response.status}`);
+    if (!response.ok)
+      throw new Error(`DeepSeek Proxy error: ${response.status}`);
 
     const data = await response.json();
-    const resultText = data.choices[0].message.content || "{}";
+    const resultText = data.choices?.[0]?.message?.content || "{}";
     return JSON.parse(resultText);
   } catch (error) {
     emailServiceLogger.error("Error generating email:", error);

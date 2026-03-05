@@ -221,4 +221,88 @@ router.post("/generate-video", requireAuth, async (req: any, res) => {
   }
 });
 
+// 8. Secure Proxies for Frontend AI Calls (preventing API keys exposure)
+router.post("/proxy/deepseek", async (req, res) => {
+  try {
+    const { model, messages, temperature, response_format, max_tokens } =
+      req.body;
+
+    // In production, grab key from process.env, NOT the client
+    const apiKey =
+      process.env.DEEPSEEK_API_KEY ||
+      process.env.GROQ_API_KEY ||
+      process.env.OLLAMA_API_KEY;
+
+    if (!apiKey) {
+      return res.status(503).json({ error: "Backend AI keys not configured" });
+    }
+
+    // Call actual DeepSeek API
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model || "deepseek-chat",
+        messages,
+        temperature: temperature || 0.8,
+        response_format,
+        max_tokens,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Upstream API error: ${response.status} ${err}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("[AI Proxy] DeepSeek error:", error.message);
+    res
+      .status(500)
+      .json({ error: "Backend proxy failed", message: error.message });
+  }
+});
+
+router.post("/proxy/gemini", async (req, res) => {
+  try {
+    const { prompt, model } = req.body;
+
+    // Server-side key
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res
+        .status(503)
+        .json({ error: "Backend Gemini key not configured" });
+    }
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model || "gemini-2.0-flash-exp"}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Upstream API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("[AI Proxy] Gemini error:", error.message);
+    res
+      .status(500)
+      .json({ error: "Backend proxy failed", message: error.message });
+  }
+});
+
 export default router;

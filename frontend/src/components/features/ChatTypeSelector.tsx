@@ -93,7 +93,6 @@ export const ChatTypeSelector: React.FC<ChatTypeSelectorProps> = ({
             0 4px 8px rgba(0,0,0,0.4),
             inset 0 1px 2px rgba(255,255,255,0.1)
           `,
-          ringColor: LEATHER.gold,
         }}
       >
         {/* Icon */}

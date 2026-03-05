@@ -30,103 +30,9 @@ import {
   useTIGuy,
 } from "@/components/tiguy";
 import { VideoDoctorDashboard } from "@/components/admin/VideoDoctorDashboard";
-import { VideoDebugger } from "@/components/video/VideoDebugger";
-import { UIDiagnostics } from "@/components/debug/UIDiagnostics";
 
-// ===== AUTH CONTEXT =====
-const AuthContext = createContext(null);
 
-function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await getSessionWithTimeout(5000);
-
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email,
-            username:
-              session.user.user_metadata?.username ||
-              session.user.email?.split("@")[0],
-            avatar: session.user.user_metadata?.avatar_url,
-          });
-        }
-      } catch (e) {
-        console.error("Auth error:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  };
-
-  const signInWithEmail = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    if (data.user) {
-      setUser({
-        id: data.user.id,
-        email: data.user.email,
-        username:
-          data.user.user_metadata?.username || data.user.email?.split("@")[0],
-        avatar: data.user.user_metadata?.avatar_url,
-      });
-    }
-  };
-
-  const signUpWithEmail = async (email, password, username) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { username } },
-    });
-    if (error) throw error;
-    return data;
-  };
-
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
-    setUser(null);
-    window.location.href = "/login";
-  };
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        signInWithGoogle,
-        signInWithEmail,
-        signUpWithEmail,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-const useAuth = () => useContext(AuthContext);
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 // ===== CONSTANTS - ANTIQUE GOLD & RICH LEATHER =====
 const COLORS = {
@@ -155,15 +61,14 @@ const COLORS = {
 
 // ===== COMPONENTS =====
 // Beautiful black opening with gold fleur-de-lys emblem
-function LoadingScreen() {
-  return <LoadingScreenComponent message="Chargement..." />;
+function LoadingScreen({ message }: { message?: string }) {
+  return <LoadingScreenComponent message={message || "Chargement..."} />;
 }
 
 // ===== LOGIN PAGE =====
 function Login() {
   const navigate = useNavigate();
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail } =
-    useAuth();
+  const { user } = useAuth() || {};
   const [mode, setMode] = useState("login"); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -175,29 +80,42 @@ function Login() {
     if (user) navigate("/feed");
   }, [user, navigate]);
 
-  const handleEmailLogin = async (e) => {
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      await signInWithEmail(email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       navigate("/feed");
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignup = async (e) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     try {
-      await signUpWithEmail(email, password, username);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username } },
+      });
+      if (error) throw error;
       setMode("login");
       setError("Account created! Please sign in.");
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || "Failed to create account");
     } finally {
       setLoading(false);
@@ -262,7 +180,7 @@ function Login() {
               letterSpacing: "0.05em",
             }}
           >
-            L'app sociale du Québec ⚜️
+            L&apos;app sociale du Québec ⚜️
           </p>
         </div>
 
@@ -773,14 +691,14 @@ function Settings() {
       const b = parseInt(savedColor.slice(5, 7), 16);
       document.documentElement.style.setProperty(
         "--edge-glow",
-        `rgba(${r}, ${g}, ${b}, 0.6)`,
+        "transparent",
       );
     }
   }, []);
 
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     username: user?.username || "",
-    email: user?.email || "",
+    email: (user as any)?.email || "",
     phone: "",
     bio: "Quebec Creator ⚜️",
     privateAccount: false,
@@ -800,8 +718,8 @@ function Settings() {
     contentLanguage: "All",
   });
 
-  const handleToggle = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  const handleToggle = (key: string) => {
+    setSettings((prev: any) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSave = () => {
@@ -855,7 +773,7 @@ function Settings() {
                     type="text"
                     value={settings.username}
                     onChange={(e) =>
-                      setSettings((prev) => ({
+                      setSettings((prev: any) => ({
                         ...prev,
                         username: e.target.value,
                       }))
@@ -879,7 +797,7 @@ function Settings() {
                     type="email"
                     value={settings.email}
                     onChange={(e) =>
-                      setSettings((prev) => ({
+                      setSettings((prev: any) => ({
                         ...prev,
                         email: e.target.value,
                       }))
@@ -903,7 +821,7 @@ function Settings() {
                     type="tel"
                     value={settings.phone}
                     onChange={(e) =>
-                      setSettings((prev) => ({
+                      setSettings((prev: any) => ({
                         ...prev,
                         phone: e.target.value,
                       }))
@@ -927,7 +845,7 @@ function Settings() {
                   <textarea
                     value={settings.bio}
                     onChange={(e) =>
-                      setSettings((prev) => ({ ...prev, bio: e.target.value }))
+                      setSettings((prev: any) => ({ ...prev, bio: e.target.value }))
                     }
                     className="w-full px-4 py-3 rounded-xl resize-none"
                     rows={3}
@@ -1188,7 +1106,7 @@ function Settings() {
                 <select
                   value={settings.language}
                   onChange={(e) =>
-                    setSettings((prev) => ({
+                    setSettings((prev: any) => ({
                       ...prev,
                       language: e.target.value,
                     }))
@@ -1217,7 +1135,7 @@ function Settings() {
                 <select
                   value={settings.contentLanguage}
                   onChange={(e) =>
-                    setSettings((prev) => ({
+                    setSettings((prev: any) => ({
                       ...prev,
                       contentLanguage: e.target.value,
                     }))
@@ -1465,7 +1383,7 @@ function Settings() {
 }
 
 // Toggle Item Component
-function ToggleItem({ icon, title, description, checked, onChange }) {
+function ToggleItem({ icon, title, description, checked, onChange }: { icon: string, title: string, description: string, checked: boolean, onChange: () => void }) {
   return (
     <div
       className="flex items-center justify-between p-5 rounded-xl"
@@ -1506,7 +1424,7 @@ function ToggleItem({ icon, title, description, checked, onChange }) {
 }
 
 // Help Item Component
-function HelpItem({ icon, title, description }) {
+function HelpItem({ icon, title, description }: { icon: string, title: string, description: string }) {
   return (
     <button
       className="w-full flex items-center gap-4 p-5 rounded-xl text-left transition-colors"
@@ -1536,7 +1454,7 @@ function HelpItem({ icon, title, description }) {
 // [Previous components remain the same]
 
 // ===== COMMENTS MODAL =====
-function CommentsModal({ postId, onClose }) {
+function CommentsModal({ postId, onClose }: { postId?: number, onClose: () => void }) {
   const [comments, setComments] = useState([
     { id: 1, user: "marie_qc", text: "C'est ben beau!", avatar: "M" },
     { id: 2, user: "ti_guy_514", text: "Tabarnac c'est nice", avatar: "T" },
@@ -1544,7 +1462,7 @@ function CommentsModal({ postId, onClose }) {
   ]);
   const [newComment, setNewComment] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
     setComments((prev) => [
@@ -1628,7 +1546,7 @@ function CommentsModal({ postId, onClose }) {
 }
 
 // ===== PROFILE MODAL =====
-function ProfileModal({ user, onClose }) {
+function ProfileModal({ user, onClose }: { user?: { username?: string }, onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -1716,15 +1634,16 @@ function ProfileModal({ user, onClose }) {
 function Create() {
   const navigate = useNavigate();
   const [step, setStep] = useState("select");
-  const [videoFile, setVideoFile] = useState(null);
-  const [videoPreview, setVideoPreview] = useState(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef(null);
+  const [isJoualizing, setIsJoualizing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("video/")) {
       alert("Please select a video file");
@@ -1737,18 +1656,43 @@ function Create() {
   };
 
   const handleUpload = async () => {
-    if (!videoFile) return;
+    if (!videoFile && !videoPreview) return;
     setUploading(true);
     setStep("uploading");
 
     try {
+      // Case 1: AI Generated Video (URL based)
+      if (videoPreview && !videoFile) {
+        const response = await fetch("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mediaUrl: videoPreview,
+            caption: caption,
+            content: caption,
+            type: "video",
+            hiveId: "quebec",
+            aiGenerated: true,
+            videoType: "url", // So backend knows it's a direct URL
+          }),
+        });
+
+        if (response.ok) {
+          setUploading(false);
+          navigate("/feed");
+        } else {
+          throw new Error("Post creation failed");
+        }
+        return;
+      }
+
+      // Case 2: File Upload (Original logic)
       const formData = new FormData();
-      formData.append("video", videoFile);
+      if (videoFile) formData.append("video", videoFile);
       formData.append("caption", caption);
       formData.append("hive_id", "quebec");
 
       const xhr = new XMLHttpRequest();
-
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
           const progress = Math.round((e.loaded / e.total) * 100);
@@ -1757,7 +1701,7 @@ function Create() {
       };
 
       xhr.onload = () => {
-        if (xhr.status === 200) {
+        if (xhr.status === 200 || xhr.status === 201) {
           setUploading(false);
           navigate("/feed");
         } else {
@@ -1776,6 +1720,7 @@ function Create() {
       xhr.open("POST", "/api/upload");
       xhr.send(formData);
     } catch (error) {
+      console.error("Upload error:", error);
       alert("Upload failed. Please try again.");
       setUploading(false);
       setStep("caption");
@@ -1794,7 +1739,7 @@ function Create() {
               fontWeight: 700,
             }}
           >
-            Create
+            Create [V2]
           </h1>
           <p
             className="mb-8 flex items-center justify-center gap-1"
@@ -1859,6 +1804,37 @@ function Create() {
               </span>
             </button>
 
+            <button
+              onClick={() => setStep("ai_prompt")}
+              className="w-full p-8 rounded-2xl flex flex-col items-center gap-4 transition-all duration-300"
+              style={{
+                background: `linear-gradient(145deg, #4c1d95 0%, #1e1b4b 100%)`,
+                border: `2px dashed ${COLORS.gold}60`,
+                boxShadow: `0 0 20px rgba(139, 92, 246, 0.3)`,
+              }}
+            >
+              <i
+                className="ph ph-sparkle text-5xl"
+                style={{ color: COLORS.gold }}
+              ></i>
+              <div className="text-center">
+                <span
+                  className="block font-bold"
+                  style={{
+                    color: COLORS.gold,
+                    fontFamily: COLORS.fontDisplay,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  AI Video Magic
+                </span>
+                <span className="text-xs text-purple-200 opacity-80">
+                  Generate video from text prompt
+                </span>
+              </div>
+            </button>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -1869,6 +1845,104 @@ function Create() {
           </div>
         </div>
         <BottomNav />
+      </div>
+    );
+  }
+
+  if (step === "ai_prompt") {
+    return (
+      <div
+        className="min-h-screen flex flex-col"
+        style={{ background: COLORS.brown }}
+      >
+        <div className="flex justify-between items-center p-4">
+          <button
+            onClick={() => setStep("select")}
+            style={{ color: COLORS.text }}
+          >
+            Cancel
+          </button>
+          <span className="font-bold" style={{ color: COLORS.gold }}>
+            AI Generator
+          </span>
+          <div className="w-12"></div>
+        </div>
+
+        <div className="flex-1 p-6 flex flex-col justify-center gap-8">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🪄</div>
+            <h2
+              className="text-2xl font-bold mb-2"
+              style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}
+            >
+              What should I create?
+            </h2>
+            <p className="text-sm text-white/60 mb-6">
+              Describe the scene you want to generate.
+            </p>
+          </div>
+
+          <textarea
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="e.g. A majestic beaver wearing a crown, standing on top of a giant poutine in downtown Montreal, cinematic lighting, highly detailed..."
+            className="w-full h-40 p-5 rounded-2xl resize-none text-lg"
+            style={{
+              background: COLORS.leather,
+              border: `2px dashed ${COLORS.gold}40`,
+              color: COLORS.text,
+              boxShadow: "inset 0 4px 10px rgba(0,0,0,0.3)",
+            }}
+          />
+
+          <button
+            onClick={async () => {
+              if (!caption.trim()) return;
+              setUploading(true);
+              setStep("uploading");
+              try {
+                const response = await fetch("/api/v3/generate-video", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ prompt: caption }),
+                });
+
+                if (!response.ok) throw new Error("Generation failed");
+
+                const data = await response.json();
+                setVideoPreview(data.videoUrl);
+                setStep("preview");
+              } catch (_err) {
+                alert("AI Generation failed. Check your API credits.");
+                setStep("ai_prompt");
+              } finally {
+                setUploading(false);
+              }
+            }}
+            disabled={!caption.trim() || uploading}
+            className="w-full py-5 rounded-xl font-bold text-lg transition-all"
+            style={{
+              background: `linear-gradient(135deg, ${COLORS.gold} 0%, #B8860B 100%)`,
+              color: COLORS.brownDark,
+              boxShadow: `0 10px 20px rgba(201, 162, 39, 0.3)`,
+              opacity: !caption.trim() || uploading ? 0.5 : 1,
+            }}
+          >
+            {uploading ? "Generating Magic..." : "Generate Magic"}
+          </button>
+
+          <div className="flex flex-wrap gap-2 justify-center">
+            {["Winter in Quebec", "Montreal at night", "Maple forest", "Funny beaver"].map(hint => (
+              <button
+                key={hint}
+                onClick={() => setCaption(hint)}
+                className="px-4 py-2 rounded-full text-sm bg-white/5 border border-white/10 text-white/60 hover:text-white transition-colors"
+              >
+                {hint}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -1936,7 +2010,7 @@ function Create() {
             style={{
               background: COLORS.gold,
               color: COLORS.brownDark,
-              opacity: loading ? 0.5 : 1,
+              opacity: uploading ? 0.5 : 1,
             }}
           >
             {uploading ? "Posting..." : "Post"}
@@ -1950,7 +2024,7 @@ function Create() {
                 className="w-24 h-32 rounded-xl object-cover"
               />
             )}
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
@@ -1962,6 +2036,42 @@ function Create() {
                   color: COLORS.text,
                 }}
               />
+              <button
+                onClick={async () => {
+                  if (!caption.trim() || isJoualizing) return;
+                  setIsJoualizing(true);
+                  try {
+                    const response = await fetch("/api/v3/joualize", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ text: caption, style: "street" }),
+                    });
+                    if (response.ok) {
+                      const data = await response.json();
+                      setCaption(data.rewrittenText);
+                    }
+                  } catch (err) {
+                    console.error("Joualizer error:", err);
+                  } finally {
+                    setIsJoualizing(false);
+                  }
+                }}
+                disabled={!caption.trim() || isJoualizing}
+                className="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold transition-all shadow-lg"
+                style={{
+                  background: isJoualizing
+                    ? "rgba(201, 162, 39, 0.3)"
+                    : `linear-gradient(135deg, ${COLORS.gold} 0%, #B8860B 100%)`,
+                  color: COLORS.brownDark,
+                  opacity: !caption.trim() || isJoualizing ? 0.6 : 1,
+                }}
+              >
+                {isJoualizing ? (
+                  <div className="w-4 h-4 border-2 border-brown-900 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "⚜️ Joualize it!"
+                )}
+              </button>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2305,7 +2415,7 @@ function Logout() {
 
 // ===== APP =====
 function AppContent() {
-  const { loading, user } = useAuth();
+  const { isLoading, user } = useAuth();
   const {
     isOpen,
     isExpanded,
@@ -2314,10 +2424,10 @@ function AppContent() {
     minimizeChat,
     expandChat,
     userId,
-  } = useTIGuy(user?.id);
+  } = useTIGuy(user?.id as any);
 
   // Beautiful black opening with gold emblem while auth loads
-  if (loading) {
+  if (isLoading) {
     return <LoadingScreen message="Chargement..." />;
   }
 
@@ -2351,14 +2461,7 @@ function AppContent() {
             username={user?.username}
           />
         </>
-      )}
-
-      {/* 🎬 Video Debugger - Add ?debug=1 to URL to enable */}
-      <VideoDebugger />
-
-      {/* 🔍 UI Diagnostics - Add ?ui-debug=1 to URL to enable */}
-      <UIDiagnostics />
-    </Router>
+      )}    </Router>
   );
 }
 

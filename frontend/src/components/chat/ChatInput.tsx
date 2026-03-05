@@ -18,7 +18,7 @@ interface Props {
   chatType: string;
 }
 
-const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '🔥', '👏', '🦫', '⚜️', '🍁', '🏒', '❄️'];
+const EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '🔥', '👏', '🦫', '⚜️', '🧊', '🏒', '❄️'];
 
 const EPHEMERAL_OPTIONS = [
   { value: 0, label: 'Off', icon: '🔓' },
@@ -37,19 +37,19 @@ export const ChatInput: React.FC<Props> = ({ onSend, isTyping, chatType }) => {
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [ephemeralDuration, setEphemeralDuration] = useState(0);
   const [showEphemeralMenu, setShowEphemeralMenu] = useState(false);
-  
+
   const inputRef = useRef<HTMLInputElement>(null);
   const recordingInterval = useRef<NodeJS.Timeout | null>(null);
 
   // Handle send
   const handleSend = () => {
     if (!text.trim() || isTyping) return;
-    
+
     onSend(text, {
       isEncrypted,
       ephemeralDuration,
     });
-    
+
     setText('');
     setShowEmoji(false);
     tap();
@@ -67,7 +67,7 @@ export const ChatInput: React.FC<Props> = ({ onSend, isTyping, chatType }) => {
   const startRecording = useCallback(() => {
     setIsRecording(true);
     impact();
-    
+
     recordingInterval.current = setInterval(() => {
       setRecordingDuration(d => d + 1);
     }, 1000);
@@ -78,7 +78,7 @@ export const ChatInput: React.FC<Props> = ({ onSend, isTyping, chatType }) => {
     if (recordingInterval.current) {
       clearInterval(recordingInterval.current);
     }
-    
+
     // TODO: Actually record and send voice
     toast.info('Messages vocaux bientôt disponibles!');
     setRecordingDuration(0);
@@ -139,7 +139,7 @@ export const ChatInput: React.FC<Props> = ({ onSend, isTyping, chatType }) => {
           >
             ⏱️
           </button>
-          
+
           {showEphemeralMenu && (
             <div className="ephemeral-menu">
               {EPHEMERAL_OPTIONS.map(opt => (

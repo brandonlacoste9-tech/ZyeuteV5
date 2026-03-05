@@ -137,7 +137,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioVisualization, setAudioVisualization] = useState<number[]>([]);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -218,7 +218,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       // Set up audio visualization
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -249,7 +249,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
       recorder.onstop = () => {
         const audioBlob = new Blob(chunks, { type: "audio/webm" });
         const audioUrl = URL.createObjectURL(audioBlob);
-        
+
         setMessages(prev => [...prev, {
           id: `voice-${Date.now()}`,
           sender: "user",
@@ -303,7 +303,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
     if (!text || isTyping) return;
 
     tap();
-    
+
     const userMsg: EnhancedMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
@@ -319,10 +319,10 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
 
     try {
       const response = await tiguyService.sendMessage(text);
-      const responseText = typeof response === "string" 
-        ? response 
-        : response.response || "Je n'ai pas de réponse pour ça, tsé?";
-      
+      const responseText = typeof response === "string"
+        ? response
+        : (response as any).response || "Je n'ai pas de réponse pour ça, tsé?";
+
       setMessages(prev => [...prev, {
         id: `tiguy-${Date.now()}`,
         sender: "tiGuy",
@@ -348,7 +348,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
     setMessageReactions(prev => {
       const current = prev[messageId] || [];
       const existing = current.find(r => r.emoji === emoji);
-      
+
       if (existing) {
         // Toggle reaction
         const userReacted = existing.users.includes("currentUser");
@@ -375,19 +375,19 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     tap();
     const isImage = file.type.startsWith("image/");
     const isVideo = file.type.startsWith("video/");
     const type: MessageType = isImage ? "image" : isVideo ? "video" : "file";
-    
+
     setMessages(prev => [...prev, {
       id: `file-${Date.now()}`,
       sender: "user",
       text: isImage || isVideo ? "" : file.name,
       timestamp: new Date(),
       type,
-      metadata: { 
+      metadata: {
         filename: file.name,
         size: (file.size / 1024 / 1024).toFixed(2) + " MB",
       },
@@ -414,7 +414,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
           </button>
         ))}
       </div>
-      
+
       {/* Emojis */}
       <div className="p-3 grid grid-cols-8 gap-2 max-h-48 overflow-y-auto">
         {EMOJI_CATEGORIES[selectedEmojiCategory].map((emoji, i) => (
@@ -469,8 +469,8 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
           onClick={action}
           className={cn(
             "w-full flex items-center gap-3 px-4 py-3 text-left transition-all",
-            danger 
-              ? "text-red-400 hover:bg-red-500/10" 
+            danger
+              ? "text-red-400 hover:bg-red-500/10"
               : "text-[#e8dcc8] hover:bg-[#d4af37]/10"
           )}
         >
@@ -484,7 +484,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
   // Create group modal
   const CreateGroupModal = () => (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div 
+      <div
         className="w-full max-w-md rounded-3xl overflow-hidden border-4 border-[#d4af37]/50"
         style={{ background: "#2b1f17", backgroundImage: FLEUR_PATTERN }}
       >
@@ -496,7 +496,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
             </button>
           </div>
         </div>
-        
+
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm text-[#8b7355] mb-2">Nom du groupe</label>
@@ -506,7 +506,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
               className="w-full px-4 py-3 rounded-xl bg-[#1a1410] border border-[#d4af37]/30 text-[#e8dcc8] placeholder-[#8b7355] focus:border-[#d4af37] outline-none"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm text-[#8b7355] mb-2">Description</label>
             <textarea
@@ -515,7 +515,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
               className="w-full px-4 py-3 rounded-xl bg-[#1a1410] border border-[#d4af37]/30 text-[#e8dcc8] placeholder-[#8b7355] focus:border-[#d4af37] outline-none resize-none"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm text-[#8b7355] mb-2">Ajouter des membres</label>
             <div className="flex gap-2 flex-wrap">
@@ -530,7 +530,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
             </div>
           </div>
         </div>
-        
+
         <div className="p-6 border-t border-[#d4af37]/30 flex gap-3">
           <button
             onClick={() => setShowGroupModal(false)}
@@ -598,7 +598,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
             ))}
           </div>
         );
-      
+
       case "dms":
         return (
           <div className="space-y-1">
@@ -696,7 +696,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
             ))}
           </div>
         );
-      
+
       case "mystuff":
         return (
           <div className="space-y-3">
@@ -723,7 +723,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
                 </button>
               ))}
             </div>
-            
+
             <div className="px-3 space-y-2">
               {activeSubmenu === "files" && (
                 <>
@@ -750,7 +750,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
     <div className="fixed inset-0 z-[100] flex bg-black/90 backdrop-blur-sm">
       {/* Main Container */}
       <div className="flex w-full h-full max-w-6xl mx-auto my-4 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#d4af37]/50">
-        
+
         {/* SIDEBAR */}
         <div
           className={cn(
@@ -820,7 +820,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
               <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-[#d4af37]/20 text-[#d4af37]">
                 {sidebarOpen ? <IoChevronDown className="w-5 h-5 -rotate-90" /> : <IoChevronUp className="w-5 h-5 -rotate-90" />}
               </button>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-2xl shadow-lg shadow-[#d4af37]/20">
                   🦫
@@ -883,16 +883,16 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
                     message.sender === "user" ? "rounded-br-sm" : "rounded-bl-sm",
                     message.isError && "border-red-500/50 bg-red-500/10"
                   )} style={{
-                    background: message.sender === "user" 
+                    background: message.sender === "user"
                       ? "linear-gradient(135deg, rgba(109,40,217,0.4), rgba(79,70,229,0.3))"
                       : "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))",
-                    border: message.isError ? "2px solid rgba(239,68,68,0.5)" : message.sender === "user" 
+                    border: message.isError ? "2px solid rgba(239,68,68,0.5)" : message.sender === "user"
                       ? "2px solid rgba(139,92,246,0.4)" : "2px solid rgba(212,175,55,0.4)",
                   }}>
                     <p className={cn("leading-relaxed whitespace-pre-wrap text-[15px]", message.sender === "user" ? "text-violet-100" : "text-amber-100")}>
                       {message.text}
                     </p>
-                    
+
                     {/* Message Menu Button */}
                     <button
                       onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
@@ -900,7 +900,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
                     >
                       <IoEllipsisHorizontal className="w-3 h-3" />
                     </button>
-                    
+
                     {/* Message Menu Dropdown */}
                     {showMessageMenu === message.id && (
                       <MessageMenu message={message} onClose={() => setShowMessageMenu(null)} />
@@ -996,7 +996,7 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
           {/* Input Area */}
           <div className="px-6 py-4 border-t-2 border-[#d4af37]/30 relative"
             style={{ background: "linear-gradient(180deg, rgba(35,25,18,0.98) 0%, rgba(43,31,23,0.98) 100%)", boxShadow: "0 -10px 40px rgba(0,0,0,0.5)" }}>
-            
+
             {/* Emoji Picker */}
             {showEmojiPicker && <EmojiPicker />}
 
@@ -1006,8 +1006,8 @@ export const ChatInterfaceEnhanced: React.FC<ChatInterfaceProps> = ({ onClose })
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={cn(
                   "w-10 h-10 rounded-xl border transition-all flex items-center justify-center text-lg",
-                  showEmojiPicker 
-                    ? "bg-[#d4af37]/30 border-[#d4af37]" 
+                  showEmojiPicker
+                    ? "bg-[#d4af37]/30 border-[#d4af37]"
                     : "bg-[#3a2820]/80 border-[#d4af37]/20 hover:border-[#d4af37]/50"
                 )}
               >

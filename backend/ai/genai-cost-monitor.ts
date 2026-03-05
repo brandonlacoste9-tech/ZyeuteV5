@@ -9,8 +9,8 @@ import { sendCostAlert } from "../services/alert-service";
 const GENAI_COSTS = {
   // Gemini Pro
   "gemini-pro": {
-    inputPer1K: 0.0005,   // $0.50 per 1M input tokens
-    outputPer1K: 0.0015,  // $1.50 per 1M output tokens
+    inputPer1K: 0.0005, // $0.50 per 1M input tokens
+    outputPer1K: 0.0015, // $1.50 per 1M output tokens
   },
   // Gemini Pro Vision (multimodal)
   "gemini-pro-vision": {
@@ -19,19 +19,19 @@ const GENAI_COSTS = {
   },
   // Gemini Ultra
   "gemini-ultra": {
-    inputPer1K: 0.001,    // $1.00 per 1M input tokens
-    outputPer1K: 0.002,   // $2.00 per 1M output tokens
+    inputPer1K: 0.001, // $1.00 per 1M input tokens
+    outputPer1K: 0.002, // $2.00 per 1M output tokens
   },
   // Embeddings
-  "embedding": {
-    per1K: 0.0001,        // $0.10 per 1K tokens
+  embedding: {
+    per1K: 0.0001, // $0.10 per 1K tokens
   },
 };
 
 // Combined cap with Dialogflow
 const TOTAL_GOOGLE_AI_CAP = 1300; // Your total credits
-const WARNING_THRESHOLD = 800;    // Shared warning with Dialogflow
-const CRITICAL_THRESHOLD = 1200;  // Stop before hitting $1300
+const WARNING_THRESHOLD = 800; // Shared warning with Dialogflow
+const CRITICAL_THRESHOLD = 1200; // Stop before hitting $1300
 
 interface GenAIUsage {
   model: string;
@@ -74,10 +74,10 @@ class GenAICostMonitor {
   recordUsage(
     model: string,
     inputTokens: number,
-    outputTokens: number
+    outputTokens: number,
   ): { allowed: boolean; cost: number; warning?: string } {
     const cost = this.calculateCost(model, inputTokens, outputTokens);
-    
+
     // Check combined cap with Dialogflow
     const dialogflowCost = this.getDialogflowCost();
     const totalCost = this.monthlyCost + dialogflowCost;
@@ -86,7 +86,8 @@ class GenAICostMonitor {
       return {
         allowed: false,
         cost: 0,
-        warning: "Limite Google AI atteinte. Service temporairement indisponible.",
+        warning:
+          "Limite Google AI atteinte. Service temporairement indisponible.",
       };
     }
 
@@ -104,11 +105,11 @@ class GenAICostMonitor {
 
     // Check warning thresholds
     const newTotal = this.monthlyCost + dialogflowCost;
-    
+
     if (newTotal >= WARNING_THRESHOLD && !this.alertsSent.has("warning")) {
       this.alertsSent.add("warning");
       this.sendAlert("warning", newTotal);
-      
+
       return {
         allowed: true,
         cost,
@@ -126,9 +127,13 @@ class GenAICostMonitor {
     return { allowed: true, cost };
   }
 
-  private calculateCost(model: string, inputTokens: number, outputTokens: number): number {
+  private calculateCost(
+    model: string,
+    inputTokens: number,
+    outputTokens: number,
+  ): number {
     const pricing = GENAI_COSTS[model as keyof typeof GENAI_COSTS];
-    
+
     if (!pricing) {
       // Unknown model - estimate with Gemini Pro rates
       return (inputTokens / 1000) * 0.0005 + (outputTokens / 1000) * 0.0015;
@@ -163,19 +168,13 @@ class GenAICostMonitor {
     };
 
     console.error(`[GenAI Cost Alert] ${messages[level]}`);
-    
+
+    let threshold = 0.9;
+    if (level === "warning") threshold = 1.0;
+    if (level === "critical") threshold = 1.25;
+
     // Send to monitoring/alerting service
-    await sendCostAlert(
-      level as "ninety" | "warning" | "critical",
-      "Google GenAI (Vertex/Gemini)",
-      this.monthlyCost,
-      WARNING_THRESHOLD,
-      {
-        byModel: this.getCombinedReport().genAI.byModel,
-        dialogflowCost: this.getDialogflowCost(),
-        totalCombined: totalCost,
-      }
-    );
+    await sendCostAlert(this.monthlyCost, WARNING_THRESHOLD, threshold);
   }
 
   /**
@@ -202,7 +201,7 @@ class GenAICostMonitor {
       totalCap: TOTAL_GOOGLE_AI_CAP,
       percentUsed: ((totalCost / TOTAL_GOOGLE_AI_CAP) * 100).toFixed(1),
       remaining: (TOTAL_GOOGLE_AI_CAP - totalCost).toFixed(2),
-      
+
       // Breakdown
       dialogflow: {
         cost: dialogflowCost.toFixed(2),
@@ -213,13 +212,14 @@ class GenAICostMonitor {
         percentOfTotal: ((genAICost / totalCost) * 100).toFixed(1),
         byModel,
       },
-      
+
       // Status
-      status: totalCost >= WARNING_THRESHOLD 
-        ? "warning" 
-        : totalCost >= WARNING_THRESHOLD * 0.9
-        ? "caution"
-        : "healthy",
+      status:
+        totalCost >= WARNING_THRESHOLD
+          ? "warning"
+          : totalCost >= WARNING_THRESHOLD * 0.9
+            ? "caution"
+            : "healthy",
     };
   }
 }
@@ -234,10 +234,10 @@ export async function trackGenAIUsage<T>(
   model: string,
   inputTokens: number,
   outputTokens: number,
-  apiCall: () => Promise<T>
+  apiCall: () => Promise<T>,
 ): Promise<{ result: T | null; cost: number; warning?: string }> {
   const check = genAICostMonitor.recordUsage(model, inputTokens, outputTokens);
-  
+
   if (!check.allowed) {
     return { result: null, cost: 0, warning: check.warning };
   }

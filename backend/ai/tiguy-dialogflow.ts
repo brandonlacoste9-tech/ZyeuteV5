@@ -5,7 +5,7 @@
 
 import { SessionsClient } from "@google-cloud/dialogflow-cx";
 import { broadcastAIResponse, broadcastAITyping } from "../websocket/gateway";
-import { db } from "../storage.js";
+import { pool } from "../storage.js";
 import { costMonitor, checkCostLimit } from "./tiguy-cost-monitor";
 
 // Dialogflow CX configuration
@@ -94,7 +94,9 @@ export async function queryTIGuy(
     const confidence = response.queryResult?.match?.confidence;
     const parameters = response.queryResult?.parameters;
     const sentiment =
-      response.queryResult?.sentimentAnalysisResult?.queryTextSentiment;
+      (response.queryResult?.sentimentAnalysisResult as any)
+        ?.queryTextSentiment ||
+      (response.queryResult?.sentimentAnalysisResult as any);
 
     // Simulate thinking time for realism
     await new Promise((resolve) =>
@@ -106,8 +108,8 @@ export async function queryTIGuy(
 
     return {
       text: textResponse || "Je ne comprends pas bien. Peux-tu reformuler?",
-      intent,
-      confidence,
+      intent: intent || undefined,
+      confidence: confidence || undefined,
       parameters: parameters
         ? Object.fromEntries(Object.entries(parameters))
         : undefined,
@@ -138,7 +140,7 @@ export async function sendTIGuyResponse(
 ): Promise<void> {
   try {
     // Store in database
-    const insertResult = await db.query(
+    const insertResult = await pool.query(
       `INSERT INTO messages (
         conversation_id, sender_id, content_type, content_text,
         content_metadata, is_encrypted, created_at

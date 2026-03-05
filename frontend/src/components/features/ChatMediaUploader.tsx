@@ -4,11 +4,11 @@
  */
 
 import React, { useState, useRef, useCallback } from "react";
-import { 
-  Image as ImageIcon, 
-  File, 
-  X, 
-  Upload, 
+import {
+  Image as ImageIcon,
+  File,
+  X,
+  Upload,
   Loader2,
   Film,
   Music
@@ -126,8 +126,8 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
 
     // Simulate upload progress
     for (const file of files) {
-      setFiles((prev) =
-        prev.map((f) =
+      setFiles((prev) =>
+        prev.map((f) =>
           f.id === file.id ? { ...f, status: "uploading" } : f
         )
       );
@@ -135,18 +135,18 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
       // Simulate progress
       for (let progress = 0; progress <= 100; progress += 10) {
         await new Promise((resolve) => setTimeout(resolve, 200));
-        setFiles((prev) =
-          prev.map((f) =
+        setFiles((prev) =>
+          prev.map((f) =>
             f.id === file.id ? { ...f, progress } : f
           )
         );
       }
 
       // Mark as done with fake URL
-      setFiles((prev) =
-        prev.map((f) =
-          f.id === file.id 
-            ? { ...f, status: "done", url: `https://cdn.zyeute.com/${f.id}` } 
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === file.id
+            ? { ...f, status: "done", url: `https://cdn.zyeute.com/${f.id}` }
             : f
         )
       );
@@ -218,7 +218,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
               onChange={handleFileSelect}
               className="hidden"
             />
-            
+
             <div className="flex justify-center gap-4 mb-4">
               <div className="w-12 h-12 rounded-xl bg-gold-500/10 flex items-center justify-center">
                 <ImageIcon className="w-6 h-6 text-gold-400" />
@@ -230,7 +230,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
                 <File className="w-6 h-6 text-gold-400" />
               </div>
             </div>
-            
+
             <p className="text-white font-medium mb-2">
               Glissez-déposez vos fichiers ici
             </p>
@@ -245,7 +245,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
               <p className="text-stone-400 text-sm font-medium">
                 {files.length} fichier{files.length > 1 ? "s" : ""} sélectionné{files.length > 1 ? "s" : ""}
               </p>
-              
+
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {files.map((file) => (
                   <div
@@ -264,7 +264,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
                         <span className="text-gold-400">{getFileIcon(file.type)}</span>
                       )}
                     </div>
-                    
+
                     {/* File Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-medium truncate">
@@ -273,7 +273,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
                       <p className="text-stone-500 text-sm">
                         {formatFileSize(file.file.size)}
                       </p>
-                      
+
                       {/* Progress Bar */}
                       {file.status === "uploading" && (
                         <div className="mt-2 h-1 bg-stone-700 rounded-full overflow-hidden">
@@ -284,7 +284,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
                         </div>
                       )}
                     </div>
-                    
+
                     {/* Remove Button */}
                     <button
                       onClick={() => removeFile(file.id)}
@@ -308,7 +308,7 @@ export const ChatMediaUploader: React.FC<ChatMediaUploaderProps> = ({
           >
             Annuler
           </button>
-          
+
           <button
             onClick={handleUpload}
             disabled={files.length === 0}

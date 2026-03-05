@@ -56,7 +56,7 @@ const EMOJIS = {
   recents: ["👍", "❤️", "😂", "😮", "🎉", "🔥", "👏", "🦫"],
   smileys: ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😉", "😊", "🥰", "😍", "🤩", "😘", "😗"],
   coeurs: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖"],
-  quebec: ["⚜️", "🇨🇦", "🏒", "🍁", "🥞", "🧈", "🍟", "❄️", "⛷️", "🏔️", "🌲", "🦫", "🦆", "🦌"],
+  quebec: ["⚜️", "🥞", "🏒", "🍺", "🧈", "🍟", "❄️", "⛷️", "🏔️", "🌲", "🦫", "🦆", "🦌"],
 };
 
 const REACTIONS = ["❤️", "👍", "😂", "😮", "🎉", "🔥", "👏", "🦫", "⚜️"];
@@ -96,7 +96,7 @@ type Onglet = "historique" | "messages" | "groupes" | "fichiers";
 export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const { tap, impact } = useHaptics();
   const { user: currentUser } = useAuth();
-  
+
   // États principaux
   const [ongletActif, setOngletActif] = useState<Onglet>("messages");
   const [barreLateraleOuverte, setBarreLateraleOuverte] = useState(true);
@@ -106,13 +106,13 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const [tiguyEcrit, setTiguyEcrit] = useState(false);
   const [modeRecherche, setModeRecherche] = useState(false);
   const [requeteRecherche, setRequeteRecherche] = useState("");
-  
+
   // Data states
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [activeConversationData, setActiveConversationData] = useState<Conversation | null>(null);
-  
+
   // Fonctionnalités
   const [modeChiffre, setModeChiffre] = useState(false);
   const [modeEphemere, setModeEphemere] = useState(0);
@@ -124,7 +124,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   const [reactionsMessages, setReactionsMessages] = useState<Record<string, { emoji: string; compte: number }[]>>({});
   const [menuMessageOuvert, setMenuMessageOuvert] = useState<string | null>(null);
   const [modeAppel, setModeAppel] = useState<"audio" | "video" | null>(null);
-  
+
   const refFinMessages = useRef<HTMLDivElement>(null);
   const refSaisie = useRef<HTMLInputElement>(null);
   const refFichier = useRef<HTMLInputElement>(null);
@@ -226,17 +226,17 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
     if (!texte || tiguyEcrit) return;
 
     tap();
-    
+
     // Ti-Guy conversation
     if (conversationActive === "tiguy") {
       let texteFinal = texte;
       let estChiffre = false;
-      
+
       if (modeChiffre) {
         texteFinal = chiffrerMessage(texte);
         estChiffre = true;
       }
-      
+
       const nouveauMessage: Message = {
         id: `msg-${Date.now()}`,
         sender_id: currentUser?.id || "user",
@@ -247,11 +247,11 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
         ephemeral_duration: modeEphemere,
         is_read: true,
       };
-      
+
       setMessages(prev => [...prev, nouveauMessage]);
       setTexteSaisi("");
       setMenuEmojiOuvert(false);
-      
+
       if (modeEphemere > 0) {
         setTimeout(() => {
           setMessages(prev => prev.filter(m => m.id !== nouveauMessage.id));
@@ -262,8 +262,8 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
       setTiguyEcrit(true);
       try {
         const reponse = await tiguyService.sendMessage(texte);
-        const texteReponse = typeof reponse === "string" ? reponse : reponse.response || "Je n'ai pas compris, mon ami!";
-        
+        const texteReponse = typeof reponse === "string" ? reponse : (reponse as any).response || "Je n'ai pas compris, mon ami!";
+
         setTimeout(() => {
           setMessages(prev => [...prev, {
             id: `tiguy-${Date.now()}`,
@@ -297,17 +297,17 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
         if (modeChiffre) {
           content = chiffrerMessage(texte);
         }
-        
+
         const { message } = await messagingService.sendMessage(conversationActive, {
           content,
           type: "text",
           ephemeralDuration: modeEphemere,
         });
-        
+
         setMessages(prev => [...prev, message]);
         setTexteSaisi("");
         setMenuEmojiOuvert(false);
-        
+
         // Refresh conversations to update last message
         loadConversations();
       } catch (error) {
@@ -323,7 +323,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
       setReactionsMessages(prev => {
         const actuelles = prev[idMessage] || [];
         const existante = actuelles.find(r => r.emoji === emoji);
-        
+
         if (existante) {
           existante.compte++;
           return { ...prev, [idMessage]: actuelles };
@@ -371,9 +371,9 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   // Get display name for active conversation
   const getActiveConversationName = () => {
     if (conversationActive === "tiguy") return "Ti-Guy";
-    return activeConversationData?.other_user?.display_name || 
-           activeConversationData?.name || 
-           "Conversation";
+    return activeConversationData?.other_user?.display_name ||
+      activeConversationData?.name ||
+      "Conversation";
   };
 
   // Écran d'appel
@@ -382,7 +382,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
       <div className="fixed inset-0 z-[200] bg-[#1a1410] flex flex-col">
         <div className="flex-1 flex items-center justify-center" style={{ backgroundImage: FLEUR_PATTERN }}>
           <div className="text-center">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-4 border-[#d4af37] flex items-center justify-center text-6xl mb-6 animate-pulse shadow-2xl shadow-[#d4af37]/30">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-4 border-[#d4af37] flex items-center justify-center text-6xl mb-6 shadow-xl shadow-[#d4af37]/20">
               {conversationActive === "tiguy" ? "🦫" : "👤"}
             </div>
             <h2 className="text-2xl font-bold text-[#d4af37] mb-2">{getActiveConversationName()}</h2>
@@ -410,11 +410,11 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex bg-black/90 backdrop-blur-sm">
       <div className="flex w-full h-full max-w-6xl mx-auto my-4 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#d4af37]/50">
-        
+
         {/* Barre latérale */}
         <div className={cn("flex flex-col transition-all duration-300 border-r-4 border-[#d4af37]/30", barreLateraleOuverte ? "w-80" : "w-0 overflow-hidden")}
           style={{ background: "#2b1f17", backgroundImage: FLEUR_PATTERN }}>
-          
+
           {/* En-tête */}
           <div className="px-4 py-4 border-b-2 border-[#d4af37]/30" style={{ background: "linear-gradient(180deg, rgba(43,31,23,0.98), rgba(35,25,18,0.98))" }}>
             <div className="flex items-center gap-2 mb-4">
@@ -423,7 +423,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                 ZYEUTÉ
               </span>
             </div>
-            
+
             {/* Onglets */}
             <div className="flex gap-1 p-1 rounded-xl bg-[#3a2820]/80 border border-[#d4af37]/20">
               {[
@@ -520,16 +520,16 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
         {/* Zone de chat */}
         <div className="flex-1 flex flex-col" style={{ background: "#1a1410" }}>
-          
+
           {/* En-tête conversation */}
           <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#d4af37]/30" style={{ background: "linear-gradient(90deg, rgba(43,31,23,0.98), rgba(35,25,18,0.98))" }}>
             <div className="flex items-center gap-4">
               <button onClick={() => setBarreLateraleOuverte(!barreLateraleOuverte)} className="p-2 rounded-lg hover:bg-[#d4af37]/20 text-[#d4af37]">
                 {barreLateraleOuverte ? <IoChevronDown className="w-5 h-5 -rotate-90" /> : <IoChevronUp className="w-5 h-5 -rotate-90" />}
               </button>
-              
+
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-2xl shadow-lg shadow-[#d4af37]/20">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-2xl shadow-md shadow-[#d4af37]/10">
                   {conversationActive === "tiguy" ? "🦫" : "👤"}
                 </div>
                 <div>
@@ -553,7 +553,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
               >
                 <IoSearch className="w-5 h-5" />
               </button>
-              
+
               {/* Chiffrement */}
               <button
                 onClick={() => { setModeChiffre(!modeChiffre); toast.info(modeChiffre ? "🔓 Mode normal" : "🔒 Mode sécurisé activé"); }}
@@ -561,7 +561,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
               >
                 {modeChiffre ? <IoLockClosed className="w-5 h-5" /> : <IoLockClosed className="w-5 h-5 opacity-50" />}
               </button>
-              
+
               {/* Éphémère */}
               <div className="relative">
                 <button
@@ -571,7 +571,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                   <IoTimer className="w-5 h-5" />
                   {modeEphemere > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">!</span>}
                 </button>
-                
+
                 {/* Menu éphémère */}
                 {menuEphemereOuvert && (
                   <div className="absolute top-12 right-0 w-48 bg-[#2b1f17] border-2 border-[#d4af37]/40 rounded-xl shadow-2xl overflow-hidden z-50">
@@ -592,12 +592,12 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                   </div>
                 )}
               </div>
-              
+
               {/* Appel vidéo */}
               <button onClick={() => commencerAppel("video")} className="p-3 rounded-xl hover:bg-[#d4af37]/20 text-[#d4af37] transition-all">
                 <IoVideocamOutline className="w-5 h-5" />
               </button>
-              
+
               {/* Appel audio */}
               <button onClick={() => commencerAppel("audio")} className="p-3 rounded-xl hover:bg-[#d4af37]/20 text-[#d4af37] transition-all">
                 <IoCall className="w-5 h-5" />
@@ -646,13 +646,13 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                     {/* Avatar */}
                     <div className={cn(
                       "w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 border-2",
-                      message.sender_id === "tiguy" ? "bg-gradient-to-br from-amber-400 to-amber-700 border-[#d4af37]" : 
-                      message.sender_id === (currentUser?.id || "user") ? "bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-400" :
-                      "bg-[#3a2820] border-[#d4af37]/30"
+                      message.sender_id === "tiguy" ? "bg-gradient-to-br from-amber-400 to-amber-700 border-[#d4af37]" :
+                        message.sender_id === (currentUser?.id || "user") ? "bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-400" :
+                          "bg-[#3a2820] border-[#d4af37]/30"
                     )}>
-                      {message.sender_id === "tiguy" ? "🦫" : 
-                       message.sender_id === (currentUser?.id || "user") ? "👤" :
-                       message.sender?.display_name?.[0] || "?"}
+                      {message.sender_id === "tiguy" ? "🦫" :
+                        message.sender_id === (currentUser?.id || "user") ? "👤" :
+                          message.sender?.display_name?.[0] || "?"}
                     </div>
 
                     {/* Contenu message */}
@@ -664,13 +664,13 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                           Auto-destruction
                         </div>
                       )}
-                      
+
                       {/* Bulle */}
                       <div className={cn(
                         "rounded-2xl px-5 py-3 shadow-lg relative",
                         message.sender_id === (currentUser?.id || "user") ? "rounded-br-sm" : "rounded-bl-sm"
                       )} style={{
-                        background: message.sender_id === (currentUser?.id || "user") 
+                        background: message.sender_id === (currentUser?.id || "user")
                           ? "linear-gradient(135deg, rgba(109,40,217,0.4), rgba(79,70,229,0.3))"
                           : message.sender_id === "tiguy"
                             ? "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))"
@@ -688,11 +688,11 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                             Message sécurisé - Cliquer pour lire
                           </button>
                         )}
-                        
+
                         <p className={cn("leading-relaxed whitespace-pre-wrap text-[15px]", message.sender_id === (currentUser?.id || "user") ? "text-violet-100" : "text-amber-100")}>
                           {message.content}
                         </p>
-                        
+
                         {/* Menu message */}
                         <button
                           onClick={() => setMenuMessageOuvert(menuMessageOuvert === message.id ? null : message.id)}
@@ -700,7 +700,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                         >
                           <IoEllipsisHorizontal className="w-3 h-3" />
                         </button>
-                        
+
                         {/* Menu actions */}
                         {menuMessageOuvert === message.id && (
                           <div className="absolute right-0 top-6 bg-[#2b1f17] border border-[#d4af37]/30 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
@@ -776,7 +776,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
 
           {/* Zone saisie */}
           <div className="px-6 py-4 border-t-2 border-[#d4af37]/30 relative" style={{ background: "linear-gradient(180deg, rgba(35,25,18,0.98), rgba(43,31,23,0.98))", boxShadow: "0 -10px 40px rgba(0,0,0,0.5)" }}>
-            
+
             {/* Sélecteur emoji */}
             {menuEmojiOuvert && (
               <div className="absolute bottom-20 left-4 right-4 bg-[#2b1f17] border-2 border-[#d4af37]/40 rounded-2xl shadow-2xl overflow-hidden z-50">
@@ -784,7 +784,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                   {Object.keys(EMOJIS).map((cat) => (
                     <button
                       key={cat}
-                      onClick={() => {}}
+                      onClick={() => { }}
                       className="px-3 py-2 rounded-lg text-xs uppercase text-[#8b7355] hover:bg-[#d4af37]/10 whitespace-nowrap"
                     >
                       {cat === "recents" ? "Récents" : cat === "smileys" ? "Smileys" : cat === "coeurs" ? "Cœurs" : cat === "quebec" ? "Québec" : cat}
@@ -847,7 +847,7 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
                   type="text"
                   value={texteSaisi}
                   onChange={(e) => setTexteSaisi(e.target.value)}
-                  placeholder={conversationActive === "tiguy" 
+                  placeholder={conversationActive === "tiguy"
                     ? (modeChiffre ? "🔒 Message sécurisé..." : "Écris à Ti-Guy...")
                     : (modeChiffre ? "🔒 Message sécurisé..." : "Écris ton message...")
                   }

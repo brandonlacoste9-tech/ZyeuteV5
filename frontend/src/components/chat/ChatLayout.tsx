@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChatTypeMenu } from './ChatTypeMenu';
+// Removed ChatTypeMenu import since it is not used or does not exist.
 import { ChatArea } from './ChatArea';
 import { ChatInput } from './ChatInput';
 import { messagingService } from '@/services/messagingService';
@@ -36,18 +36,18 @@ export const ChatLayout: React.FC = () => {
   const [ambientMode, setAmbientMode] = useState<AmbientMode>('default');
   const [charge, setCharge] = useState(100);
   const [glowPhase, setGlowPhase] = useState(0);
-  
+
   // Mock user likes - replace with real data
-  const userLikes = user?.totalLikes || 1500;
-  
+  const userLikes = (user as any)?.totalLikes || 1500;
+
   // Breathing animation loop
   useEffect(() => {
     // DISABLED: Breathing animation causing system freezes
     // Use static glow instead
     setGlowPhase(0.4);
-    return () => {};
+    return () => { };
   }, []);
-  
+
   // Ambient glow configuration based on mode
   const ambientConfig: Record<AmbientMode, AmbientGlowConfig> = {
     default: {
@@ -87,9 +87,9 @@ export const ChatLayout: React.FC = () => {
       pulseSpeed: 4,
     },
   };
-  
+
   const currentConfig = ambientConfig[ambientMode];
-  
+
   // Simplified background - no heavy blur/animation to prevent GPU freeze
   const backgroundStyle = useMemo(() => {
     return {
@@ -100,7 +100,7 @@ export const ChatLayout: React.FC = () => {
       opacity: 0.2,
     };
   }, [currentConfig]);
-  
+
   // Simplified edge glow - static only
   const edgeGlowStyle = useMemo(() => {
     if (ambientMode !== 'royal' && ambientMode !== 'charging') return {};
@@ -108,7 +108,7 @@ export const ChatLayout: React.FC = () => {
       boxShadow: 'inset 0 0 40px rgba(212, 175, 55, 0.15)',
     };
   }, [ambientMode]);
-  
+
   // TI-GUY energy/charge simulation
   useEffect(() => {
     if (isTyping && charge > 0) {
@@ -123,7 +123,7 @@ export const ChatLayout: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [isTyping, charge]);
-  
+
   // Update ambient mode based on state
   useEffect(() => {
     if (isTyping) {
@@ -136,7 +136,7 @@ export const ChatLayout: React.FC = () => {
       setAmbientMode('default');
     }
   }, [isTyping, charge]);
-  
+
   // Load conversations on mount
   useEffect(() => {
     if (activeType !== 'tiguy') {
@@ -171,7 +171,7 @@ export const ChatLayout: React.FC = () => {
     }
   };
 
-  const handleSend = async (content: string, options?: { 
+  const handleSend = async (content: string, options?: {
     isEncrypted?: boolean;
     ephemeralDuration?: number;
     mediaUrl?: string;
@@ -179,7 +179,7 @@ export const ChatLayout: React.FC = () => {
     if (!content.trim()) return;
 
     haptics.tap();
-    
+
     // Add user message
     const userMessage = {
       id: `temp-${Date.now()}`,
@@ -189,18 +189,18 @@ export const ChatLayout: React.FC = () => {
       type: 'sent',
       isEncrypted: options?.isEncrypted,
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
 
     // TI-GUY AI response
     if (activeType === 'tiguy') {
       setIsTyping(true);
-      haptics.aiThinking();
-      
+      haptics.impact();
+
       try {
         const response = await tiguyService.sendMessage(content);
-        const text = typeof response === 'string' ? response : response.response;
-        
+        const text = typeof response === 'string' ? response : (response as any).response;
+
         setTimeout(() => {
           setMessages(prev => [...prev, {
             id: `tiguy-${Date.now()}`,
@@ -210,7 +210,7 @@ export const ChatLayout: React.FC = () => {
             type: 'bot',
           }]);
           setIsTyping(false);
-          haptics.receive();
+          haptics.success();
         }, 1500);
       } catch (error) {
         setIsTyping(false);
@@ -227,78 +227,67 @@ export const ChatLayout: React.FC = () => {
       }, options.ephemeralDuration * 1000);
     }
   };
-  
+
   // Toggle royal mode on double click of header
   const [royalClicks, setRoyalClicks] = useState(0);
   const handleHeaderClick = () => {
     const newClicks = royalClicks + 1;
     setRoyalClicks(newClicks);
-    
+
     if (newClicks >= 3) {
       setAmbientMode(prev => prev === 'royal' ? 'default' : 'royal');
       setRoyalClicks(0);
-      haptics.toggle();
+      haptics.selection();
       toast.info(ambientMode === 'royal' ? 'Mode royal désactivé' : '✨ Mode royal activé!');
     }
-    
+
     setTimeout(() => setRoyalClicks(0), 500);
   };
 
   return (
     <div className="chat-layout">
       {/* Ambient Mood Lighting Background */}
-      <div 
+      <div
         className="ambient-glow-layer"
         style={backgroundStyle}
       />
-      
+
       {/* Gold Edge Glow Effect (Royal Mode) */}
       {(ambientMode === 'royal' || ambientMode === 'charging') && (
-        <div 
+        <div
           className="edge-glow-layer"
           style={edgeGlowStyle}
         />
       )}
-      
+
       {/* Floating Particles DISABLED - caused system freezes */}
-      
+
       {/* Main Chat Container */}
       <div className="chat-layout-inner stitched" style={edgeGlowStyle}>
-        
+
         {/* Header with Chat Type Menu */}
-        <div 
+        <div
           className="chat-header"
           onClick={handleHeaderClick}
           style={{ cursor: 'pointer' }}
           title="Triple-click pour mode royal"
         >
-          <ChatTypeMenu 
-            userLikes={userLikes}
-            activeType={activeType}
-            onTypeChange={setActiveType}
-            unreadCounts={{
-              tiguy: 0,
-              dms: 2,
-              groups: 5,
-            }}
-          />
-          
           {/* TI-GUY Energy Indicator */}
           <div className="energy-indicator" title={`Énergie TI-GUY: ${charge}%`}>
             <div className={`fleur-de-lys ${charge < 20 ? 'critical' : charge < 50 ? 'low' : ''}`}>
               ⚜️
             </div>
             <div className="energy-bar">
-              <div 
+              <div
                 className="energy-fill"
-                style={{ 
+                style={{
                   width: `${charge}%`,
                   background: charge < 20 ? '#ef4444' : charge < 50 ? '#f59e0b' : '#d4af37'
                 }}
               />
             </div>
           </div>
-          
+
           <div className="chat-actions">
             <button className="header-btn" title="Rechercher">🔍</button>
             <button className="header-btn" title="Paramètres">⚙️</button>
@@ -319,7 +308,7 @@ export const ChatLayout: React.FC = () => {
         </div>
 
         {/* Chat Area */}
-        <ChatArea 
+        <ChatArea
           messages={messages}
           isLoading={isLoading}
           isTyping={isTyping}
@@ -327,13 +316,15 @@ export const ChatLayout: React.FC = () => {
         />
 
         {/* Input Area */}
-        <ChatInput 
-          onSend={handleSend}
-          isTyping={isTyping}
-          chatType={activeType}
-          ambientMode={ambientMode}
+        <ChatInput
+          {...{
+            onSend: handleSend,
+            isTyping,
+            chatType: activeType,
+            ambientMode
+          } as any}
         />
-        
+
       </div>
     </div>
   );

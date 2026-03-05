@@ -3,7 +3,7 @@
  * Only allows good videos to play
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 export type VideoQuality = "good" | "bad" | "checking" | "unknown";
 
@@ -18,23 +18,23 @@ export interface VideoValidationResult {
 // Test if browser can play this video format
 export function canPlayVideo(url: string): boolean {
   const video = document.createElement("video");
-  
+
   // Check HLS
   if (url.includes(".m3u8")) {
-    return video.canPlayType("application/vnd.apple.mpegurl") !== "" || 
-           (window as any).Hls?.isSupported();
+    return video.canPlayType("application/vnd.apple.mpegurl") !== "" ||
+      (window as any).Hls?.isSupported();
   }
-  
+
   // Check MP4
   if (url.includes(".mp4") || url.match(/^https?:\/\//)) {
     return video.canPlayType("video/mp4") !== "";
   }
-  
+
   // Check WebM
   if (url.includes(".webm")) {
     return video.canPlayType("video/webm") !== "";
   }
-  
+
   return true; // Unknown, let it try
 }
 
@@ -46,34 +46,34 @@ export async function validateVideoSource(url: string): Promise<VideoValidationR
       resolve({ url, quality: "bad", error: "Invalid URL", canPlay: false });
       return;
     }
-    
+
     // Quick checks without loading
     if (url.includes("undefined") || url.includes("null")) {
       resolve({ url, quality: "bad", error: "Malformed URL", canPlay: false });
       return;
     }
-    
+
     // Check if browser can play this format
     if (!canPlayVideo(url)) {
       resolve({ url, quality: "bad", error: "Format not supported", canPlay: false });
       return;
     }
-    
+
     // Create test video element
     const video = document.createElement("video");
     video.preload = "metadata";
     video.muted = true;
     video.crossOrigin = "anonymous";
-    
-    const timeoutId: NodeJS.Timeout;
+
+    let timeoutId: NodeJS.Timeout;
     let resolved = false;
-    
+
     const cleanup = () => {
       clearTimeout(timeoutId);
       video.src = "";
       video.load();
     };
-    
+
     const resolveOnce = (result: VideoValidationResult) => {
       if (!resolved) {
         resolved = true;
@@ -81,45 +81,45 @@ export async function validateVideoSource(url: string): Promise<VideoValidationR
         resolve(result);
       }
     };
-    
+
     // Success - video loaded
     video.onloadedmetadata = () => {
       const duration = video.duration;
-      
+
       // Check if duration is valid (not NaN, not 0, not Infinity)
       if (!duration || isNaN(duration) || duration === 0) {
-        resolveOnce({ 
-          url, 
-          quality: "bad", 
-          error: "Invalid duration (corrupted?)", 
-          canPlay: false 
+        resolveOnce({
+          url,
+          quality: "bad",
+          error: "Invalid duration (corrupted?)",
+          canPlay: false
         });
         return;
       }
-      
+
       if (duration === Infinity) {
-        resolveOnce({ 
-          url, 
-          quality: "good", 
+        resolveOnce({
+          url,
+          quality: "good",
           duration,
-          canPlay: true 
+          canPlay: true
         }); // Live stream
         return;
       }
-      
-      resolveOnce({ 
-        url, 
-        quality: "good", 
+
+      resolveOnce({
+        url,
+        quality: "good",
         duration,
-        canPlay: true 
+        canPlay: true
       });
     };
-    
+
     // Error loading video
     video.onerror = () => {
       const error = video.error;
       let errorMessage = "Unknown error";
-      
+
       if (error) {
         switch (error.code) {
           case 1: errorMessage = "Aborted"; break;
@@ -128,25 +128,26 @@ export async function validateVideoSource(url: string): Promise<VideoValidationR
           case 4: errorMessage = "Format not supported"; break;
         }
       }
-      
-      resolveOnce({ 
-        url, 
-        quality: "bad", 
-        error: errorMessage, 
-        canPlay: false 
+
+      resolveOnce({
+        url,
+        quality: "bad",
+        error: errorMessage,
+        canPlay: false
       });
     };
-    
-    // Timeout after 5 seconds
+
+    // Timeout after 10 seconds — resolve as unknown but playable (not "bad")
+    // Slow connections shouldn't mark videos as broken
     timeoutId = setTimeout(() => {
-      resolveOnce({ 
-        url, 
-        quality: "bad", 
-        error: "Load timeout (>5s)", 
-        canPlay: false 
+      resolveOnce({
+        url,
+        quality: "good",  // Don't mark as bad — let user try playing
+        error: undefined,
+        canPlay: true
       });
-    }, 5000);
-    
+    }, 10000);
+
     // Start loading
     video.src = url;
     video.load();
@@ -157,43 +158,43 @@ export async function validateVideoSource(url: string): Promise<VideoValidationR
 export function useVideoValidation(url: string | undefined) {
   const [result, setResult] = useState<VideoValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  
+
   useEffect(() => {
     let cancelled = false;
-    
+
     const validate = async () => {
       if (!url) {
         if (!cancelled) setResult(null);
         return;
       }
-      
+
       if (!cancelled) {
         setIsValidating(true);
         setResult({ url, quality: "checking", canPlay: false });
       }
-      
+
       const validation = await validateVideoSource(url);
-      
+
       if (!cancelled) {
         setResult(validation);
         setIsValidating(false);
       }
     };
-    
+
     validate();
-    
+
     return () => { cancelled = true; };
   }, [url]);
-  
+
   return { result, isValidating };
 }
 
 // Component that only renders children if video is good
 interface ValidatedVideoProps {
   src: string;
-  children: (props: { 
-    isValid: boolean; 
-    isChecking: boolean; 
+  children: (props: {
+    isValid: boolean;
+    isChecking: boolean;
     error?: string;
     duration?: number;
   }) => React.ReactNode;
@@ -201,7 +202,7 @@ interface ValidatedVideoProps {
 
 export function ValidatedVideo({ src, children }: ValidatedVideoProps) {
   const { result, isValidating } = useVideoValidation(src);
-  
+
   return <>{children({
     isValid: result?.quality === "good" || false,
     isChecking: isValidating,

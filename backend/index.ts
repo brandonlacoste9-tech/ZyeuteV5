@@ -75,11 +75,38 @@ const httpServer = createServer(app);
 // Initialize Socket.IO for Real-Time Features
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST"],
   },
+  // Connection limits for production
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxHttpBufferSize: 1e6, // 1MB max message size
 });
+
+// Redis adapter for multi-instance scale (if Redis is available)
+(async () => {
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    try {
+      const { createAdapter } = await import("@socket.io/redis-adapter");
+      const { createClient } = await import("ioredis").then((m) => ({
+        createClient: (url: string) => new m.default(url),
+      }));
+      const pubClient = createClient(redisUrl);
+      const subClient = createClient(redisUrl);
+      io.adapter(createAdapter(pubClient as any, subClient as any));
+      console.log(
+        "✅ Socket.IO Redis adapter connected (multi-instance ready)",
+      );
+    } catch (err) {
+      console.warn(
+        "⚠️ Socket.IO Redis adapter not available, single-instance mode",
+      );
+    }
+  }
+})();
 
 app.set("io", io);
 
@@ -197,8 +224,6 @@ app.use((req, res, next) => {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
 
-    const { default: debugRouter } = await import("./routes/debug.js");
-    app.use("/api/debug", debugRouter);
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
     app.use("/api/messaging", messagingRouter);
@@ -207,78 +232,10 @@ app.use((req, res, next) => {
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
 
-    // Debug DB connection test
-    app.get("/api/debug/db-test", async (req, res) => {
-      try {
-        const pool = (await import("./storage.js")).pool;
-        const client = await pool.connect();
-        const result = await client.query(
-          "SELECT NOW() as time, current_database() as db",
-        );
-        client.release();
-        res.json({
-          success: true,
-          db: result.rows[0],
-          env: process.env.DATABASE_URL
-            ? "DATABASE_URL is set"
-            : "DATABASE_URL is MISSING",
-        });
-      } catch (error: any) {
-        const dbUrl = process.env.DATABASE_URL || "";
-        const maskedUrl = dbUrl.replace(/:([^@]+)@/, ":***@");
-        res.json({
-          success: false,
-          error: error.message,
-          code: error.code,
-          url: maskedUrl,
-        });
-      }
-    });
-
     // Feed routes using Supabase HTTP API (works without DATABASE_URL)
     const { default: feedSupabaseRouter } =
       await import("./routes/feed-supabase.js");
     app.use("/api", feedSupabaseRouter);
-
-    // Debug feed route (PUBLIC - no auth required for troubleshooting)
-    app.get("/api/debug/feed", async (req, res) => {
-      try {
-        const pool = (await import("./storage.js")).pool;
-        const client = await pool.connect();
-
-        // Check posts
-        const postsResult = await client.query(`
-          SELECT COUNT(*) as total,
-            COUNT(CASE WHEN visibility = 'public' AND (est_masque = false OR est_masque IS NULL) AND deleted_at IS NULL THEN 1 END) as visible
-          FROM publications
-        `);
-
-        // Check users
-        const usersResult = await client.query(`
-          SELECT COUNT(*) as count FROM user_profiles
-        `);
-
-        // Sample posts without join
-        const postsOnly = await client.query(`
-          SELECT id, caption, media_url, user_id, created_at, visibility, est_masque, deleted_at
-          FROM publications
-          WHERE visibility = 'public' AND (est_masque = false OR est_masque IS NULL) AND deleted_at IS NULL
-          ORDER BY created_at DESC
-          LIMIT 3
-        `);
-
-        client.release();
-
-        res.json({
-          stats: postsResult.rows[0],
-          users: usersResult.rows[0],
-          postsOnly: postsOnly.rows,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message, stack: error.stack });
-      }
-    });
 
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);

@@ -207,7 +207,16 @@ async function fallbackToVertexAI(
 ): Promise<AnalyzeImageResult> {
   // Import the existing Vertex AI service
   const { analyzeImage } = await import("./vertex-service.js");
-  return await analyzeImage(imageUrl, options);
+  const result = await analyzeImage(imageUrl, options);
+
+  return {
+    caption: result.description || "C'est cool! \ud83e\uddab",
+    tags: result.tags || ["quebec"],
+    detected_objects: result.tags || [],
+    vibe_category: result.vibe || "chill",
+    confidence: 0.8,
+    joual_caption: result.description || "C'est malade! \ud83e\uddab",
+  };
 }
 
 async function fetchImageBase64(imageUrl: string): Promise<string | null> {

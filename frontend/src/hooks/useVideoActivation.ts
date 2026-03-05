@@ -61,12 +61,17 @@ export function useVideoActivation(
 
   useEffect(() => {
     // 1. Playback Logic
+    // STRICT TIKTOK RULE: Only ONE video plays at a time to prevent hardware decoder contention.
     let nextShouldPlay = false;
-    if (
-      !isFastScrolling &&
-      (isFocused || (priority && visibilityRatio > 0.3))
-    ) {
-      nextShouldPlay = true;
+    if (!isFastScrolling) {
+      // Only play if it is the designated priority (current index) and is mostly visible,
+      // OR if it happens to be fully visible (e.g., initial load).
+      if (priority && visibilityRatio >= 0.3) {
+        nextShouldPlay = true;
+      } else if (!priority && visibilityRatio > 0.8) {
+        // If not priority, wait until it's overwhelmingly obvious it's the main video
+        nextShouldPlay = true;
+      }
     }
     setShouldPlay(nextShouldPlay);
 

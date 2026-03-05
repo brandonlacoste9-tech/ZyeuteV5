@@ -22,13 +22,13 @@ import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import type { Post, User } from "@/types";
 
 /** Post with optional engagement fields from API */
-interface PostWithEngagement extends Post {
+type PostWithEngagement = Post & {
   is_fired?: boolean;
   fire_count?: number;
   fireCount?: number;
   comment_count?: number;
   commentCount?: number;
-}
+};
 
 export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
@@ -43,7 +43,6 @@ export const LaZyeute: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showEdgeGlow, setShowEdgeGlow] = useState(false);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -79,30 +78,20 @@ export const LaZyeute: React.FC = () => {
     }
   }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
 
-  // Video playback control and edge lighting
-  useEffect(() => {
-    videoRefs.current.forEach((video, id) => {
-      const postIndex = posts.findIndex((p) => p.id === id);
-      if (postIndex === currentIndex) {
-        video.currentTime = 0;
-        if (isPlaying) {
-          video.play().catch(() => {});
-          setShowEdgeGlow(true);
-        } else {
-          video.pause();
-          setShowEdgeGlow(false);
-        }
+  // Video playback control
+  videoRefs.current.forEach((video, id) => {
+    const postIndex = posts.findIndex((p) => p.id === id);
+    if (postIndex === currentIndex) {
+      video.currentTime = 0;
+      if (isPlaying) {
+        video.play().catch(() => { });
       } else {
         video.pause();
       }
-    });
-
-    // Show edge glow for photos too (after a brief delay)
-    if (currentPost?.type !== "video") {
-      const timer = setTimeout(() => setShowEdgeGlow(true), 300);
-      return () => clearTimeout(timer);
+    } else {
+      video.pause();
     }
-  }, [currentIndex, posts, isPlaying, currentPost]);
+  });
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -111,7 +100,6 @@ export const LaZyeute: React.FC = () => {
     const newIndex = Math.round(scrollTop / viewportHeight);
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
       setCurrentIndex(newIndex);
-      setShowEdgeGlow(false); // Reset glow on scroll
     }
   }, [currentIndex, posts.length]);
 
@@ -222,36 +210,9 @@ export const LaZyeute: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col">
-      {/* Dynamic Edge Lighting Effect */}
-      <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          boxShadow: `
-            inset 0 0 60px ${edgeLighting}40,
-            inset 0 0 120px ${edgeLighting}20,
-            inset 0 0 200px ${edgeLighting}10
-          `,
-        }}
-      />
+      {/* Edge lighting overlays removed — was covering video playback */}
 
-      {/* Animated Edge Border */}
-      <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow && currentPost?.type === "video"
-            ? "opacity-100"
-            : "opacity-0"
-        }`}
-        style={{
-          border: `2px solid ${edgeLighting}60`,
-          boxShadow: `
-            0 0 20px ${edgeLighting}50,
-            0 0 40px ${edgeLighting}30,
-            0 0 60px ${edgeLighting}20
-          `,
-        }}
-      />
+
 
       {/* Header */}
       <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
@@ -379,7 +340,7 @@ export const LaZyeute: React.FC = () => {
               className="absolute inset-0 bg-black"
               onClick={
                 (post.media_url || post.mediaUrl)?.includes(".mp4") ||
-                (post.media_url || post.mediaUrl)?.includes("video")
+                  (post.media_url || post.mediaUrl)?.includes("video")
                   ? togglePlayPause
                   : undefined
               }
@@ -418,9 +379,8 @@ export const LaZyeute: React.FC = () => {
                   <img
                     src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     alt={post.caption || "Post image"}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
-                      index === currentIndex ? "scale-110" : "scale-100"
-                    }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? "scale-110" : "scale-100"
+                      }`}
                   />
                 </div>
               )}
@@ -428,12 +388,11 @@ export const LaZyeute: React.FC = () => {
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                    (post.media_url || post.mediaUrl)?.includes(".mp4") ||
+                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${(post.media_url || post.mediaUrl)?.includes(".mp4") ||
                     (post.media_url || post.mediaUrl)?.includes("video")
-                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  }`}
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    }`}
                 >
                   {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
                 </div>
@@ -533,10 +492,6 @@ export const LaZyeute: React.FC = () => {
                           realIndex === currentIndex
                             ? edgeLighting
                             : "rgba(255,255,255,0.3)",
-                        boxShadow:
-                          realIndex === currentIndex
-                            ? `0 0 8px ${edgeLighting}`
-                            : "none",
                       }}
                     />
                   );
@@ -555,7 +510,7 @@ export const LaZyeute: React.FC = () => {
               <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
               <p className="text-white text-lg">Chargement...</p>
               <p className="text-white/60 text-sm">
-                Encore plus de contenu québécois! 🍁
+                Encore plus de contenu d'icitte! ⚜️
               </p>
             </div>
           </div>
@@ -565,7 +520,7 @@ export const LaZyeute: React.FC = () => {
         {!hasNextPage && posts.length > 0 && (
           <div className="h-screen snap-start snap-always flex items-center justify-center">
             <div className="text-center p-8">
-              <div className="text-6xl mb-4">🍁</div>
+              <div className="text-6xl mb-4">⚜️</div>
               <h2 className="text-gold-400 text-xl font-bold mb-2">
                 C'est tout pour le moment!
               </h2>
@@ -598,7 +553,6 @@ export const LaZyeute: React.FC = () => {
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
                 border: `2px solid ${edgeLighting}`,
-                boxShadow: `0 4px 15px rgba(0,0,0,0.4)`,
               }}
             >
               <img
@@ -623,9 +577,6 @@ export const LaZyeute: React.FC = () => {
                   ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
                   : "linear-gradient(145deg, #D4AF37 0%, #B8860B 50%, #8B4513 100%)",
                 border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : "#D4AF37"}`,
-                boxShadow: (currentPost as PostWithEngagement).is_fired
-                  ? "0 0 25px rgba(255,61,61,0.8), 0 0 10px rgba(255,215,0,0.5)"
-                  : "0 0 15px rgba(212,175,55,0.5), 0 4px 15px rgba(0,0,0,0.4)",
               }}
             >
               <svg
@@ -654,7 +605,6 @@ export const LaZyeute: React.FC = () => {
                 color: (currentPost as PostWithEngagement).is_fired
                   ? "#FFD700"
                   : "#D4AF37",
-                textShadow: "0 1px 2px rgba(0,0,0,0.5)",
               }}
             >
               {(currentPost as any).fireCount ??
@@ -675,7 +625,6 @@ export const LaZyeute: React.FC = () => {
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
                 border: `2px solid ${edgeLighting}`,
-                boxShadow: `0 4px 15px rgba(0,0,0,0.4)`,
               }}
             >
               <svg
@@ -709,7 +658,6 @@ export const LaZyeute: React.FC = () => {
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
                 border: `2px solid ${edgeLighting}`,
-                boxShadow: `0 4px 15px rgba(0,0,0,0.4)`,
               }}
             >
               <svg

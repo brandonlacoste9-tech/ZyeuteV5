@@ -119,7 +119,7 @@ export const ChatTypeMenu: React.FC<Props> = ({
 
   const handleSelect = (type: ChatTypeOption) => {
     tap();
-    
+
     if (!type.unlocked && !isPremiumUnlocked && type.likesRequired > 0) {
       toast.info(`🔒 Débloque à ${type.likesRequired.toLocaleString()} likes!`);
       impact();
@@ -150,10 +150,10 @@ export const ChatTypeMenu: React.FC<Props> = ({
       >
         {/* Gold Stitching Effect */}
         <span className="absolute inset-1 border border-dashed border-[#d4af37]/40 rounded-lg pointer-events-none" />
-        
+
         {/* Icon */}
         <span className="text-2xl">{activeChatType.icon}</span>
-        
+
         {/* Label */}
         <div className="flex flex-col items-start">
           <span className="text-[#d4af37] font-bold text-sm tracking-wide">
@@ -163,7 +163,7 @@ export const ChatTypeMenu: React.FC<Props> = ({
             {isPremiumUnlocked ? '✨ Premium' : `${userLikes.toLocaleString()} likes`}
           </span>
         </div>
-        
+
         {/* Dropdown Arrow */}
         <svg
           className={cn(
@@ -178,9 +178,9 @@ export const ChatTypeMenu: React.FC<Props> = ({
         </svg>
 
         {/* Unread Badge */}
-        {unreadCounts[activeType] > 0 && (
+        {(unreadCounts?.[activeType] || 0) > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#d4af37] text-black text-xs font-bold rounded-full flex items-center justify-center">
-            {unreadCounts[activeType] > 9 ? '9+' : unreadCounts[activeType]}
+            {(unreadCounts?.[activeType] ?? 0) > 9 ? '9+' : unreadCounts?.[activeType]}
           </span>
         )}
 
@@ -217,7 +217,7 @@ export const ChatTypeMenu: React.FC<Props> = ({
                 />
               </div>
               <p className="text-[10px] text-[#8b7355] mt-1">
-                {likesRemaining > 0 
+                {likesRemaining > 0
                   ? `Encore ${likesRemaining.toLocaleString()} likes pour débloquer les canaux!`
                   : '🎉 Félicitations! Menu premium débloqué!'
                 }
@@ -248,7 +248,7 @@ export const ChatTypeMenu: React.FC<Props> = ({
                   onClick={() => handleSelect(type)}
                   className={cn(
                     "w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all relative overflow-hidden",
-                    isActive 
+                    isActive
                       ? "bg-[#d4af37]/20 border border-[#d4af37]/50"
                       : "hover:bg-[#d4af37]/10 border border-transparent",
                     isLocked && "opacity-60 cursor-not-allowed"
@@ -283,7 +283,7 @@ export const ChatTypeMenu: React.FC<Props> = ({
                       )}
                     </div>
                     <p className="text-[10px] text-[#8b7355]">
-                      {isLocked 
+                      {isLocked
                         ? `Débloque à ${type.likesRequired.toLocaleString()} likes`
                         : type.description
                       }

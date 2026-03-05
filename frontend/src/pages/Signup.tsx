@@ -105,7 +105,7 @@ export const Signup: React.FC = () => {
             REJOINS LA COMMUNAUTÉ QUÉBÉCOISE
           </p>
           <p className="text-white/80 text-sm embossed">
-            Fait au Québec, pour le Québec 🇨🇦⚜️
+            Fait au Québec, pour vous autres ⚜️
           </p>
         </div>
 
@@ -267,7 +267,7 @@ export const Signup: React.FC = () => {
           <p className="flex items-center justify-center gap-2 embossed">
             <span className="text-gold-500">⚜️</span>
             <span>Bienvenue dans la famille québécoise</span>
-            <span className="text-gold-500">🦫</span>
+            <span className="text-gold-500">⚜️</span>
           </p>
         </div>
       </div>

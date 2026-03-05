@@ -44,6 +44,7 @@ interface SingleVideoViewProps {
     concurrency: number;
     tier: number;
   };
+  shouldPrefetch?: boolean;
   /** Called when playback reaches 70% (for prefetching next videos) */
   onVideoProgress?: (progress: number) => void;
 }
@@ -62,6 +63,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     videoSource,
     isCached,
     debug,
+    shouldPrefetch = false,
     onVideoProgress,
   }) => {
     const videoRef = useRef<HTMLDivElement>(null);
@@ -128,7 +130,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             }
           }
         });
-        
+
         return () => {
           if ('cancelIdleCallback' in window) {
             cancelIdleCallback(idleCallbackId);
@@ -164,8 +166,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const [isFollowing, setIsFollowing] = useState(false);
 
     // Derive counts from props OR real-time updates
-    const fireCount = engagement.fireCount ?? post.fireCount;
-    const commentCount = engagement.commentCount ?? post.commentCount;
+    const fireCount = engagement.fireCount ?? (post as any).fireCount ?? 0;
+    const commentCount = engagement.commentCount ?? (post as any).commentCount ?? 0;
 
     const handleFire = () => {
       // Only toggle if not already liked (or toggle off?)
@@ -369,9 +371,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Deep Enhance: Select best video source
     // Support both snake_case and camelCase for compatibility
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
-    const mediaUrl = (post.media_url ?? post.mediaUrl) || 
-                     (post.enhanced_url ?? post.enhancedUrl) || 
-                     (post.original_url ?? post.originalUrl) || "";
+    const mediaUrl = (post.media_url ?? post.mediaUrl) ||
+      (post.enhanced_url ?? post.enhancedUrl) ||
+      (post.original_url ?? post.originalUrl) || "";
     const muxPlaybackId = post.mux_playback_id ?? post.muxPlaybackId;
     const validatedType = validatePostType(
       mediaUrl,
@@ -517,14 +519,14 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         )}
         {/* Full-screen Media */}
         {/* MEMORY OPTIMIZATION: Unmount video player when off-screen (>2 items away) */}
-        {/* This prevents DOM/video decoder bloat after scrolling through many videos */}
+        {/* We keep the active, priority, or shouldPrefetch (predictive next) mounted */}
         <div className="absolute inset-0 w-full h-full">
-          {!isActive && !priority ? (
+          {!isActive && !priority && !shouldPrefetch ? (
             // Off-screen: Show static thumbnail only (no video element)
             <div className="w-full h-full bg-zinc-900">
               {post.thumbnailUrl ? (
                 <img
-                  src={post.thumbnailUrl || post.thumbnail_url}
+                  src={post.thumbnailUrl || post.thumbnail_url || undefined}
                   alt=""
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -607,6 +609,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   className="w-full h-full"
                   style={filterStyle}
                   priority={priority}
+                  preload={isActive ? "auto" : preload}
                   onProgress={isActive ? onVideoProgress : undefined}
                   onError={(err) => setVideoError(err)}
                 />
@@ -627,7 +630,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Double Tap Fire Animation */}
         {showFireAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 animate-heart-pump">
-            <div className="text-[120px] drop-shadow-[0_0_30px_rgba(255,100,0,0.9)] animate-pulse">
+            <div className="text-[120px] animate-pulse">
               🔥
             </div>
           </div>
@@ -703,7 +706,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             onClick={tap}
             className="relative"
           >
-            <div className="absolute inset-0 rounded-full border border-gold-500/50 blur-[2px]"></div>
+            <div className="absolute inset-0 rounded-full border border-gold-500/50"></div>
             <Avatar
               src={user.avatar_url}
               size="md"
@@ -720,7 +723,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             >
               {user.display_name || user.username}
               {user.is_verified && (
-                <span className="text-gold-500 drop-shadow-[0_0_3px_rgba(255,191,0,0.8)]">
+                <span className="text-gold-500">
                   ✓
                 </span>
               )}
@@ -735,8 +738,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
           {/* Live Viewer Count (Zyeuteurs) */}
           {viewerCount > 0 && (
-            <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.4)]">
-              <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_white]" />
+            <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-white" />
               <span className="text-white text-[10px] font-bold uppercase tracking-wider">
                 {viewerCount} {viewerCount > 1 ? "Zyeuteurs" : "Zyeuteur"}
               </span>
@@ -802,7 +805,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             >
               <div
                 className={`text-4xl transition-all ${isLiked
-                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
+                  ? "animate-pulse"
                   : "grayscale opacity-80"
                   }`}
               >

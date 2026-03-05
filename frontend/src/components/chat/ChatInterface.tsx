@@ -65,7 +65,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showVoiceWaveform, setShowVoiceWaveform] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,7 +107,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
     if (!text || isTyping) return;
 
     tap();
-    
+
     // Add user message
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -121,10 +121,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
 
     try {
       const response = await tiguyService.sendMessage(text);
-      const responseText = typeof response === "string" 
-        ? response 
-        : response.response || "Je n'ai pas de réponse pour ça, tsé?";
-      
+      const responseText = typeof response === "string"
+        ? response
+        : (response as any).response || "Je n'ai pas de réponse pour ça, tsé?";
+
       setMessages(prev => [...prev, {
         id: `tiguy-${Date.now()}`,
         sender: "tiGuy",
@@ -163,7 +163,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
         text: "🎤 Message vocal (0:05)",
         timestamp: new Date(),
       }]);
-      
+
       // Ti-Guy responds to voice
       setIsTyping(true);
       setTimeout(() => {
@@ -181,11 +181,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     tap();
     const isImage = file.type.startsWith("image/");
     const icon = isImage ? "🖼️" : "📎";
-    
+
     setMessages(prev => [...prev, {
       id: `file-${Date.now()}`,
       sender: "user",
@@ -250,7 +250,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
             ))}
           </div>
         );
-      
+
       case "dms":
         return (
           <div className="space-y-1">
@@ -292,7 +292,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
             ))}
           </div>
         );
-      
+
       case "mystuff":
         return (
           <div className="space-y-3">
@@ -320,7 +320,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
                 </button>
               ))}
             </div>
-            
+
             {/* Content based on submenu */}
             <div className="px-3 space-y-2">
               {activeSubmenu === "files" && (
@@ -379,7 +379,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
     <div className="fixed inset-0 z-[100] flex bg-black/90 backdrop-blur-sm">
       {/* Main Container */}
       <div className="flex w-full h-full max-w-6xl mx-auto my-4 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#d4af37]/50">
-        
+
         {/* SIDEBAR - Leather Stitched Panel */}
         <div
           className={cn(
@@ -484,7 +484,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
               >
                 {sidebarOpen ? <IoChevronDown className="w-5 h-5 -rotate-90" /> : <IoChevronUp className="w-5 h-5 -rotate-90" />}
               </button>
-              
+
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-700 border-2 border-[#d4af37] flex items-center justify-center text-2xl shadow-lg shadow-[#d4af37]/20">
                   🦫
@@ -561,8 +561,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
                       border: message.isError
                         ? "2px solid rgba(239,68,68,0.5)"
                         : message.sender === "user"
-                        ? "2px solid rgba(139,92,246,0.4)"
-                        : "2px solid rgba(212,175,55,0.4)",
+                          ? "2px solid rgba(139,92,246,0.4)"
+                          : "2px solid rgba(212,175,55,0.4)",
                       boxShadow:
                         message.sender === "user"
                           ? "0 4px 15px rgba(109,40,217,0.2), inset 0 1px 0 rgba(255,255,255,0.1)"

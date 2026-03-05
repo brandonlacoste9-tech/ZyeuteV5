@@ -163,7 +163,7 @@ export const Achievements: React.FC = () => {
                       width: `${Math.min(
                         ((stats?.total_points - tierInfo.min_points) /
                           (tierInfo.max_points - tierInfo.min_points)) *
-                          100,
+                        100,
                         100,
                       )}%`,
                     }}
@@ -222,7 +222,7 @@ export const Achievements: React.FC = () => {
                   : "bg-white/5 text-white hover:bg-white/10",
               )}
             >
-              🍁 Culturel
+              ⚜️ Culturel
             </button>
             <button
               onClick={() => setFilter("regional")}
@@ -353,15 +353,15 @@ export const Achievements: React.FC = () => {
                         className={cn(
                           "px-2 py-0.5 rounded-full text-xs font-bold",
                           achievement.rarity === "legendary" &&
-                            "bg-yellow-500/20 text-yellow-400",
+                          "bg-yellow-500/20 text-yellow-400",
                           achievement.rarity === "epic" &&
-                            "bg-purple-500/20 text-purple-400",
+                          "bg-purple-500/20 text-purple-400",
                           achievement.rarity === "rare" &&
-                            "bg-blue-500/20 text-blue-400",
+                          "bg-blue-500/20 text-blue-400",
                           achievement.rarity === "uncommon" &&
-                            "bg-green-500/20 text-green-400",
+                          "bg-green-500/20 text-green-400",
                           achievement.rarity === "common" &&
-                            "bg-gray-500/20 text-gray-400",
+                          "bg-gray-500/20 text-gray-400",
                         )}
                       >
                         {achievement.rarity.toUpperCase()}

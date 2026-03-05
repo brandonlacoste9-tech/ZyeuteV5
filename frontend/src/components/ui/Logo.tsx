@@ -180,7 +180,7 @@ export const LogoFull: React.FC<{ className?: string }> = ({ className }) => {
             L&apos;APP SOCIALE DU QUÉBEC
           </p>
           <p className="text-white/60 text-xs mt-1">
-            Fait au Québec, pour le Québec 🇨🇦⚜️
+            Fait au Québec, pour vous autres ⚜️
           </p>
         </div>
       </div>

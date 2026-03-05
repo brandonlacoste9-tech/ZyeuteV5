@@ -88,9 +88,11 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
       </div>
 
       {/* Bottom tagline */}
-      <div className="absolute bottom-8 text-center">
-        <p className="text-white/40 text-sm">
-          Fait au Québec, pour le Québec 🇨🇦⚜️
+      <div className="absolute bottom-8 text-center text-leather-400">
+        <p className="flex items-center justify-center gap-2 text-sm">
+          <span>⚜️</span>
+          <span>Fait au Québec, pour vous autres</span>
+          <span>⚜️</span>
         </p>
       </div>
     </div>

@@ -4,7 +4,7 @@
  */
 
 import { Router } from "express";
-import { db } from "../storage.js";
+import { db, pool } from "../storage.js";
 import { requireAuth as authenticateToken } from "../supabase-auth.js";
 import {
   broadcastMessage,
@@ -21,7 +21,7 @@ router.use(authenticateToken);
  * Create a new group conversation
  */
 router.post("/group", async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { title, memberIds = [], description, avatarUrl } = req.body;
 
   if (!title) {
@@ -34,7 +34,7 @@ router.post("/group", async (req, res) => {
 
   try {
     // Create conversation
-    const convResult = await db.query(
+    const convResult = await pool.query(
       `INSERT INTO conversations (type, title, description, avatar_url, created_by, created_at, updated_at)
        VALUES ('group', $1, $2, $3, $4, NOW(), NOW())
        RETURNING *`,
@@ -47,7 +47,7 @@ router.post("/group", async (req, res) => {
     const allMembers = [...new Set([userId, ...memberIds])];
 
     for (const memberId of allMembers) {
-      await db.query(
+      await pool.query(
         `INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
          VALUES ($1, $2, $3, NOW())`,
         [conversation.id, memberId, memberId === userId ? "owner" : "member"],
@@ -55,18 +55,19 @@ router.post("/group", async (req, res) => {
     }
 
     // Create group settings
-    await db.query(`INSERT INTO group_settings (conversation_id) VALUES ($1)`, [
-      conversation.id,
-    ]);
+    await pool.query(
+      `INSERT INTO group_settings (conversation_id) VALUES ($1)`,
+      [conversation.id],
+    );
 
     // Add system message
-    await db.query(
+    await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
       [
         conversation.id,
         userId,
-        `${req.user.username} a créé le groupe "${title}"`,
+        `${req.user!.username} a créé le groupe "${title}"`,
       ],
     );
 
@@ -92,13 +93,13 @@ router.post("/group", async (req, res) => {
  * Add member to group
  */
 router.post("/:id/members", async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { id: conversationId } = req.params;
   const { userId: newMemberId } = req.body;
 
   try {
     // Check if user is admin/owner
-    const roleResult = await db.query(
+    const roleResult = await pool.query(
       `SELECT role FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
       [conversationId, userId],
@@ -112,7 +113,7 @@ router.post("/:id/members", async (req, res) => {
     }
 
     // Add new member
-    await db.query(
+    await pool.query(
       `INSERT INTO conversation_participants (conversation_id, user_id, role, joined_at)
        VALUES ($1, $2, 'member', NOW())
        ON CONFLICT DO NOTHING`,
@@ -120,7 +121,7 @@ router.post("/:id/members", async (req, res) => {
     );
 
     // Get new member info
-    const userResult = await db.query(
+    const userResult = await pool.query(
       `SELECT username, display_name FROM users WHERE id = $1`,
       [newMemberId],
     );
@@ -128,7 +129,7 @@ router.post("/:id/members", async (req, res) => {
     const newMember = userResult.rows[0];
 
     // Add system message
-    await db.query(
+    await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
       [conversationId, userId, `${newMember.display_name} a rejoint le groupe`],
@@ -156,14 +157,14 @@ router.post("/:id/members", async (req, res) => {
  * Remove member from group (or leave)
  */
 router.delete("/:id/members/:memberId", async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { id: conversationId, memberId } = req.params;
   const isSelfRemoval = memberId === "me" || memberId === userId;
 
   try {
     if (!isSelfRemoval) {
       // Check if user is admin/owner
-      const roleResult = await db.query(
+      const roleResult = await pool.query(
         `SELECT role FROM conversation_participants
          WHERE conversation_id = $1 AND user_id = $2`,
         [conversationId, userId],
@@ -182,13 +183,13 @@ router.delete("/:id/members/:memberId", async (req, res) => {
     const targetId = isSelfRemoval ? userId : memberId;
 
     // Get user info before removing
-    const userResult = await db.query(
+    const userResult = await pool.query(
       `SELECT username, display_name FROM users WHERE id = $1`,
       [targetId],
     );
 
     // Remove member
-    await db.query(
+    await pool.query(
       `DELETE FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
       [conversationId, targetId],
@@ -198,7 +199,7 @@ router.delete("/:id/members/:memberId", async (req, res) => {
     const actionText = isSelfRemoval
       ? "a quitté le groupe"
       : "a été retiré du groupe";
-    await db.query(
+    await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, content_type, content_text, created_at)
        VALUES ($1, $2, 'system', $3, NOW())`,
       [
@@ -220,12 +221,12 @@ router.delete("/:id/members/:memberId", async (req, res) => {
  * Get group members
  */
 router.get("/:id/members", async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { id: conversationId } = req.params;
 
   try {
     // Check if user is member
-    const memberCheck = await db.query(
+    const memberCheck = await pool.query(
       `SELECT 1 FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
       [conversationId, userId],
@@ -236,7 +237,7 @@ router.get("/:id/members", async (req, res) => {
     }
 
     // Get members with user info
-    const result = await db.query(
+    const result = await pool.query(
       `SELECT 
         u.id,
         u.username,
@@ -271,13 +272,13 @@ router.get("/:id/members", async (req, res) => {
  * Update group info
  */
 router.patch("/:id", async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user!.id;
   const { id: conversationId } = req.params;
   const { title, description, avatarUrl } = req.body;
 
   try {
     // Check if user is admin/owner
-    const roleResult = await db.query(
+    const roleResult = await pool.query(
       `SELECT role FROM conversation_participants
        WHERE conversation_id = $1 AND user_id = $2`,
       [conversationId, userId],
@@ -313,7 +314,7 @@ router.patch("/:id", async (req, res) => {
 
     values.push(conversationId);
 
-    await db.query(
+    await pool.query(
       `UPDATE conversations SET ${updates.join(", ")} WHERE id = $${paramIndex}`,
       values,
     );

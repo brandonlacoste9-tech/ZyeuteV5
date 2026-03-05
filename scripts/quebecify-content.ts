@@ -8,7 +8,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+const supabaseUrl =
+  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseKey) {
@@ -22,39 +23,39 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const QUEBEC_CAPTIONS: Record<string, string[]> = {
   "montreal city": [
     "Montréal, la métropole du Québec! 🏙️⚜️ #Montreal #Quebec",
-    "Les rues de Montréal! 🇨🇦❤️ #MTL #Quebec",
-    "Ma belle ville de Montréal! 🍁✨ #Montreal",
+    "Les rues de Montréal! ⚜️❤️ #MTL #Quebec",
+    "Ma belle ville de Montréal! 🏙️✨ #Montreal",
   ],
-  "nature": [
+  nature: [
     "La nature québécoise! 🌲🍂 #Nature #Quebec",
     "Paysage du Québec! 🏔️⚜️ #Paysage #Nature",
     "La belle province! 🌲🦌 #Quebec #Nature",
   ],
-  "urban": [
+  urban: [
     "Ambiance urbaine à Montréal! 🌃✨ #Urban #MTL",
     "La vie de quartier! 🏘️❤️ #Montreal #Vie",
   ],
-  "night": [
+  night: [
     "Montréal la nuit! 🌙✨ #Nightlife #Montreal",
     "Les lumières de la ville! 🌃⚜️ #Lumiere",
   ],
-  "travel": [
-    "Découvrir le Québec! 🗺️🍁 #Voyage #Quebec",
+  travel: [
+    "Découvrir le Québec! 🗺️⚜️ #Voyage #Quebec",
     "Roadtrip au Québec! 🚗💨 #Voyage",
   ],
-  "dance": [
+  dance: [
     "Danse et culture! 💃🎵 #Danse #Culture",
     "Expression libre! 🎭✨ #Art #Danse",
   ],
-  "default": [
-    "Contenu québécois! 🍁⚜️ #Quebec #Zyeute",
-    "Made in Quebec! 🇨🇦❤️ #Quebec",
-    "La belle province! 🍁✨ #Quebec",
+  default: [
+    "Contenu d'icitte! ⚜️ #Quebec #Zyeute",
+    "Fait au Québec! ⚜️❤️ #Quebec",
+    "La belle province! 🌲✨ #Quebec",
     "Zyeuté! 👀⚜️ #Quebec #Content",
-    "Vive le Québec! 🍁❤️ #Quebec",
+    "Vive le Québec! ⚜️❤️ #Quebec",
     "Culture québécoise! ⚜️🎭 #Culture",
-    "Moment québécois! ☕🍁 #Moment",
-    "L'esprit du Québec! 🍁✨ #Esprit",
+    "Moment québécois! ☕⚜️ #Moment",
+    "L'esprit du Québec! ⚜️✨ #Esprit",
   ],
 };
 
@@ -65,7 +66,8 @@ function getQuebecCaption(category: string): string {
 
 function categorizeContent(caption: string): string {
   const lower = caption.toLowerCase();
-  if (lower.includes("montreal") || lower.includes("city")) return "montreal city";
+  if (lower.includes("montreal") || lower.includes("city"))
+    return "montreal city";
   if (lower.includes("nature") || lower.includes("forest")) return "nature";
   if (lower.includes("urban") || lower.includes("street")) return "urban";
   if (lower.includes("night") || lower.includes("light")) return "night";
@@ -107,9 +109,14 @@ async function quebecifyContent() {
       .eq("id", post.id);
 
     if (updateError) {
-      console.error(`❌ Failed to update ${post.id?.slice(0, 8)}:`, updateError.message);
+      console.error(
+        `❌ Failed to update ${post.id?.slice(0, 8)}:`,
+        updateError.message,
+      );
     } else {
-      console.log(`✅ ${post.id?.slice(0, 8)}... → "${newCaption.substring(0, 40)}..."`);
+      console.log(
+        `✅ ${post.id?.slice(0, 8)}... → "${newCaption.substring(0, 40)}..."`,
+      );
       updated++;
     }
   }
