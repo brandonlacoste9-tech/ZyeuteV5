@@ -1,72 +1,56 @@
-/**
- * Test database connection with new direct URL
- */
-import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import pg from "pg";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const { Pool } = pg;
 
-async function testSupabaseHTTP() {
-  console.log("Testing Supabase HTTP API...");
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: join(__dirname, "../.env") });
 
-  if (!supabaseUrl || !supabaseKey) {
-    console.log("❌ Missing Supabase env vars");
-    return;
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  const { data, error } = await supabase
-    .from("publications")
-    .select("count")
-    .eq("type", "video")
-    .is("deleted_at", null)
-    .single();
-
-  if (error) {
-    console.log("❌ Supabase HTTP error:", error.message);
-  } else {
-    console.log("✅ Supabase HTTP works! Video count:", data?.count);
-  }
-}
-
-async function testDirectPostgres() {
-  console.log("\nTesting Direct PostgreSQL...");
-  console.log("DATABASE_URL:", process.env.DATABASE_URL?.slice(0, 40) + "...");
-
+async function tryConnect(url: string) {
+  console.log(`\n🔍 Trying URL... ${url.replace(/:[^:@]+@/, ":***@")}`);
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: url,
+    connectionTimeoutMillis: 5000,
     ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 10000,
   });
 
   try {
-    const client = await pool.connect();
-    const result = await client.query(
-      "SELECT COUNT(*) as count FROM publications WHERE type = 'video' AND deleted_at IS NULL",
+    const res = await pool.query(
+      "SELECT NOW() as now, current_database() as db",
     );
-    console.log(
-      "✅ Direct PostgreSQL works! Video count:",
-      result.rows[0].count,
-    );
-    client.release();
+    console.log("✅ Connection Successful!");
+    return true;
   } catch (err: any) {
-    console.log("❌ Direct PostgreSQL error:", err.message);
+    console.log(`❌ Failed: ${err.message}`);
+    return false;
   } finally {
     await pool.end();
   }
 }
 
-async function main() {
-  console.log("=== DB Connection Test ===\n");
-  await testSupabaseHTTP();
-  await testDirectPostgres();
+async function run() {
+  const original = process.env.DATABASE_URL || "";
+
+  const alternatives = [
+    original,
+    original
+      .replace(":6543", ":5432")
+      .replace("postgres.vuanulvyqkfefmjcikfk", "postgres"),
+    original.replace("postgres.vuanulvyqkfefmjcikfk", "postgres"),
+    original.replace(":6543", ":5432"),
+  ];
+
+  for (const url of alternatives) {
+    if (await tryConnect(url)) {
+      console.log(`\n🟢 Best connection string found. Please update .env`);
+      process.exit(0);
+    }
+  }
+
+  console.log("\n🔴 Could not find a working connection string.");
+  process.exit(1);
 }
 
-main();
+run();
