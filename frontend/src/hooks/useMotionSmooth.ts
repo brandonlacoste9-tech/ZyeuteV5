@@ -129,7 +129,7 @@ export function useMotionSmooth(
         rafRef.current = requestAnimationFrame(() => loopRef.current?.());
       }
     };
-  });
+  }, []);
 
   // Kick off RAF loop when velocity or transition state changes
   useEffect(() => {
