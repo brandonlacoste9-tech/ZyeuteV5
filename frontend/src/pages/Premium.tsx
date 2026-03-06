@@ -4,10 +4,8 @@
  * Beaver leather, gold embossing, stitched elegance
  */
 
-import React, { useState } from "react";
-import { Header } from "../components/Header";
+import React from "react";
 import { BottomNav } from "../components/BottomNav";
-import { Button } from "../components/Button";
 import { subscribeToPremium } from "../services/stripeService";
 import { usePremium } from "../hooks/usePremium";
 import { toast } from "../components/Toast";
@@ -20,7 +18,6 @@ type SubscriptionTier = "free" | "bronze" | "silver" | "gold";
 
 export default function Premium() {
   const { tier: currentTier, isLoading } = usePremium();
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>("gold");
   const { tap } = useHaptics();
 
   const tiers = [
@@ -82,7 +79,7 @@ export default function Premium() {
 
     try {
       await subscribeToPremium(tier);
-    } catch (error: any) {
+    } catch (error) {
       premiumLogger.error("Subscription error:", error);
       toast.error("Erreur lors de l'abonnement. Réessaie plus tard.");
     }
@@ -131,7 +128,7 @@ export default function Premium() {
               </span>
             </div>
             <p className="text-leather-300 mt-4">
-              Merci de supporter Zyeuté! 🇨🇦⚜️
+              Merci de supporter Zyeuté! ⚜️
             </p>
           </div>
         )}
@@ -148,7 +145,7 @@ export default function Premium() {
               <div
                 key={tier.id}
                 className={`leather-card rounded-2xl p-6 stitched relative overflow-hidden transition-all hover:scale-105 ${
-                  tier.popular ? "ring-2 ring-gold-500 glow-gold" : ""
+                  tier.popular ? "ring-2 ring-gold-500" : ""
                 }`}
               >
                 {/* Popular Badge */}
@@ -160,7 +157,7 @@ export default function Premium() {
 
                 {/* Tier Icon */}
                 <div
-                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4 glow-gold-subtle`}
+                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4`}
                 >
                   <span className="text-3xl">{tier.emoji}</span>
                 </div>
@@ -207,7 +204,7 @@ export default function Premium() {
                     isCurrentTier
                       ? "bg-leather-700 text-leather-400 cursor-not-allowed"
                       : tier.id === "gold"
-                        ? "btn-gold glow-gold"
+                        ? "btn-gold border-gold-500"
                         : "btn-leather hover:btn-gold"
                   }`}
                 >
@@ -393,7 +390,7 @@ export default function Premium() {
         <p className="flex items-center justify-center gap-2">
           <span className="text-gold-500">⚜️</span>
           <span>Supporte les créateurs québécois</span>
-          <span className="text-gold-500">🇨🇦</span>
+          <span className="text-gold-500">⚜️</span>
         </p>
       </div>
 

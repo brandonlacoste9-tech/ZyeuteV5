@@ -151,6 +151,7 @@ export const users = pgTable("user_profiles", {
   maxStreak: integer("max_streak").default(0),
   lastDailyBonus: timestamp("last_daily_bonus"),
   unlockedHives: jsonb("unlocked_hives").default(["quebec"]),
+  raisonBannissement: text("raison_bannissement"),
   parentId: uuid("parent_id").references((): AnyPgColumn => users.id, {
     onDelete: "set null",
   }), // For Parental Controls
@@ -239,6 +240,12 @@ export const posts = pgTable(
     // Sound/Music Library
     soundId: uuid("sound_id"), // Reference to sounds table
     soundStartTime: integer("sound_start_time"), // Start time in seconds for sound
+
+    // Colonnes SOUVERAINES (Grand Castor) ⚜️
+    titre: text("titre"),
+    scoreMomentum: integer("score_momentum").default(0),
+    choixDuCastor: boolean("choix_du_castor").default(false),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({
@@ -452,7 +459,7 @@ export const gifts = pgTable(
       .references(() => posts.id, { onDelete: "cascade" }),
     giftType: giftTypeEnum("gift_type").notNull(),
     amount: integer("amount").notNull(), // in cents
-    stripePaymentId: text("stripe_payment_id"),
+    stripePaymentId: text("stripe_payment_id").unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

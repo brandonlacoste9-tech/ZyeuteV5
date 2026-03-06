@@ -8,7 +8,7 @@ import type { Post, User, Story, Comment, Notification } from "@/types";
 
 const apiLogger = logger.withContext("API");
 
-import { supabase } from "@/lib/supabase";
+import { getSessionWithTimeout } from "@/lib/supabase";
 import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
 // [CONFIG] API Base URL
@@ -17,65 +17,141 @@ import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 // - Vercel: vercel.json rewrite (/api → Railway backend)
 const API_BASE_URL = "";
 
-// Base API call helper
+// [DEDUPLICATION] Prevent duplicate in-flight requests
+const pendingRequests = new Map<string, Promise<any>>();
+
+// [CIRCUIT BREAKER] Track 429 errors to back off
+const circuitBreaker = {
+  failures: 0,
+  lastFailure: 0,
+  isOpen: () => {
+    if (circuitBreaker.failures === 0) return false;
+    const backoff = Math.min(
+      30000,
+      Math.pow(2, circuitBreaker.failures) * 1000,
+    );
+    const shouldReset = Date.now() - circuitBreaker.lastFailure > backoff;
+    return !shouldReset;
+  },
+  recordSuccess: () => {
+    circuitBreaker.failures = 0;
+  },
+  recordFailure: (code?: string | number) => {
+    if (code === 429 || code === "RATE_LIMIT") {
+      circuitBreaker.failures++;
+      circuitBreaker.lastFailure = Date.now();
+    }
+  },
+};
+
+function getRequestKey(endpoint: string, options: RequestInit): string {
+  return `${options.method || "GET"}:${endpoint}:${JSON.stringify(options.body || "")}`;
+}
+
+// Base API call helper with deduplication and circuit breaker
 export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
-  try {
-    // ... rest of the function will use ${API_BASE_URL}/api${endpoint}
-    // Get current session token
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-
-    // Prepare headers with Authorization if token exists
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((options.headers as Record<string, string>) || {}),
+  // Check circuit breaker (back off if rate limited)
+  if (circuitBreaker.isOpen()) {
+    apiLogger.warn(`Circuit breaker open, rejecting request to ${endpoint}`);
+    return {
+      data: null,
+      error: "Rate limited - please wait",
+      code: 429,
     };
+  }
 
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
+  const requestKey = getRequestKey(endpoint, options);
 
-    const apiUrl = `${API_BASE_URL}/api${endpoint}`;
+  // Return existing pending request if exists (prevents duplicate in-flight requests)
+  if (pendingRequests.has(requestKey)) {
+    apiLogger.debug(`Deduplicating request: ${endpoint}`);
+    return pendingRequests.get(requestKey)!;
+  }
 
-    const response = await fetch(apiUrl, {
-      ...options,
-      headers,
-      credentials: "include", // Include cookies for session
-    });
+  // Create the request promise
+  const requestPromise = (async () => {
+    try {
+      const {
+        data: { session },
+      } = await getSessionWithTimeout(3000);
+      const token = session?.access_token;
 
-    const data = await response.json().catch(() => null);
+      // Prepare headers with Authorization if token exists
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...((options.headers as Record<string, string>) || {}),
+      };
 
-    if (!response.ok) {
-      const code =
-        (data && data.code) ||
-        (response.status >= 500 ? "SERVER_ERROR" : "REQUEST_FAILED");
-      if (response.status >= 500) {
-        apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
-          code,
-        });
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const apiUrl = `${API_BASE_URL}/api${endpoint}`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const response = await fetch(apiUrl, {
+        ...options,
+        headers,
+        credentials: "include",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const code = response.status;
+
+        // Record 429 failures for circuit breaker
+        if (code === 429) {
+          circuitBreaker.recordFailure(code);
+        }
+
+        if (response.status >= 500) {
+          apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
+            code,
+          });
+          return {
+            data: null,
+            error: (data && data.error) || "Server Unavailable",
+            code,
+          };
+        }
         return {
           data: null,
-          error: (data && data.error) || "Server Unavailable",
+          error: (data && data.error) || "Request failed",
           code,
         };
       }
-      return {
-        data: null,
-        error: (data && data.error) || "Request failed",
-        code,
-      };
-    }
 
-    return { data, error: null };
-  } catch (error) {
-    apiLogger.error(`API call failed: ${endpoint}`, error);
-    return { data: null, error: "Network error", code: "NETWORK_ERROR" };
-  }
+      // Success - reset circuit breaker
+      circuitBreaker.recordSuccess();
+      return { data, error: null };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        apiLogger.error(`API timeout: ${endpoint}`);
+        return { data: null, error: "Request timeout", code: "TIMEOUT" };
+      }
+      apiLogger.error(`API call failed: ${endpoint}`, error);
+      return { data: null, error: "Network error", code: "NETWORK_ERROR" };
+    } finally {
+      // Clean up pending request after a longer delay to prevent rapid refetch
+      setTimeout(() => {
+        pendingRequests.delete(requestKey);
+      }, 500);
+    }
+  })();
+
+  // Store the pending request
+  pendingRequests.set(requestKey, requestPromise);
+
+  return requestPromise;
 }
 
 // ============ AUTH FUNCTIONS ============
@@ -166,7 +242,9 @@ export async function getFeedPosts(
       .map(mapBackendPost)
       .filter(
         (post: Post | null): post is Post =>
-          post !== null && !!post.id && !!(post.media_url || post.hls_url),
+          post !== null &&
+          !!post.id &&
+          !!(post.media_url || post.hls_url || post.mux_playback_id),
       );
   } catch (err) {
     // Final safety net
@@ -180,20 +258,23 @@ export async function getExplorePosts(
   hiveId?: string,
 ): Promise<Post[]> {
   const query = new URLSearchParams({
-    page: page.toString(),
     limit: limit.toString(),
   });
   if (hiveId) query.append("hive", hiveId);
 
-  const { data, error } = await apiCall<{ posts: Post[] }>(
-    `/explore?${query.toString()}`,
-  );
+  // Use Supabase HTTP API endpoint (works without DATABASE_URL)
+  const url = `/explore/supabase?${query.toString()}`;
+  console.log("[Feed] Fetching:", url);
+  const { data, error } = await apiCall<{ posts: Post[] }>(url);
+  console.log("[Feed] Response:", { posts: data?.posts?.length || 0, error });
   if (error || !data) return [];
   return (data.posts || [])
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!(post.media_url || post.hls_url),
+        post !== null &&
+        !!post.id &&
+        !!(post.media_url || post.hls_url || post.mux_playback_id),
     );
 }
 
@@ -229,7 +310,9 @@ export async function getUserPosts(userId: string): Promise<Post[]> {
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
-        post !== null && !!post.id && !!(post.media_url || post.hls_url),
+        post !== null &&
+        !!post.id &&
+        !!(post.media_url || post.hls_url || post.mux_playback_id),
     );
 }
 
@@ -743,6 +826,11 @@ function mapBackendUser(user: Record<string, any>): User {
     // Gamification
     last_daily_bonus: user.last_daily_bonus || user.lastDailyBonus || null,
   } as User;
+}
+
+/** Normalize backend post for feed display (handles snake_case/camelCase, Mux URLs) */
+export function normalizePostForFeed(p: Record<string, any>): Post | null {
+  return mapBackendPost(p);
 }
 
 function mapBackendPost(p: Record<string, any>): Post | null {

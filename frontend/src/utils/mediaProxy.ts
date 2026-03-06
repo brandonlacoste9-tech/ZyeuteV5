@@ -8,11 +8,12 @@ const PROXY_DOMAINS = [
   "assets.mixkit.co",
   "unsplash.com",
   "images.unsplash.com",
-  "pexels.com",
   "videos.pexels.com",
   "images.pexels.com",
-  "supabase.co",
-  "supabase.in",
+  // Note: stream.mux.com is intentionally excluded — MuxVideoPlayer handles
+  // its own HLS streaming natively and must never go through this proxy.
+  // Note: supabase.co is excluded — direct Supabase storage URLs work without
+  // proxy in production and proxying them breaks byte-range seeking.
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
 ];

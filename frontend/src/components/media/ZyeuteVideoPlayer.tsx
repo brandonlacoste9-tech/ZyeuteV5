@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Play, Pause, Volume2, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ZyeutePlayerProps {
   src: string; // The .m3u8 URL from Colony OS
@@ -17,6 +18,7 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   const [isPaused, setIsPaused] = useState(!autoPlay);
   const [hasError, setHasError] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,6 +30,12 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       hls = new Hls({
         capLevelToPlayerSize: true,
         autoStartLoad: true,
+        maxBufferLength: 30, // 3x bigger: 10s → 30s
+        maxMaxBufferLength: 60, // 3x bigger: 30s → 60s
+        startFragPrefetch: true, // Prefetch before media attach
+        enableWorker: true, // Off-main-thread demux
+        fragLoadingMaxRetry: 6, // More resilient: 3 → 6 retries
+        fragLoadingTimeOut: 8000, // Longer timeout: 5s → 8s
       });
       hls.loadSource(src);
       hls.attachMedia(video);
@@ -61,20 +69,41 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   };
 
   return (
-    <div className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20">
+    <div
+      className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20 video-motion-smooth"
+      style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
+    >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover video-container-crisp"
+        style={{
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+        }}
         poster={poster}
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-300",
+          isReady ? "opacity-100" : "opacity-0",
+        )}
         onTimeUpdate={handleTimeUpdate}
+        onPlaying={() => setIsReady(true)}
         onClick={togglePlay}
         playsInline
         muted={autoPlay}
       />
 
+      {/* Static Poster Overlay - prevents white/black flashes */}
+      {!isReady && poster && (
+        <img
+          src={poster}
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          alt="Poster"
+        />
+      )}
+
       {/* Luxury Glass Overlay (Pause State) */}
       {isPaused && !hasError && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center transition-all">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center transition-all z-10">
           <div className="text-gold/80 opacity-40 select-none text-2xl font-bold tracking-widest uppercase">
             ZYEUTÉ
           </div>
@@ -96,7 +125,7 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         <div className="w-full h-[2px] bg-white/20 mb-4 cursor-pointer relative">
           <div
-            className="h-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37]"
+            className="h-full bg-[#D4AF37] shadow-[0_0_8px_#D4AF37] video-progress-smooth"
             style={{ width: `${progress}%` }}
           />
         </div>

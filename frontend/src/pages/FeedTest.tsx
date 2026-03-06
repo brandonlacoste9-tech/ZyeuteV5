@@ -159,6 +159,7 @@ export default function Sandbox() {
                 incididunt ut labore et dolore magna aliqua.
               </p>
             </div>
+            op
           </section>
         )}
 
@@ -216,7 +217,13 @@ export default function Sandbox() {
               rowCount={100}
               rowHeight={600}
               className="no-scrollbar snap-y snap-mandatory scroll-smooth"
-              rowComponent={({ index, style }: any) => (
+              rowComponent={({
+                index,
+                style,
+              }: {
+                index: number;
+                style: React.CSSProperties;
+              }) => (
                 <div
                   style={style}
                   className="snap-center h-full w-full relative border-b border-white/10 bg-neutral-900 flex items-center justify-center"

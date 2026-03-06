@@ -11,14 +11,28 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { getCurrentUser, togglePostFire } from "@/services/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
+import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
+import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import type { Post, User } from "@/types";
+
+/** Post with optional engagement fields from API */
+type PostWithEngagement = Post & {
+  is_fired?: boolean;
+  fire_count?: number;
+  fireCount?: number;
+  comment_count?: number;
+  commentCount?: number;
+};
 
 export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { edgeLighting } = useTheme();
 
   // Infinite scroll hook
@@ -29,7 +43,7 @@ export const LaZyeute: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showEdgeGlow, setShowEdgeGlow] = useState(false);
+  const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const touchStartY = useRef<number>(0);
@@ -64,30 +78,20 @@ export const LaZyeute: React.FC = () => {
     }
   }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
 
-  // Video playback control and edge lighting
-  useEffect(() => {
-    videoRefs.current.forEach((video, id) => {
-      const postIndex = posts.findIndex((p) => p.id === id);
-      if (postIndex === currentIndex) {
-        video.currentTime = 0;
-        if (isPlaying) {
-          video.play().catch(() => {});
-          setShowEdgeGlow(true);
-        } else {
-          video.pause();
-          setShowEdgeGlow(false);
-        }
+  // Video playback control
+  videoRefs.current.forEach((video, id) => {
+    const postIndex = posts.findIndex((p) => p.id === id);
+    if (postIndex === currentIndex) {
+      video.currentTime = 0;
+      if (isPlaying) {
+        video.play().catch(() => { });
       } else {
         video.pause();
       }
-    });
-
-    // Show edge glow for photos too (after a brief delay)
-    if (currentPost?.type !== "video") {
-      const timer = setTimeout(() => setShowEdgeGlow(true), 300);
-      return () => clearTimeout(timer);
+    } else {
+      video.pause();
     }
-  }, [currentIndex, posts, isPlaying, currentPost]);
+  });
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -96,7 +100,6 @@ export const LaZyeute: React.FC = () => {
     const newIndex = Math.round(scrollTop / viewportHeight);
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
       setCurrentIndex(newIndex);
-      setShowEdgeGlow(false); // Reset glow on scroll
     }
   }, [currentIndex, posts.length]);
 
@@ -165,72 +168,54 @@ export const LaZyeute: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
-          <p className="text-white">Chargement de La Zyeute...</p>
+      <div className="fixed inset-0 bg-black flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
+            <p className="text-white">Chargement de La Zyeute...</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (posts.length === 0) {
-    return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="text-6xl mb-4">🦫</div>
-          <h2 className="text-gold-400 text-xl font-bold mb-2">
-            Rien à zyeuter!
-          </h2>
-          <p className="text-stone-400 mb-6">
-            Suis des créateurs pour voir leur contenu ici
-          </p>
+  // Empty state - lightweight inline message, NOT a full-screen replacement
+  const emptyFeedContent = posts.length === 0 && (
+    <div className="px-4 pt-6 pb-6 h-full min-h-full flex items-center justify-center snap-start">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-sm w-full">
+        <div className="text-4xl mb-3">🦫</div>
+        <p className="text-lg font-semibold text-white">
+          Aucune publication pour l'instant
+        </p>
+        <p className="mt-1 text-sm text-white/70">
+          Sois le premier à publier du contenu québécois!
+        </p>
+        <div className="mt-4 flex gap-2">
+          <Link
+            to="/create"
+            className="flex-1 bg-gold-500 text-black px-4 py-2 rounded-xl font-bold text-center text-sm"
+          >
+            Créer un post
+          </Link>
           <Link
             to="/explore"
-            className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold"
+            className="flex-1 border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-center text-sm hover:bg-white/5"
           >
-            Découvrir
+            Explorer
           </Link>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 bg-black">
-      {/* Dynamic Edge Lighting Effect */}
-      <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          boxShadow: `
-            inset 0 0 60px ${edgeLighting}40,
-            inset 0 0 120px ${edgeLighting}20,
-            inset 0 0 200px ${edgeLighting}10
-          `,
-        }}
-      />
+    <div className="fixed inset-0 bg-black flex flex-col">
+      {/* Edge lighting overlays removed — was covering video playback */}
 
-      {/* Animated Edge Border */}
-      <div
-        className={`fixed inset-0 pointer-events-none z-40 transition-opacity duration-500 ${
-          showEdgeGlow && currentPost?.type === "video"
-            ? "opacity-100"
-            : "opacity-0"
-        }`}
-        style={{
-          border: `2px solid ${edgeLighting}60`,
-          boxShadow: `
-            0 0 20px ${edgeLighting}50,
-            0 0 40px ${edgeLighting}30,
-            0 0 60px ${edgeLighting}20
-          `,
-        }}
-      />
+
 
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+      <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <button
           onClick={() => navigate(-1)}
           className="text-white p-2 press-scale"
@@ -311,60 +296,103 @@ export const LaZyeute: React.FC = () => {
         </div>
       </div>
 
-      {/* Vertical Snap Scroll Container */}
+      {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
       <div
         ref={containerRef}
         onScroll={handleScroll}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        className="flex-1 min-h-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
         style={{ scrollSnapType: "y mandatory" }}
       >
+        {emptyFeedContent}
         {posts.map((post, index) => (
           <div
             key={post.id}
             className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
             data-testid={`post-slide-${post.id}`}
           >
+            {/* Video Playback Diagnostic (?debug=1) */}
+            {post.type === "video" && (
+              <VideoPlaybackDiagnostic
+                postId={post.id}
+                postType={post.type}
+                muxPlaybackId={(post as Post).mux_playback_id}
+                mediaUrl={post.media_url}
+                videoSrc={
+                  (post as Post).mux_playback_id
+                    ? null
+                    : getProxiedMediaUrl(post.media_url) || post.media_url
+                }
+                playerPath={
+                  (post as Post).mux_playback_id
+                    ? "mux"
+                    : post.media_url
+                      ? "native"
+                      : "none"
+                }
+                isActive={index === currentIndex}
+              />
+            )}
             {/* Media */}
             <div
               className="absolute inset-0 bg-black"
-              onClick={post.type === "video" ? togglePlayPause : undefined}
+              onClick={
+                (post.media_url || post.mediaUrl)?.includes(".mp4") ||
+                  (post.media_url || post.mediaUrl)?.includes("video")
+                  ? togglePlayPause
+                  : undefined
+              }
             >
               {post.type === "video" ? (
-                <video
-                  ref={(el) => {
-                    if (el) videoRefs.current.set(post.id, el);
-                  }}
-                  src={post.media_url}
-                  className="w-full h-full object-cover"
-                  loop
-                  playsInline
-                  muted={isMuted}
-                  autoPlay={index === currentIndex && isPlaying}
-                />
+                (post as Post).mux_playback_id ? (
+                  <MuxVideoPlayer
+                    playbackId={(post as Post).mux_playback_id || ""}
+                    thumbnailUrl={
+                      getProxiedMediaUrl(
+                        post.thumbnail_url || post.media_url,
+                      ) ||
+                      post.thumbnail_url ||
+                      post.media_url
+                    }
+                    className="w-full h-full object-cover"
+                    autoPlay={index === currentIndex && isPlaying}
+                    muted={isMuted}
+                    loop
+                  />
+                ) : (
+                  <video
+                    ref={(el) => {
+                      if (el) videoRefs.current.set(post.id, el);
+                    }}
+                    src={getProxiedMediaUrl(post.media_url) || post.media_url}
+                    className="w-full h-full object-cover"
+                    loop
+                    playsInline
+                    muted={isMuted}
+                    autoPlay={index === currentIndex && isPlaying}
+                  />
+                )
               ) : (
                 <div className="relative w-full h-full">
                   <img
-                    src={post.media_url}
+                    src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     alt={post.caption || "Post image"}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
-                      index === currentIndex ? "scale-110" : "scale-100"
-                    }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? "scale-110" : "scale-100"
+                      }`}
                   />
-                  {/* Subtle Ken Burns effect for photos */}
                 </div>
               )}
 
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${
-                    post.type === "video"
-                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                      : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                  }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${(post.media_url || post.mediaUrl)?.includes(".mp4") ||
+                    (post.media_url || post.mediaUrl)?.includes("video")
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    }`}
                 >
                   {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
                 </div>
@@ -391,119 +419,6 @@ export const LaZyeute: React.FC = () => {
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
 
-            {/* Right Side Actions */}
-            <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-20">
-              {/* Profile */}
-              <Link
-                to={`/profile/${post.user?.username || post.user?.id}`}
-                className="relative press-scale"
-                data-testid={`link-profile-${post.id}`}
-              >
-                <div
-                  className="w-12 h-12 rounded-full border-2 overflow-hidden shadow-lg transition-all duration-300"
-                  style={{
-                    borderColor: edgeLighting,
-                    boxShadow: showEdgeGlow
-                      ? `0 0 15px ${edgeLighting}50`
-                      : "none",
-                  }}
-                >
-                  <img
-                    src={post.user?.avatar_url || "/default-avatar.png"}
-                    alt={post.user?.display_name || "User"}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div
-                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: edgeLighting }}
-                >
-                  <span className="text-black text-xs font-bold">+</span>
-                </div>
-              </Link>
-
-              {/* Fire */}
-              <button
-                onClick={() => handleFireToggle(post.id)}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`button-fire-${post.id}`}
-              >
-                <div
-                  className={`p-2 rounded-full transition-all duration-300 ${
-                    post.is_fired
-                      ? "bg-orange-500/30 scale-110"
-                      : "bg-black/40 hover:bg-black/60"
-                  }`}
-                  style={
-                    post.is_fired
-                      ? { boxShadow: "0 0 20px rgba(255,100,0,0.5)" }
-                      : {}
-                  }
-                >
-                  <span
-                    className={`text-2xl transition-transform duration-200 ${
-                      post.is_fired ? "animate-bounce" : ""
-                    }`}
-                  >
-                    🔥
-                  </span>
-                </div>
-                <span className="text-white text-xs font-bold">
-                  {post.fire_count || 0}
-                </span>
-              </button>
-
-              {/* Comments */}
-              <Link
-                to={`/p/${post.id}`}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`link-comments-${post.id}`}
-              >
-                <div className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors">
-                  <svg
-                    className="w-7 h-7 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-white text-xs font-bold">
-                  {post.comment_count || 0}
-                </span>
-              </Link>
-
-              {/* Share */}
-              <button
-                onClick={() => handleShare(post.id)}
-                className="flex flex-col items-center gap-1 press-scale"
-                data-testid={`button-share-${post.id}`}
-              >
-                <div className="p-2 rounded-full bg-black/40 hover:bg-black/60 transition-colors">
-                  <svg
-                    className="w-7 h-7 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                    />
-                  </svg>
-                </div>
-                <span className="text-white text-xs font-bold">Partager</span>
-              </button>
-            </div>
-
             {/* Bottom Info */}
             <div className="absolute bottom-6 left-4 right-20 z-20">
               {/* Username */}
@@ -515,7 +430,7 @@ export const LaZyeute: React.FC = () => {
                 <span className="text-white font-bold text-base">
                   @{post.user?.username}
                 </span>
-                {post.user?.is_verified && (
+                {post.user?.isVerified && (
                   <span
                     className="drop-shadow-lg"
                     style={{ color: edgeLighting }}
@@ -577,10 +492,6 @@ export const LaZyeute: React.FC = () => {
                           realIndex === currentIndex
                             ? edgeLighting
                             : "rgba(255,255,255,0.3)",
-                        boxShadow:
-                          realIndex === currentIndex
-                            ? `0 0 8px ${edgeLighting}`
-                            : "none",
                       }}
                     />
                   );
@@ -599,7 +510,7 @@ export const LaZyeute: React.FC = () => {
               <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
               <p className="text-white text-lg">Chargement...</p>
               <p className="text-white/60 text-sm">
-                Encore plus de contenu québécois! 🍁
+                Encore plus de contenu d'icitte! ⚜️
               </p>
             </div>
           </div>
@@ -609,7 +520,7 @@ export const LaZyeute: React.FC = () => {
         {!hasNextPage && posts.length > 0 && (
           <div className="h-screen snap-start snap-always flex items-center justify-center">
             <div className="text-center p-8">
-              <div className="text-6xl mb-4">🍁</div>
+              <div className="text-6xl mb-4">⚜️</div>
               <h2 className="text-gold-400 text-xl font-bold mb-2">
                 C'est tout pour le moment!
               </h2>
@@ -627,40 +538,323 @@ export const LaZyeute: React.FC = () => {
         )}
       </div>
 
-      {/* Swipe Hint (shows briefly on first load) */}
-      <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 animate-bounce opacity-70">
-        <div className="flex flex-col items-center text-white/60">
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Right Side Actions - Leather style matching bottom nav */}
+      {posts.length > 0 && currentPost && (
+        <div className="fixed right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-30">
+          {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
+          <Link
+            to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`link-profile-${currentPost.id}`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 15l7-7 7 7"
-            />
-          </svg>
-          <span className="text-xs">Glisse vers le haut</span>
+            <div
+              className="w-12 h-12 rounded-full overflow-hidden transition-all duration-300"
+              style={{
+                background:
+                  "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                border: `2px solid ${edgeLighting}`,
+              }}
+            >
+              <img
+                src={currentPost.user?.avatar_url || "/default-avatar.png"}
+                alt={currentPost.user?.displayName || "User"}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <span className="text-[10px] font-bold text-white/80">Profil</span>
+          </Link>
+
+          {/* Fire - Gold/Red gradient always visible, brighter when fired */}
+          <button
+            onClick={() => handleFireToggle(currentPost.id)}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`button-fire-${currentPost.id}`}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              style={{
+                background: (currentPost as PostWithEngagement).is_fired
+                  ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
+                  : "linear-gradient(145deg, #D4AF37 0%, #B8860B 50%, #8B4513 100%)",
+                border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : "#D4AF37"}`,
+              }}
+            >
+              <svg
+                className="w-6 h-6"
+                viewBox="0 0 24 24"
+                fill={
+                  (currentPost as PostWithEngagement).is_fired
+                    ? "#FF3D3D"
+                    : "#FFD700"
+                }
+                stroke={
+                  (currentPost as PostWithEngagement).is_fired
+                    ? "#FFD700"
+                    : "#8B4513"
+                }
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
+              </svg>
+            </div>
+            <span
+              className="text-[10px] font-bold"
+              style={{
+                color: (currentPost as PostWithEngagement).is_fired
+                  ? "#FFD700"
+                  : "#D4AF37",
+              }}
+            >
+              {(currentPost as any).fireCount ??
+                (currentPost as any).fire_count ??
+                0}
+            </span>
+          </button>
+
+          {/* Comments */}
+          <Link
+            to={`/p/${currentPost.id}`}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`link-comments-${currentPost.id}`}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              style={{
+                background:
+                  "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                border: `2px solid ${edgeLighting}`,
+              }}
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke={edgeLighting}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-bold text-white/80">
+              {(currentPost as PostWithEngagement).commentCount ??
+                (currentPost as PostWithEngagement).comment_count ??
+                0}
+            </span>
+          </Link>
+
+          {/* Share */}
+          <button
+            onClick={() => handleShare(currentPost.id)}
+            className="flex flex-col items-center gap-1 press-scale"
+            data-testid={`button-share-${currentPost.id}`}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              style={{
+                background:
+                  "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                border: `2px solid ${edgeLighting}`,
+              }}
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke={edgeLighting}
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </div>
+            <span className="text-[10px] font-bold text-white/80">
+              Partager
+            </span>
+          </button>
         </div>
+      )}
+
+      {/* Swipe Hint (shows briefly on first load) - Hidden when feed is empty */}
+      {posts.length > 0 && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-50 animate-bounce opacity-70">
+          <div className="flex flex-col items-center text-white/60">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+            <span className="text-xs">Glisse vers le haut</span>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
+      <div
+        className="flex-shrink-0 z-40 flex items-center justify-around"
+        style={{
+          background:
+            "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
+          borderTop: `1px solid ${edgeLighting}30`,
+          paddingInline: 24,
+          paddingTop: 8,
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
+        }}
+      >
+        {/* Home */}
+        <button
+          onClick={() => navigate("/feed")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={location.pathname === "/feed" ? edgeLighting : "none"}
+            stroke={edgeLighting}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Home
+          </span>
+        </button>
+
+        {/* Search */}
+        <button
+          onClick={() => navigate("/search")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={edgeLighting}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Search
+          </span>
+        </button>
+
+        {/* Center create (+) */}
+        <button
+          onClick={() => navigate("/create")}
+          className="relative -top-3 press-scale"
+          aria-label="Create"
+        >
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center"
+            style={{
+              background:
+                "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
+              border: "2px solid #8B6914",
+              boxShadow: "0 4px 15px rgba(201, 162, 39, 0.6)",
+            }}
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="#1A0F0A"
+              stroke="#1A0F0A"
+              strokeWidth={2}
+              strokeLinecap="round"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </div>
+        </button>
+
+        {/* Notifications */}
+        <button
+          onClick={() => navigate("/notifications")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={
+              location.pathname === "/notifications" ? edgeLighting : "none"
+            }
+            stroke={edgeLighting}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Notifications
+          </span>
+        </button>
+
+        {/* Profile */}
+        <button
+          onClick={() => navigate("/profile")}
+          className="flex flex-col items-center gap-1 press-scale"
+        >
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill={location.pathname === "/profile" ? edgeLighting : "none"}
+            stroke={edgeLighting}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span
+            className="text-xs"
+            style={{ color: edgeLighting, opacity: 0.9 }}
+          >
+            Profile
+          </span>
+        </button>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="absolute bottom-0 left-0 right-0 z-50 p-4 flex justify-center">
-        <Link
-          to="/"
-          className="bg-black/60 backdrop-blur-md px-6 py-2 rounded-full border text-sm font-medium press-scale transition-all"
-          style={{
-            borderColor: `${edgeLighting}50`,
-            color: edgeLighting,
-          }}
-          data-testid="link-home"
-        >
-          ← Retour au fil
-        </Link>
-      </div>
+      {/* TI-GUY Messaging – Voyageur Luxury (dropdown: DMs, Last Chats, File upload, etc.) */}
+      <TiGuyMessaging
+        key={showTiGuyChat ? "open" : "closed"}
+        open={showTiGuyChat}
+        onClose={() => setShowTiGuyChat(false)}
+      />
     </div>
   );
 };

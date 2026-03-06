@@ -1,6 +1,6 @@
 # Dialogflow CX Agent ID Configuration
 
-**Agent ID:** `AQ.Ab8RN6JXQGPlRh_wZvOyiRAWgsgC3XIVpUfILZkPUy_-RrUlNg`  
+**Agent ID:** `YOUR_AGENT_ID`  
 **Project:** `spatial-garden-483401-g8`  
 **Location:** `us-central1`
 
@@ -11,7 +11,7 @@
 The complete Agent ID path for API calls:
 
 ```
-projects/spatial-garden-483401-g8/locations/us-central1/agents/AQ.Ab8RN6JXQGPlRh_wZvOyiRAWgsgC3XIVpUfILZkPUy_-RrUlNg
+projects/spatial-garden-483401-g8/locations/us-central1/agents/YOUR_AGENT_ID
 ```
 
 ---
@@ -53,7 +53,7 @@ tsx scripts/test-dialogflow-cx-connection.ts
 Or with explicit Agent ID:
 
 ```bash
-tsx scripts/test-dialogflow-cx-connection.ts --agent-id=AQ.Ab8RN6JXQGPlRh_wZvOyiRAWgsgC3XIVpUfILZkPUy_-RrUlNg
+tsx scripts/test-dialogflow-cx-connection.ts --agent-id=YOUR_AGENT_ID
 ```
 
 ---

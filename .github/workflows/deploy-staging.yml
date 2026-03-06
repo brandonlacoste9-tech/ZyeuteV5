@@ -1,98 +1,55 @@
-name: Deploy to Staging
+name: 🧪 Deploy to Staging
 
 on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: staging-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
-  deploy:
+  deploy-staging:
+    name: 🧪 Deploy Preview (Vercel)
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    
-    # Only run if Vercel secrets are configured
-    if: ${{ secrets.VERCEL_TOKEN != '' }}
-    
+
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
+
+      - name: 🟢 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.12.0'
+          node-version: '20'
           cache: 'npm'
-      
-      - name: Install dependencies
+
+      - name: 📦 Install dependencies
         run: npm ci
-      
-      - name: Run tests
-        run: npm test
-      
-      - name: Build project
-        run: npm run build
+
+      - name: 🔨 Build frontend
+        run: npm run build:vercel
+
+      - name: 🚀 Deploy to Vercel Preview
+        uses: amondnet/vercel-action@v25
+        id: vercel-deploy
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
         env:
-          NODE_ENV: production
-      
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-      
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      
-      - name: Deploy to Vercel Staging
-        id: deploy
-        run: |
-          # Deploy and capture output
-          DEPLOY_OUTPUT=$(vercel deploy --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
-          echo "$DEPLOY_OUTPUT"
-          
-          # Extract URL using multiple methods for reliability
-          DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9.-]+\.vercel\.app' | head -1)
-          
-          # Fallback to broader pattern if first attempt fails
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+' | grep 'vercel' | head -1)
-          fi
-          
-          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          echo "Deployed to: $DEPLOYMENT_URL"
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      
-      - name: Comment deployment URL on PR
-        if: steps.deploy.outputs.deployment_url != ''
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: 💬 Comment PR with Preview URL
         uses: actions/github-script@v7
         with:
           script: |
-            const deploymentUrl = '${{ steps.deploy.outputs.deployment_url }}';
-            const comment = `✅ **Staging Deployment Successful**
-            
-            🚀 Preview URL: ${deploymentUrl}
-            
-            The application has been deployed to staging and is ready for review.`;
+            const previewUrl = '${{ steps.vercel-deploy.outputs.preview-url }}';
+            const message = `🚀 **Staging Deployment Ready!**\n\nPreview URL: ${previewUrl}\n\n*This deployment will be updated with each commit.*`;
             
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
-            });
-      
-      - name: Deployment failed notification
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ **Staging Deployment Failed**\n\nPlease check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+              body: message
             });

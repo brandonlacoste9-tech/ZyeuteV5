@@ -10,6 +10,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
+import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
+import { VideoErrorBoundary } from "@/components/video/VideoErrorBoundary";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePresence } from "@/hooks/usePresence";
@@ -173,24 +176,99 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               muted={muted}
               loop
             />
+          ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
+              <div className="animate-spin text-3xl mb-3">⚙️</div>
+              <p className="text-white/60 text-xs">Traitement vidéo...</p>
+              {post.thumbnail_url && (
+                <img
+                  src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                  alt="Preview"
+                  className="absolute inset-0 w-full h-full object-cover opacity-20 -z-10"
+                />
+              )}
+            </div>
           ) : (
-            <VideoPlayer
-              src={getProxiedMediaUrl(post.media_url) || post.media_url}
-              poster={
-                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                post.thumbnail_url ||
-                post.media_url
+            (() => {
+              // VIDEO DEBUG LOGGING - Check both snake_case and camelCase
+              console.log("[VideoCard] DEBUG:", {
+                postId: post.id,
+                type: post.type,
+                hlsUrl: post.hls_url ?? post.hlsUrl,
+                enhancedUrl: post.enhanced_url ?? post.enhancedUrl,
+                mediaUrl: post.media_url ?? post.mediaUrl,
+                originalUrl: post.original_url ?? post.originalUrl,
+                muxPlaybackId: post.mux_playback_id ?? post.muxPlaybackId,
+                processingStatus: post.processing_status ?? post.processingStatus,
+                thumbnailUrl: post.thumbnail_url ?? post.thumbnailUrl,
+              });
+              
+              // Support both snake_case (DB) and camelCase (Drizzle/TS) for compatibility
+              const rawVideoUrl = 
+                post.hls_url ?? post.hlsUrl ?? 
+                post.enhanced_url ?? post.enhancedUrl ?? 
+                post.media_url ?? post.mediaUrl ?? 
+                post.original_url ?? post.originalUrl ?? "";
+              const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
+
+              // Detect Cloudflare Stream URLs
+              const isCloudflareStream = rawVideoUrl.includes('cloudflarestream.com') || 
+                                         rawVideoUrl.includes('cloudflare-stream.com');
+              const isHLS = rawVideoUrl.includes('.m3u8') || isCloudflareStream;
+
+              console.log("[VideoCard] Resolved:", {
+                rawVideoUrl,
+                videoSrc,
+                needsProxy: getProxiedMediaUrl(rawVideoUrl) !== rawVideoUrl,
+                playerType: isHLS ? 'HLS' : 'Native',
+                isCloudflareStream
+              });
+
+              // Validate video source exists
+              if (!videoSrc || videoSrc === "") {
+                console.error("[VideoCard] NO VIDEO SOURCE for post:", post.id);
+                return (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
+                    <p className="text-white/60 text-sm">Vidéo non disponible</p>
+                  </div>
+                );
               }
-              autoPlay={autoPlay}
-              muted={muted}
-              loop
-              priority={priority}
-            />
+
+              // Use HLS player for HLS/Cloudflare, native for MP4
+              // Wrap in ErrorBoundary to prevent app freeze
+              return (
+                <VideoErrorBoundary>
+                  {isHLS ? (
+                    <VideoPlayer
+                      src={videoSrc}
+                      poster={
+                        getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
+                        post.thumbnail_url ?? post.thumbnailUrl ?? 
+                        post.media_url ?? post.mediaUrl
+                      }
+                      autoPlay={autoPlay}
+                      muted={muted}
+                      loop
+                      priority={priority}
+                    />
+                  ) : (
+                    <SimpleVideoPlayer
+                      src={videoSrc}
+                      poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
+                      autoPlay={autoPlay}
+                      muted={muted}
+                      loop
+                      priority={priority}
+                    />
+                  )}
+                </VideoErrorBoundary>
+              );
+            })()
           )
         ) : (
           <div className="relative w-full h-full group/media">
             <img
-              src={post.media_url}
+              src={post.media_url || post.mediaUrl}
               alt={post.caption || "Photo"}
               className="w-full h-full object-cover transition-transform duration-500 group-hover/media:scale-105"
               loading={priority ? "eager" : "lazy"}
@@ -268,11 +346,10 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         >
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${
-              isLiked
+            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
                 ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
                 : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
-            }`}
+              }`}
           >
             <svg
               className="w-7 h-7"

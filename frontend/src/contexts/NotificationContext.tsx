@@ -244,16 +244,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const value = React.useMemo(() => ({
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    refreshNotifications,
+  }), [notifications, unreadCount, loading, markAsRead, markAllAsRead, refreshNotifications]);
+
   return (
     <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        loading,
-        markAsRead,
-        markAllAsRead,
-        refreshNotifications,
-      }}
+      value={value}
     >
       {children}
     </NotificationContext.Provider>

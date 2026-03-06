@@ -53,7 +53,7 @@ router.post("/create-upload", async (req: Request, res: Response) => {
     const upload = await Video.uploads.create({
       new_asset_settings: {
         playback_policy: ["public"],
-        mp4_support: "standard",
+        // mp4_support: "standard", // Deprecated for basic assets
       },
       cors_origin: corsOrigin,
     });

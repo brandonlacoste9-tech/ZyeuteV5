@@ -1,22 +1,22 @@
 """Worker management components."""
 
 from typing import Dict, List, Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from colonyos.core.types import Worker, WorkerStatus
 
 
 @dataclass
 class WorkerMetrics:
     """Performance metrics for workers."""
-    
+
     tasks_completed: int = 0
     tasks_failed: int = 0
     total_execution_time: float = 0.0
-    
+
     def record_success(self, duration: float) -> None:
         self.tasks_completed += 1
         self.total_execution_time += duration
-        
+
     def record_failure(self) -> None:
         self.tasks_failed += 1
 

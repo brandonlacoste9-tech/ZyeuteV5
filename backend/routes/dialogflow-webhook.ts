@@ -26,30 +26,36 @@ const router = express.Router();
  */
 router.post("/webhook", async (req, res) => {
   try {
-    const detectIntentResponse = req.body.detectIntentResponse || req.body;
-    const queryResult =
-      detectIntentResponse.queryResult || detectIntentResponse;
-    const intent = queryResult.intent?.displayName || queryResult.intent;
-    const parameters =
-      queryResult.parameters?.fields || queryResult.parameters || {};
-    const session = detectIntentResponse.session || req.body.session;
+    // Dialogflow CX sends standard WebhookRequest
+    // https://cloud.google.com/dialogflow/cx/docs/reference/rest/v3/WebhookRequest
+    const webRequest = req.body;
 
-    logger.info(`[DialogflowWebhook] Intent: ${intent}, Session: ${session}`);
+    // Intent detection info
+    const intent = webRequest.intentInfo?.displayName;
+    const parameters = webRequest.intentInfo?.parameters || {};
+    const session = webRequest.sessionInfo?.session;
 
-    // Extract parameter values (Dialogflow sends them as objects with stringValue)
-    const extractParam = (param: any): string => {
+    logger.info(
+      `[DialogflowWebhook] CX Intent: ${intent}, Session: ${session}`,
+    );
+
+    // Helper to extract value from CX parameter structure
+    const extractParam = (name: string): string => {
+      const param = parameters[name];
       if (!param) return "";
-      if (typeof param === "string") return param;
-      return param.stringValue || param.numberValue?.toString() || "";
+      // In CX Webhooks, parameters are resolved values (string, number, or object)
+      return (
+        param.resolvedValue?.toString() || param.originalValue?.toString() || ""
+      );
     };
 
     // Handle different intents
     switch (intent) {
       case "search_videos":
       case "find_videos": {
-        const query = extractParam(parameters.query || parameters.search_query);
-        const location = extractParam(parameters.location);
-        const limit = parseInt(extractParam(parameters.limit)) || 10;
+        const query = extractParam("query") || extractParam("search_query");
+        const location = extractParam("location");
+        const limit = parseInt(extractParam("limit")) || 10;
 
         logger.info(
           `[DialogflowWebhook] Searching videos: query="${query}", location="${location}"`,
@@ -156,7 +162,7 @@ router.post("/webhook", async (req, res) => {
 
       case "show_montreal_videos":
       case "montreal_content": {
-        const limit = parseInt(extractParam(parameters.limit)) || 10;
+        const limit = parseInt(extractParam("limit")) || 10;
         const posts = await storage.getExplorePosts(0, limit * 2);
         const montrealPosts = posts
           .filter(
@@ -190,6 +196,57 @@ router.post("/webhook", async (req, res) => {
               location: "Montreal",
               count: montrealPosts.length,
             },
+          },
+        });
+      }
+
+      case "expulser_troll": {
+        const idUtilisateur = extractParam("id_utilisateur");
+        const raison = extractParam("raison") || "Toxicité détectée par Ti-Guy";
+
+        logger.info(
+          `[DialogflowWebhook] Governance ACTION: expulser_troll ${idUtilisateur}`,
+        );
+
+        const { GovernanceBee } = await import("../ai/bees/governance-bee.js");
+        await GovernanceBee.expulser_troll(idUtilisateur, raison);
+
+        return res.json({
+          fulfillmentResponse: {
+            messages: [
+              {
+                text: {
+                  text: [
+                    `C'est réglé mon chum. On l'a sacré dehors pour la raison suivante: ${raison}. la Ruche est propre.`,
+                  ],
+                },
+              },
+            ],
+          },
+        });
+      }
+
+      case "ajuster_momentum": {
+        const idPublication = extractParam("id_publication");
+
+        logger.info(
+          `[DialogflowWebhook] Governance ACTION: ajuster_momentum ${idPublication}`,
+        );
+
+        const { GovernanceBee } = await import("../ai/bees/governance-bee.js");
+        await GovernanceBee.ajuster_momentum(idPublication);
+
+        return res.json({
+          fulfillmentResponse: {
+            messages: [
+              {
+                text: {
+                  text: [
+                    "Par-fait! J'ai boosté la publication. On va mettre du feu dans le feed!",
+                  ],
+                },
+              },
+            ],
           },
         });
       }

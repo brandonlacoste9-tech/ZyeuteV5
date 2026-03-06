@@ -45,10 +45,7 @@ import { logger } from "@/lib/logger";
 
 const tiGuyAgentLogger = logger.withContext("TiGuyAgent");
 
-// NOTE: Using client-side AI is for demo/development purposes
-// In production, this should be moved to a server-side endpoint to protect the API key
-const apiKey =
-  import.meta.env.VITE_DEEPSEEK_API_KEY || import.meta.env.VITE_OPENAI_API_KEY;
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export type TiGuyInput = {
   text: string;
@@ -64,20 +61,14 @@ export type TiGuyResponse = {
 };
 
 /**
- * Helper to call DeepSeek API via fetch
+ * Helper to call DeepSeek API via proxy
  */
 async function callDeepSeek(prompt: string) {
-  if (!apiKey) {
-    tiGuyAgentLogger.warn("⚠️ No API Key found. Using demo response.");
-    return null;
-  }
-
   try {
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetch(`${BACKEND_URL}/api/ai/proxy/deepseek`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "deepseek-chat",
@@ -193,7 +184,7 @@ function generateDemoResponse(input: TiGuyInput): TiGuyResponse {
     },
     poem: {
       caption: "Des mots qui touchent le cœur québécois... 📝💙",
-      emojis: ["📝", "💙", "⚜️", "🍁"],
+      emojis: ["📝", "💙", "⚜️", "🦫"],
       tags: ["Poesie", "Quebec", "Culture"],
       flagged: false,
       reply: "Wow! T'as du talent, mon ami! Continue d'écrire! ✨",

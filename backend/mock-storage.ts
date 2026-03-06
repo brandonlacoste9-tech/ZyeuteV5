@@ -121,6 +121,24 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
+  async updateUserCredits(
+    userId: string,
+    amount: number,
+  ): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated = { ...user, credits: (user.credits || 0) + amount };
+    return this.updateUser(userId, updated);
+  }
+
+  async deductCashCredits(userId: string, amount: number): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user || (user.cashCredits || 0) < amount) return false;
+    const updated = { ...user, cashCredits: (user.cashCredits || 0) - amount };
+    await this.updateUser(userId, updated);
+    return true;
+  }
+
   async getPost(id: string): Promise<(Post & { user: User }) | undefined> {
     const post = this.posts.get(id);
     if (!post) return undefined;

@@ -55,7 +55,20 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
     onVideoProgress,
   }) => {
     // Route to appropriate component based on post type
-    if (post.type === "video") {
+    // type field may be null for older seeded posts - detect via URL if so
+    const isVideo =
+      post.type === "video" ||
+      (!post.type && (
+        !!(post as any).mediaUrl?.includes(".mp4") ||
+        !!(post as any).media_url?.includes(".mp4") ||
+        !!(post as any).hlsUrl ||
+        !!(post as any).hls_url ||
+        !!(post as any).mediaUrl?.includes("pexels.com/video") ||
+        !!(post as any).media_url?.includes("pexels.com/video") ||
+        !!(post as any).muxPlaybackId ||
+        !!(post as any).mux_playback_id
+      ));
+    if (isVideo) {
       return (
         <SingleVideoView
           post={post}
@@ -70,6 +83,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           isCached={isCached}
           debug={debug}
           onVideoProgress={onVideoProgress}
+          shouldPrefetch={shouldPrefetch}
         />
       );
     }
@@ -101,7 +115,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
       // Video-specific checks
       (prevProps.post.type === "video"
         ? prevProps.videoSource === nextProps.videoSource &&
-          prevProps.isCached === nextProps.isCached
+        prevProps.isCached === nextProps.isCached
         : true)
     );
   },

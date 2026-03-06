@@ -29,3 +29,14 @@ attached_assets/*.zip
 **/*.test.tsx
 **/*.spec.ts
 **/test/
+
+# 🔒 Security: Block ALL credential/key files from deploy
+*-key.json
+*-credentials.json
+*-service-account.json
+*.pem
+*.p12
+service-account*.json
+credentials*.json
+zyeute-ai-key.json
+google-credentials.json

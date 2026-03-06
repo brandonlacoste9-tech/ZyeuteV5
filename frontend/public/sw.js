@@ -1,6 +1,6 @@
 // Service Worker for Zyeuté PWA
-const CACHE_NAME = 'zyeute-v6';
-const OLD_CACHES = ['zyeute-v1', 'zyeute-v2', 'zyeute-v3', 'zyeute-v4', 'zyeute-v5'];
+const CACHE_NAME = 'zyeute-v7';
+const OLD_CACHES = ['zyeute-v1', 'zyeute-v2', 'zyeute-v3', 'zyeute-v4', 'zyeute-v5', 'zyeute-v6'];
 
 // Install event
 self.addEventListener('install', (event) => {

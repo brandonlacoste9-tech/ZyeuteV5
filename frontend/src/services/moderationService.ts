@@ -7,9 +7,7 @@ import { logger } from "@/lib/logger";
 const moderationServiceLogger = logger.withContext("ModerationService");
 import { supabase } from "../lib/supabase";
 
-// API Keys
-const deepSeekKey = import.meta.env.VITE_DEEPSEEK_API_KEY;
-const openaiKey = import.meta.env.VITE_OPENAI_API_KEY;
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export type ModerationSeverity =
   | "safe"
@@ -124,25 +122,10 @@ export async function analyzeText(text: string): Promise<ModerationResult> {
       };
     }
 
-    if (!deepSeekKey) {
-      moderationServiceLogger.warn(
-        "⚠️ No DeepSeek API Key. Skipping moderation.",
-      );
-      return {
-        is_safe: true,
-        severity: "safe",
-        categories: [],
-        confidence: 0,
-        reason: "Modération inactive",
-        action: "allow",
-      };
-    }
-
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetch(`${BACKEND_URL}/api/ai/proxy/deepseek`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${deepSeekKey}`,
       },
       body: JSON.stringify({
         model: "deepseek-chat",
@@ -154,11 +137,12 @@ export async function analyzeText(text: string): Promise<ModerationResult> {
       }),
     });
 
-    if (!response.ok) throw new Error(`DeepSeek API error: ${response.status}`);
+    if (!response.ok)
+      throw new Error(`Backend Proxy error: ${response.status}`);
 
     const data = await response.json();
     const resultText = data.choices[0].message.content;
-    if (!resultText) throw new Error("No response from DeepSeek");
+    if (!resultText) throw new Error("No response from Proxy");
 
     const moderationResult: ModerationResult = JSON.parse(resultText);
     return moderationResult;
@@ -178,79 +162,38 @@ export async function analyzeText(text: string): Promise<ModerationResult> {
 }
 
 /**
- * Analyze image content using OpenAI Vision
+ * Analyze image content using backend AI proxy
  */
 export async function analyzeImage(
   imageUrl: string,
 ): Promise<ModerationResult> {
   try {
-    if (!openaiKey) {
-      moderationServiceLogger.warn(
-        "⚠️ No OpenAI API Key for Vision. Skipping image moderation.",
-      );
-      return {
-        is_safe: true,
-        severity: "safe",
-        categories: [],
-        confidence: 0,
-        reason: "Modération image inactive",
-        action: "allow",
-      };
-    }
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(`${BACKEND_URL}/api/ai/analyze-media`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: MODERATION_PROMPT },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Analyse cette image pour détecter: Nudité, violence, haine, drogues, armes.",
-              },
-              { type: "image_url", image_url: { url: imageUrl } },
-            ],
-          },
-        ],
-        max_tokens: 300,
+        imageUrl,
       }),
     });
 
-    if (!response.ok)
-      throw new Error(`OpenAI Vision API error: ${response.status}`);
+    if (!response.ok) throw new Error(`Media API error: ${response.status}`);
 
     const data = await response.json();
-    const resultText = data.choices[0].message.content || "{}";
-    // Cleanup JSON if needed (sometimes model adds markdown)
-    const cleanJson = resultText
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
 
-    try {
-      const moderationResult: ModerationResult = JSON.parse(cleanJson);
-      return moderationResult;
-    } catch (e) {
-      moderationServiceLogger.error(
-        "Failed to parse JSON from vision response",
-        resultText,
-      );
-      return {
-        is_safe: true,
-        severity: "safe",
-        categories: [],
-        confidence: 50,
-        reason: "Analyse incertaine",
-        action: "allow",
-      };
-    }
+    // GenAI App Builder returns { safe: boolean, moderationScores: any, labels: [] }
+    // Convert to standard moderation format
+    const isSafe = data.safe !== false;
+
+    return {
+      is_safe: isSafe,
+      severity: isSafe ? "safe" : "medium",
+      categories: data.labels || [],
+      confidence: 80,
+      reason: data.story || "Analyse d'image complétée",
+      action: isSafe ? "allow" : "flag",
+    };
   } catch (error) {
     moderationServiceLogger.error("Error in analyzeImage:", error);
     return {

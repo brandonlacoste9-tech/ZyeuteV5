@@ -31,10 +31,41 @@ if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
   );
 }
 
+/** getSession with timeout - prevents feed/API from hanging if auth is slow. */
+export async function getSessionWithTimeout(ms = 3000): Promise<{
+  data: { session: { access_token: string } | null };
+}> {
+  try {
+    const result = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise<{ data: { session: null } }>((resolve) =>
+        setTimeout(() => resolve({ data: { session: null } }), ms),
+      ),
+    ]);
+    return result;
+  } catch {
+    return { data: { session: null } };
+  }
+}
+
+// No-op lock: bypass Navigator LockManager to prevent 10s timeout (auth-js#1594)
+const noOpLock = async <R>(
+  _name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<R>,
+): Promise<R> => fn();
+
 // Create real Supabase client if credentials exist and are valid, otherwise use mock
 export const supabase =
   isValidUrl(supabaseUrl) && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          lock: noOpLock,
+        },
+      })
     : createMockClient();
 
 // Mock implementation for development without Supabase

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Zyeute Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --gold: #C9A227;
+      --gold-light: #D4AF37;
+      --gold-dark: #8B6914;
+      --brown: #1A0F0A;
+      --brown-light: #2C1810;
+      --brown-dark: #0F0906;
+      --leather: #3D2418;
+      --text: #F5E6D3;
+      --text-muted: #A68B7C;
+      --stitch-color: rgba(201, 162, 39, 0.4);
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--brown);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--brown) 0%, var(--brown-dark) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-page::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 700px;
+      height: 700px;
+      background: radial-gradient(circle, rgba(201, 162, 39, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Leather grain texture overlay */
+    .login-page::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+      padding: 48px 40px;
+      background: linear-gradient(145deg, var(--leather) 0%, rgba(61, 36, 24, 0.9) 100%);
+      border: 1px solid rgba(201, 162, 39, 0.2);
+      border-radius: 20px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(201, 162, 39, 0.1);
+    }
+
+    /* Gold stitching effect */
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border: 1px dashed var(--stitch-color);
+      border-radius: 12px;
+      pointer-events: none;
+    }
+
+    .login-logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .login-logo-icon {
+      font-size: 72px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 8px rgba(201, 162, 39, 0.3));
+    }
+
+    .login-logo-text {
+      font-family: var(--font-display);
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      background: linear-gradient(180deg, var(--gold-light) 0%, var(--gold) 50%, var(--gold-dark) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 4px rgba(201, 162, 39, 0.2);
+    }
+
+    .login-logo-subtitle {
+      color: var(--text-muted);
+      margin-top: 8px;
+      font-size: 14px;
+      letter-spacing: 1px;
+    }
+
+    .login-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 28px;
+      background: var(--brown);
+      border-radius: 10px;
+      padding: 5px;
+      border: 1px solid rgba(201, 162, 39, 0.1);
+    }
+
+    .login-tab {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.25s ease;
+      font-family: var(--font-body);
+      font-size: 14px;
+    }
+
+    .login-tab.active {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      color: var(--brown);
+      box-shadow: 0 2px 8px rgba(201, 162, 39, 0.3);
+    }
+
+    .login-form {
+      display: none;
+    }
+
+    .login-form.active {
+      display: block;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 16px 18px;
+      background: var(--brown);
+      border: 1px solid rgba(201, 162, 39, 0.2);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: var(--font-body);
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* Buckle-style Login Button */
+    .login-button {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+      border: none;
+      border-radius: 10px;
+      color: var(--brown);
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      margin-top: 10px;
+      font-family: var(--font-body);
+      letter-spacing: 0.5px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 
+        0 4px 12px rgba(201, 162, 39, 0.3),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    }
+
+    /* Inner buckle stitch */
+    .login-button::before {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+      border: 1px dashed rgba(26, 15, 10, 0.3);
+      border-radius: 6px;
+      pointer-events: none;
+    }
+
+    .login-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 8px 24px rgba(201, 162, 39, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+    }
+
+    .login-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 28px 0;
+    }
+
+    .login-divider-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.3), transparent);
+    }
+
+    .login-divider-text {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .social-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .social-button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--brown);
+      border: 1px solid rgba(201, 162, 39, 0.2);
+      border-radius: 10px;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+      font-size: 14px;
+      position: relative;
+    }
+
+    .social-button:hover {
+      border-color: var(--gold);
+      background: rgba(201, 162, 39, 0.05);
+    }
+
+    /* Dashed stitch on hover */
+    .social-button::before {
+      content: '';
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      right: 4px;
+      bottom: 4px;
+      border: 1px dashed var(--stitch-color);
+      border-radius: 6px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .social-button:hover::before {
+      opacity: 1;
+    }
+
+    .social-button.google svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .guest-button {
+      background: transparent;
+      border: 1px dashed rgba(201, 162, 39, 0.4);
+      color: var(--gold);
+    }
+
+    .guest-button:hover {
+      background: rgba(201, 162, 39, 0.08);
+      border-style: solid;
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .error-message {
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid rgba(255, 68, 68, 0.4);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 18px;
+      color: #ff6b6b;
+      font-size: 13px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .forgot-password {
+      text-align: right;
+      margin-top: -8px;
+      margin-bottom: 18px;
+    }
+
+    .forgot-password a {
+      color: var(--gold);
+      font-size: 13px;
+      text-decoration: none;
+      border-bottom: 1px dashed var(--stitch-color);
+      padding-bottom: 1px;
+      transition: all 0.2s ease;
+    }
+
+    .forgot-password a:hover {
+      border-bottom-style: solid;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-container">
+      <!-- Logo -->
+      <div class="login-logo">
+        <div class="login-logo-icon">⚜️</div>
+        <div class="login-logo-text">ZYEUTÉ</div>
+        <div class="login-logo-subtitle">Quebec's Creator Studio 🦫⚜️</div>
+      </div>
+
+      <!-- Error Message -->
+      <div class="error-message" id="errorMessage"></div>
+
+      <!-- Tabs -->
+      <div class="login-tabs">
+        <button class="login-tab active" data-tab="login">Sign In</button>
+        <button class="login-tab" data-tab="signup">Create Account</button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="login-form active" id="loginForm">
+        <div class="form-group">
+          <input type="email" class="form-input" placeholder="Email" required>
+        </div>
+        <div class="form-group">
+          <input type="password" class="form-input" placeholder="Password" required>
+        </div>
+        <div class="forgot-password">
+          <a href="#" onclick="alert('Contact support to reset your password')">Forgot password?</a>
+        </div>
+        <button type="submit" class="login-button">Sign In</button>
+      </form>
+
+      <!-- Signup Form -->
+      <form class="login-form" id="signupForm">
+        <div class="form-group">
+          <input type="text" class="form-input" placeholder="Username" required>
+        </div>
+        <div class="form-group">
+          <input type="email" class="form-input" placeholder="Email" required>
+        </div>
+        <div class="form-group">
+          <input type="password" class="form-input" placeholder="Password" minlength="6" required>
+        </div>
+        <button type="submit" class="login-button">Create Account</button>
+      </form>
+
+      <!-- Divider -->
+      <div class="login-divider">
+        <div class="login-divider-line"></div>
+        <span class="login-divider-text">or</span>
+        <div class="login-divider-line"></div>
+      </div>
+
+      <!-- Social Login -->
+      <div class="social-buttons">
+        <button class="social-button google" id="googleLogin">
+          <svg viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
+        <button class="social-button guest-button" id="guestLogin">
+          Continue as Guest
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="login-footer">
+        By signing in, you agree to our Terms of Service and Privacy Policy
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    const tabs = document.querySelectorAll('.login-tab');
+    const forms = document.querySelectorAll('.login-form');
+    const errorMessage = document.getElementById('errorMessage');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        
+        // Update tabs
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Update forms
+        forms.forEach(form => {
+          form.classList.remove('active');
+          if (form.id === `${tabName}Form`) {
+            form.classList.add('active');
+          }
+        });
+        
+        // Hide error
+        errorMessage.classList.remove('show');
+      });
+    });
+
+    // Form submissions
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Mock login - in real app, validate with backend
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('signupForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      // Mock signup
+      showError('Account created! Please sign in.');
+      // Switch to login tab
+      tabs[0].click();
+    });
+
+    // Google login
+    document.getElementById('googleLogin').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    // Guest login
+    document.getElementById('guestLogin').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+      setTimeout(() => {
+        errorMessage.classList.remove('show');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

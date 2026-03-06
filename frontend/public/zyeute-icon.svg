@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Rich Antique Gold -->
+    <linearGradient id="goldRich" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8D5A3"/>
+      <stop offset="30%" stop-color="#C9A227"/>
+      <stop offset="50%" stop-color="#B8941F"/>
+      <stop offset="70%" stop-color="#C9A227"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </linearGradient>
+    
+    <!-- Leather Texture Background -->
+    <radialGradient id="leatherBg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2C1810"/>
+      <stop offset="100%" stop-color="#1a1510"/>
+    </radialGradient>
+    
+    <!-- 3D Shadow -->
+    <filter id="iconShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.4"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="20" flood-color="#C9A227" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Rounded Square Background - iOS Style -->
+  <rect x="32" y="32" width="448" height="448" rx="100" ry="100" fill="url(#leatherBg)"/>
+  
+  <!-- Stitching Border -->
+  <rect x="48" y="48" width="416" height="416" rx="88" ry="88" 
+        fill="none" stroke="url(#goldRich)" stroke-width="4" stroke-dasharray="12 8" opacity="0.6"/>
+  
+  <!-- Inner Border -->
+  <rect x="64" y="64" width="384" height="384" rx="76" ry="76" 
+        fill="none" stroke="url(#goldRich)" stroke-width="2" opacity="0.4"/>
+  
+  <!-- Fleur-de-lis Monogram -->
+  <g transform="translate(256, 256)" filter="url(#iconShadow)">
+    <!-- Scale to fit -->
+    <g transform="scale(2.2)">
+      <!-- Center Petal -->
+      <path d="M0,-50 C-10,-38 -15,-22 -10,-6 C-6,6 -3,17 -3,28 L-10,45 L-3,45 L0,62 L3,45 L10,45 L3,28 C3,17 6,6 10,-6 C15,-22 10,-38 0,-50 Z" 
+            fill="url(#goldRich)"/>
+      
+      <!-- Left Petal -->
+      <path d="M-18,-28 C-42,-22 -52,-6 -46,18 C-44,28 -34,36 -22,40 L-14,43 L-18,33 C-24,31 -30,24 -26,14 C-24,6 -22,0 -18,-6 C-14,-14 -12,-20 -18,-28 Z" 
+            fill="url(#goldRich)"/>
+      
+      <!-- Right Petal -->
+      <path d="M18,-28 C42,-22 52,-6 46,18 C44,28 34,36 22,40 L14,43 L18,33 C24,31 30,24 26,14 C24,6 22,0 18,-6 C14,-14 12,-20 18,-28 Z" 
+            fill="url(#goldRich)"/>
+      
+      <!-- Base -->
+      <ellipse cx="0" cy="46" rx="14" ry="5" fill="#6B4E14"/>
+      
+      <!-- Highlight Lines -->
+      <path d="M0,-45 Q-5,-25 -3,0" stroke="#F4E4C1" stroke-width="1.5" fill="none" opacity="0.6"/>
+      <path d="M-15,-25 Q-25,-15 -20,5" stroke="#F4E4C1" stroke-width="1" fill="none" opacity="0.4"/>
+      <path d="M15,-25 Q25,-15 20,5" stroke="#F4E4C1" stroke-width="1" fill="none" opacity="0.4"/>
+    </g>
+  </g>
+  
+  <!-- Corner Accents - Diamond Pattern -->
+  <g stroke="url(#goldRich)" stroke-width="3" fill="none" opacity="0.3">
+    <path d="M80,80 L110,80 L110,110"/>
+    <path d="M432,80 L402,80 L402,110"/>
+    <path d="M80,432 L110,432 L110,402"/>
+    <path d="M432,432 L402,432 L402,402"/>
+  </g>
+</svg>

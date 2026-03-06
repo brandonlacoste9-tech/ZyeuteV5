@@ -18,7 +18,7 @@ Update `.mcp.json`:
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres"],
       "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+        "POSTGRES_CONNECTION_STRING": "postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:6543/postgres"
       }
     }
   }

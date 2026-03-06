@@ -69,9 +69,11 @@ export const NavigationStateProvider: React.FC<{
     delete feedsRef.current[key];
   }, []);
 
+  const value = React.useMemo(() => ({ saveFeedState, getFeedState, clearFeedState }), [saveFeedState, getFeedState, clearFeedState]);
+
   return (
     <NavigationStateContext.Provider
-      value={{ saveFeedState, getFeedState, clearFeedState }}
+      value={value}
     >
       {children}
     </NavigationStateContext.Provider>

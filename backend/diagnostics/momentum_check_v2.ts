@@ -2,8 +2,7 @@ import pg from "pg";
 const { Pool } = pg;
 
 const pool = new Pool({
-  connectionString:
-    "postgresql://postgres:kHDQJHWAPzxpUXQlXIsKwXPamtQPNvXU@junction.proxy.rlwy.net:44815/railway",
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
 

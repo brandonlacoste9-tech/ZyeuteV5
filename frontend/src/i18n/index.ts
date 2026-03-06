@@ -1,5 +1,3 @@
-import { AppConfig } from "../config/factory";
-
 /**
  * Universal Translation Map
  * Add common UI strings here.
@@ -316,11 +314,14 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
   },
 };
 
+// HARDCODED TO FRENCH - Prevents locale switching loops
+const DEFAULT_LOCALE = "fr-CA";
+
 export function useTranslation() {
-  const locale = AppConfig.identity.locale;
+  // Always return French - no hooks, no re-renders
   const t = (key: string) => {
-    return TRANSLATIONS[locale]?.[key] || TRANSLATIONS["fr-CA"][key] || key;
+    return TRANSLATIONS[DEFAULT_LOCALE]?.[key] || key;
   };
 
-  return { t, locale };
+  return { t, locale: DEFAULT_LOCALE };
 }

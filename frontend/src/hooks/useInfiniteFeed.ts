@@ -2,12 +2,17 @@
  * Infinite Scroll Feed Hook
  * Uses React Query for data fetching with cursor-based pagination
  * Compatible with both LaZyeute (TikTok) and Feed (grid) components
+ *
+ * CRITICAL: Uses Supabase session token (not localStorage "token")
+ * to match backend JWT validation.
  */
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { Post } from "@/types";
+import { normalizePostForFeed } from "@/services/api";
+import { getSessionWithTimeout } from "@/lib/supabase";
 
 interface FeedResponse {
   posts: Post[];
@@ -17,6 +22,17 @@ interface FeedResponse {
 }
 
 export type FeedType = "feed" | "explore" | "smart";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await getSessionWithTimeout(3000);
+  const token = session?.access_token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 export function useInfiniteFeed(feedType: FeedType = "explore") {
   const {
@@ -29,24 +45,63 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     refetch,
   } = useInfiniteQuery<FeedResponse>({
     queryKey: ["feed-infinite", feedType],
+    staleTime: 30_000, // 30s - avoid aggressive refetch on mount
+    gcTime: 5 * 60 * 1000, // 5 min cache
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
+        hive: "quebec",
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
+        headers,
+        credentials: "include",
       });
 
       if (!response.ok) {
         throw new Error("Failed to fetch feed");
       }
 
-      return response.json();
+      const data = await response.json();
+      // Normalize posts for consistent media_url, mux_playback_id shape
+      const rawCount = (data.posts || []).length;
+      const posts = (data.posts || [])
+        .map((p: any) => normalizePostForFeed(p))
+        .filter(
+          (p: Post | null): p is Post =>
+            p != null &&
+            !!p.id &&
+            !!(p.media_url || p.hls_url || p.mux_playback_id),
+        );
+      // Debug: log feed structure when ?debug=1
+      if (
+        typeof window !== "undefined" &&
+        (new URLSearchParams(window.location.search).get("debug") === "1" ||
+          localStorage.getItem("debug") === "true")
+      ) {
+        const muxCount = posts.filter((p: any) => p.mux_playback_id).length;
+        const withMedia = posts.filter((p: any) => p.media_url).length;
+        console.log("[FeedDiagnostic]", {
+          rawPosts: rawCount,
+          afterFilter: posts.length,
+          withMuxId: muxCount,
+          withMediaUrl: withMedia,
+          sample: posts[0]
+            ? {
+                id: posts[0].id,
+                type: posts[0].type,
+                hasMux: !!posts[0].mux_playback_id,
+                mediaUrlPreview: posts[0].media_url?.slice(0, 50),
+              }
+            : null,
+        });
+      }
+      return { ...data, posts };
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null,
@@ -66,7 +121,10 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Flatten pages into single array of posts
-  const posts = data?.pages.flatMap((page) => page.posts) ?? [];
+  const posts = useMemo(
+    () => data?.pages.flatMap((page) => page.posts) ?? [],
+    [data?.pages],
+  );
 
   return {
     posts,
@@ -98,13 +156,14 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
+        hive: "quebec",
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
+      const headers = await getAuthHeaders();
       const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-        },
+        headers,
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -117,7 +176,10 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
     initialPageParam: null,
   });
 
-  const posts = data?.pages.flatMap((page) => page.posts) ?? [];
+  const posts = useMemo(
+    () => data?.pages.flatMap((page) => page.posts) ?? [],
+    [data?.pages],
+  );
 
   return {
     posts,

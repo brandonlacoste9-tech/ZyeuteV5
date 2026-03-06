@@ -24,6 +24,7 @@ export interface IStorage {
   getUserHive(userId: string): Promise<string>;
   createUser(user: InsertUser & { id: string }): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deductCashCredits(userId: string, amount: number): Promise<boolean>;
 
   // Posts
   getPost(id: string): Promise<(Post & { user: User }) | undefined>;

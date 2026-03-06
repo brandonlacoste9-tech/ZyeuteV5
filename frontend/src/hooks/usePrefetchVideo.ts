@@ -103,7 +103,17 @@ export function usePrefetchVideo(
       abortControllerRef.current.abort();
     }
 
-    if (tier === 0 || !url) {
+    // Skip prefetch for managed streaming sources — they handle their own adaptive delivery
+    // Mux: HLS adaptive streaming, Supabase: CDN-optimized storage
+    const isStreamingUrl =
+      url.endsWith(".m3u8") ||
+      url.includes(".m3u8") ||
+      url.includes("stream.mux.com") ||
+      url.includes("chunk.mux.com") ||
+      url.includes(".mux.com") ||
+      url.includes("supabase.co/storage") ||
+      url.includes(".supabase.co");
+    if (tier === 0 || !url || isStreamingUrl) {
       setDebugInfo({ requests: 0, concurrency: 1 });
       return;
     }

@@ -53,8 +53,17 @@ tsc_*.txt
 my-project/
 antigravity-kit/
 google-credentials.json
-google-credentials.json
 ZyeuteV5/
+
+# 🔒 Security: Block ALL credential/key files
+*-key.json
+*-credentials.json
+*-service-account.json
+*.pem
+*.p12
+service-account*.json
+credentials*.json
+
 
 # Local tooling / external repos (cloned via scripts, not committed)
 external/
@@ -62,3 +71,19 @@ tools/
 video-diag-output.txt
 .claude/
 .env*.local
+
+# Phase 4 Sweep Additions
+/*.sql
+/*.png
+*.tgz
+*.vsix
+*.mp4
+/test-*.js
+/test_*.js
+/verify-*.js
+/repair_db_schema*.js
+/check_db_schema*.js
+/1
+/Home.tsx
+/QUICK_START_CLAUDE_CODE.txt
+/.empty-commit-placeholder

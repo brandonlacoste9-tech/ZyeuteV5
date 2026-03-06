@@ -79,6 +79,27 @@ export function getPool(): pg.Pool {
   }
   return _pool;
 }
+// Database connection
+console.log(
+  "🔍 [Storage] Initializing pool with DATABASE_URL:",
+  process.env.DATABASE_URL
+    ? `${process.env.DATABASE_URL.slice(0, 20)}...`
+    : "UNDEFINED",
+);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
+  idleTimeoutMillis: 30000,
+  ssl: {
+    rejectUnauthorized: false, // Allow self-signed certificates from Supabase/Railway
+  },
+});
+
+// Database error handling - prevent crashes on connection failures
+pool.on("error", (err) => {
+  console.error("❌ Unexpected database pool error:", err);
+  // Don't crash the process - let health checks handle degraded state
+});
 
 // Proxy so all existing `pool` imports work unchanged — delegates to
 // getPool() on first property access, which happens after dotenv loads.
@@ -101,6 +122,7 @@ export interface IStorage {
   // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   updateUserCredits(userId: string, amount: number): Promise<User | undefined>; // Added for Nectar Bonus
+  deductCashCredits(userId: string, amount: number): Promise<boolean>;
 
   // Posts
   getPost(id: string): Promise<(Post & { user: User }) | undefined>;
@@ -116,6 +138,7 @@ export interface IStorage {
     limit: number,
     hiveId?: string,
   ): Promise<(Post & { user: User })[]>;
+  getRecentPosts(limit: number): Promise<(Post & { user: User })[]>;
   getNearbyPosts(
     lat: number,
     lon: number,
@@ -225,6 +248,7 @@ export interface IStorage {
     userId: string,
     limit?: number,
   ): Promise<(Transaction & { sender?: User; receiver?: User })[]>;
+  getRawDb(): any;
 
   // Moderation
   getModerationHistory(userId: string): Promise<{ violations: number }>;
@@ -306,6 +330,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return result[0];
+  }
+
+  async deductCashCredits(userId: string, amount: number): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ cashCredits: sql`${users.cashCredits} - ${amount}` })
+      // Use SQL conditional to ensure balance cannot drop below 0 due to a race condition
+      .where(and(eq(users.id, userId), sql`${users.cashCredits} >= ${amount}`))
+      .returning();
+    return result.length > 0;
   }
 
   async getUserHive(userId: string): Promise<string> {
@@ -548,73 +582,208 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getExplorePosts(
-    _page: number,
+    page: number,
     limit: number,
     hiveId?: string,
   ): Promise<(Post & { user: User })[]> {
     return traceDatabase("EXPLORE", "posts", async () => {
       const startTime = Date.now();
-      
-      // Quick check: count total posts first
-      const countResult = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(posts)
-        .where(eq(posts.hiveId, (hiveId || "quebec") as any));
-      
-      const totalPosts = countResult[0]?.count || 0;
-      console.log(`[STORAGE] Total posts in hive '${hiveId}': ${totalPosts}`);
-      
-      if (totalPosts === 0) {
-        console.log(`[STORAGE] No posts found, returning empty array`);
-        return [];
+      const targetHive = hiveId || "quebec";
+      const pageNum = Math.max(0, page);
+      // Fetch enough rows to rank and slice the requested page (ranking is in-memory)
+      const fetchSize = Math.min(200, (pageNum + 1) * limit + 50);
+
+      // Use raw SQL via pool - resilient to schema diffs between envs
+      // Only selects columns guaranteed to exist in all DB versions
+      const client = await pool.connect();
+      try {
+        const result = await client.query(
+          `SELECT
+            p.id, p.user_id, p.media_url, p.hls_url, p.thumbnail_url, COALESCE(p.type, 'video') as type,
+            p.content, p.caption, p.visibility,
+            COALESCE(p.reactions_count, 0) as reactions_count,
+            COALESCE(p.comments_count, 0) as comments_count,
+            COALESCE(p.shares_count, 0) as shares_count,
+            COALESCE(p.piasse_count, 0) as piasse_count,
+            COALESCE(p.est_masque, false) as est_masque,
+            p.processing_status, p.aspect_ratio,
+            p.mux_playback_id, p.mux_asset_id,
+            p.hive_id, p.city, p.region_id,
+            p.created_at, p.deleted_at,
+            u.id as u_id, u.username, u.display_name, u.avatar_url,
+            u.email, u.region, u.hive_id as u_hive_id,
+            u.is_admin, u.is_premium, u.plan, u.credits,
+            COALESCE(u.piasse_balance, 0) as piasse_balance,
+            COALESCE(u.total_karma, 0) as total_karma,
+            u.subscription_tier, u.city as u_city, u.region_id as u_region_id,
+            u.created_at as u_created_at, u.updated_at as u_updated_at,
+            COALESCE(u.nectar_points, 0) as nectar_points,
+            COALESCE(u.current_streak, 0) as current_streak
+          FROM publications p
+          LEFT JOIN user_profiles u ON p.user_id = u.id
+          WHERE
+            COALESCE(p.est_masque, false) = false
+            AND p.deleted_at IS NULL
+            AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
+          ORDER BY p.created_at DESC
+          LIMIT $2`,
+          [targetHive, fetchSize],
+        );
+
+        console.log(
+          `[STORAGE] Raw SQL explore: ${result.rows.length} posts in hive '${targetHive}'`,
+        );
+
+        if (result.rows.length === 0) return [];
+
+        const now = Date.now();
+        const ranked = result.rows
+          .map((row) => ({
+            post: {
+              id: row.id,
+              userId: row.user_id,
+              mediaUrl: row.media_url,
+              hlsUrl: row.hls_url,
+              thumbnailUrl: row.thumbnail_url,
+              content: row.content || "",
+              caption: row.caption,
+              visibility: row.visibility || "public",
+              fireCount: Number(row.reactions_count) || 0,
+              commentCount: Number(row.comments_count) || 0,
+              sharesCount: Number(row.shares_count) || 0,
+              piasseCount: Number(row.piasse_count) || 0,
+              isHidden: row.est_masque || false,
+              processingStatus: row.processing_status || "completed",
+              aspectRatio: row.aspect_ratio || "9:16",
+              muxPlaybackId: row.mux_playback_id,
+              muxAssetId: row.mux_asset_id,
+              hiveId: row.hive_id,
+              city: row.city,
+              regionId: row.region_id,
+              createdAt: new Date(row.created_at),
+              deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
+              // Fields required by Post type with safe defaults
+              originalUrl: null,
+              enhancedUrl: null,
+              mediaMetadata: {},
+              muxUploadId: null,
+              promoUrl: null,
+              hlsUrl2: null,
+              duration: null,
+              visualFilter: "none",
+              enhanceStartedAt: null,
+              enhanceFinishedAt: null,
+              region: null,
+              embedding: null,
+              lastEmbeddedAt: null,
+              transcription: null,
+              transcribedAt: null,
+              aiDescription: null,
+              aiLabels: [],
+              contentFr: null,
+              contentEn: null,
+              hashtags: [],
+              detectedThemes: [],
+              detectedItems: [],
+              aiGenerated: false,
+              quebecScore: 0,
+              viralScore: 0,
+              safetyFlags: {},
+              isModerated: false,
+              moderationApproved: true,
+              moderationScore: 0,
+              moderatedAt: null,
+              isEphemeral: false,
+              viewCount: 0,
+              maxViews: 1,
+              expiresAt: null,
+              burnedAt: null,
+              isVaulted: false,
+              remixType: null,
+              originalPostId: null,
+              remixCount: 0,
+              soundId: null,
+              soundStartTime: 0,
+            } as unknown as Post,
+            user: row.u_id
+              ? ({
+                  id: row.u_id,
+                  username: row.username,
+                  displayName: row.display_name,
+                  avatarUrl: row.avatar_url,
+                  email: row.email,
+                  region: row.region,
+                  hiveId: row.u_hive_id || "quebec",
+                  isAdmin: row.is_admin || false,
+                  isPremium: row.is_premium || false,
+                  plan: row.plan || "free",
+                  credits: row.credits || 0,
+                  piasseBalance: Number(row.piasse_balance) || 0,
+                  totalKarma: Number(row.total_karma) || 0,
+                  subscriptionTier: row.subscription_tier || "free",
+                  city: row.u_city,
+                  regionId: row.u_region_id,
+                  createdAt: new Date(row.u_created_at),
+                  updatedAt: row.u_updated_at
+                    ? new Date(row.u_updated_at)
+                    : null,
+                  nectarPoints: Number(row.nectar_points) || 0,
+                  currentStreak: Number(row.current_streak) || 0,
+                  // Safe defaults for all other User fields
+                  bio: null,
+                  role: "citoyen",
+                  customPermissions: {},
+                  location: null,
+                  tiGuyCommentsEnabled: true,
+                  karmaCredits: 0,
+                  cashCredits: 0,
+                  totalGiftsSent: 0,
+                  totalGiftsReceived: 0,
+                  legendaryBadges: [],
+                  taxId: null,
+                  beeAlias: null,
+                  maxStreak: 0,
+                  lastDailyBonus: null,
+                  unlockedHives: ["quebec"],
+                  parentId: null,
+                  totalDocumentsProcessed: 0,
+                  stripeCustomerId: null,
+                  tier: null,
+                } as unknown as User)
+              : null,
+          }))
+          .filter((r) => r.user !== null)
+          .map((r) => ({
+            ...r,
+            momentum: calculateCulturalMomentum(
+              {
+                ...r.post,
+                fireCount: r.post.fireCount || 0,
+                sharesCount: (r.post as any).sharesCount || 0,
+                piasseCount: (r.post as any).piasseCount || 0,
+              },
+              (now - r.post.createdAt.getTime()) / 36e5,
+            ),
+          }))
+          .sort((a, b) => b.momentum - a.momentum);
+
+        const duration = Date.now() - startTime;
+        if (duration > 200) {
+          console.warn(`[SENTRY] Slow Explore Ranking: ${duration}ms`);
+        }
+
+        const start = pageNum * limit;
+        return ranked
+          .slice(start, start + limit)
+          .map((r) => ({ ...r.post, user: r.user! }));
+      } finally {
+        client.release();
       }
-      
-      const candidates = await db
-        .select({
-          post: posts,
-          user: users,
-        })
-        .from(posts)
-        .leftJoin(users, eq(posts.userId, users.id))
-        .where(
-          and(
-            eq(posts.isHidden, false),
-            isNull(posts.deletedAt),
-            eq(posts.hiveId, (hiveId || "quebec") as any),
-          ),
-        )
-        .orderBy(desc(posts.createdAt))
-        .limit(100);
-
-      const now = Date.now();
-      const ranked = candidates
-        .map((r) => ({
-          ...r,
-          momentum: calculateCulturalMomentum(
-            {
-              ...r.post,
-              fireCount: r.post.fireCount || 0,
-              sharesCount: (r.post as any).sharesCount || 0,
-              piasseCount: (r.post as any).piasseCount || 0,
-            },
-            (now - r.post.createdAt.getTime()) / 36e5,
-          ),
-        }))
-        .sort((a, b) => b.momentum - a.momentum);
-
-      const duration = Date.now() - startTime;
-      if (duration > 200) {
-        console.warn(`[SENTRY] Slow Explore Ranking: ${duration}ms`);
-      }
-
-      return ranked
-        .filter((r) => r.user != null) // Filter out posts with missing users
-        .slice(0, limit)
-        .map((r) => ({
-          ...r.post,
-          user: r.user!,
-        }));
     });
+  }
+
+  async getRecentPosts(limit: number): Promise<(Post & { user: User })[]> {
+    return this.getExplorePosts(0, limit, "global");
   }
 
   async createPost(post: InsertPost): Promise<Post> {
@@ -1437,6 +1606,10 @@ export class DatabaseStorage implements IStorage {
 
   async setSystemUserId(userId: string): Promise<void> {
     this.systemUserId = userId;
+  }
+
+  getRawDb() {
+    return db;
   }
 }
 

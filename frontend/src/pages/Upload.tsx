@@ -247,6 +247,7 @@ export const Upload: React.FC = () => {
                   <span className="text-white font-bold tracking-wide">
                     CAMÉRA
                   </span>
+                  <span className="text-leather-400 text-xs">(Direct)</span>
                 </button>
 
                 <button
@@ -260,6 +261,7 @@ export const Upload: React.FC = () => {
                   <span className="text-white font-bold tracking-wide">
                     GALERIE
                   </span>
+                  <span className="text-leather-400 text-xs">(Direct)</span>
                 </button>
 
                 <button
@@ -271,8 +273,9 @@ export const Upload: React.FC = () => {
                     <IoCloudUploadOutline className="text-3xl text-gold-500" />
                   </div>
                   <span className="text-white font-bold tracking-wide">
-                    UPLOAD MUX
+                    UPLOAD
                   </span>
+                  <span className="text-leather-400 text-xs">(Streaming)</span>
                 </button>
 
                 <button
@@ -290,7 +293,7 @@ export const Upload: React.FC = () => {
               </div>
             )}
           </>
-        ) : (preview || muxData || pexelsData) ? (
+        ) : preview || muxData || pexelsData ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Preview Card */}
             <div className="relative aspect-[4/5] bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border-4 border-leather-800 group">
@@ -357,17 +360,19 @@ export const Upload: React.FC = () => {
                   <button
                     key={filter.id}
                     onClick={() => setVisualFilter(filter.id)}
-                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${visualFilter === filter.id
+                    className={`flex-shrink-0 flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      visualFilter === filter.id
                         ? "border-gold-500 bg-gold-500/10 shadow-[0_0_15px_rgba(255,191,0,0.2)]"
                         : "border-leather-700 bg-black/40"
-                      }`}
+                    }`}
                   >
                     <span className="text-2xl">{filter.emoji}</span>
                     <span
-                      className={`text-[10px] font-bold uppercase tracking-tighter ${visualFilter === filter.id
+                      className={`text-[10px] font-bold uppercase tracking-tighter ${
+                        visualFilter === filter.id
                           ? "text-gold-400"
                           : "text-leather-400"
-                        }`}
+                      }`}
                     >
                       {filter.name}
                     </span>
@@ -413,7 +418,7 @@ export const Upload: React.FC = () => {
                       ];
                       const randomCaption =
                         suggestions[
-                        Math.floor(Math.random() * suggestions.length)
+                          Math.floor(Math.random() * suggestions.length)
                         ];
                       setCaption((prev) =>
                         prev ? `${prev} ${randomCaption}` : randomCaption,

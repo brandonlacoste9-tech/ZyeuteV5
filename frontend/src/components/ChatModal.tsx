@@ -132,9 +132,9 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
       const responseText =
         typeof response === "string"
           ? response
-          : response.response ||
-            response.message ||
-            "Je n'ai pas de réponse pour ça, tsé?";
+          : (response as any).response ||
+          (response as any).message ||
+          "Je n'ai pas de réponse pour ça, tsé?";
       addMessage({ sender: "tiGuy", text: responseText });
     } catch (error: any) {
       console.error("Chat error:", error);
@@ -502,15 +502,15 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
           isOpen={isMenuOpen}
           onClose={() => setIsMenuOpen(false)}
           onChatSelect={(chatId) => {
-            toast.info(`Opening chat: ${chatId}`);
+            toast.info(`Chat: ${chatId}`);
             setIsMenuOpen(false);
           }}
           onDMSelect={(dmId) => {
-            toast.info(`Opening DM: ${dmId}`);
+            toast.info(`Message: ${dmId}`);
             setIsMenuOpen(false);
           }}
           onImageSelect={(imageId) => {
-            toast.info(`Opening image: ${imageId}`);
+            toast.info(`Image: ${imageId}`);
             setIsMenuOpen(false);
           }}
         />

@@ -36,7 +36,7 @@ The backend logs these exact messages before exiting. Look for them in **Deploy 
 **Fix:** Verify `DATABASE_URL` format:
 
 ```
-postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:6543/postgres
 ```
 
 ---
@@ -132,7 +132,7 @@ When sharing Railway errors, include:
 
 ```bash
 # Set in Railway Dashboard → Variables
-DATABASE_URL=postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:6543/postgres
 ```
 
 ### If you see "Database connection failed":

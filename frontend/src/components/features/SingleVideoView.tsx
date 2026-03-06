@@ -4,9 +4,10 @@
  */
 
 import React, { useRef, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import TikTokVideoPlayer from "@/components/video/TikTokVideoPlayer";
 import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -18,11 +19,13 @@ import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
 import { useVideoVision } from "@/hooks/useVideoVision";
-import { validatePostType } from "@/utils/validatePostType";
+import { validatePostType } from "@shared/utils/validatePostType";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { RemixModal } from "./RemixModal";
 import { getRemixInfo } from "@/services/api";
-import { Music } from "lucide-react";
+import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
+import { Music, AlertCircle } from "lucide-react";
+import { TrustCertificate } from "../ui/TrustCertificate";
 
 interface SingleVideoViewProps {
   post: Post;
@@ -33,6 +36,8 @@ interface SingleVideoViewProps {
   onShare?: (postId: string) => void;
   onFollow?: (userId: string) => void;
   priority?: boolean;
+  isNext?: boolean;
+  isEngaged?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: import("@/hooks/usePrefetchVideo").VideoSource;
   isCached?: boolean;
@@ -41,6 +46,7 @@ interface SingleVideoViewProps {
     concurrency: number;
     tier: number;
   };
+  shouldPrefetch?: boolean;
   /** Called when playback reaches 70% (for prefetching next videos) */
   onVideoProgress?: (progress: number) => void;
 }
@@ -57,13 +63,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     priority = false,
     preload = "metadata",
     videoSource,
-    isCached,
     debug,
+    shouldPrefetch = false,
     onVideoProgress,
   }) => {
     const videoRef = useRef<HTMLDivElement>(null);
     const { tap, impact } = useHaptics();
-    const navigate = useNavigate();
     const { preferences } = useSettingsPreferences();
 
     // Audio Control State (TikTok-style tap to unmute)
@@ -81,7 +86,13 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     // Remix State (TikTok-style)
     const [showRemixModal, setShowRemixModal] = useState(false);
-    const [remixCount, setRemixCount] = useState((post as any).remixCount || 0);
+    const [remixCount, setRemixCount] = useState(
+      (post as { remixCount?: number }).remixCount || 0,
+    );
+
+    // Video error capture (for diagnostic overlay)
+    const [videoError, setVideoError] = useState<Error | null>(null);
+    // Note: State reset on post change is handled by key={post.id} in ContinuousFeed
 
     // Load remix count
     useEffect(() => {
@@ -94,7 +105,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       }
     }, [post.id, post.type, isActive]);
 
-    // Trigger Vision Analysis if missing
+    // Trigger Vision Analysis if missing (deferred to idle time)
     useEffect(() => {
       if (
         isActive &&
@@ -103,21 +114,28 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         !isAnalyzing &&
         post.type === "video"
       ) {
-        const timer = setTimeout(async () => {
+        // Defer AI Vision to browser idle time (doesn't block video decoder)
+        const idleCallbackId = requestIdleCallback(() => {
           if (videoRef.current) {
             // Try to find the actual video tag inside the container
             const videoEl = videoRef.current.querySelector("video");
             if (videoEl) {
               console.log("[VideoVision] Analyzing frame for", post.id);
               setHasAnalyzed(true); // Prevent loop
-              const result = await analyzeFrame(videoEl);
-              if (result) {
-                setLocalAiDescription(result.description);
-              }
+              analyzeFrame(videoEl).then((result) => {
+                if (result) {
+                  setLocalAiDescription(result.description);
+                }
+              });
             }
           }
-        }, 3000); // Wait 3s for meaningful frame
-        return () => clearTimeout(timer);
+        });
+
+        return () => {
+          if ("cancelIdleCallback" in window) {
+            cancelIdleCallback(idleCallbackId);
+          }
+        };
       }
     }, [
       isActive,
@@ -132,14 +150,17 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Get swipe gesture setting
     const swipeGesturesEnabled = preferences.interactions.swipeGestures;
 
-    // Horizontal swipe gesture tracking
+    // Horizontal swipe gesture tracking with smooth visual displacement
     const touchStartX = useRef<number>(0);
     const touchStartY = useRef<number>(0);
     const touchEndX = useRef<number>(0);
     const touchEndY = useRef<number>(0);
+    const swipeRafRef = useRef<number>(0);
     const [swipeDirection, setSwipeDirection] = useState<
       "left" | "right" | null
     >(null);
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const swipeTargetRef = useRef(0);
 
     // Real-time Presence & Engagement
     const { viewerCount, engagement } = usePresence(post.id);
@@ -148,8 +169,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     const [isFollowing, setIsFollowing] = useState(false);
 
     // Derive counts from props OR real-time updates
-    const fireCount = engagement.fireCount ?? post.fire_count;
-    const commentCount = engagement.commentCount ?? post.comment_count;
+    const fireCount = engagement.fireCount ?? (post as any).fireCount ?? 0;
+    const commentCount =
+      engagement.commentCount ?? (post as any).commentCount ?? 0;
 
     const handleFire = () => {
       // Only toggle if not already liked (or toggle off?)
@@ -224,15 +246,33 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       impact();
     };
 
-    // Horizontal swipe handlers
+    // Horizontal swipe handlers with smooth visual tracking
     const handleTouchStart = (e: React.TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
+      touchEndX.current = 0;
+      touchEndY.current = 0;
+      swipeTargetRef.current = 0;
+      setSwipeOffset(0);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
       touchEndX.current = e.touches[0].clientX;
       touchEndY.current = e.touches[0].clientY;
+
+      const deltaX = touchEndX.current - touchStartX.current;
+      const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+
+      // Only track horizontal swipes with rubber-band damping
+      if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+        const damped = deltaX * 0.4;
+        swipeTargetRef.current = damped;
+
+        if (swipeRafRef.current) cancelAnimationFrame(swipeRafRef.current);
+        swipeRafRef.current = requestAnimationFrame(() => {
+          setSwipeOffset(swipeTargetRef.current);
+        });
+      }
     };
 
     const handleTouchEnd = async () => {
@@ -339,21 +379,41 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       // Reset touch positions
       touchStartX.current = 0;
       touchEndX.current = 0;
+
+      // Spring-back animation for swipe offset
+      if (swipeRafRef.current) cancelAnimationFrame(swipeRafRef.current);
+      const springBack = () => {
+        setSwipeOffset((prev) => {
+          const next = prev * 0.75;
+          if (Math.abs(next) < 0.5) return 0;
+          swipeRafRef.current = requestAnimationFrame(springBack);
+          return next;
+        });
+      };
+      swipeRafRef.current = requestAnimationFrame(springBack);
     };
 
-    // Cleanup tap timeout on unmount
+    // Cleanup tap timeout and swipe RAF on unmount
     useEffect(() => {
       return () => {
         if (tapTimeoutRef.current) {
           clearTimeout(tapTimeoutRef.current);
         }
+        if (swipeRafRef.current) {
+          cancelAnimationFrame(swipeRafRef.current);
+        }
       };
     }, []);
 
     // Deep Enhance: Select best video source
+    // Support both snake_case and camelCase for compatibility
     // 🛡️ GUARDRAIL: Validate the actual type based on media URL (fallback safety)
-    const mediaUrl = post.media_url || post.enhanced_url || post.original_url || "";
-    const muxPlaybackId = post.mux_playback_id;
+    const mediaUrl =
+      (post.media_url ?? post.mediaUrl) ||
+      (post.enhanced_url ?? post.enhancedUrl) ||
+      (post.original_url ?? post.originalUrl) ||
+      "";
+    const muxPlaybackId = post.mux_playback_id ?? post.muxPlaybackId;
     const validatedType = validatePostType(
       mediaUrl,
       post.type as "video" | "photo",
@@ -372,16 +432,16 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     if (isVideo) {
       // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
-      const processingReady = post.processing_status === "completed";
-      const hlsUrl = post.hls_url || (post as any).hlsUrl;
-      if (hlsUrl) {
-        videoSrc = hlsUrl;
-      } else if (processingReady && post.enhanced_url) {
-        videoSrc = post.enhanced_url;
-      } else if (post.media_url) {
-        videoSrc = post.media_url;
-      } else if (post.original_url) {
-        videoSrc = post.original_url;
+      const processingReady =
+        (post.processing_status ?? post.processingStatus) === "completed";
+      if (post.hls_url ?? post.hlsUrl) {
+        videoSrc = post.hls_url ?? post.hlsUrl ?? "";
+      } else if (processingReady && (post.enhanced_url ?? post.enhancedUrl)) {
+        videoSrc = post.enhanced_url ?? post.enhancedUrl ?? "";
+      } else if (post.media_url ?? post.mediaUrl) {
+        videoSrc = post.media_url ?? post.mediaUrl ?? "";
+      } else if (post.original_url ?? post.originalUrl) {
+        videoSrc = post.original_url ?? post.originalUrl ?? "";
       }
 
       // Debug log if video source is empty
@@ -392,45 +452,70 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             postId: post.id,
             type: post.type,
             validatedType,
-            enhanced_url: post.enhanced_url,
-            media_url: post.media_url,
-            original_url: post.original_url,
-            processing_status: post.processing_status,
+            hlsUrl: post.hls_url ?? post.hlsUrl,
+            enhancedUrl: post.enhanced_url ?? post.enhancedUrl,
+            mediaUrl: post.media_url ?? post.mediaUrl,
+            originalUrl: post.original_url ?? post.originalUrl,
+            processingStatus: post.processing_status ?? post.processingStatus,
           },
         );
       } else {
-        // Route external URLs (Mixkit, Unsplash, Pexels) through media proxy to fix 403/ORB
-        videoSrc = getProxiedMediaUrl(videoSrc) || videoSrc;
+        // Route external URLs through media proxy to fix 403/ORB
+        // Skip MUX URLs - they handle CORS natively
+        if (
+          !videoSrc.includes("stream.mux.com") &&
+          !videoSrc.includes("chunk.mux.com")
+        ) {
+          videoSrc = getProxiedMediaUrl(videoSrc) || videoSrc;
+        }
         // Log valid video source for debugging
         console.debug("[SingleVideoView] Video source selected:", {
           postId: post.id,
           source: videoSrc.substring(0, 50) + "...",
-          type: processingReady && post.enhanced_url ? "enhanced" : "original",
+          type:
+            processingReady && (post.enhanced_url ?? post.enhancedUrl)
+              ? "enhanced"
+              : "original",
         });
       }
     }
 
     // Deep Enhance: Visual Filters
+    const visualFilter = post.visual_filter ?? post.visualFilter;
     const filterStyle =
-      isVideo && post.visual_filter && post.visual_filter !== "none"
-        ? { filter: post.visual_filter }
+      isVideo && visualFilter && visualFilter !== "none"
+        ? { filter: visualFilter }
         : {};
 
     return (
       <div
         ref={videoRef}
-        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none"
+        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none video-motion-smooth video-stabilized"
+        style={{
+          transform: swipeOffset !== 0
+            ? `translate3d(${swipeOffset}px, 0, 0) scale(${1 - Math.abs(swipeOffset) * 0.0003})`
+            : "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          transition: swipeOffset === 0 ? "transform 250ms cubic-bezier(0.25, 0.1, 0.25, 1)" : "none",
+        } as React.CSSProperties}
         onClick={handleSingleTap}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Swipe Direction Indicator */}
+        {/* Swipe Direction Indicator — smooth momentum overlay */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${swipeDirection === "left" ? "animate-pulse" : ""
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm swipe-overlay-smooth ${swipeDirection === "left" ? "animate-pulse" : ""
               }`}
+            style={{
+              animation: "fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
+              swipeDirection === "left" ? "animate-pulse" : ""
+            }`}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -449,25 +534,72 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   </>
                 )
               ) : // LEGACY MODE: Advanced Features
-                swipeDirection === "left" ? (
-                  <>
-                    <div className="text-6xl mb-2">🔨</div>
-                    <p className="text-gold-400 font-bold text-lg">
-                      Régénération...
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-6xl mb-2">🔒</div>
-                    <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
-                  </>
-                )}
+              swipeDirection === "left" ? (
+                <>
+                  <div className="text-6xl mb-2">🔨</div>
+                  <p className="text-gold-400 font-bold text-lg">
+                    Régénération...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-6xl mb-2">🔒</div>
+                  <p className="text-gold-400 font-bold text-lg">Sauvegardé!</p>
+                </>
+              )}
             </div>
           </div>
         )}
+        {/* Video Playback Diagnostic (?debug=1 or localStorage debug=true) */}
+        {post.type === "video" && (
+          <VideoPlaybackDiagnostic
+            postId={post.id}
+            postType={post.type}
+            muxPlaybackId={post.mux_playback_id}
+            mediaUrl={post.media_url}
+            videoSrc={
+              post.mux_playback_id
+                ? `https://stream.mux.com/${post.mux_playback_id}.m3u8`
+                : videoSrc
+            }
+            playerPath={
+              post.mux_playback_id
+                ? "mux"
+                : post.processing_status === "pending" ||
+                    post.processing_status === "processing"
+                  ? "processing"
+                  : videoSrc
+                    ? "native"
+                    : "none"
+            }
+            processingStatus={post.processingStatus}
+            error={videoError}
+            isActive={isActive}
+          />
+        )}
+        {/* Full-screen Media — GPU-composited layer for smooth playback */}
+        <div className="absolute inset-0 w-full h-full video-container-crisp">
+          {!isActive && !priority ? (
         {/* Full-screen Media */}
+        {/* MEMORY OPTIMIZATION: Strictly mount only CURRENT and NEXT players (Max 2) */}
         <div className="absolute inset-0 w-full h-full">
-          {post.type === "video" ? (
+          {!isActive && !priority && !shouldPrefetch ? (
+            // Off-screen: Show static thumbnail only (no video element)
+            <div className="w-full h-full bg-zinc-900">
+              {post.thumbnailUrl ? (
+                <img
+                  src={post.thumbnailUrl || post.thumbnail_url || undefined}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-white/20 text-sm">Chargement...</div>
+                </div>
+              )}
+            </div>
+          ) : post.type === "video" ? (
             post.mux_playback_id ? (
               <MuxVideoPlayer
                 playbackId={post.mux_playback_id}
@@ -481,32 +613,55 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 autoPlay={isActive}
                 muted={isMuted}
                 loop
+                onError={(err) => setVideoError(err)}
               />
-            ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+            ) : post.processing_status === "pending" ||
+              post.processing_status === "processing" ? (
               // 🐝 FIX: Show loading state instead of black screen
               <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
                 <div className="animate-spin text-4xl mb-4">⚙️</div>
                 <div className="text-white/80 text-sm font-medium">
-                  {post.processing_status === "processing" ? "Amélioration en cours..." : "Traitement vidéo..."}
+                  {post.processing_status === "processing"
+                    ? "Amélioration en cours..."
+                    : "Traitement vidéo..."}
                 </div>
                 <div className="text-white/50 text-xs mt-2">
                   Zyeute traite votre vidéo
                 </div>
                 {post.thumbnail_url && (
-                  <img 
-                    src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                  <img
+                    src={
+                      getProxiedMediaUrl(post.thumbnail_url) ||
+                      post.thumbnail_url
+                    }
                     alt="Preview"
                     className="absolute inset-0 w-full h-full object-cover opacity-30 -z-10"
                   />
                 )}
               </div>
-            ) : (
+            ) : !videoSrc ? (
+              // No video source available - show error state
+              <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900">
+                <AlertCircle className="w-12 h-12 text-white/30 mb-3" />
+                <p className="text-white/60 text-sm">Vidéo non disponible</p>
+                <p className="text-white/40 text-xs mt-1">Source manquante</p>
+              </div>
+            ) : // Player selection based on EXPLICIT fields, not URL sniffing
+            // Priority: hls_url → VideoPlayer (HLS.js) | media_url → SimpleVideoPlayer (native)
+            (post.hls_url ?? post.hlsUrl) ? (
               <VideoPlayer
                 src={videoSrc}
                 poster={
-                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                  post.thumbnail_url ||
-                  post.media_url
+                  getProxiedMediaUrl(
+                    post.thumbnail_url ??
+                      post.thumbnailUrl ??
+                      post.media_url ??
+                      post.mediaUrl,
+                  ) ||
+                  (post.thumbnail_url ??
+                    post.thumbnailUrl ??
+                    post.media_url ??
+                    post.mediaUrl)
                 }
                 autoPlay={isActive}
                 muted={isMuted}
@@ -519,10 +674,29 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 debug={debug}
                 onProgress={isActive ? onVideoProgress : undefined}
               />
+            ) : (
+              <TikTokVideoPlayer
+                src={videoSrc}
+                poster={
+                  post.thumbnail_url ??
+                  post.thumbnailUrl ??
+                  post.media_url ??
+                  post.mediaUrl
+                }
+                autoPlay={isActive}
+                muted={isMuted}
+                loop
+                className="w-full h-full"
+                style={filterStyle}
+                priority={priority}
+                preload={isActive ? "auto" : preload}
+                onProgress={isActive ? onVideoProgress : undefined}
+                onError={(err) => setVideoError(err)}
+              />
             )
           ) : (
             <Image
-              src={post.media_url}
+              src={post.mediaUrl || post.media_url}
               alt={post.caption || "Post media"}
               className="w-full h-full object-cover"
               style={filterStyle}
@@ -535,9 +709,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Double Tap Fire Animation */}
         {showFireAnimation && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 animate-heart-pump">
-            <div className="text-[120px] drop-shadow-[0_0_30px_rgba(255,100,0,0.9)] animate-pulse">
-              🔥
-            </div>
+            <div className="text-[120px] animate-pulse">🔥</div>
           </div>
         )}
 
@@ -546,10 +718,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <div className="absolute bottom-20 right-4 z-30 pointer-events-none">
             {/* Persistent mute icon */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${showMuteIndicator
-                ? "bg-white/90 scale-125"
-                : "bg-black/40 backdrop-blur-sm"
-                }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                showMuteIndicator
+                  ? "bg-white/90 scale-125"
+                  : "bg-black/40 backdrop-blur-sm"
+              }`}
             >
               {isMuted ? (
                 <svg
@@ -572,8 +745,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           </div>
         )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+        {/* Gradient Overlay — hardware accelerated for zero jank */}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"
+          style={{ transform: "translate3d(0, 0, 0)" }}
+        />
 
         {/* Québec Or emblem — top right of video screen, small */}
         <img
@@ -589,18 +765,27 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         <div className="absolute top-16 right-4 z-20 flex flex-col gap-2 items-end">
           <EphemeralBadge post={post} className="static bg-red-600/90" />
 
-          {post.type === "video" && (
-            post.processing_status === "processing" ? (
-              <div className="bg-black/60 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 backdrop-blur-md">
+          {post.type === "video" &&
+            (post.processing_status === "processing" ? (
+              <div className="bg-black/90 text-white border border-white/20 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
                 <span className="animate-spin">⚙️</span>
                 <span>Amélioration...</span>
               </div>
             ) : post.processing_status === "completed" && post.enhanced_url ? (
-              <div className="bg-gold-500/90 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-lg flex items-center gap-1 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+              <div className="bg-gold-500 text-black px-2 py-0.5 rounded-full text-[10px] font-bold shadow-etched flex items-center gap-1 animate-in fade-in zoom-in duration-300">
                 <span>✨</span>
                 <span>4K ULTRA</span>
               </div>
-            ) : null
+            ) : null)}
+
+          {/* Forensic Trust Certificate */}
+          {isActive && (
+            <TrustCertificate
+              score={98}
+              username={user.username}
+              className="mt-2 scale-75 origin-right"
+              type="authenticity"
+            />
           )}
         </div>
 
@@ -611,7 +796,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             onClick={tap}
             className="relative"
           >
-            <div className="absolute inset-0 rounded-full border border-gold-500/50 blur-[2px]"></div>
+            <div className="absolute inset-0 rounded-full border border-gold-500/50"></div>
             <Avatar
               src={user.avatar_url}
               size="md"
@@ -627,11 +812,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               className="font-bold text-white hover:text-gold-400 transition-colors flex items-center gap-1 text-sm"
             >
               {user.display_name || user.username}
-              {user.is_verified && (
-                <span className="text-gold-500 drop-shadow-[0_0_3px_rgba(255,191,0,0.8)]">
-                  ✓
-                </span>
-              )}
+              {user.is_verified && <span className="text-gold-500">✓</span>}
             </Link>
             {post.region && (
               <p className="text-stone-300 text-xs flex items-center gap-1">
@@ -643,8 +824,8 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
           {/* Live Viewer Count (Zyeuteurs) */}
           {viewerCount > 0 && (
-            <div className="flex items-center gap-1.5 bg-red-600/80 backdrop-blur-md px-2 py-0.5 rounded-full border border-red-400/30 animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.4)]">
-              <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_white]" />
+            <div className="flex items-center gap-1.5 glass-frosted px-2 py-0.5 rounded-full border border-red-400/30 shadow-etched animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
               <span className="text-white text-[10px] font-bold uppercase tracking-wider">
                 {viewerCount} {viewerCount > 1 ? "Zyeuteurs" : "Zyeuteur"}
               </span>
@@ -705,14 +886,14 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
-                }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${
+                isLiked ? "scale-110" : ""
+              }`}
             >
               <div
-                className={`text-4xl transition-all ${isLiked
-                  ? "drop-shadow-[0_0_15px_rgba(255,100,0,0.8)] animate-pulse"
-                  : "grayscale opacity-80"
-                  }`}
+                className={`text-4xl transition-all ${
+                  isLiked ? "animate-pulse" : "grayscale opacity-80"
+                }`}
               >
                 🔥
               </div>
@@ -727,18 +908,21 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 e.stopPropagation();
                 handleFollow();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isFollowing ? "scale-105" : ""
-                }`}
+              className={`flex flex-col items-center gap-1 transition-all press-scale ${
+                isFollowing ? "scale-105" : ""
+              }`}
             >
               <div
-                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${isFollowing
-                  ? "border-gold-500 bg-gold-500/20"
-                  : "border-white/80 bg-black/20 hover:border-gold-400"
-                  }`}
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all ${
+                  isFollowing
+                    ? "border-gold-500 bg-gold-500/20"
+                    : "border-white/80 bg-black/20 hover:border-gold-400"
+                }`}
               >
                 <span
-                  className={`text-2xl font-bold ${isFollowing ? "text-gold-500" : "text-white"
-                    }`}
+                  className={`text-2xl font-bold ${
+                    isFollowing ? "text-gold-500" : "text-white"
+                  }`}
                 >
                   {isFollowing ? "✓" : "+"}
                 </span>

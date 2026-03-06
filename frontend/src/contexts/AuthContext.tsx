@@ -3,10 +3,11 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useRef,
   ReactNode,
 } from "react";
 import { Session, AuthChangeEvent } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { supabase, getSessionWithTimeout } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
 import { User } from "@/types"; // Use our extended User type
 import { checkIsAdmin } from "@/lib/admin";
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const hasInitialized = useRef(false);
 
   // Check guest mode validity
   const checkGuestMode = (): boolean => {
@@ -66,7 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionUser) return null;
     try {
       // Use /auth/me for current user - it auto-provisions if profile missing
-      const fullProfile = await getUserProfile("me");
+      // Add timeout to prevent hanging if backend is down
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
+      );
+      const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
       if (fullProfile) return fullProfile;
 
       // Fallback if profile doesn't exist yet (rare race condition)
@@ -98,39 +104,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // GUARD: Prevent duplicate initialization
+    if (hasInitialized.current) {
+      console.log("🕯️ [Auth] Already initialized, skipping");
+      return;
+    }
+    hasInitialized.current = true;
+
+    const startTime = Date.now();
+    console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;
     const initStart = Date.now();
 
-    // EMERGENCY FAILSAFE: Force loading to complete after 2s maximum
+    // EMERGENCY FAILSAFE: Force loading to complete after 1.5s
     const emergencyTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn("⚠️ EMERGENCY: Forcing UI render after 2 seconds");
+        console.warn("⚠️ EMERGENCY: Forcing UI render after 1.5s");
         setIsLoading(false);
       }
-    }, 2000);
+    }, 1500);
 
     const initializeAuth = async () => {
       try {
         const sessionStart = Date.now();
-        // 1. Get initial session
-        const {
-          data: { session: initialSession },
-          error,
-        } = await supabase.auth.getSession();
+        const { data: { session: initialSession } } = await getSessionWithTimeout(5000);
 
         trackPerformance("Supabase getSession", sessionStart);
 
         if (mounted) {
-          if (initialSession?.user) {
-            setSession(initialSession);
-            const profile = await enhanceUser(initialSession.user);
+          if ((initialSession as any)?.user) {
+            setSession(initialSession as any);
+            const profile = await enhanceUser((initialSession as any).user);
             if (mounted && profile) {
               setUser(profile);
               // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
-                  profile.role === "moderator" ||
-                  (await checkIsAdmin(initialSession.user as any)),
+                profile.role === "moderator" ||
+                (await checkIsAdmin((initialSession as any).user)),
               );
             }
           } else {
@@ -157,25 +168,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
-    // 3. Listen for Auth Changes
+    // 3. Listen for Auth Changes - CRITICAL: do NOT await Supabase/API inside callback (deadlock auth-js#762)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, newSession: Session | null) => {
+      (event: AuthChangeEvent, newSession: Session | null) => {
         if (!mounted) return;
-        // console.log('🔐 Auth State Changed:', event);
-
         setSession(newSession);
 
         if (newSession?.user) {
           setIsGuest(false);
-          const profile = await enhanceUser(newSession.user);
-          if (mounted && profile) {
-            setUser(profile);
-            setIsAdmin(
-              profile.role === "founder" || profile.role === "moderator",
-            );
-          }
+          setTimeout(() => {
+            if (!mounted) return;
+            enhanceUser(newSession.user)
+              .then((profile) => {
+                if (mounted && profile) {
+                  setUser(profile);
+                  setIsAdmin(profile.role === "founder" || profile.role === "moderator");
+                }
+                if (mounted) setIsLoading(false);
+              })
+              .catch(() => mounted && setIsLoading(false));
+          }, 0);
         } else {
           setUser(null);
           setIsAdmin(false);
@@ -183,10 +197,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const validGuest = checkGuestMode();
             if (mounted) setIsGuest(validGuest);
           }
+          if (mounted) setIsLoading(false);
         }
-
-        // Ensure loading is false only after all state updates are complete
-        if (mounted) setIsLoading(false);
       },
     );
 
@@ -233,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isGuest, isLoading]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     user,
     session,
     isAuthenticated: !!user || isGuest,
@@ -242,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     logout,
     enterGuestMode,
-  };
+  }), [user, session, isGuest, isLoading, logout, enterGuestMode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    to: "/upload",
+    to: "/create",
     label: "Créer",
     icon: (
       <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ const navItems: NavItem[] = [
 
 export const BottomNav: React.FC = () => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/10 safe-bottom max-w-sm mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 glass-nav border-t border-white/10 max-w-sm mx-auto">
       <div className="max-w-7xl mx-auto px-2">
         <div className="flex items-center justify-around h-16">
           {navItems.map((item) => (

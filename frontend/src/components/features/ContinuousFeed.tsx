@@ -54,19 +54,22 @@ import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 const feedLogger = logger.withContext("ContinuousFeed");
-import { AppConfig } from "@/config/factory";
+// HARDCODED: Always use Quebec hive to prevent switching loops
+const HIVE_ID = "quebec";
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
 // Added in FE-06 for offline support
 import { useNetworkQueue } from "../../contexts/NetworkQueueContext";
 import { FeedPostSkeleton } from "@/components/ui/Skeleton";
 import { useScrollVelocity } from "@/hooks/useScrollVelocity";
+import { useMotionSmooth } from "@/hooks/useMotionSmooth";
 import { useVideoActivation } from "@/hooks/useVideoActivation";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { videoCache } from "@/lib/videoWarmCache";
 import { useFeedEngagement } from "@/hooks/useFeedEngagement";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
+import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 
 // ... imports ...
 
@@ -94,18 +97,22 @@ const FeedRow = memo(
 
     const post = posts[index];
     const isPriority = index === currentIndex;
-    const isPredictive = Math.abs(index - currentIndex) === 1;
+    const isNext = index === currentIndex + 1;
 
-    // Determine Video Source
-    // Only video type posts need prefetching logic
-    const videoUrl =
-      post?.type === "video"
-        ? (post as Post).hls_url ||
-          (post as Post).enhanced_url ||
-          (post as Post).media_url ||
-          (post as Post).original_url ||
-          ""
-        : "";
+    // Determine Video Source — skip prefetch for Mux (MuxVideoPlayer handles its own streaming)
+    const hasMux = !!(post as Post).mux_playback_id;
+    const rawVideoUrl = hasMux
+      ? ""
+      : (post as Post).hls_url ||
+        (post as Post).enhanced_url ||
+        (post as Post).media_url ||
+        (post as Post).original_url ||
+        "";
+    // Proxy the URL now — SingleVideoView also proxies via getProxiedMediaUrl,
+    // so we pass the SAME proxied URL here to avoid src/chunk mismatch in MSE pipeline.
+    const videoUrl = rawVideoUrl
+      ? getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl
+      : "";
 
     // Smart Activation
     const { ref, shouldPlay, preloadTier } = useVideoActivation(
@@ -113,7 +120,7 @@ const FeedRow = memo(
       isMediumScrolling,
       isSlowScrolling,
       isPriority,
-      isPredictive,
+      isNext,
     );
 
     // Circuit Breaker: If system is overloaded (high latency), kill prefetching
@@ -134,9 +141,10 @@ const FeedRow = memo(
         style={style}
         ref={ref}
         data-video-index={index}
-        className="w-full h-full"
+        className="w-full h-full video-stabilized"
       >
         <UnifiedMediaCard
+          key={post.id}
           post={post}
           user={post.user}
           isActive={shouldPlay && isPageVisible}
@@ -145,8 +153,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Adjacent videos (n±1): aggressively buffer for instant swipe
-            isPredictive && !isFastScrolling
+            // Adjacent video (Next): aggressively buffer for instant swipe
+            isNext && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -157,7 +165,7 @@ const FeedRow = memo(
           videoSource={source}
           isCached={isCached}
           debug={debug}
-          shouldPrefetch={isPredictive}
+          shouldPrefetch={isNext}
           onVideoProgress={isPriority ? onVideoProgress : undefined}
         />
       </div>
@@ -194,11 +202,9 @@ const FeedRow = memo(
     const nextIsPriority = nextProps.index === nextData.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
-    const prevIsPredictive =
-      Math.abs(prevProps.index - prevData.currentIndex) === 1;
-    const nextIsPredictive =
-      Math.abs(nextProps.index - nextData.currentIndex) === 1;
-    if (prevIsPredictive !== nextIsPredictive) return false;
+    const prevIsNext = prevProps.index === prevData.currentIndex + 1;
+    const nextIsNext = nextProps.index === nextData.currentIndex + 1;
+    if (prevIsNext !== nextIsNext) return false;
 
     if (prevData.isPageVisible !== nextData.isPageVisible) return false;
 
@@ -222,13 +228,25 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { isOnline, addToQueue } = useNetworkQueue();
 
   const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
-  // Initialize from saved state or defaults
-  const savedState = getFeedState(stateKey);
+  const isFetchingRef = useRef(false); // Prevent concurrent fetches
+  const lastFetchTimeRef = useRef(0); // Rate limit fetches
+  // Initialize from saved state or defaults - memoize to prevent loop
+  const savedState = useMemo(
+    () => getFeedState(stateKey),
+    [stateKey, getFeedState],
+  );
 
-  // Scroll Velocity Tracking
-  const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
+  // Scroll Velocity Tracking — EMA-smoothed for clean motion decisions
+  const { handleScroll, smoothVelocity, isFast, isMedium, isSlow, isDecelerating } = useScrollVelocity();
   const [isSystemOverloaded, setIsSystemOverloaded] = useState(false);
   const isPageVisible = usePageVisibility();
+
+  // Motion Smooth System — provides GPU-accelerated blur/stabilization during scroll
+  const { motionClass, motionStyle } = useMotionSmooth(
+    smoothVelocity,
+    isDecelerating,
+    { maxBlurPx: 1.5, enableMotionBlur: true, enableStabilization: true },
+  );
 
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
@@ -316,32 +334,53 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Transform Pexels videos to Post format for fallback
   const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
+    // Pick best video quality: HD first, then SD, then anything
+    const getBestVideoUrl = (videoFiles: any[]): string => {
+      if (!videoFiles?.length) return "";
+      const hd = videoFiles.find((f) => f.quality === "hd");
+      const sd = videoFiles.find((f) => f.quality === "sd");
+      return hd?.link || sd?.link || videoFiles[0]?.link || "";
+    };
+
     return pexelsVideos.map((video, index) => ({
       id: `pexels-${video.id}`,
-      type: 'video' as const,
-      caption: video.url?.split('/').pop()?.replace(/-/g, ' ') || 'Video from Pexels',
-      media_url: video.video_files?.[0]?.link || video.url,
-      original_url: video.video_files?.[0]?.link || video.url,
+      type: "video" as const,
+      caption:
+        video.url?.split("/").pop()?.replace(/-/g, " ") || "Video from Pexels",
+      media_url: getBestVideoUrl(video.video_files) || video.url,
+      original_url: getBestVideoUrl(video.video_files) || video.url,
       thumbnail_url: video.image,
       user: {
-        id: 'pexels-user',
-        username: 'pexels',
-        display_name: 'Pexels',
-        avatar_url: 'https://images.pexels.com/lib/api/pexels.png',
+        id: "pexels-user",
+        username: "pexels",
+        display_name: "Pexels",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
         is_verified: false,
       },
       fire_count: Math.floor(Math.random() * 1000),
       comment_count: Math.floor(Math.random() * 100),
       created_at: new Date(Date.now() - index * 3600000).toISOString(),
-      visibility: 'public',
-      hive_id: 'quebec',
+      visibility: "public",
+      hive_id: "quebec",
     }));
   }, []);
 
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
+    // GUARD: Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      feedLogger.debug("Fetch already in progress, skipping");
+      return;
+    }
+
+    // GUARD: Rate limit - wait at least 1s between fetches
+    const now = Date.now();
+    if (now - lastFetchTimeRef.current < 1000) {
+      feedLogger.debug("Rate limited, skipping fetch");
+      return;
+    }
+
     // If we already have posts (restored state), don't fetch initial
-    // Log the check to verify logic
     if (savedState?.posts?.length) {
       feedLogger.debug(
         `Skipping fetch, found ${savedState.posts.length} posts in savedState`,
@@ -349,18 +388,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       return;
     }
 
+    isFetchingRef.current = true;
+    lastFetchTimeRef.current = Date.now();
     feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
     setFetchError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
-    let apiSuccess = false;
 
     try {
       // Fetch first page with Hive filtering
-      const data = await getExplorePosts(0, 10, AppConfig.identity.hiveId);
-      feedLogger.info(
-        `fetchVideoFeed: API returned ${data?.length || 0} posts`,
+      const data = await getExplorePosts(0, 10, HIVE_ID);
+      console.log(
+        "[ContinuousFeed] API returned:",
+        data?.length || 0,
+        "posts",
+        data,
       );
 
       if (data && Array.isArray(data)) {
@@ -372,43 +415,40 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
           return true;
         }) as Array<Post & { user: User }>;
-        apiSuccess = true;
       }
-    } catch (error) {
-      feedLogger.error(
-        "Error fetching API posts, pivoting to Pexels fallback:",
-        error,
-      );
-      apiSuccess = false;
-    }
 
-    // If API has no posts, fallback to Pexels curated videos
-    if (validPosts.length === 0) {
-      feedLogger.info("No API posts, fetching Pexels fallback...");
-      try {
-        const pexelsRes = await fetch('/api/pexels/curated?per_page=10');
-        if (pexelsRes.ok) {
-          const pexelsData = await pexelsRes.json();
-          if (pexelsData.videos?.length > 0) {
-            const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
-            setPosts(pexelsPosts as Array<Post & { user: User }>);
-            setHasMore(false); // Pexels is one-time fetch
-            setFetchError(false);
-            setIsLoading(false);
-            return;
+      // If API has no posts, fallback to Pexels curated videos
+      if (validPosts.length === 0) {
+        feedLogger.info("No API posts, fetching Pexels fallback...");
+        try {
+          const pexelsRes = await fetch("/api/pexels/curated?per_page=10");
+          if (pexelsRes.ok) {
+            const pexelsData = await pexelsRes.json();
+            if (pexelsData.videos?.length > 0) {
+              const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
+              setPosts(pexelsPosts as unknown as Array<Post & { user: User }>);
+              setHasMore(false); // Pexels is one-time fetch
+              setFetchError(false);
+              return;
+            }
           }
+        } catch (pexelsErr) {
+          feedLogger.error("Pexels fallback failed:", pexelsErr);
         }
-      } catch (pexelsErr) {
-        feedLogger.error("Pexels fallback failed:", pexelsErr);
+        setFetchError(true);
+      } else {
+        setPosts(validPosts);
+        setHasMore(validPosts.length === 10);
       }
-      setFetchError(true);
-    }
-    
-    setPosts(validPosts);
-    setHasMore(validPosts.length === 10);
 
-    setPage(0);
-    setIsLoading(false);
+      setPage(0);
+    } catch (error) {
+      feedLogger.error("Error fetching API posts:", error);
+      setFetchError(true);
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
+    }
   }, [savedState, transformPexelsToPosts]);
 
   // Load more videos
@@ -419,11 +459,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       const nextPage = page + 1;
       // Fetch next page with Hive filtering
-      const data = await getExplorePosts(
-        nextPage,
-        10,
-        AppConfig.identity.hiveId,
-      );
+      const data = await getExplorePosts(nextPage, 10, HIVE_ID);
 
       if (data && data.length > 0) {
         const validPosts = data.filter((p) => {
@@ -505,11 +541,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState]);
 
-  // Sliding-window memory: evict blob/chunk data outside active ±1 (debounced to avoid evicting during rapid scroll/updates)
+  // Sliding-window memory: evict blob/chunk data outside active ±2
+  // Keep current ±2 videos in memory, aggressively clean the rest
   const evictTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedVideosRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const retainUrls: string[] = [];
-    for (const i of [currentIndex - 1, currentIndex, currentIndex + 1]) {
+    const windowSize = 2; // Keep current ±2 videos
+
+    for (
+      let i = currentIndex - windowSize;
+      i <= currentIndex + windowSize;
+      i++
+    ) {
       if (i >= 0 && i < posts.length) {
         const p = posts[i];
         if (p?.type === "video") {
@@ -518,15 +563,27 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             (p as Post).enhanced_url ||
             (p as Post).media_url ||
             (p as Post).original_url;
-          if (url) retainUrls.push(url);
+          if (url) {
+            retainUrls.push(url);
+            loadedVideosRef.current.add(p.id);
+          }
         }
       }
     }
+
     if (evictTimeoutRef.current) clearTimeout(evictTimeoutRef.current);
     evictTimeoutRef.current = setTimeout(() => {
       evictTimeoutRef.current = null;
       videoCache.evictUrlsNotIn(retainUrls);
-    }, 300);
+
+      // Log memory cleanup for debugging
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[Memory] Retaining ${retainUrls.length} videos, cleaned ${posts.length - (windowSize * 2 + 1)}`,
+        );
+      }
+    }, 500); // Increased debounce for smoother scrolling
+
     return () => {
       if (evictTimeoutRef.current) {
         clearTimeout(evictTimeoutRef.current);
@@ -535,12 +592,49 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
   }, [currentIndex, posts]);
 
+  // Douyin-level Preloading Strategy
+  // Preload next 2 videos aggressively for instant swipe experience
+  const preloadNextVideos = useCallback(() => {
+    const nextIndices = [currentIndex + 1, currentIndex + 2];
+
+    nextIndices.forEach((idx, priority) => {
+      if (idx >= 0 && idx < posts.length) {
+        const post = posts[idx];
+        if (post?.type === "video") {
+          const url = post.hls_url || post.media_url || post.original_url;
+          if (url && !url.includes("mux")) {
+            // Don't preload MUX - it handles its own
+            // Preload with low priority (not blocking current playback)
+            const link = document.createElement("link");
+            link.rel = "preload";
+            link.href = url;
+            link.as = "fetch";
+            link.fetchPriority = priority === 0 ? "high" : "low";
+            document.head.appendChild(link);
+
+            // Cleanup after load
+            setTimeout(() => link.remove(), 10000);
+          }
+        }
+      }
+    });
+  }, [currentIndex, posts]);
+
+  // Trigger preload when current video is stable (not scrolling fast)
+  useEffect(() => {
+    if (isFast) return; // Don't preload during fast scroll
+
+    const timer = setTimeout(() => {
+      preloadNextVideos();
+    }, 1000); // Wait 1s after scroll stops
+
+    return () => clearTimeout(timer);
+  }, [currentIndex, isFast, preloadNextVideos]);
+
   // Smart Prefetching: Load heavy chunks (Camera) when main thread is idle
-  // This ensures they are ready in the browser cache when the user needs them
   useEffect(() => {
     const prefetchHeavyChunks = () => {
       feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
-      // Trigger dynamic imports to populate browser cache without executing render logic
       import("@/components/features/CameraView").catch(() => {});
     };
 
@@ -709,7 +803,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (url) urls.push(url);
         }
       }
-      urls.forEach((url) => fetch(url, { method: "HEAD" }).catch(() => {}));
+      urls.forEach((url) => {
+        const proxiedUrl = getProxiedMediaUrl(url) || url;
+        fetch(proxiedUrl, { method: "HEAD" }).catch(() => {});
+      });
     },
     [posts, currentIndex],
   );
@@ -785,7 +882,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }
 
   return (
-    <div className={cn("w-full h-full leather-dark feed-root", className)}>
+    <div className={cn("w-full h-full leather-dark feed-root", motionClass, className)} style={motionStyle}>
       {!isOnline && posts.length > 0 && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-center py-2 text-sm font-medium">
           Tu es hors ligne. Les actions seront synchronisées à la reconnexion.
@@ -802,8 +899,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
             <List
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory"
-              style={{ height, width }}
+              className="no-scrollbar snap-smooth-decel"
+              style={{
+                height,
+                width,
+                willChange: "scroll-position",
+                WebkitOverflowScrolling: "touch",
+              } as React.CSSProperties}
               rowCount={posts.length}
               rowHeight={height}
               rowProps={{ data: itemData }}

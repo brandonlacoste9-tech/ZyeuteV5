@@ -11,6 +11,7 @@ import { GiftOverlay } from "@/components/features/GiftOverlay";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { getCurrentUser, getStories } from "@/services/api";
 import { ContinuousFeed } from "@/components/features/ContinuousFeed";
+import ChoixDuGrandCastor from "@/components/features/ChoixDuGrandCastor";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { AvatarSkeleton } from "@/components/ui/Skeleton";
 
@@ -18,13 +19,14 @@ import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { DailyGratteuxModal } from "@/components/gamification/DailyGratteuxModal";
+import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
 const feedLogger = logger.withContext("Feed");
 
 // Gift emoji lookup moved outside to avoid re-creation on every render
 const GIFT_EMOJIS: Record<string, string> = {
   comete: "☄️",
-  feuille_erable: "🍁",
+  feuille_erable: "⚜️",
   fleur_de_lys: "⚜️",
   feu: "🔥",
   coeur_or: "💛",
@@ -39,6 +41,10 @@ export const Feed: React.FC = () => {
   >([]);
   const [isLoadingStories, setIsLoadingStories] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
+
+  // GUARD: Prevent duplicate fetches
+  const hasFetchedUser = React.useRef(false);
+  const hasFetchedStories = React.useRef(false);
 
   const { showOnboarding, isChecked, completeOnboarding } = useOnboarding();
   const { incrementViews } = useGuestMode();
@@ -59,8 +65,11 @@ export const Feed: React.FC = () => {
     incrementViews();
   }, [incrementViews]);
 
-  // Fetch current user
+  // Fetch current user - GUARDED
   React.useEffect(() => {
+    if (hasFetchedUser.current) return;
+    hasFetchedUser.current = true;
+
     const fetchCurrentUser = async () => {
       const user = await getCurrentUser();
       if (user) setCurrentUser(user);
@@ -69,8 +78,11 @@ export const Feed: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
-  // Fetch stories
+  // Fetch stories - GUARDED
   React.useEffect(() => {
+    if (hasFetchedStories.current) return;
+    hasFetchedStories.current = true;
+
     const fetchStories = async () => {
       try {
         const storyList = await getStories(currentUser?.id);
@@ -130,6 +142,9 @@ export const Feed: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
+      {/* Network Resilience: Offline Banner */}
+      <OfflineBanner />
+
       {/* Daily Bonus Modal */}
       <DailyGratteuxModal />
 
@@ -208,6 +223,13 @@ export const Feed: React.FC = () => {
         {/* Gold accent line */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gold-500/20" />
       </div>
+
+      {/* ⚜️ LES CHOIX DU GRAND CASTOR ⚜️ */}
+      <section className="flex-none bg-black">
+        <ErrorBoundary fallback={null}>
+          <ChoixDuGrandCastor />
+        </ErrorBoundary>
+      </section>
 
       {/* Main Content - Continuous Video Feed */}
       <div className="flex-1 w-full bg-black relative">

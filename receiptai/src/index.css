@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: #0D0F1A;
+    color: #ffffff;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #131625; }
+  ::-webkit-scrollbar-thumb { background: #222740; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #00FF85; }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-navy-800 border border-white/5 rounded-2xl;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  }
+  .btn-primary {
+    @apply bg-green-400 text-navy-900 font-semibold px-6 py-3 rounded-xl hover:bg-green-500 transition-all duration-200;
+    box-shadow: 0 0 20px rgba(0,255,133,0.3);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(0,255,133,0.5); transform: translateY(-1px); }
+  .btn-secondary {
+    @apply border border-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:border-green-400/50 hover:bg-white/5 transition-all duration-200;
+  }
+  .stat-card { @apply glass-card p-5 flex flex-col gap-2; }
+  .upload-zone {
+    @apply border-2 border-dashed border-white/20 rounded-2xl p-8 text-center transition-all duration-300 cursor-pointer;
+  }
+  .upload-zone:hover, .upload-zone.dragging {
+    @apply border-green-400/70 bg-green-400/5;
+  }
+  .deductible-badge {
+    @apply bg-green-400/20 text-green-400 text-xs font-semibold px-2 py-0.5 rounded-full border border-green-400/30;
+  }
+  .rage-badge {
+    @apply bg-red-500/20 text-red-400 text-xs font-bold px-2 py-0.5 rounded-full border border-red-500/30;
+  }
+  .nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200 cursor-pointer relative;
+  }
+  .nav-item.active { @apply text-green-400 bg-green-400/10; }
+  .nav-item.active::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-green-400 rounded-full;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-green-400 to-green-300 bg-clip-text text-transparent;
+  }
+  .font-display { font-family: 'Space Grotesk', sans-serif; }
+  .glow-green { box-shadow: 0 0 20px rgba(0,255,133,0.3); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  width: 10px; height: 10px;
+  animation: confetti-fall 3s ease-in forwards;
+}

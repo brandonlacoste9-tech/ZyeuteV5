@@ -8,7 +8,7 @@
 
 ### Step 1: Go to Supabase Dashboard
 
-1. **Open:** https://app.supabase.com/project/vuanulvyqkfefmjcikfk
+1. **Open:** https://app.supabase.com/project/YOUR_PROJECT_ID
 2. **Navigate to:** Settings → Integrations (or AI / MCP settings)
 3. **Look for:** "Model Context Protocol" or "MCP" section
 4. **Click:** "Authorize Claude Code" or "Connect MCP"
@@ -27,7 +27,7 @@ If Supabase provides a token, update `.mcp.json`:
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=vuanulvyqkfefmjcikfk",
+      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_ID",
       "headers": {
         "Authorization": "Bearer YOUR_OAUTH_TOKEN_HERE"
       }
@@ -51,7 +51,7 @@ Update `.mcp.json`:
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres"],
       "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+        "POSTGRES_CONNECTION_STRING": "postgresql://YOUR_USER:YOUR_PASSWORD@YOUR_HOST:6543/postgres"
       }
     }
   }
@@ -67,8 +67,8 @@ Update `.mcp.json`:
       "command": "npx",
       "args": ["-y", "@supabase/mcp-server"],
       "env": {
-        "SUPABASE_URL": "https://vuanulvyqkfefmjcikfk.supabase.co",
-        "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        "SUPABASE_URL": "https://YOUR_PROJECT_ID.supabase.co",
+        "SUPABASE_KEY": "YOUR_SUPABASE_SERVICE_ROLE_KEY"
       }
     }
   }

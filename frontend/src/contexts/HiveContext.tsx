@@ -57,13 +57,15 @@ export const HiveProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
+  const value = React.useMemo(() => ({
+    currentHive,
+    switchHive,
+    availableHives: Object.values(HIVES),
+  }), [currentHive]);
+
   return (
     <HiveContext.Provider
-      value={{
-        currentHive,
-        switchHive,
-        availableHives: HIVES ? Object.values(HIVES) : [],
-      }}
+      value={value}
     >
       {children}
     </HiveContext.Provider>

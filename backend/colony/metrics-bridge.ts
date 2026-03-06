@@ -108,8 +108,16 @@ export async function sendMetricsToColony(): Promise<void> {
 
     _metricsColonyAvailable = response.ok;
     _metricsLastCheck = now;
-  } catch {
-    // Silently mark unavailable — no log spam
+    
+    // Reset error state on success
+    if (response.ok && _metricsColonyAvailable === false) {
+      console.log("[Colony Bridge] Connection restored");
+    }
+  } catch (error) {
+    // Only log once when first failing, not every retry
+    if (_metricsColonyAvailable !== false) {
+      console.warn("[Colony Bridge] Connection failed, silencing errors for 5 min");
+    }
     _metricsColonyAvailable = false;
     _metricsLastCheck = now;
   }

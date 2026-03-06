@@ -1,14 +1,22 @@
-import dotenv from "dotenv";
-// Load .env ONLY in development (Railway provides env vars directly in production)
+import "./preload.js";
+// [SSL SECURITY BYPASS] Required for development to allow the server to connect to Supabase/Railway certificates
 if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
-  dotenv.config({ path: ".env.local", override: true });
-  console.log("🔧 [Dev] Loaded .env files");
-} else {
-  console.log(
-    "🚂 [Production] Using Railway environment variables (skipping .env)",
-  );
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
+import express from "express";
+import cors from "cors";
+import { registerRoutes } from "./routes.js";
+import { serveStatic } from "./static.js";
+import tiGuyRouter from "./routes/tiguy.js";
+import hiveRouter from "./routes/hive.js";
+import messagingRouter from "./routes/messaging.js";
+import { createServer } from "http";
+import pg from "pg";
+import { Server as SocketIOServer } from "socket.io";
+import { db, pool } from "./storage.js";
+import { posts } from "../shared/schema.js";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+
 // Log but do NOT exit — keep server up so one bad error doesn't kill the process.
 // Use a process manager (e.g. Railway, PM2) to restart if needed.
 process.on("uncaughtException", (err) => {
@@ -17,18 +25,6 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason, promise) => {
   console.error("❌ Unhandled Rejection (server staying up):", reason, promise);
 });
-import express from "express";
-import cors from "cors";
-import { registerRoutes } from "./routes.js";
-import { serveStatic } from "./static.js";
-import tiGuyRouter from "./routes/tiguy.js";
-import hiveRouter from "./routes/hive.js";
-import { createServer } from "http";
-import pg from "pg";
-import { Server as SocketIOServer } from "socket.io";
-import { db, pool } from "./storage.js";
-import { posts } from "../shared/schema.js";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 // DB Pool is imported from ./storage.js
 // const { Pool } = pg;
@@ -40,14 +36,42 @@ const app = express();
 app.set("trust proxy", 1);
 
 // CORS: allow frontend (Vercel / localhost) to call this backend
+const allowedOrigins = [
+  "https://www.zyeute.com",
+  "https://zyeute.com",
+  "https://zyeute.vercel.app",
+  "https://zyeutev5-production.up.railway.app",
+  "http://localhost:12000",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
+
 app.use(
   cors({
-    origin: true, // reflect request origin so Vercel + localhost both work
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        origin.endsWith(".vercel.app")
+      ) {
+        callback(null, true);
+      } else {
+        console.log(`[CORS] Blocked origin: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
   }),
 );
+
+// Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
+app.options(/.*/, cors());
 app.use(express.json());
 
 const httpServer = createServer(app);
@@ -55,11 +79,38 @@ const httpServer = createServer(app);
 // Initialize Socket.IO for Real-Time Features
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST"],
   },
+  // Connection limits for production
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxHttpBufferSize: 1e6, // 1MB max message size
 });
+
+// Redis adapter for multi-instance scale (if Redis is available)
+(async () => {
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    try {
+      const { createAdapter } = await import("@socket.io/redis-adapter");
+      const { createClient } = await import("ioredis").then((m) => ({
+        createClient: (url: string) => new m.default(url),
+      }));
+      const pubClient = createClient(redisUrl);
+      const subClient = createClient(redisUrl);
+      io.adapter(createAdapter(pubClient as any, subClient as any));
+      console.log(
+        "✅ Socket.IO Redis adapter connected (multi-instance ready)",
+      );
+    } catch (err) {
+      console.warn(
+        "⚠️ Socket.IO Redis adapter not available, single-instance mode",
+      );
+    }
+  }
+})();
 
 app.set("io", io);
 
@@ -72,19 +123,21 @@ const port = Number(process.env.PORT) || 3000;
 let server: any;
 let isSystemReady = false;
 
+// [CRITICAL] Explicit health route - MUST be registered before middleware
+// This ensures Railway healthchecks pass even during initialization
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    stage: isSystemReady ? "ready" : "initializing",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // [NEW] Startup Liveness Middleware
 // Blocks traffic until DB is ready, but allows Health Check
 app.use((req, res, next) => {
-  // Always allow health checks - RETURN IMMEDIATELY, DO NOT USE next()
-  if (req.path === "/api/health") {
-    return res.status(200).json({
-      status: "ok",
-      stage: isSystemReady ? "ready" : "initializing",
-      uptime: process.uptime(),
-    });
-  }
-
-  // Debug route also overrides
+  // Debug route overrides
   if (req.path === "/api/debug") {
     return res
       .status(200)
@@ -136,22 +189,24 @@ app.use((req, res, next) => {
         console.log("✅ [Startup] Database Connected Successfully");
 
         // [CRITICAL] Run Database Migrations
-        console.log("📦 [Startup] Running Schema Migrations...");
-        try {
-          await migrate(db, { migrationsFolder: "./migrations" });
-          console.log("✅ [Startup] Migrations Complete");
-        } catch (err: any) {
-          // Log but don't crash main loop if possible, unless critical
-          console.error("⚠️ [Startup] Migration warning/error:", err.message);
-        }
+        // TEMPORARILY DISABLED - Migration causing startup crash
+        // console.log("📦 [Startup] Running Schema Migrations...");
+        // try {
+        //   await migrate(db, { migrationsFolder: "./migrations" });
+        //   console.log("✅ [Startup] Migrations Complete");
+        // } catch (err: any) {
+        //   // Log but don't crash main loop if possible, unless critical
+        //   console.error("⚠️ [Startup] Migration warning/error:", err.message);
+        // }
 
         // [SURGICAL SELF-HEALING] Active Schema Repair
-        try {
-          const { healSchema } = await import("./schemaDoctor.js");
-          await healSchema(pool);
-        } catch (err) {
-          console.warn("⚠️ [Startup] Schema healing skipped:", err);
-        }
+        // TEMPORARILY DISABLED
+        // try {
+        //   const { healSchema } = await import("./schemaDoctor.js");
+        //   await healSchema(pool);
+        // } catch (err) {
+        //   console.warn("⚠️ [Startup] Schema healing skipped:", err);
+        // }
       } catch (dbErr: any) {
         console.error("🔥 [Startup] CANNOT CONNECT TO DATABASE:", dbErr);
       }
@@ -173,10 +228,18 @@ app.use((req, res, next) => {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
 
-    const { default: debugRouter } = await import("./routes/debug.js");
-    app.use("/api/debug", debugRouter);
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
+    app.use("/api/messaging", messagingRouter);
+
+    // Seed route for emergency feed population
+    const { default: seedRouter } = await import("./routes/seed.js");
+    app.use("/api/seed", seedRouter);
+
+    // Feed routes using Supabase HTTP API (works without DATABASE_URL)
+    const { default: feedSupabaseRouter } =
+      await import("./routes/feed-supabase.js");
+    app.use("/api", feedSupabaseRouter);
 
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
@@ -186,8 +249,21 @@ app.use((req, res, next) => {
       serveStatic(app);
     } else {
       console.log("🛠️  Step 3: Setting up Vite (Development)...");
-      const { setupVite } = await import("./vite.js");
-      await setupVite(httpServer, app);
+      try {
+        const { setupVite } = await import("./vite.js");
+        await setupVite(httpServer, app);
+      } catch (viteErr: any) {
+        console.warn(
+          "⚠️ Vite dev server skipped (backend API still works):",
+          viteErr?.message ?? viteErr,
+        );
+        console.warn(
+          "   If you see Rollup/lightningcss native module errors, run: rm -rf node_modules package-lock.json && npm install",
+        );
+        console.warn(
+          "   To run the frontend separately: npx vite (from project root)",
+        );
+      }
     }
 
     // 3. Mark System Ready

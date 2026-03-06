@@ -100,16 +100,18 @@ class ConsensusCoordinator:
             self.threshold = float(config["consensus_threshold"])
         self.active_votes: Dict[str, ConsensusVote] = {}
 
-    def start_vote(self, decision: Dict[str, Any], participants: List[str]) -> ConsensusVote:
+    def start_vote(
+        self, decision: Dict[str, Any], participants: List[str]
+    ) -> ConsensusVote:
         vote_id = str(uuid4())
-        
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = asyncio.get_event_loop()
-            
+
         future: asyncio.Future[Tuple[bool, Dict[str, Any]]] = loop.create_future()
-        
+
         vote = ConsensusVote(
             vote_id=vote_id,
             participants=participants,
@@ -122,7 +124,9 @@ class ConsensusCoordinator:
 
         # If no participants, approve immediately
         if not participants:
-            vote.future.set_result((True, {"approvals": 0, "total": 0, "decision": decision}))
+            vote.future.set_result(
+                (True, {"approvals": 0, "total": 0, "decision": decision})
+            )
             return vote
 
         return vote
@@ -154,7 +158,9 @@ class Neurasphere:
         self.identity: Optional[Identity] = None
         self.audit_log = AuditLog(memory.relational)
         self.state_manager = StateManager(memory)
-        self.consensus = ConsensusCoordinator(config.guardian if hasattr(config, "guardian") else None)
+        self.consensus = ConsensusCoordinator(
+            config.guardian if hasattr(config, "guardian") else None
+        )
         self._safety_rules = [
             ProhibitedPatternRule([r"rm\s+-rf", r"DROP\s+TABLE"]),
             ResourceLimitRule(max_tokens=2000, max_timeout=3600),
@@ -169,11 +175,15 @@ class Neurasphere:
         for rule in self._safety_rules:
             passed, message = rule.check(task)
             if not passed and message:
-                violations.append(TaskViolation(rule=rule.__class__.__name__, message=message))
+                violations.append(
+                    TaskViolation(rule=rule.__class__.__name__, message=message)
+                )
 
         approved = len(violations) == 0
         if approved:
-            await self.event_bus.publish("task_validated", {"task_id": task.id}, "neurasphere")
+            await self.event_bus.publish(
+                "task_validated", {"task_id": task.id}, "neurasphere"
+            )
         else:
             await self.event_bus.publish(
                 "task_rejected",
@@ -182,12 +192,16 @@ class Neurasphere:
             )
         return approved, violations
 
-    async def request_consensus(self, decision: Dict[str, Any], participants: List[str]) -> Tuple[bool, Dict[str, Any]]:
+    async def request_consensus(
+        self, decision: Dict[str, Any], participants: List[str]
+    ) -> Tuple[bool, Dict[str, Any]]:
         vote = self.consensus.start_vote(decision, participants)
         result = await vote.future
         return result
 
-    def get_audit_trail(self, event_type: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_audit_trail(
+        self, event_type: Optional[str] = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         entries = self.audit_log.list_events(limit=limit)
         if event_type:
             entries = [entry for entry in entries if entry.event_type == event_type]
@@ -204,12 +218,20 @@ class Neurasphere:
 
     def create_checkpoint(self, state: Dict[str, Any]) -> str:
         checkpoint_id = self.state_manager.create_checkpoint(state)
-        self.audit_log.log_event("checkpoint", self.identity.id if self.identity else "system", {"id": checkpoint_id})
+        self.audit_log.log_event(
+            "checkpoint",
+            self.identity.id if self.identity else "system",
+            {"id": checkpoint_id},
+        )
         return checkpoint_id
 
     async def rollback_to_checkpoint(self, checkpoint_id: str) -> Dict[str, Any]:
         payload = await self.state_manager.load_checkpoint(checkpoint_id)
         if not payload:
             raise ValueError(f"Checkpoint {checkpoint_id} not found")
-        self.audit_log.log_event("rollback", self.identity.id if self.identity else "system", {"id": checkpoint_id})
+        self.audit_log.log_event(
+            "rollback",
+            self.identity.id if self.identity else "system",
+            {"id": checkpoint_id},
+        )
         return payload["state"]

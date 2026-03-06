@@ -60,20 +60,8 @@ function getRandomFallback(): string {
 // ═══════════════════════════════════════════════════════════════
 
 export class TiGuySwarmAdapter {
-  private apiKey: string | undefined;
-  private useLocalJoualBee: boolean;
-
   constructor() {
-    this.apiKey =
-      import.meta.env.VITE_DEEPSEEK_API_KEY ||
-      import.meta.env.VITE_OPENAI_API_KEY;
-
-    // Use local JoualBee if no API key
-    this.useLocalJoualBee = !this.apiKey;
-
-    if (this.useLocalJoualBee) {
-      console.log("🐝 Ti-Guy running in local JoualBee mode (no API key)");
-    }
+    console.log("🐝 Ti-Guy Swarm initialized (via backend proxy)");
   }
 
   /**
@@ -237,11 +225,6 @@ export class TiGuySwarmAdapter {
     // 2. STANDARD MODE: Ti-Guy handles directly
     // ═══════════════════════════════════════════════════════════
 
-    // If no DeepSeek API, use local JoualBee
-    if (this.useLocalJoualBee) {
-      return processJoualTask(prompt);
-    }
-
     // Use circuit breaker for DeepSeek API
     const response = await deepSeekCircuit.executeWithFallback(
       async () => this.callDeepSeek(prompt, history),
@@ -266,15 +249,13 @@ export class TiGuySwarmAdapter {
   }
 
   /**
-   * Calls DeepSeek V3 API
+   * Calls DeepSeek API via standard proxy
    */
   private async callDeepSeek(
     prompt: string,
     history: { role: "user" | "assistant"; content: string }[],
   ): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error("DeepSeek API key not found");
-    }
+    const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
     const messages = [
       { role: "system", content: TI_GUY_SYSTEM_PROMPT },
@@ -282,11 +263,10 @@ export class TiGuySwarmAdapter {
       { role: "user", content: prompt },
     ];
 
-    const response = await fetch("https://api.deepseek.com/chat/completions", {
+    const response = await fetch(`${BACKEND_URL}/api/ai/proxy/deepseek`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
         messages: messages,
@@ -297,7 +277,7 @@ export class TiGuySwarmAdapter {
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status}`);
+      throw new Error(`DeepSeek Proxy error: ${response.status}`);
     }
 
     const data = (await response.json()) as DeepSeekResponse;
@@ -321,7 +301,7 @@ export class TiGuySwarmAdapter {
         state: swarmCircuit.getState(),
         failures: swarmCircuit.getStats().failures,
       },
-      mode: this.useLocalJoualBee ? "local" : "api",
+      mode: "api",
     };
   }
 }

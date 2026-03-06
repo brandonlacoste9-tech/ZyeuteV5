@@ -72,7 +72,7 @@ npm run audit:security:verbose
 
    docs/example.md:15
    Pattern: Dialogflow Agent ID
-   Match: AQ.Ab8RN6JXQGPlRh_wZvOyiRAWgsgC3XIVpUfILZkPUy_-RrUlNg
+   Match: YOUR_DIALOGFLOW_AGENT_ID
 
 📊 Summary:
    Critical: 1

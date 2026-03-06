@@ -1,5 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { traceSupabase } from "./tracer.js";
+import { Request, Response, NextFunction } from "express";
+import { storage } from "./storage.js";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 // FALLBACK: Prioritize Anon Key for verification as Service Role Key is reporting invalid
@@ -69,4 +71,58 @@ export async function verifyAuthToken(token: string): Promise<string | null> {
       }
     },
   );
+}
+
+/**
+ * Hybrid Auth Middleware
+ * Accepts Authorization: Bearer <jwt>
+ */
+export async function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+
+    if (userId) {
+      const user = await storage.getUser(userId);
+      if (user?.role === "banned") {
+        return res.status(403).json({
+          error: "Votre compte a été désactivé.",
+          isBanned: true,
+        });
+      }
+
+      (req as any).userId = userId;
+      (req as any).userRole = user?.role || "citoyen";
+      return next();
+    }
+  }
+
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+/**
+ * Optional Auth Middleware
+ */
+export async function optionalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+
+    if (userId) {
+      const user = await storage.getUser(userId);
+      (req as any).userId = userId;
+      (req as any).userRole = user?.role || "citoyen";
+    }
+  }
+  next();
 }

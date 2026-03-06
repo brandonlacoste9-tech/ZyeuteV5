@@ -7,6 +7,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "../Button";
+import { colonyLink } from "../../lib/colony-link";
+import { PhysicalFeedback } from "../../lib/physical-feedback";
 import { cn } from "../../lib/utils";
 import tiGuyEmblem from "@assets/TI-GUY_NEW_SHARP_1765507001190.jpg";
 import { TiGuyChatResponseSchema } from "../../schemas/ai";
@@ -74,6 +76,8 @@ const ENHANCED_ACTIONS = [
   { label: "🎨 Génère une image", key: "image", action: "image" },
   { label: "🔍 Cherche sur le web", key: "search", action: "search" },
   { label: "💡 Idées d'images", key: "ideas", action: "ideas" },
+  { label: "📚 Mes Docs", key: "knowledge", action: "knowledge" },
+  { label: "⚖️ Gouvernance", key: "governance", action: "governance" },
   { label: "😎 Crée mon avatar", key: "avatar", action: "avatar" },
 ];
 
@@ -85,6 +89,102 @@ export const TiGuy: React.FC = () => {
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 🎤 Logique de Parole (Voice Actions)
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1];
+          handleVoiceAction(base64Audio);
+        };
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Accès micro refusé:", err);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const handleVoiceAction = async (base64Audio?: string, text?: string) => {
+    setIsTyping(true);
+    setGenerating(true);
+    setProgress(20);
+
+    try {
+      const response = await fetch("/api/tiguy/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: base64Audio,
+          text: text
+        }),
+      });
+      const data = await response.json();
+
+      if (data.transcription) {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          text: `🎤 ${data.transcription}`,
+          sender: "user",
+          timestamp: new Date()
+        }]);
+      }
+
+      if (data.response) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          text: data.response,
+          sender: "tiguy",
+          timestamp: new Date()
+        }]);
+      }
+
+      if (data.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+        setIsSpeaking(true);
+
+        // Effets physiques lors du début de la parole
+        PhysicalFeedback.vibrateSovereign();
+        PhysicalFeedback.triggerStrobe(3000);
+
+        audio.onended = () => setIsSpeaking(false);
+        audio.play();
+      }
+    } catch (err) {
+      console.error("Erreur voix:", err);
+    } finally {
+      setIsTyping(false);
+      setGenerating(false);
+      setProgress(0);
+    }
+  };
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -130,6 +230,37 @@ export const TiGuy: React.FC = () => {
       setTimeout(() => setProgress(0), 500);
     }, 1000);
   }, []);
+
+  // Listen for Hive Events (Q-emplois, AdGenXAI)
+  useEffect(() => {
+    const handler = (event: any) => {
+      console.log("Hive event received:", event);
+
+      // Notification visuelle rapide dans le chat
+      const systemMessage: Message = {
+        id: `hive-${Date.now()}`,
+        text: `[${event.source.toUpperCase()}] ${event.payload.title}: ${event.payload.message}`,
+        sender: "tiguy",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, systemMessage]);
+
+      // Si priorite haute, Ti-Guy prend la parole pour l'annoncer
+      if (event.payload.priority === 'high' && !isSpeaking) {
+        PhysicalFeedback.vibrateMomentum();
+        (PhysicalFeedback as any).triggerStrobe?.(5000);
+        handleVoiceAction(null as any, `Heille! Une nouvelle de la Ruche: ${event.payload.message}`);
+      }
+    };
+
+    (colonyLink as any).on("hive_event", handler);
+
+    return () => {
+      if (typeof (colonyLink as any).off === 'function') {
+        (colonyLink as any).off("hive_event", handler);
+      }
+    };
+  }, [isSpeaking]);
 
   // Initialize with greeting
   useEffect(() => {
@@ -314,6 +445,16 @@ export const TiGuy: React.FC = () => {
         actionType: "search-prompt",
       };
       setMessages((prev) => [...prev, newMessage]);
+    } else if (actionKey === "knowledge") {
+      // Prompt user for knowledge search
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        text: "Quelle question as-tu sur Zyeuté ou mes archives? Je vais chercher dans mes docs! 📚",
+        sender: "tiguy",
+        timestamp: new Date(),
+        actionType: "knowledge-prompt",
+      };
+      setMessages((prev) => [...prev, newMessage]);
     }
   };
 
@@ -355,7 +496,11 @@ export const TiGuy: React.FC = () => {
                 <img
                   src={tiGuyEmblem}
                   alt="Ti-Guy"
-                  className="w-full h-full object-cover"
+                  className={cn(
+                    "w-full h-full object-cover",
+                    isSpeaking && "animate-pulse scale-110"
+                  )}
+                  style={{ transition: "transform 0.3s ease" }}
                 />
               </div>
               <div>
@@ -439,16 +584,16 @@ export const TiGuy: React.FC = () => {
                   style={
                     message.sender === "user"
                       ? {
-                          background:
-                            "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
-                          boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
-                        }
+                        background:
+                          "linear-gradient(135deg, #FFD966 0%, #B38600 100%)",
+                        boxShadow: "0 2px 8px rgba(179, 134, 0, 0.4)",
+                      }
                       : {
-                          background:
-                            "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
-                          border: "1px solid #4a3b22",
-                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
-                        }
+                        background:
+                          "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
+                        border: "1px solid #4a3b22",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+                      }
                   }
                 >
                   {message.text}
@@ -491,7 +636,10 @@ export const TiGuy: React.FC = () => {
                   <img
                     src={tiGuyEmblem}
                     alt="Ti-Guy"
-                    className="w-full h-full object-cover"
+                    className={cn(
+                      "w-full h-full object-cover",
+                      isSpeaking && "animate-pulse"
+                    )}
                   />
                 </div>
                 <div
@@ -658,6 +806,51 @@ export const TiGuy: React.FC = () => {
                   viewBox="0 0 24 24"
                 >
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+              </button>
+
+              {/* 🎤 MICROPHONE SOUVERAIN */}
+              <button
+                type="button"
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onMouseLeave={stopRecording}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={cn(
+                  "p-3 rounded-full transition-all duration-300 relative group overflow-hidden",
+                  isRecording ? "scale-125" : "hover:scale-110"
+                )}
+                style={{
+                  background: isRecording
+                    ? "radial-gradient(circle, #FFD966 0%, #B38600 100%)"
+                    : "linear-gradient(135deg, #2d2218 0%, #1a1512 100%)",
+                  border: isRecording ? "2px solid #FFD966" : "1px solid #4a3b22",
+                  boxShadow: isRecording
+                    ? "0 0 20px #FFD966, inset 0 0 10px rgba(0,0,0,0.5)"
+                    : "0 0 10px rgba(0,0,0,0.3)",
+                }}
+              >
+                {/* Effet de lueur pulsante */}
+                {isRecording && (
+                  <div className="absolute inset-0 animate-ping opacity-30 bg-gold-400 rounded-full" />
+                )}
+
+                <svg
+                  className={cn(
+                    "w-6 h-6 transition-colors",
+                    isRecording ? "text-black" : "text-gold-500"
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                  />
                 </svg>
               </button>
             </form>

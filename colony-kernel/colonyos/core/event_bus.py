@@ -25,13 +25,19 @@ class EventBusBackend:
     async def publish(self, event: Event) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
-    async def subscribe(self, event_type: str, handler: EventHandler) -> str:  # pragma: no cover - interface
+    async def subscribe(
+        self, event_type: str, handler: EventHandler
+    ) -> str:  # pragma: no cover - interface
         raise NotImplementedError
 
-    async def unsubscribe(self, subscription_id: str) -> None:  # pragma: no cover - interface
+    async def unsubscribe(
+        self, subscription_id: str
+    ) -> None:  # pragma: no cover - interface
         raise NotImplementedError
 
-    async def get_history(self, event_type: Optional[str], limit: int) -> List[Event]:  # pragma: no cover - interface
+    async def get_history(
+        self, event_type: Optional[str], limit: int
+    ) -> List[Event]:  # pragma: no cover - interface
         raise NotImplementedError
 
 
@@ -86,11 +92,15 @@ class InMemoryEventBus(EventBusBackend):
         async with self._lock:
             self._subscriptions.pop(subscription_id, None)
 
-    async def get_history(self, event_type: Optional[str], limit: int = 100) -> List[Event]:
+    async def get_history(
+        self, event_type: Optional[str], limit: int = 100
+    ) -> List[Event]:
         async with self._lock:
             if event_type is None:
                 return list(self._history[-limit:])
-            return [event for event in self._history if event.event_type == event_type][-limit:]
+            return [event for event in self._history if event.event_type == event_type][
+                -limit:
+            ]
 
 
 class EventBus:
@@ -106,7 +116,12 @@ class EventBus:
         await self.backend.stop()
 
     async def publish(self, event_type: str, data: Dict[str, Any], source: str) -> None:
-        event = Event(event_type=event_type, data=data, source=source, timestamp=datetime.now(timezone.utc))
+        event = Event(
+            event_type=event_type,
+            data=data,
+            source=source,
+            timestamp=datetime.now(timezone.utc),
+        )
         await self.backend.publish(event)
 
     async def subscribe(self, event_type: str, handler: EventHandler) -> str:
@@ -115,7 +130,9 @@ class EventBus:
     async def unsubscribe(self, subscription_id: str) -> None:
         await self.backend.unsubscribe(subscription_id)
 
-    async def get_history(self, event_type: Optional[str] = None, limit: int = 100) -> List[Event]:
+    async def get_history(
+        self, event_type: Optional[str] = None, limit: int = 100
+    ) -> List[Event]:
         return await self.backend.get_history(event_type, limit)
 
 
