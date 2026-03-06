@@ -150,14 +150,17 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     // Get swipe gesture setting
     const swipeGesturesEnabled = preferences.interactions.swipeGestures;
 
-    // Horizontal swipe gesture tracking
+    // Horizontal swipe gesture tracking with smooth visual displacement
     const touchStartX = useRef<number>(0);
     const touchStartY = useRef<number>(0);
     const touchEndX = useRef<number>(0);
     const touchEndY = useRef<number>(0);
+    const swipeRafRef = useRef<number>(0);
     const [swipeDirection, setSwipeDirection] = useState<
       "left" | "right" | null
     >(null);
+    const [swipeOffset, setSwipeOffset] = useState(0);
+    const swipeTargetRef = useRef(0);
 
     // Real-time Presence & Engagement
     const { viewerCount, engagement } = usePresence(post.id);
@@ -243,15 +246,33 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       impact();
     };
 
-    // Horizontal swipe handlers
+    // Horizontal swipe handlers with smooth visual tracking
     const handleTouchStart = (e: React.TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
+      touchEndX.current = 0;
+      touchEndY.current = 0;
+      swipeTargetRef.current = 0;
+      setSwipeOffset(0);
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
       touchEndX.current = e.touches[0].clientX;
       touchEndY.current = e.touches[0].clientY;
+
+      const deltaX = touchEndX.current - touchStartX.current;
+      const deltaY = Math.abs(touchEndY.current - touchStartY.current);
+
+      // Only track horizontal swipes with rubber-band damping
+      if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+        const damped = deltaX * 0.4;
+        swipeTargetRef.current = damped;
+
+        if (swipeRafRef.current) cancelAnimationFrame(swipeRafRef.current);
+        swipeRafRef.current = requestAnimationFrame(() => {
+          setSwipeOffset(swipeTargetRef.current);
+        });
+      }
     };
 
     const handleTouchEnd = async () => {
@@ -358,13 +379,28 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       // Reset touch positions
       touchStartX.current = 0;
       touchEndX.current = 0;
+
+      // Spring-back animation for swipe offset
+      if (swipeRafRef.current) cancelAnimationFrame(swipeRafRef.current);
+      const springBack = () => {
+        setSwipeOffset((prev) => {
+          const next = prev * 0.75;
+          if (Math.abs(next) < 0.5) return 0;
+          swipeRafRef.current = requestAnimationFrame(springBack);
+          return next;
+        });
+      };
+      swipeRafRef.current = requestAnimationFrame(springBack);
     };
 
-    // Cleanup tap timeout on unmount
+    // Cleanup tap timeout and swipe RAF on unmount
     useEffect(() => {
       return () => {
         if (tapTimeoutRef.current) {
           clearTimeout(tapTimeoutRef.current);
+        }
+        if (swipeRafRef.current) {
+          cancelAnimationFrame(swipeRafRef.current);
         }
       };
     }, []);
@@ -454,16 +490,29 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
     return (
       <div
         ref={videoRef}
-        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none"
+        className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none video-motion-smooth video-stabilized"
+        style={{
+          transform: swipeOffset !== 0
+            ? `translate3d(${swipeOffset}px, 0, 0) scale(${1 - Math.abs(swipeOffset) * 0.0003})`
+            : "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+          transition: swipeOffset === 0 ? "transform 250ms cubic-bezier(0.25, 0.1, 0.25, 1)" : "none",
+        } as React.CSSProperties}
         onClick={handleSingleTap}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Swipe Direction Indicator */}
+        {/* Swipe Direction Indicator — smooth momentum overlay */}
         {swipeDirection && (
           <div
+            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm swipe-overlay-smooth ${swipeDirection === "left" ? "animate-pulse" : ""
+              }`}
+            style={{
+              animation: "fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
             className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
               swipeDirection === "left" ? "animate-pulse" : ""
             }`}
@@ -528,6 +577,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             isActive={isActive}
           />
         )}
+        {/* Full-screen Media — GPU-composited layer for smooth playback */}
+        <div className="absolute inset-0 w-full h-full video-container-crisp">
+          {!isActive && !priority ? (
         {/* Full-screen Media */}
         {/* MEMORY OPTIMIZATION: Strictly mount only CURRENT and NEXT players (Max 2) */}
         <div className="absolute inset-0 w-full h-full">
@@ -693,8 +745,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           </div>
         )}
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none" />
+        {/* Gradient Overlay — hardware accelerated for zero jank */}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent pointer-events-none"
+          style={{ transform: "translate3d(0, 0, 0)" }}
+        />
 
         {/* Québec Or emblem — top right of video screen, small */}
         <img

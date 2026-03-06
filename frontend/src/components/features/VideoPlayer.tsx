@@ -17,6 +17,7 @@ import { VideoSource } from "@/hooks/usePrefetchVideo";
 import { videoCache } from "@/lib/videoWarmCache";
 import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useVideoFrameCallback } from "@/hooks/useVideoFrameCallback";
 
 const StreamingDebugOverlay = React.lazy(
   () => import("./StreamingDebugOverlay"),
@@ -102,6 +103,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
+  // Frame-accurate playback tracking (uses requestVideoFrameCallback when available)
+  const { isSmooth: isFrameSmooth } = useVideoFrameCallback(
+    videoRef,
+    (time, _frames) => {
+      if (onProgress && duration > 0 && !progress70FiredRef.current) {
+        const progress = time / duration;
+        if (progress >= 0.7) {
+          progress70FiredRef.current = true;
+          onProgress(progress);
+        }
+      }
+    },
+  );
+
   // Check for debug mode
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -136,9 +151,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        backBufferLength: 90,
+        backBufferLength: 30,
+        maxBufferLength: 15,
+        maxMaxBufferLength: 30,
+        maxBufferSize: 30 * 1000 * 1000,
+        maxBufferHole: 0.3,
         enableWorker: true,
         capLevelToPlayerSize: true,
+        startLevel: -1,
+        abrEwmaDefaultEstimate: 1_000_000,
+        abrEwmaFastLive: 3.0,
+        abrEwmaSlowLive: 9.0,
+        abrEwmaFastVoD: 3.0,
+        abrEwmaSlowVoD: 9.0,
+        abrBandWidthFactor: 0.95,
+        abrBandWidthUpFactor: 0.7,
+        progressive: true,
+        lowLatencyMode: false,
+        testBandwidth: true,
+        nudgeOffset: 0.1,
+        nudgeMaxRetry: 5,
         maxBufferLength: 30,        // 3x bigger: 10s → 30s
         maxMaxBufferLength: 60,     // 3x bigger: 30s → 60s
         startFragPrefetch: true,    // Prefetch before media attach
@@ -864,10 +896,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <div
       className={cn(
-        "relative group video-hover-glow rounded-xl overflow-hidden",
+        "relative group video-hover-glow video-motion-smooth rounded-xl overflow-hidden",
         className,
       )}
-      style={style}
+      style={{
+        ...style,
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => {
         setShowControls(false);
@@ -906,6 +942,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         </Suspense>
       )}
+      {/* Video Element with poster crossfade */}
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-[1] pointer-events-none"
+          style={{
+            opacity: readiness === "ready" && isPlaying ? 0 : 1,
+            transition: "opacity 400ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+            transform: "translate3d(0, 0, 0)",
+          }}
+          fetchPriority={priority ? "high" : "low"}
+          onError={() => {}}
       {/* Video Element */}
       {priority && poster && (
         <img
@@ -919,15 +968,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <video
         ref={videoRef}
         src={effectiveSrc}
-        poster={poster}
-        playsInline // CRITICAL for iOS production
-        muted={muted} // CRITICAL for production - required as HTML attribute for autoplay
-        autoPlay={autoPlay} // Explicit attribute + useEffect sync for better compatibility
-        loop={loop} // Explicit attribute for continuous playback
+        playsInline
+        muted={muted}
+        autoPlay={autoPlay}
+        loop={loop}
         preload={preload}
-        fetchPriority={priority ? "high" : "low"} // Next/active: prioritize over thumbnails (Chrome 102+)
-        className="w-full h-full object-cover"
-        style={videoStyle}
+        fetchPriority={priority ? "high" : "low"}
+        className="w-full h-full object-cover video-container-crisp"
+        style={{
+          ...videoStyle,
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        }}
         onError={handleError}
         onCanPlay={handleCanPlay}
         onLoadStart={handleLoadStart}
@@ -935,9 +988,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onWaiting={handleWaiting}
         onProgress={handleProgress}
       />
-      {/* Loading / Buffering State */}
+      {/* Loading / Buffering State — smooth fade overlay */}
       {readiness === "loading" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 video-transitioning">
           <div className="text-center">
             {/* Circular progress indicator */}
             <div className="relative w-14 h-14 mx-auto mb-3">
@@ -1023,7 +1076,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             max={duration || 0}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer video-progress-smooth"
             style={{
               background: `linear-gradient(to right, var(--edge-color) 0%, var(--edge-color) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) ${(currentTime / duration) * 100}%, rgba(255,255,255,0.2) 100%)`,
             }}

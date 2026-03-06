@@ -1,28 +1,34 @@
 /**
- * useVideoTransition - Smooth cross-fade transitions between feed videos
+ * useVideoTransition - Ultra-smooth cross-fade transitions between feed videos
  *
- * Manages opacity transitions when the active video changes,
- * preventing jarring cuts in the TikTok-style feed scroll.
+ * Uses multi-phase transitions with motion-aware easing to prevent
+ * jarring cuts in the TikTok-style feed scroll. Includes soft motion
+ * blur during transitions for perceived smoothness.
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 interface TransitionState {
-  /** Whether this video is transitioning in (becoming active) */
   isEntering: boolean;
-  /** Whether this video is transitioning out (becoming inactive) */
   isExiting: boolean;
-  /** Opacity value (0-1) for the video overlay */
   opacity: number;
-  /** CSS transition class to apply */
   transitionClass: string;
+  /** CSS class for motion-blur during transition */
+  motionClass: string;
+  /** Inline style for smooth transition with motion blur */
+  transitionStyle: React.CSSProperties;
 }
 
-const TRANSITION_DURATION_MS = 200; // Quick fade for snappy TikTok feel
+const ENTER_DURATION_MS = 280;
+const EXIT_DURATION_MS = 220;
+
+// Custom easing: fast start, smooth deceleration (feels natural)
+const ENTER_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
+const EXIT_EASING = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 /**
  * Hook for individual video items in the feed.
- * Returns transition state based on active index changes.
+ * Returns transition state with motion-blur-aware styling.
  */
 export function useVideoTransition(
   index: number,
@@ -39,27 +45,25 @@ export function useVideoTransition(
     prevActiveRef.current = isActive;
 
     if (!wasActive && isActive) {
-      // Becoming active -> fade in (defer setState to avoid sync-in-effect)
-      const t1 = setTimeout(() => setTransitionPhase("entering"), 0);
+      const t1 = requestAnimationFrame(() => setTransitionPhase("entering"));
       const t2 = setTimeout(
         () => setTransitionPhase("idle"),
-        TRANSITION_DURATION_MS,
+        ENTER_DURATION_MS,
       );
       return () => {
-        clearTimeout(t1);
+        cancelAnimationFrame(t1);
         clearTimeout(t2);
       };
     }
 
     if (wasActive && !isActive) {
-      // Becoming inactive -> fade out
-      const t1 = setTimeout(() => setTransitionPhase("exiting"), 0);
+      const t1 = requestAnimationFrame(() => setTransitionPhase("exiting"));
       const t2 = setTimeout(
         () => setTransitionPhase("idle"),
-        TRANSITION_DURATION_MS,
+        EXIT_DURATION_MS,
       );
       return () => {
-        clearTimeout(t1);
+        cancelAnimationFrame(t1);
         clearTimeout(t2);
       };
     }
@@ -68,14 +72,54 @@ export function useVideoTransition(
   const isEntering = transitionPhase === "entering";
   const isExiting = transitionPhase === "exiting";
 
+  const opacity = isActive ? 1 : isExiting ? 0.5 : 0.2;
+
+  const motionClass = useMemo(() => {
+    if (isEntering) return "video-enter-active";
+    if (isExiting) return "video-exit-active";
+    return "";
+  }, [isEntering, isExiting]);
+
+  const transitionStyle: React.CSSProperties = useMemo(() => {
+    if (isEntering) {
+      return {
+        opacity: 1,
+        transform: "scale(1) translate3d(0, 0, 0)",
+        transition: `opacity ${ENTER_DURATION_MS}ms ${ENTER_EASING}, transform ${ENTER_DURATION_MS}ms ${ENTER_EASING}, filter ${ENTER_DURATION_MS}ms ${ENTER_EASING}`,
+        filter: "blur(0px)",
+        willChange: "opacity, transform, filter",
+      };
+    }
+    if (isExiting) {
+      return {
+        opacity: 0.5,
+        transform: "scale(0.985) translate3d(0, 0, 0)",
+        transition: `opacity ${EXIT_DURATION_MS}ms ${EXIT_EASING}, transform ${EXIT_DURATION_MS}ms ${EXIT_EASING}, filter ${EXIT_DURATION_MS}ms ${EXIT_EASING}`,
+        filter: "blur(0.8px)",
+        willChange: "opacity, transform, filter",
+      };
+    }
+    return {
+      transform: "translate3d(0, 0, 0)",
+      willChange: "auto",
+    };
+  }, [isEntering, isExiting]);
+
+  const transitionClass = useMemo(() => {
+    if (isEntering)
+      return `transition-all duration-[${ENTER_DURATION_MS}ms] ease-out`;
+    if (isExiting)
+      return `transition-all duration-[${EXIT_DURATION_MS}ms] ease-in`;
+    return "";
+  }, [isEntering, isExiting]);
+
   return {
     isEntering,
     isExiting,
-    opacity: isActive ? 1 : isExiting ? 0.6 : 0.3,
-    transitionClass:
-      isEntering || isExiting
-        ? `transition-opacity duration-[${TRANSITION_DURATION_MS}ms] ease-out`
-        : "",
+    opacity,
+    transitionClass,
+    motionClass,
+    transitionStyle,
   };
 }
 

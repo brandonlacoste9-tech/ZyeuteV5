@@ -62,6 +62,7 @@ import { useNavigationState } from "../../contexts/NavigationStateContext";
 import { useNetworkQueue } from "../../contexts/NetworkQueueContext";
 import { FeedPostSkeleton } from "@/components/ui/Skeleton";
 import { useScrollVelocity } from "@/hooks/useScrollVelocity";
+import { useMotionSmooth } from "@/hooks/useMotionSmooth";
 import { useVideoActivation } from "@/hooks/useVideoActivation";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
@@ -140,7 +141,7 @@ const FeedRow = memo(
         style={style}
         ref={ref}
         data-video-index={index}
-        className="w-full h-full"
+        className="w-full h-full video-stabilized"
       >
         <UnifiedMediaCard
           key={post.id}
@@ -235,10 +236,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     [stateKey, getFeedState],
   );
 
-  // Scroll Velocity Tracking
-  const { handleScroll, isFast, isMedium, isSlow } = useScrollVelocity();
+  // Scroll Velocity Tracking — EMA-smoothed for clean motion decisions
+  const { handleScroll, smoothVelocity, isFast, isMedium, isSlow, isDecelerating } = useScrollVelocity();
   const [isSystemOverloaded, setIsSystemOverloaded] = useState(false);
   const isPageVisible = usePageVisibility();
+
+  // Motion Smooth System — provides GPU-accelerated blur/stabilization during scroll
+  const { motionClass, motionStyle } = useMotionSmooth(
+    smoothVelocity,
+    isDecelerating,
+    { maxBlurPx: 1.5, enableMotionBlur: true, enableStabilization: true },
+  );
 
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
@@ -874,7 +882,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }
 
   return (
-    <div className={cn("w-full h-full leather-dark feed-root", className)}>
+    <div className={cn("w-full h-full leather-dark feed-root", motionClass, className)} style={motionStyle}>
       {!isOnline && posts.length > 0 && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-center py-2 text-sm font-medium">
           Tu es hors ligne. Les actions seront synchronisées à la reconnexion.
@@ -891,8 +899,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
             <List
               listRef={listRef}
-              className="no-scrollbar snap-y snap-mandatory"
-              style={{ height, width }}
+              className="no-scrollbar snap-smooth-decel"
+              style={{
+                height,
+                width,
+                willChange: "scroll-position",
+                WebkitOverflowScrolling: "touch",
+              } as React.CSSProperties}
               rowCount={posts.length}
               rowHeight={height}
               rowProps={{ data: itemData }}

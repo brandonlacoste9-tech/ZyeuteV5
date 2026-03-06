@@ -337,15 +337,17 @@ export const Player: React.FC = () => {
         </svg>
       </button>
 
-      {/* Video Feed Container with CSS Scroll Snap */}
+      {/* Video Feed Container — ultra-smooth scroll snap */}
       <div
         ref={containerRef}
-        className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth"
+        className="w-full h-full overflow-y-scroll snap-smooth-decel feed-root"
         onScroll={handleScroll}
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
-        }}
+          WebkitOverflowScrolling: "touch",
+          willChange: "scroll-position",
+        } as React.CSSProperties}
       >
         <style>{`
           div::-webkit-scrollbar {
@@ -362,7 +364,11 @@ export const Player: React.FC = () => {
               <div
                 key={post.id}
                 data-video-view
-                className="w-full h-full snap-center"
+                className="w-full h-full snap-center video-stabilized"
+                style={{
+                  transform: "translate3d(0, 0, 0)",
+                  backfaceVisibility: "hidden",
+                }}
               >
                 <SingleVideoView
                   post={post}

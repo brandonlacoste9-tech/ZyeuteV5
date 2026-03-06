@@ -73,7 +73,8 @@ export function PexelsVideoPlayer({
 
   return (
     <div
-      className={cn("relative group", className)}
+      className={cn("relative group video-motion-smooth", className)}
+      style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -87,7 +88,8 @@ export function PexelsVideoPlayer({
         ref={videoRef}
         src={videoUrl}
         poster={thumbnail}
-        className="w-full h-full object-cover rounded-xl"
+        className="w-full h-full object-cover rounded-xl video-container-crisp"
+        style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
         loop
         playsInline
         onClick={togglePlay}
@@ -116,7 +118,7 @@ export function PexelsVideoPlayer({
       >
         <div className="w-full h-1 bg-leather-800 rounded-full mb-3 overflow-hidden">
           <div
-            className="h-full bg-gold-500 transition-all duration-100"
+            className="h-full bg-gold-500 video-progress-smooth"
             style={{ width: `${progress}%` }}
           />
         </div>

@@ -214,8 +214,12 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
 
   return (
     <div
-      className={cn("relative group rounded-xl overflow-hidden", className)}
-      style={style}
+      className={cn("relative group rounded-xl overflow-hidden video-motion-smooth", className)}
+      style={{
+        ...style,
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
     >
@@ -226,12 +230,30 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Video element */}
+      {/* Poster crossfade overlay */}
+      {poster && (
+        <img
+          src={poster}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover z-[1] pointer-events-none"
+          style={{
+            opacity: isPlaying && !isLoading ? 0 : 1,
+            transition: "opacity 350ms cubic-bezier(0.25, 0.1, 0.25, 1)",
+            transform: "translate3d(0, 0, 0)",
+          }}
+          onError={() => {}}
+        />
+      )}
+      {/* Video element — GPU-accelerated with crisp rendering */}
       <video
         ref={videoRef}
         src={src}
-        poster={poster}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover video-container-crisp"
+        style={{
+          transform: "translate3d(0, 0, 0)",
+          backfaceVisibility: "hidden",
+          WebkitBackfaceVisibility: "hidden",
+        } as React.CSSProperties}
         loop={loop}
         playsInline
         muted={isMuted}
@@ -265,10 +287,10 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
           showControls || !isPlaying ? "opacity-100" : "opacity-0"
         )}
       >
-        {/* Progress bar */}
+        {/* Progress bar — smooth continuous fill */}
         <div className="w-full h-1 bg-white/20 rounded-full mb-3 overflow-hidden">
           <div
-            className="h-full bg-gold-500 transition-all duration-100"
+            className="h-full bg-gold-500 video-progress-smooth"
             style={{ width: `${progress}%` }}
           />
         </div>
