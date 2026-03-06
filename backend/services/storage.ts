@@ -67,22 +67,22 @@ export async function uploadProcessedVideo(
   const timestamp = Date.now();
   const basePath = `posts/${postId}/${timestamp}`;
 
-  const [videoHighUrl, videoMediumUrl, videoLowUrl, thumbnailUrl] =
-    await Promise.all([
-      uploadToStorage(files.videoHigh, `${basePath}/high.mp4`, "video/mp4"),
-      uploadToStorage(files.videoMedium, `${basePath}/medium.mp4`, "video/mp4"),
-      uploadToStorage(files.videoLow, `${basePath}/low.mp4`, "video/mp4"),
-      uploadToStorage(
-        files.thumbnail,
-        `${basePath}/thumbnail.jpg`,
-        "image/jpeg",
-      ),
-    ]);
+  // Only upload high-quality + thumbnail. Medium and low renditions have no
+  // schema columns and are never referenced — uploading them was pure GCS waste.
+  // Adaptive bitrate is handled by the separate HLS pipeline.
+  const [videoHighUrl, thumbnailUrl] = await Promise.all([
+    uploadToStorage(files.videoHigh, `${basePath}/high.mp4`, "video/mp4"),
+    uploadToStorage(
+      files.thumbnail,
+      `${basePath}/thumbnail.jpg`,
+      "image/jpeg",
+    ),
+  ]);
 
   return {
     videoHighUrl,
-    videoMediumUrl,
-    videoLowUrl,
+    videoMediumUrl: "",
+    videoLowUrl: "",
     thumbnailUrl,
   };
 }

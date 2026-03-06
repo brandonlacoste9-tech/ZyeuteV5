@@ -5,7 +5,6 @@ import multer from "multer";
 import { verifyAuthToken } from "../supabase-auth.js";
 import crypto from "crypto";
 import { inferMediaType } from "../../shared/utils/validatePostType.js";
-import { moderateVideo } from "../services/videoModeration.js";
 
 export const surgicalUploadRouter = express.Router();
 

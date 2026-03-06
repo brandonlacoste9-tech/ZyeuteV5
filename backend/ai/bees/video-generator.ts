@@ -1,10 +1,11 @@
 /**
  * 🎬 Video Generator Bee
  * Enables Ti-Guy to generate short videos using AI
- * Uses FAL.ai Kling or Hunyuan Video models
+ * Delegates to video-engine.ts (FAL.ai/Kling) — single source of truth.
  */
 
 import { z } from "zod";
+import { generateVideo } from "../media/video-engine.js";
 
 // Video generation request schema
 export const VideoGenerationSchema = z.object({
@@ -24,11 +25,6 @@ export const VideoGenerationSchema = z.object({
 
 export type VideoGenerationRequest = z.infer<typeof VideoGenerationSchema>;
 
-// FAL.ai Video endpoints
-const FAL_KLING_URL =
-  "https://fal.run/fal-ai/kling-video/v1/standard/text-to-video";
-const FAL_HUNYUAN_URL = "https://fal.run/fal-ai/hunyuan-video";
-
 // Quebec-themed video prompt enhancers
 const QUEBEC_VIDEO_ENHANCERS: Record<string, string> = {
   "quebec-winter":
@@ -45,13 +41,10 @@ const QUEBEC_VIDEO_ENHANCERS: Record<string, string> = {
  * Creates short-form videos with Quebec cultural awareness
  */
 export class VideoGeneratorBee {
-  private apiKey: string;
-
   constructor() {
-    this.apiKey = process.env.FAL_KEY || "";
-    if (!this.apiKey) {
+    if (!process.env.FAL_API_KEY) {
       console.warn(
-        "🦫 Ti-Guy: FAL_KEY pas configuré - génération vidéo désactivée",
+        "🦫 Ti-Guy: FAL_API_KEY pas configuré - génération vidéo désactivée",
       );
     }
   }
@@ -83,7 +76,7 @@ export class VideoGeneratorBee {
     error?: string;
     cost?: number;
   }> {
-    if (!this.apiKey) {
+    if (!process.env.FAL_API_KEY) {
       return {
         success: false,
         error: "FAL API key not configured",
@@ -97,33 +90,18 @@ export class VideoGeneratorBee {
     );
 
     try {
-      // Use Kling for video generation
-      const response = await fetch(FAL_KLING_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Key ${this.apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          duration: request.duration,
-          aspect_ratio: request.aspectRatio,
-        }),
+      const result = await generateVideo({
+        prompt: finalPrompt,
+        duration: Number(request.duration),
+        modelHint: "kling",
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`FAL API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
 
       return {
         success: true,
-        videoUrl: data.video?.url,
+        videoUrl: result.url,
         prompt: finalPrompt,
         duration: request.duration,
-        cost: request.duration === "5" ? 0.05 : 0.1, // Approximate cost
+        cost: result.cost,
       };
     } catch (error) {
       console.error("🦫 Ti-Guy: Erreur de génération vidéo:", error);
@@ -145,38 +123,23 @@ export class VideoGeneratorBee {
     videoUrl?: string;
     error?: string;
   }> {
-    if (!this.apiKey) {
+    if (!process.env.FAL_API_KEY) {
       return { success: false, error: "FAL API key not configured" };
     }
 
     console.log(`🦫 Ti-Guy: J'anime ton image...`);
 
     try {
-      const response = await fetch(
-        "https://fal.run/fal-ai/kling-video/v1/standard/image-to-video",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Key ${this.apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            image_url: imageUrl,
-            prompt: motion,
-            duration: "5",
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`FAL API error: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const result = await generateVideo({
+        prompt: motion,
+        imageUrl,
+        duration: 5,
+        modelHint: "kling",
+      });
 
       return {
         success: true,
-        videoUrl: data.video?.url,
+        videoUrl: result.url,
       };
     } catch (error) {
       return {
