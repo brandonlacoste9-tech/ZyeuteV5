@@ -2,42 +2,39 @@ services:
   - type: web
     name: zyeute-api
     env: node
-    plan: starter
+    plan: free  # Change to 'starter' for always-on ($7/mo)
     buildCommand: npm install && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
+      # Database - using Supabase (not Render's Postgres)
       - key: DATABASE_URL
-        fromDatabase:
-          name: zyeute-db
-          property: connectionString
-      - key: STRIPE_SECRET_KEY
-        sync: false
+        sync: false  # Add your Supabase connection string in dashboard
+      # Supabase
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: DEEPSEEK_API_KEY
+      # AI Services
+      - key: DIALOGFLOW_CX_AGENT_ID
         sync: false
-      - key: PYTHON_KERNEL_URL
-        value: https://zyeute-kernel.modal.run
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
       - key: GOOGLE_CLOUD_PROJECT
         value: spatial-garden-483401-g8
       - key: GOOGLE_CLOUD_REGION
         value: us-central1
       - key: VERTEX_LOCATION
         value: us-central1
-      - key: DIALOGFLOW_CX_AGENT_ID
+      # API Keys
+      - key: STRIPE_SECRET_KEY
         sync: false
-      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+      - key: DEEPSEEK_API_KEY
         sync: false
       - key: VITE_COLONY_API_URL
         sync: false
+      # Port
       - key: PORT
         value: "10000"
-
-databases:
-  - name: zyeute-db
-    plan: starter
-    region: ohio
+    healthCheckPath: /api/health

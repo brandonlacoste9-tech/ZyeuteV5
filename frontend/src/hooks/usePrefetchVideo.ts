@@ -103,14 +103,17 @@ export function usePrefetchVideo(
       abortControllerRef.current.abort();
     }
 
-    // Skip prefetch for HLS streams — HLS.js handles its own adaptive streaming
-    // Also skip if Mux (by URL pattern) regardless of whether it's proxied
-    const isHlsUrl =
+    // Skip prefetch for managed streaming sources — they handle their own adaptive delivery
+    // Mux: HLS adaptive streaming, Supabase: CDN-optimized storage
+    const isStreamingUrl =
       url.endsWith(".m3u8") ||
       url.includes(".m3u8") ||
       url.includes("stream.mux.com") ||
-      url.includes("chunk.mux.com");
-    if (tier === 0 || !url || isHlsUrl) {
+      url.includes("chunk.mux.com") ||
+      url.includes(".mux.com") ||
+      url.includes("supabase.co/storage") ||
+      url.includes(".supabase.co");
+    if (tier === 0 || !url || isStreamingUrl) {
       setDebugInfo({ requests: 0, concurrency: 1 });
       return;
     }

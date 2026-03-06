@@ -83,6 +83,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           isCached={isCached}
           debug={debug}
           onVideoProgress={onVideoProgress}
+          shouldPrefetch={shouldPrefetch}
         />
       );
     }
@@ -114,7 +115,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
       // Video-specific checks
       (prevProps.post.type === "video"
         ? prevProps.videoSource === nextProps.videoSource &&
-          prevProps.isCached === nextProps.isCached
+        prevProps.isCached === nextProps.isCached
         : true)
     );
   },

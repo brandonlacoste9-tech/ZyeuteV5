@@ -134,7 +134,7 @@ const translateText = async (text: string, targetLang: string): Promise<string> 
       zh: "你好！",
     },
   };
-  
+
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
   return translations[text]?.[targetLang] || `[${targetLang.toUpperCase()}] ${text}`;
 };
@@ -198,28 +198,28 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [showVoiceWaveform, setShowVoiceWaveform] = useState(false);
   const [audioVisualization, setAudioVisualization] = useState<number[]>([]);
-  
+
   // FEATURE: Search
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UltimateMessage[]>([]);
   const [currentResultIndex, setCurrentResultIndex] = useState(0);
-  
+
   // FEATURE: Disappearing Messages
   const [disappearMode, setDisappearMode] = useState(0);
   const [showDisappearMenu, setShowDisappearMenu] = useState(false);
   const [disappearingMessages, setDisappearingMessages] = useState<Set<string>>(new Set());
-  
+
   // FEATURE: Encryption
   const [encryptionEnabled, setEncryptionEnabled] = useState(false);
   const [encryptionKey] = useState("demo-key-123"); // In production: generate secure key
-  
+
   // FEATURE: Translation
   const [translationEnabled, setTranslationEnabled] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [translatedMessages, setTranslatedMessages] = useState<Set<string>>(new Set());
-  
+
   // FEATURE: Video Call (WebRTC)
   const [activeCall, setActiveCall] = useState<CallType>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -227,7 +227,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  
+
   // UI States
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedEmojiCategory, setSelectedEmojiCategory] = useState<keyof typeof EMOJI_CATEGORIES>("recent");
@@ -236,7 +236,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   const [replyingTo, setReplyingTo] = useState<UltimateMessage | null>(null);
   const [showMessageMenu, setShowMessageMenu] = useState<string | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -289,7 +289,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   // Handle disappearing messages
   const scheduleDisappear = useCallback((messageId: string, seconds: number) => {
     if (seconds === 0) return;
-    
+
     const timer = setTimeout(() => {
       setMessages(prev => prev.filter(m => m.id !== messageId));
       setDisappearingMessages(prev => {
@@ -299,7 +299,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
       });
       toast.info("💨 Message éphémère disparu!");
     }, seconds * 1000);
-    
+
     disappearTimersRef.current[messageId] = timer;
     setDisappearingMessages(prev => new Set(prev).add(messageId));
   }, []);
@@ -314,7 +314,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   // SEARCH functionality
   useEffect(() => {
     if (searchQuery.trim()) {
-      const results = messages.filter(m => 
+      const results = messages.filter(m =>
         m.text.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setSearchResults(results);
@@ -326,13 +326,13 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
 
   const navigateSearch = (direction: "next" | "prev") => {
     if (searchResults.length === 0) return;
-    
+
     if (direction === "next") {
       setCurrentResultIndex(prev => (prev + 1) % searchResults.length);
     } else {
       setCurrentResultIndex(prev => (prev - 1 + searchResults.length) % searchResults.length);
     }
-    
+
     // Scroll to result
     const resultId = searchResults[currentResultIndex]?.id;
     if (resultId) {
@@ -344,7 +344,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
       const analyser = audioContextRef.current.createAnalyser();
@@ -378,7 +378,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
           disappearAfter: disappearMode > 0 ? disappearMode : undefined,
           expiresAt: disappearMode > 0 ? new Date(Date.now() + disappearMode * 1000) : undefined,
         };
-        
+
         setMessages(prev => [...prev, newMessage]);
         if (disappearMode > 0) scheduleDisappear(newMessage.id, disappearMode);
 
@@ -415,28 +415,28 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   // WEBRTC VIDEO CALL
   const startVideoCall = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
       });
       setLocalStream(stream);
       setActiveCall("video");
-      
+
       // Initialize peer connection
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
       });
-      
+
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
       });
-      
+
       pc.ontrack = (event) => {
         setRemoteStream(event.streams[0]);
       };
-      
+
       peerConnectionRef.current = pc;
-      
+
       toast.success("📹 Appel vidéo démarré!");
     } catch (err) {
       toast.error("Impossible d'accéder à la caméra");
@@ -458,16 +458,16 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
     if (!text || isTyping) return;
 
     tap();
-    
+
     let finalText = text;
     let encryptedText: string | undefined;
-    
+
     // Encrypt if enabled
     if (encryptionEnabled) {
       encryptedText = encryptMessage(text, encryptionKey);
       finalText = "🔒 Message chiffré";
     }
-    
+
     const newMessage: UltimateMessage = {
       id: `user-${Date.now()}`,
       sender: "user",
@@ -481,26 +481,26 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
       disappearAfter: disappearMode > 0 ? disappearMode : undefined,
       expiresAt: disappearMode > 0 ? new Date(Date.now() + disappearMode * 1000) : undefined,
     };
-    
+
     setMessages(prev => [...prev, newMessage]);
     setInputText("");
     setReplyingTo(null);
-    
+
     if (disappearMode > 0) scheduleDisappear(newMessage.id, disappearMode);
 
     // Translation
     if (translationEnabled) {
       const translated = await translateText(text, targetLanguage);
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m.id === newMessage.id ? { ...m, translatedText: translated, translatedTo: targetLanguage } : m
       ));
     }
-    
+
     setIsTyping(true);
     try {
       const response = await tiguyService.sendMessage(text);
-      const responseText = typeof response === "string" ? response : response.response || "Je n'ai pas de réponse";
-      
+      const responseText = typeof response === "string" ? response : (response as any).response || "Je n'ai pas de réponse";
+
       setMessages(prev => [...prev, {
         id: `tiguy-${Date.now()}`,
         sender: "tiGuy",
@@ -525,7 +525,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
     setMessageReactions(prev => {
       const current = prev[messageId] || [];
       const existing = current.find(r => r.emoji === emoji);
-      
+
       if (existing) {
         const userReacted = existing.users.includes("currentUser");
         if (userReacted) {
@@ -549,7 +549,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
       if (m.id !== messageId || !m.isEncrypted) return m;
       return {
         ...m,
-        text: m.text === "🔒 Message chiffré" 
+        text: m.text === "🔒 Message chiffré"
           ? (decryptMessage(m.encryptedText || "", encryptionKey))
           : "🔒 Message chiffré"
       };
@@ -560,12 +560,12 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   const toggleTranslation = async (messageId: string) => {
     const message = messages.find(m => m.id === messageId);
     if (!message || message.sender !== "tiGuy") return;
-    
+
     const isTranslated = translatedMessages.has(messageId);
-    
+
     if (isTranslated) {
       // Show original
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m.id === messageId ? { ...m, text: m.originalText || m.text } : m
       ));
       setTranslatedMessages(prev => {
@@ -576,7 +576,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
     } else {
       // Translate
       const translated = await translateText(message.text, targetLanguage);
-      setMessages(prev => prev.map(m => 
+      setMessages(prev => prev.map(m =>
         m.id === messageId ? { ...m, originalText: m.text, text: translated } : m
       ));
       setTranslatedMessages(prev => new Set(prev).add(messageId));
@@ -677,7 +677,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
           </div>
           <div className="text-[#d4af37] font-mono">00:00</div>
         </div>
-        
+
         {/* Video Area */}
         <div className="flex-1 relative bg-[#1a1410]">
           {/* Remote Video (Ti-Guy placeholder) */}
@@ -690,7 +690,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
               <p className="text-[#8b7355]">En attente de connexion...</p>
             </div>
           </div>
-          
+
           {/* Local Video */}
           <div className="absolute bottom-4 right-4 w-48 h-36 rounded-xl overflow-hidden border-2 border-[#d4af37] bg-[#2b1f17]">
             {localStream ? (
@@ -700,7 +700,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
             )}
           </div>
         </div>
-        
+
         {/* Controls */}
         <div className="p-6 flex items-center justify-center gap-4 bg-[#2b1f17] border-t border-[#d4af37]/30">
           <button className="p-4 rounded-full bg-[#3a2820] text-[#d4af37] hover:bg-[#d4af37]/20">
@@ -709,7 +709,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
           <button className="p-4 rounded-full bg-[#3a2820] text-[#d4af37] hover:bg-[#d4af37]/20">
             <IoVideocam className="w-6 h-6" />
           </button>
-          <button 
+          <button
             onClick={endCall}
             className="p-4 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/40"
           >
@@ -724,7 +724,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
   return createPortal(
     <div className="fixed inset-0 z-[100] flex bg-black/90 backdrop-blur-sm">
       <div className="flex w-full h-full max-w-6xl mx-auto my-4 rounded-3xl overflow-hidden shadow-2xl border-4 border-[#d4af37]/50">
-        
+
         {/* SIDEBAR */}
         <div className={cn("flex flex-col transition-all duration-300 border-r-4 border-[#d4af37]/30", sidebarOpen ? "w-80" : "w-0 overflow-hidden")}
           style={{ background: "#2b1f17", backgroundImage: FLEUR_PATTERN }}>
@@ -797,24 +797,24 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
                 className={cn("p-3 rounded-xl transition-all", isSearchMode ? "bg-[#d4af37]/30 text-[#d4af37]" : "hover:bg-[#d4af37]/20 text-[#d4af37]")}>
                 <IoSearch className="w-5 h-5" />
               </button>
-              
+
               {/* Encryption Toggle */}
               <button onClick={() => { setEncryptionEnabled(!encryptionEnabled); toast.info(encryptionEnabled ? "Chiffrement désactivé" : "🔒 Chiffrement E2E activé"); }}
                 className={cn("p-3 rounded-xl transition-all", encryptionEnabled ? "bg-green-500/20 text-green-400" : "hover:bg-[#d4af37]/20 text-[#d4af37]")}>
                 {encryptionEnabled ? <IoLockClosed className="w-5 h-5" /> : <IoLockOpen className="w-5 h-5" />}
               </button>
-              
+
               {/* Disappearing Toggle */}
               <button onClick={() => setShowDisappearMenu(!showDisappearMenu)} className={cn("p-3 rounded-xl transition-all relative", disappearMode > 0 ? "bg-[#d4af37]/30 text-[#d4af37]" : "hover:bg-[#d4af37]/20 text-[#d4af37]")}>
                 <IoTimer className="w-5 h-5" />
                 {disappearMode > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">!</span>}
               </button>
-              
+
               {/* Translation Toggle */}
               <button onClick={() => setShowLanguageMenu(!showLanguageMenu)} className={cn("p-3 rounded-xl transition-all", translationEnabled ? "bg-[#d4af37]/30 text-[#d4af37]" : "hover:bg-[#d4af37]/20 text-[#d4af37]")}>
                 <IoLanguage className="w-5 h-5" />
               </button>
-              
+
               <button onClick={startVideoCall} className="p-3 rounded-xl hover:bg-[#d4af37]/20 text-[#d4af37]">
                 <IoVideocamOutline className="w-5 h-5" />
               </button>
@@ -859,13 +859,13 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
             {messages.map((message, index) => {
               const isSearchResult = searchResults.find(r => r.id === message.id);
               const isCurrentResult = searchResults[currentResultIndex]?.id === message.id;
-              
+
               return (
                 <div key={message.id} id={`msg-${message.id}`}
                   className={cn("flex gap-3 group", message.sender === "user" ? "flex-row-reverse" : "", isCurrentResult && "bg-[#d4af37]/10 rounded-xl p-2 -m-2")}
                   onMouseEnter={() => setHoveredMessage(message.id)}
                   onMouseLeave={() => { if (showMessageMenu !== message.id) setHoveredMessage(null); }}>
-                  
+
                   <div className={cn("w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 border-2", message.sender === "tiGuy" ? "bg-gradient-to-br from-amber-400 to-amber-700 border-[#d4af37]" : "bg-gradient-to-br from-violet-600 to-indigo-700 border-violet-400")}>
                     {message.sender === "tiGuy" ? "🦫" : "👤"}
                   </div>
@@ -878,7 +878,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
                         Disparaît dans {formatTimeLeft(message.expiresAt)}
                       </div>
                     )}
-                    
+
                     {/* Translation indicator */}
                     {translatedMessages.has(message.id) && (
                       <div className="flex items-center gap-1 text-[10px] text-[#d4af37] mb-1">
@@ -886,14 +886,14 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
                         Traduit en {LANGUAGES.find(l => l.code === targetLanguage)?.name}
                       </div>
                     )}
-                    
+
                     <div className={cn("rounded-2xl px-5 py-3 shadow-lg relative", message.sender === "user" ? "rounded-br-sm" : "rounded-bl-sm")}
                       style={{
                         background: message.sender === "user" ? "linear-gradient(135deg, rgba(109,40,217,0.4), rgba(79,70,229,0.3))" : "linear-gradient(135deg, rgba(146,64,14,0.5), rgba(120,53,15,0.4))",
                         border: message.isEncrypted ? "2px solid rgba(34,197,94,0.6)" : message.sender === "user" ? "2px solid rgba(139,92,246,0.4)" : "2px solid rgba(212,175,55,0.4)",
                         boxShadow: isSearchResult ? "0 0 20px rgba(212,175,55,0.5)" : undefined,
                       }}>
-                      
+
                       {/* Encrypted indicator */}
                       {message.isEncrypted && (
                         <button onClick={() => toggleDecrypt(message.id)} className="flex items-center gap-1 text-green-400 text-xs mb-1 hover:underline">
@@ -901,24 +901,24 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
                           {message.text === "🔒 Message chiffré" ? "Cliquer pour déchiffrer" : "Cliquer pour masquer"}
                         </button>
                       )}
-                      
+
                       <p className={cn("leading-relaxed whitespace-pre-wrap text-[15px]", message.sender === "user" ? "text-violet-100" : "text-amber-100")}>
                         {message.text}
                       </p>
-                      
+
                       {/* Translation toggle for Ti-Guy messages */}
                       {message.sender === "tiGuy" && translationEnabled && (
                         <button onClick={() => toggleTranslation(message.id)} className="text-[10px] text-[#d4af37] mt-1 hover:underline">
                           {translatedMessages.has(message.id) ? "Voir l'original" : `Traduire en ${LANGUAGES.find(l => l.code === targetLanguage)?.name}`}
                         </button>
                       )}
-                      
+
                       {/* Message Menu */}
                       <button onClick={() => setShowMessageMenu(showMessageMenu === message.id ? null : message.id)}
                         className="absolute -top-2 -right-2 p-1.5 rounded-full bg-[#1a1410] border border-[#d4af37]/30 text-[#8b7355] opacity-0 group-hover:opacity-100 transition-opacity">
                         <IoEllipsisHorizontal className="w-3 h-3" />
                       </button>
-                      
+
                       {showMessageMenu === message.id && (
                         <div className="absolute right-0 top-6 bg-[#2b1f17] border border-[#d4af37]/30 rounded-xl shadow-2xl overflow-hidden z-50 min-w-[140px]">
                           {[
@@ -1008,7 +1008,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
           {/* Input */}
           <div className="px-6 py-4 border-t-2 border-[#d4af37]/30 relative" style={{ background: "linear-gradient(180deg, rgba(35,25,18,0.98) 0%, rgba(43,31,23,0.98) 100%)", boxShadow: "0 -10px 40px rgba(0,0,0,0.5)" }}>
             {showEmojiPicker && <EmojiPicker />}
-            
+
             {/* Status indicators */}
             <div className="flex items-center justify-center gap-2 mb-2">
               {encryptionEnabled && <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">🔒 Chiffré</span>}
@@ -1036,7 +1036,7 @@ export const ChatUltimate: React.FC<ChatUltimateProps> = ({ onClose }) => {
                   style={{ boxShadow: "inset 0 2px 8px rgba(0,0,0,0.3)" }} />
               </div>
 
-              <input ref={fileInputRef} type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" onChange={() => {}} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx" onChange={() => { }} className="hidden" />
               <button type="button" onClick={() => fileInputRef.current?.click()} className="p-4 rounded-2xl bg-[#3a2820] text-[#d4af37] border border-[#d4af37]/30 hover:bg-[#d4af37]/20 transition-all">
                 <IoAttach className="w-6 h-6" />
               </button>

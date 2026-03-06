@@ -11,6 +11,7 @@ import { Avatar } from "../Avatar";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
+import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { VideoErrorBoundary } from "@/components/video/VideoErrorBoundary";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";

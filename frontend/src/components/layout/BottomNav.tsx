@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    to: "/upload",
+    to: "/create",
     label: "Créer",
     icon: (
       <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">

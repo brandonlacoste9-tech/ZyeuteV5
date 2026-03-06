@@ -26,7 +26,7 @@ const feedLogger = logger.withContext("Feed");
 // Gift emoji lookup moved outside to avoid re-creation on every render
 const GIFT_EMOJIS: Record<string, string> = {
   comete: "☄️",
-  feuille_erable: "🍁",
+  feuille_erable: "⚜️",
   fleur_de_lys: "⚜️",
   feu: "🔥",
   coeur_or: "💛",
@@ -41,7 +41,7 @@ export const Feed: React.FC = () => {
   >([]);
   const [isLoadingStories, setIsLoadingStories] = React.useState(true);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
-  
+
   // GUARD: Prevent duplicate fetches
   const hasFetchedUser = React.useRef(false);
   const hasFetchedStories = React.useRef(false);
@@ -69,7 +69,7 @@ export const Feed: React.FC = () => {
   React.useEffect(() => {
     if (hasFetchedUser.current) return;
     hasFetchedUser.current = true;
-    
+
     const fetchCurrentUser = async () => {
       const user = await getCurrentUser();
       if (user) setCurrentUser(user);
@@ -82,7 +82,7 @@ export const Feed: React.FC = () => {
   React.useEffect(() => {
     if (hasFetchedStories.current) return;
     hasFetchedStories.current = true;
-    
+
     const fetchStories = async () => {
       try {
         const storyList = await getStories(currentUser?.id);
@@ -144,7 +144,7 @@ export const Feed: React.FC = () => {
     <div className="flex flex-col h-full bg-black overflow-hidden">
       {/* Network Resilience: Offline Banner */}
       <OfflineBanner />
-      
+
       {/* Daily Bonus Modal */}
       <DailyGratteuxModal />
 

@@ -62,6 +62,11 @@ export default defineConfig({
           // Supabase chunk
           supabase: ["@supabase/supabase-js"],
 
+          // Additional large libraries (Phase 5 Optimization)
+          "ui-motion": ["framer-motion"],
+          "ui-charts": ["recharts"],
+          payments: ["@stripe/stripe-js", "@stripe/react-stripe-js"],
+
           // Form handling
           forms: ["react-hook-form", "@hookform/resolvers", "zod"],
 

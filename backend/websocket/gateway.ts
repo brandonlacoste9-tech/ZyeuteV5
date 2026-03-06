@@ -9,6 +9,7 @@ import { Server, Socket } from "socket.io";
 import Redis from "ioredis";
 import { verifyAuthToken } from "../supabase-auth.js";
 import { db } from "../storage.js";
+import { sql } from "drizzle-orm";
 
 // Event types
 export const Events = {
@@ -61,7 +62,7 @@ export async function createWebSocketGateway(httpServer: any) {
   // io.adapter(createAdapter(pubClient, subClient));
 
   // Authentication middleware
-  io.use(async (socket: AuthenticatedSocket, next) => {
+  io.use(async (socket: any, next) => {
     try {
       const token = socket.handshake.auth.token || socket.handshake.query.token;
 
@@ -87,7 +88,7 @@ export async function createWebSocketGateway(httpServer: any) {
     }
   });
 
-  io.on("connection", async (socket: AuthenticatedSocket) => {
+  io.on("connection", async (socket: any) => {
     console.log(`[WebSocket] User ${socket.username} connected: ${socket.id}`);
 
     // Notify friends that user is online
@@ -119,7 +120,7 @@ export async function createWebSocketGateway(httpServer: any) {
     // Handle disconnect
     socket.on("disconnect", async () => {
       console.log(`[WebSocket] User ${socket.username} disconnected`);
-      await pubClient.hDel("user:sockets", socket.userId!);
+      await pubClient.hdel("user:sockets", socket.userId!);
       await broadcastPresence(io, socket.userId!, "offline");
     });
   });
@@ -144,10 +145,9 @@ export async function broadcastToConversation(
 // Join all conversation rooms for a user
 async function joinConversationRooms(socket: AuthenticatedSocket) {
   try {
-    const result = await db.query(
-      `SELECT id FROM conversations 
-       WHERE participant_a = $1 OR participant_b = $1`,
-      [socket.userId],
+    const result = await db.execute(
+      sql`SELECT id FROM conversations 
+       WHERE participant_a = ${socket.userId} OR participant_b = ${socket.userId}`,
     );
 
     for (const row of result.rows) {
@@ -185,15 +185,14 @@ async function broadcastPresence(
 ) {
   try {
     // Get all conversations this user is in
-    const result = await db.query(
-      `SELECT 
+    const result = await db.execute(
+      sql`SELECT 
         CASE 
-          WHEN participant_a = $1 THEN participant_b 
+          WHEN participant_a = ${userId} THEN participant_b 
           ELSE participant_a 
         END as friend_id
        FROM conversations 
-       WHERE participant_a = $1 OR participant_b = $1`,
-      [userId],
+       WHERE participant_a = ${userId} OR participant_b = ${userId}`,
     );
 
     const event =

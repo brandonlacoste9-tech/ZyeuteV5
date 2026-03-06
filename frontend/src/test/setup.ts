@@ -1,10 +1,41 @@
-import "@testing-library/jest-dom";
 import { expect, afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
-import * as matchers from "@testing-library/jest-dom/matchers";
 
-// Extend Vitest's expect with jest-dom matchers
-expect.extend(matchers);
+// Add custom matchers
+expect.extend({
+  toBeInTheDocument(received) {
+    const pass = received !== null && received !== undefined;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? `expected element not to be in the document`
+          : `expected element to be in the document`,
+    };
+  },
+  toHaveAttribute(received, attr: string, value?: string) {
+    const hasAttr = received?.hasAttribute?.(attr);
+    const attrValue = received?.getAttribute?.(attr);
+    const pass = value !== undefined ? hasAttr && attrValue === value : hasAttr;
+    return {
+      pass,
+      message: () =>
+        pass
+          ? `expected element not to have attribute ${attr}`
+          : `expected element to have attribute ${attr}${value ? ` with value ${value}` : ""}`,
+    };
+  },
+  toHaveClass(received, className: string) {
+    const hasClass = received?.classList?.contains?.(className);
+    return {
+      pass: hasClass,
+      message: () =>
+        hasClass
+          ? `expected element not to have class ${className}`
+          : `expected element to have class ${className}`,
+    };
+  },
+});
 
 // Cleanup after each test
 afterEach(() => {
@@ -16,6 +47,10 @@ vi.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       getSession: vi.fn().mockResolvedValue({
+        data: { session: null },
+        error: null,
+      }),
+      getSessionWithTimeout: vi.fn().mockResolvedValue({
         data: { session: null },
         error: null,
       }),
@@ -79,21 +114,3 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
 } as any;
-
-// Suppress console errors in tests (optional - remove if you want to see errors)
-// const originalError = console.error;
-// beforeAll(() => {
-//   console.error = (...args: any[]) => {
-//     if (
-//       typeof args[0] === 'string' &&
-//       args[0].includes('Warning: ReactDOM.render')
-//     ) {
-//       return;
-//     }
-//     originalError.call(console, ...args);
-//   };
-// });
-
-// afterAll(() => {
-//   console.error = originalError;
-// });

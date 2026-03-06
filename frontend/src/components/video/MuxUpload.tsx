@@ -6,7 +6,14 @@
 import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import * as UpChunk from "@mux/upchunk";
-import { Upload, X, Loader2, CheckCircle, AlertCircle, Film } from "lucide-react";
+import {
+  Upload,
+  X,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Film,
+} from "lucide-react";
 import { apiCall } from "@/services/api";
 import { cn } from "@/lib/utils";
 
@@ -17,16 +24,23 @@ interface MuxUploadProps {
     uploadId: string;
   }) => void;
   onCancel?: () => void;
+  onFallbackUpload?: (file: File) => void; // Fallback to surgical upload
 }
 
-export function MuxUpload({ onUploadComplete, onCancel }: MuxUploadProps) {
+export function MuxUpload({
+  onUploadComplete,
+  onCancel,
+  onFallbackUpload,
+}: MuxUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<
     "idle" | "uploading" | "processing" | "ready" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [fileName, setFileName] = useState("");
-  const upchunkRef = useRef<ReturnType<typeof UpChunk.createUpload> | null>(null);
+  const upchunkRef = useRef<ReturnType<typeof UpChunk.createUpload> | null>(
+    null,
+  );
 
   const pollUploadStatus = useCallback(
     async (uploadId: string) => {
@@ -72,10 +86,16 @@ export function MuxUpload({ onUploadComplete, onCancel }: MuxUploadProps) {
       });
 
       if (createError || !createData?.data) {
+        // Mux not available, fall back to surgical upload
+        console.warn(
+          "[MuxUpload] Mux unavailable, falling back to surgical upload",
+        );
         setUploadStatus("error");
         setErrorMessage(
-          createData?.error || "Impossible de démarrer l'upload",
+          "Mux non disponible. Utilisation de l'upload direct...",
         );
+        // Trigger fallback via parent
+        onError?.(new Error("Mux unavailable, use surgical upload"));
         return;
       }
 

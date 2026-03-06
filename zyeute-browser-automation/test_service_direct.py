@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 
 async def main():
@@ -12,7 +11,7 @@ async def main():
             platform="google", region="montreal"
         )
         print("Result:", result)
-    except Exception as e:
+    except Exception:
         import traceback
 
         traceback.print_exc()

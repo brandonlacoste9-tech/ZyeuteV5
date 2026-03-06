@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { TiGuyAgent, type TiGuyInput, type TiGuyResponse } from "./tiGuyAgent";
+import {
+  TiGuyAgent,
+  type TiGuyInput,
+  type TiGuyResponse,
+} from "../../services/tiGuyAgent";
 import {
   EvaluationRunner,
   assertions,

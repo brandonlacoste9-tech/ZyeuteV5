@@ -26,7 +26,10 @@ const circuitBreaker = {
   lastFailure: 0,
   isOpen: () => {
     if (circuitBreaker.failures === 0) return false;
-    const backoff = Math.min(30000, Math.pow(2, circuitBreaker.failures) * 1000);
+    const backoff = Math.min(
+      30000,
+      Math.pow(2, circuitBreaker.failures) * 1000,
+    );
     const shouldReset = Date.now() - circuitBreaker.lastFailure > backoff;
     return !shouldReset;
   },
@@ -34,7 +37,7 @@ const circuitBreaker = {
     circuitBreaker.failures = 0;
   },
   recordFailure: (code?: string | number) => {
-    if (code === 429 || code === 'RATE_LIMIT') {
+    if (code === 429 || code === "RATE_LIMIT") {
       circuitBreaker.failures++;
       circuitBreaker.lastFailure = Date.now();
     }
@@ -42,7 +45,7 @@ const circuitBreaker = {
 };
 
 function getRequestKey(endpoint: string, options: RequestInit): string {
-  return `${options.method || 'GET'}:${endpoint}:${JSON.stringify(options.body || '')}`;
+  return `${options.method || "GET"}:${endpoint}:${JSON.stringify(options.body || "")}`;
 }
 
 // Base API call helper with deduplication and circuit breaker
@@ -53,25 +56,27 @@ export async function apiCall<T>(
   // Check circuit breaker (back off if rate limited)
   if (circuitBreaker.isOpen()) {
     apiLogger.warn(`Circuit breaker open, rejecting request to ${endpoint}`);
-    return { 
-      data: null, 
-      error: "Rate limited - please wait", 
-      code: 429 
+    return {
+      data: null,
+      error: "Rate limited - please wait",
+      code: 429,
     };
   }
 
   const requestKey = getRequestKey(endpoint, options);
-  
+
   // Return existing pending request if exists (prevents duplicate in-flight requests)
   if (pendingRequests.has(requestKey)) {
     apiLogger.debug(`Deduplicating request: ${endpoint}`);
     return pendingRequests.get(requestKey)!;
   }
-  
+
   // Create the request promise
   const requestPromise = (async () => {
     try {
-      const { data: { session } } = await getSessionWithTimeout(3000);
+      const {
+        data: { session },
+      } = await getSessionWithTimeout(3000);
       const token = session?.access_token;
 
       // Prepare headers with Authorization if token exists
@@ -88,26 +93,26 @@ export async function apiCall<T>(
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-      
+
       const response = await fetch(apiUrl, {
         ...options,
         headers,
         credentials: "include",
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
         const code = response.status;
-        
+
         // Record 429 failures for circuit breaker
         if (code === 429) {
           circuitBreaker.recordFailure(code);
         }
-        
+
         if (response.status >= 500) {
           apiLogger.error(`Server error ${response.status} at ${endpoint}`, {
             code,
@@ -142,10 +147,10 @@ export async function apiCall<T>(
       }, 500);
     }
   })();
-  
+
   // Store the pending request
   pendingRequests.set(requestKey, requestPromise);
-  
+
   return requestPromise;
 }
 
@@ -253,14 +258,15 @@ export async function getExplorePosts(
   hiveId?: string,
 ): Promise<Post[]> {
   const query = new URLSearchParams({
-    page: page.toString(),
     limit: limit.toString(),
   });
   if (hiveId) query.append("hive", hiveId);
 
-  const { data, error } = await apiCall<{ posts: Post[] }>(
-    `/explore?${query.toString()}`,
-  );
+  // Use Supabase HTTP API endpoint (works without DATABASE_URL)
+  const url = `/explore/supabase?${query.toString()}`;
+  console.log("[Feed] Fetching:", url);
+  const { data, error } = await apiCall<{ posts: Post[] }>(url);
+  console.log("[Feed] Response:", { posts: data?.posts?.length || 0, error });
   if (error || !data) return [];
   return (data.posts || [])
     .map(mapBackendPost)

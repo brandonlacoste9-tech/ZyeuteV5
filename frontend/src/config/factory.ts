@@ -55,7 +55,7 @@ const QUEBEC_CONFIG: AppConfig = {
     region: "QC",
     locale: "fr-CA",
     iconEmoji: "⚜️",
-    giftEmoji: "🍁",
+    giftEmoji: "⚜️",
     landingTitle: "Bienvenue dans le Swarm",
     landingSubtitle: "La plateforme sociale premium du Québec.",
     onboardingSteps: [
@@ -76,8 +76,8 @@ const QUEBEC_CONFIG: AppConfig = {
     textMain: "#FFFFFF",
     textMuted: "#a18e87", // Muted Leather
     edgeLighting: "#FFBF00", // Gold Edge
-    glowColor: "rgba(255, 191, 0, 0.4)", // Gold Glow
-    stitchingColor: "rgba(218, 165, 32, 0.7)", // Gold Stitching
+    glowColor: "rgba(255, 191, 0, 0.1)", // Toned down Gold Glow
+    stitchingColor: "rgba(218, 165, 32, 0.3)", // Subtle Gold Stitching
     fontFamily: "'Inter', sans-serif",
   },
   features: {

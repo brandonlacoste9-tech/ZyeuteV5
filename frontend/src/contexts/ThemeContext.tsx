@@ -14,6 +14,18 @@ export const PRESET_THEMES: Record<string, ThemeColors> = {
     name: "Or Classique",
     edgeLighting: "#F5C842",
   },
+  leather: {
+    name: "⚜ Cuir Luxe",
+    edgeLighting: "#c5a055",
+  },
+  "leather-green": {
+    name: "🌲 Cuir Forêt",
+    edgeLighting: "#7ec98a",
+  },
+  "leather-purple": {
+    name: "👑 Cuir Royal",
+    edgeLighting: "#b48ad4",
+  },
   blue: {
     name: "Bleu Québec",
     edgeLighting: "#0066CC",
@@ -43,6 +55,7 @@ export const PRESET_THEMES: Record<string, ThemeColors> = {
     edgeLighting: "#00D9FF",
   },
 };
+
 
 interface ThemeContextType {
   edgeLighting: string;
@@ -76,7 +89,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [glowIntensity, setGlowIntensityState] = useState<number>(() => {
     const saved = localStorage.getItem("zyeute_glow_intensity");
-    return saved ? parseInt(saved) : 50;
+    return saved ? parseInt(saved) : 0;
   });
 
   // Update CSS variables when colors change
@@ -85,13 +98,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     root.style.setProperty("--edge-color", edgeLighting);
     root.style.setProperty("--glow-intensity", `${glowIntensity}%`);
 
+    // Apply data-theme for CSS theme variants (leather, gold, etc.)
+    root.setAttribute("data-theme", currentTheme);
+
     // Add animation class if enabled
     if (isAnimated) {
       root.classList.add("edge-animated");
     } else {
       root.classList.remove("edge-animated");
     }
-  }, [edgeLighting, isAnimated, glowIntensity]);
+  }, [edgeLighting, isAnimated, glowIntensity, currentTheme]);
 
   const setEdgeLighting = (color: string) => {
     setEdgeLightingState(color);

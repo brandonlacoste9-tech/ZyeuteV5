@@ -75,21 +75,21 @@ const ChoixDuGrandCastor: React.FC = () => {
                         {/* Thumbnail */}
                         <img
                             src={post.thumbnailUrl || "/assets/placeholder-video.jpg"}
-                            alt={post.titre || "Vidéo Souveraine"}
+                            alt={(post as any).titre || "Vidéo Souveraine"}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
 
                         {/* Badges de Pouvoir */}
                         <div className="absolute top-4 right-4 z-20">
                             <div className="bg-gold-600 text-black text-[10px] font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
-                                🔥 {post.scoreMomentum?.toLocaleString() || "10,000+"}
+                                🔥 {(post as any).scoreMomentum?.toLocaleString() || "10,000+"}
                             </div>
                         </div>
 
                         {/* Infos du Citoyen */}
                         <div className="absolute bottom-6 left-6 right-6 z-20 translate-y-2 group-hover:translate-y-0 transition-transform duration-500">
                             <h3 className="text-gold-200 font-bold text-lg drop-shadow-lg truncate">
-                                {post.titre || "Haut Fait Québécois"}
+                                {(post as any).titre || "Haut Fait Québécois"}
                             </h3>
                             <p className="text-gold-400/80 text-xs font-medium">
                                 par {post.user?.username || "Un Citoyen"}

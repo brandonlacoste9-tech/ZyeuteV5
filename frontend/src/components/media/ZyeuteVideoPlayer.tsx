@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { Play, Pause, Volume2, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ZyeutePlayerProps {
   src: string; // The .m3u8 URL from Colony OS
@@ -17,6 +18,7 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   const [isPaused, setIsPaused] = useState(!autoPlay);
   const [hasError, setHasError] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -28,6 +30,12 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       hls = new Hls({
         capLevelToPlayerSize: true,
         autoStartLoad: true,
+        maxBufferLength: 30, // 3x bigger: 10s → 30s
+        maxMaxBufferLength: 60, // 3x bigger: 30s → 60s
+        startFragPrefetch: true, // Prefetch before media attach
+        enableWorker: true, // Off-main-thread demux
+        fragLoadingMaxRetry: 6, // More resilient: 3 → 6 retries
+        fragLoadingTimeOut: 8000, // Longer timeout: 5s → 8s
       });
       hls.loadSource(src);
       hls.attachMedia(video);
@@ -73,15 +81,29 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
           backfaceVisibility: "hidden",
         }}
         poster={poster}
+        className={cn(
+          "w-full h-full object-cover transition-opacity duration-300",
+          isReady ? "opacity-100" : "opacity-0",
+        )}
         onTimeUpdate={handleTimeUpdate}
+        onPlaying={() => setIsReady(true)}
         onClick={togglePlay}
         playsInline
         muted={autoPlay}
       />
 
+      {/* Static Poster Overlay - prevents white/black flashes */}
+      {!isReady && poster && (
+        <img
+          src={poster}
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          alt="Poster"
+        />
+      )}
+
       {/* Luxury Glass Overlay (Pause State) */}
       {isPaused && !hasError && (
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center transition-all">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center transition-all z-10">
           <div className="text-gold/80 opacity-40 select-none text-2xl font-bold tracking-widest uppercase">
             ZYEUTÉ
           </div>

@@ -66,7 +66,9 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
   idleTimeoutMillis: 30000,
-  ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
+  ssl: {
+    rejectUnauthorized: false, // Allow self-signed certificates from Supabase/Railway
+  },
 });
 
 // Database error handling - prevent crashes on connection failures
@@ -93,6 +95,7 @@ export interface IStorage {
   // createUserFromOAuth removed - legacy
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   updateUserCredits(userId: string, amount: number): Promise<User | undefined>; // Added for Nectar Bonus
+  deductCashCredits(userId: string, amount: number): Promise<boolean>;
 
   // Posts
   getPost(id: string): Promise<(Post & { user: User }) | undefined>;
@@ -300,6 +303,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return result[0];
+  }
+
+  async deductCashCredits(userId: string, amount: number): Promise<boolean> {
+    const result = await db
+      .update(users)
+      .set({ cashCredits: sql`${users.cashCredits} - ${amount}` })
+      // Use SQL conditional to ensure balance cannot drop below 0 due to a race condition
+      .where(and(eq(users.id, userId), sql`${users.cashCredits} >= ${amount}`))
+      .returning();
+    return result.length > 0;
   }
 
   async getUserHive(userId: string): Promise<string> {

@@ -18,6 +18,7 @@ import {
   VideoGenerationSchema,
 } from "../ai/bees/video-generator.js";
 import { voiceBee, VoiceGenerationSchema } from "../ai/bees/voice-bee.js";
+
 import {
   hockeyBee,
   weatherBee,
@@ -57,6 +58,23 @@ const getTIGuyModel = () => {
 };
 
 const router = express.Router();
+
+// ═══════════════════════════════════════════════════════════════
+// 🎭 CELEBRITY VOICES ENDPOINT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/tiguy/voices
+ * Get available celebrity voices
+ */
+router.get("/voices", async (req, res) => {
+  const voices = voiceBee.getCelebrityVoices();
+  res.json({
+    success: true,
+    voices,
+    message: "Choisis ta voix québécoise préférée! 🎤",
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════
 // 💬 CHAT & ORCHESTRATION ENDPOINT
@@ -213,8 +231,21 @@ router.post("/chat", async (req, res) => {
 
     // 5. VOICE SKILL (Hearing & Speaking) 🎤
     if (skill === "voice" || req.path === "/voice") {
-      const { audio } = req.body;
+      const { audio, voice = "ti-guy" } = req.body;
       if (!audio) return res.status(400).json({ error: "Audio requis" });
+
+      // Validate voice choice
+      const validVoices = [
+        "ti-guy",
+        "celine",
+        "ginette",
+        "denis",
+        "jean",
+        "julie",
+        "mike",
+        "mario",
+      ];
+      const selectedVoice = validVoices.includes(voice) ? voice : "ti-guy";
 
       // Écoute (STT)
       const stt = await voiceBee.speechToText(audio);
@@ -237,10 +268,10 @@ router.post("/chat", async (req, res) => {
         maxSteps: 5, // Permet l'exécution séquentielle d'outils
       } as any);
 
-      // Parole (TTS - Basé sur la réponse finale)
+      // Parole (TTS - avec voix célèbre sélectionnée)
       const tts = await voiceBee.textToSpeech({
         text,
-        voice: "ti-guy",
+        voice: selectedVoice as any,
         speed: 1.0,
         emotion: "happy",
       });
@@ -249,8 +280,61 @@ router.post("/chat", async (req, res) => {
         transcription: audio ? transcription : undefined,
         response: text,
         audio: tts.audioBase64,
+        voice: selectedVoice,
+        voiceLabel:
+          voiceBee.getCelebrityVoices().find((v) => v.id === selectedVoice)
+            ?.name || "TI-GUY",
         toolResults: toolResults.length > 0 ? toolResults : undefined,
         type: "voice",
+      });
+    }
+
+    // 5.5 VOICE TEST (Direct TTS without STT) 🎤
+    if (skill === "voice-test" || req.path === "/voice/test") {
+      const { text, voice = "ti-guy" } = req.body;
+
+      if (!text) {
+        return res
+          .status(400)
+          .json({ error: "Texte requis pour le test vocal" });
+      }
+
+      // Validate voice
+      const validVoices = [
+        "ti-guy",
+        "celine",
+        "ginette",
+        "denis",
+        "jean",
+        "julie",
+        "mike",
+        "mario",
+      ];
+      const selectedVoice = validVoices.includes(voice) ? voice : "ti-guy";
+
+      // Générer l'audio TTS directement
+      const tts = await voiceBee.textToSpeech({
+        text,
+        voice: selectedVoice as any,
+        speed: 1.0,
+        emotion: "happy",
+      });
+
+      if (!tts.success) {
+        return res.status(500).json({
+          error: "TTS failed",
+          response: "Désolé, je ne peux pas parler pour le moment!",
+        });
+      }
+
+      return res.json({
+        text,
+        audio: tts.audioBase64,
+        voice: selectedVoice,
+        voiceLabel:
+          voiceBee.getCelebrityVoices().find((v) => v.id === selectedVoice)
+            ?.name || "TI-GUY",
+        type: "voice-test",
       });
     }
 
@@ -1325,6 +1409,74 @@ router.post("/tts", async (req, res) => {
       emotion: "happy",
     });
     return res.json({ audio: tts.audioBase64 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 🍁 FEED POPULATION (Admin Only)
+// ═══════════════════════════════════════════════════════════════
+
+import { feedAutoGenerator } from "../services/feed-auto-generator.js";
+
+/**
+ * POST /api/tiguy/admin/populate-feed
+ * Manually trigger feed population with Quebec videos
+ * Requires admin role
+ */
+router.post("/admin/populate-feed", async (req: any, res) => {
+  try {
+    // Check admin role
+    if (req.userRole !== "admin" && req.userRole !== "moderator") {
+      return res.status(403).json({
+        error: "Admin access required",
+        message: "Seuls les admins peuvent peupler le feed",
+      });
+    }
+
+    const { count = 5, useAI = true } = req.body;
+
+    console.log(`🍁 Admin ${req.userId} triggered feed population`);
+
+    // Trigger AI generation
+    const result = await feedAutoGenerator.generateNow(count);
+
+    res.json({
+      success: true,
+      message: "Feed population triggered",
+      generated: result.generated,
+      errors: result.errors,
+      requested: count,
+      useAI,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("❌ Feed population error:", error);
+    res.status(500).json({
+      error: error.message,
+      message: "Failed to populate feed",
+    });
+  }
+});
+
+/**
+ * GET /api/tiguy/admin/feed-status
+ * Get feed auto-generator status
+ */
+router.get("/admin/feed-status", async (req: any, res) => {
+  try {
+    if (req.userRole !== "admin" && req.userRole !== "moderator") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const status = feedAutoGenerator.getStatus();
+
+    res.json({
+      success: true,
+      status,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

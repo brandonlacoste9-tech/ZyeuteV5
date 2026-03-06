@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Use /auth/me for current user - it auto-provisions if profile missing
       // Add timeout to prevent hanging if backend is down
-      const timeoutPromise = new Promise<null>((_, reject) => 
+      const timeoutPromise = new Promise<null>((_, reject) =>
         setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
       );
       const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     hasInitialized.current = true;
-    
+
     const startTime = Date.now();
     console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;
@@ -132,16 +132,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         trackPerformance("Supabase getSession", sessionStart);
 
         if (mounted) {
-          if (initialSession?.user) {
-            setSession(initialSession);
-            const profile = await enhanceUser(initialSession.user);
+          if ((initialSession as any)?.user) {
+            setSession(initialSession as any);
+            const profile = await enhanceUser((initialSession as any).user);
             if (mounted && profile) {
               setUser(profile);
               // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
                 profile.role === "moderator" ||
-                (await checkIsAdmin(initialSession.user as any)),
+                (await checkIsAdmin((initialSession as any).user)),
               );
             }
           } else {

@@ -6,11 +6,10 @@ from typing import Any, Dict
 from PIL import Image, ImageStat
 import requests
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 from colonyos.body.kernel import ColonyKernel
-from colonyos.core.types import ColonyConfig
 
 
 class TaskSubmitRequest(BaseModel):
@@ -71,8 +70,8 @@ def create_app(kernel: ColonyKernel) -> FastAPI:
             image = Image.open(io.BytesIO(response.content))
 
             # Convert to RGB if necessary
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
+            if image.mode != "RGB":
+                image = image.convert("RGB")
 
             # Get basic image statistics
             stat = ImageStat.Stat(image)
@@ -80,7 +79,7 @@ def create_app(kernel: ColonyKernel) -> FastAPI:
 
             # Calculate saturation (colorfulness)
             # Convert to HSV and analyze saturation channel
-            hsv_image = image.convert('HSV')
+            hsv_image = image.convert("HSV")
             hsv_array = np.array(hsv_image)
 
             # Saturation is channel 1 in HSV
@@ -88,9 +87,11 @@ def create_app(kernel: ColonyKernel) -> FastAPI:
             avg_saturation = np.mean(saturation_values) / 255.0  # Normalize to 0-1
 
             # Calculate contrast using RMS contrast
-            gray_image = image.convert('L')
+            gray_image = image.convert("L")
             gray_array = np.array(gray_image, dtype=np.float64)
-            contrast = np.sqrt(np.mean((gray_array - np.mean(gray_array))**2)) / 128.0  # Normalize
+            contrast = (
+                np.sqrt(np.mean((gray_array - np.mean(gray_array)) ** 2)) / 128.0
+            )  # Normalize
 
             # Calculate brightness (value channel in HSV)
             brightness_values = hsv_array[:, :, 2].flatten()
@@ -101,21 +102,37 @@ def create_app(kernel: ColonyKernel) -> FastAPI:
 
             # Calculate luxury score based on contrast, saturation, and resolution
             # Higher contrast + higher saturation + larger images = more luxurious
-            luxury_score = min(100, max(0, int(
-                (contrast * 40) +  # Contrast weight
-                (avg_saturation * 30) +  # Saturation weight
-                (min(width * height / 1000000, 1) * 20) +  # Resolution weight (capped)
-                (avg_brightness * 10)  # Brightness weight
-            )))
+            luxury_score = min(
+                100,
+                max(
+                    0,
+                    int(
+                        (contrast * 40)  # Contrast weight
+                        + (avg_saturation * 30)  # Saturation weight
+                        + (
+                            min(width * height / 1000000, 1) * 20
+                        )  # Resolution weight (capped)
+                        + (avg_brightness * 10)  # Brightness weight
+                    ),
+                ),
+            )
 
             # Calculate vibes score based on saturation, color variance, and brightness
             # More saturated + more colorful + balanced brightness = higher vibes
-            vibes_score = min(100, max(0, int(
-                (avg_saturation * 35) +  # Saturation weight
-                (color_variance * 25) +  # Color diversity weight
-                ((1 - abs(avg_brightness - 0.5) * 2) * 20) +  # Brightness balance weight
-                (contrast * 20)  # Contrast weight
-            )))
+            vibes_score = min(
+                100,
+                max(
+                    0,
+                    int(
+                        (avg_saturation * 35)  # Saturation weight
+                        + (color_variance * 25)  # Color diversity weight
+                        + (
+                            (1 - abs(avg_brightness - 0.5) * 2) * 20
+                        )  # Brightness balance weight
+                        + (contrast * 20)  # Contrast weight
+                    ),
+                ),
+            )
 
             # Apply regional modifiers for cultural context
             if request.region == "AR":  # Argentina - appreciates passion and contrast
@@ -129,16 +146,12 @@ def create_app(kernel: ColonyKernel) -> FastAPI:
                 luxury_score = min(100, luxury_score + 5)  # Higher luxury appreciation
 
             return ImageAnalysisResponse(
-                vibes_score=vibes_score,
-                luxury_score=luxury_score
+                vibes_score=vibes_score, luxury_score=luxury_score
             )
 
         except Exception as e:
             # If analysis fails, return neutral scores
             print(f"Image analysis failed: {e}")
-            return ImageAnalysisResponse(
-                vibes_score=50,
-                luxury_score=50
-            )
+            return ImageAnalysisResponse(vibes_score=50, luxury_score=50)
 
     return app

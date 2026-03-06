@@ -1,181 +1,23 @@
+/* ============================================
+   INDEX CSS - ZYEUTE V5
+   ============================================ */
+
+/* Tailwind CSS v4 */
 @import "tailwindcss";
 
-@theme {
-  /* ANTIQUE GOLD PALETTE - Louis Vuitton meets Canadian Fur Trader */
-  --color-gold-50: #F9F3E3;
-  --color-gold-100: #F4EAD0;
-  --color-gold-200: #E8D5A3;
-  --color-gold-300: #D4AF37;
-  --color-gold-400: #C9A227;
-  --color-gold-500: #B8941F;
-  --color-gold-600: #A68317;
-  --color-gold-700: #8B6914;
-  --color-gold-800: #6B4E14;
-  --color-gold-900: #4A3410;
-  --color-gold-950: #2A1F0A;
-  
-  /* RICH LEATHER PALETTE - Warm Cognac & Saddle Browns */
-  --color-leather-50: #FAF6F3;
-  --color-leather-100: #F0E6E0;
-  --color-leather-200: #E0CEC4;
-  --color-leather-300: #C4A894;
-  --color-leather-400: #A6846E;
-  --color-leather-500: #8B6B54;
-  --color-leather-600: #6B4E3D;
-  --color-leather-700: #4A3428;
-  --color-leather-800: #2C1810;
-  --color-leather-900: #1A0F0A;
-  --color-leather-950: #0D0705;
-  
-  --color-rose-50: #FFF0F3;
-  --color-rose-100: #FFE0E8;
-  --color-rose-200: #FFC2D1;
-  --color-rose-300: #FFA3BA;
-  --color-rose-400: #FF85A3;
-  --color-rose-500: #E86A8E;
-  --color-rose-600: #C74B73;
-  --color-rose-700: #A63D5C;
-  --color-rose-800: #7A2D44;
-  --color-rose-900: #4E1D2C;
-  --color-rose-950: #2A0F18;
-  
-  --color-plum-50: #F8F0F5;
-  --color-plum-100: #F0E0EB;
-  --color-plum-200: #E0C2D7;
-  --color-plum-300: #D1A3C3;
-  --color-plum-400: #B87FA8;
-  --color-plum-500: #9A5F8A;
-  --color-plum-600: #7C4A6F;
-  --color-plum-700: #5E3754;
-  --color-plum-800: #412639;
-  --color-plum-900: #2B1A27;
-  --color-plum-950: #180E15;
+/* Edge Accent Text */
+.text-edge {
+  color: var(--edge-color);
 }
 
-:root {
-  /* PREMIUM ANTIQUE THEME - LV meets Canadian Fur Trader */
-  --primary-color: #C9A227;
-  --primary-accent: #D4AF37;
-  --primary-dark: #8B6914;
-  --bg-main: #0D0705;
-  --bg-card: #1A0F0A;
-  --bg-elevated: #2C1810;
-  --text-main: #F5E6D3;
-  --text-cream: #FAF3EB;
-  --text-muted: #A68B7C;
-  --edge-color: #C9A227;
-  --glow-intensity: 60%;
-  --glow-color: rgba(201, 162, 39, 0.3);
-  --stitching-color: rgba(201, 162, 39, 0.5);
-  --stitching-bright: rgba(212, 175, 55, 0.7);
-  
-  /* Typography */
-  --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  
-  /* Spacing - More Generous */
-  --space-xs: 0.5rem;
-  --space-sm: 0.75rem;
-  --space-md: 1.25rem;
-  --space-lg: 2rem;
-  --space-xl: 3rem;
-  
-  /* Shadows */
-  --gold-glow: 0 0 20px rgba(201, 162, 39, 0.15), 0 0 40px rgba(201, 162, 39, 0.08);
-  --gold-glow-strong: 0 0 30px rgba(201, 162, 39, 0.25), 0 0 60px rgba(201, 162, 39, 0.12);
-  --shadow-deep: 0 4px 20px rgba(0, 0, 0, 0.5), 0 8px 40px rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  
-  /* Borders */
-  --gold-border: 1.5px solid var(--edge-color);
-  --stitch-border: 2px dashed var(--stitching-color);
+/* Edge Icon Glow */
+.icon-edge {
+  color: var(--edge-color);
 }
 
-@layer base {
-  body {
-    font-family: var(--font-body);
-    line-height: 1.6;
-    letter-spacing: -0.01em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    /* Rich leather texture with warm lighting */
-    background-image: 
-      radial-gradient(ellipse at 30% 20%, rgba(60, 40, 30, 0.4) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(40, 25, 18, 0.4) 0%, transparent 50%),
-      radial-gradient(ellipse at 50% 50%, rgba(44, 24, 16, 0.3) 0%, transparent 60%),
-      url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='leather'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0.2'/%3E%3CfeColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.04 0 0 0 0 0.03 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23leather)'/%3E%3C/svg%3E");
-  }
-
-  /* Critical for virtualization: Ensure root takes full height */
-  html, body, #root {
-    height: 100dvh; /* Dynamic Viewport Height for mobile bars */
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* Prevent body scroll, let React control it */
-  }
-  
-  /* Typography Scale - Elegant Serif Display + Clean Sans Body */
-  h1, h2, h3, .font-display {
-    font-family: var(--font-display);
-    font-weight: 600;
-    line-height: 1.15;
-    letter-spacing: 0.02em;
-    font-feature-settings: "liga" 1, "kern" 1;
-  }
-  
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-  }
-  
-  h2 {
-    font-size: 1.875rem;
-  }
-  
-  h3 {
-    font-size: 1.5rem;
-  }
-  
-  p, span, div {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  
-  /* Body text weights */
-  .font-normal {
-    font-weight: 400;
-  }
-  
-  .font-medium {
-    font-weight: 500;
-  }
-  
-  .font-semibold {
-    font-weight: 600;
-  }
-  
-  .font-bold {
-    font-weight: 700;
-  }
-  
-  /* Small text and captions */
-  .text-sm, .text-xs {
-    letter-spacing: -0.005em;
-  }
-  
-  /* Label styling */
-  label {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-  }
-  
-  /* Input styling */
-  input, textarea, select, button {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    letter-spacing: -0.01em;
-  }
+/* Edge Progress Bar */
+.edge-progress {
+  background: linear-gradient(90deg, var(--edge-color), var(--edge-color));
 }
 
 @layer utilities {
@@ -953,95 +795,190 @@
   .glow-gold {
     box-shadow: 0 0 15px rgba(255, 191, 0, 0.3);
   }
-
-  /* Card with Edge Lighting */
-  .card-edge {
-    @apply bg-neutral-900/80 backdrop-blur-xl border border-gold-500/30 rounded-2xl;
-    box-shadow: 0 0 15px rgba(0,0,0,0.5);
-  }
+/* Color Theme Variants */
+[data-theme="gold"] {
+  --edge-color: #c9a227;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="blue"] {
+  --edge-color: #0066cc;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="red"] {
+  --edge-color: #cc0000;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="green"] {
+  --edge-color: #00aa44;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="purple"] {
+  --edge-color: #8833cc;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="pink"] {
+  --edge-color: #cc3377;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="orange"] {
+  --edge-color: #ff6600;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+}
+[data-theme="teal"] {
+  --edge-color: #00aaaa;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
 }
 
-@layer components {
-  .theme-gold { --edge-color: #FFBF00; }
-  .theme-blue { --edge-color: #0066CC; }
+/* ============================================
+   ⚜ CUIR LUXE — Luxury Leather Theme
+   Warm mahogany, antique gold, double stitching
+   ============================================ */
+[data-theme="leather"] {
+  --edge-color: #c5a055;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+
+  /* Leather palette */
+  --leather-bg: #1a0f0a;
+  --leather-surface: #3a2218;
+  --leather-raised: #4a3228;
+  --leather-gold: #c5a055;
+  --leather-stitch: rgba(197, 160, 85, 0.4);
+  --leather-text: #f0e6d3;
+  --leather-muted: #a89080;
 }
 
-/* Animations */
-@keyframes fade-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+/* Leather base styling */
+[data-theme="leather"] body,
+[data-theme="leather"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
 }
 
-@keyframes fade-in-up {
-  from { 
-    opacity: 0; 
-    transform: translateY(20px) scale(0.95); 
-  }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1); 
-  }
+/* Leather cards — double stitching + vignette */
+[data-theme="leather"] .rounded-xl,
+[data-theme="leather"] .rounded-2xl,
+[data-theme="leather"] [class*="card"] {
+  background: linear-gradient(
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
 }
 
-.animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
-.animate-fade-in-up {
-  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Gold stitching on cards - HIGH CONTRAST for Forensic UI */
+[data-theme="leather"] .rounded-xl::before,
+[data-theme="leather"] .rounded-2xl::before,
+[data-theme="leather"] .forensic-border::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 0.5px dashed rgba(255, 215, 0, 0.5);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* ============ COMET ANIMATIONS ============ */
-
-/* Comet streak animation */
-@keyframes comet-streak {
-  0% {
-    transform: translateX(-100%) translateY(100%) rotate(-45deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(200%) translateY(-200%) rotate(-45deg);
-    opacity: 0;
-  }
+/* Leather backgrounds for zinc-* colors */
+[data-theme="leather"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
+}
+[data-theme="leather"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
+}
+[data-theme="leather"] .bg-black {
+  background-color: var(--leather-bg) !important;
 }
 
-/* Comet glow pulse */
-@keyframes comet-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(255, 191, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 191, 0, 0.3));
-  }
-  50% {
-    filter: drop-shadow(0 0 16px rgba(255, 191, 0, 0.9)) drop-shadow(0 0 40px rgba(255, 191, 0, 0.5));
-  }
+/* Leather text colors */
+[data-theme="leather"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather"] .text-gold-500,
+[data-theme="leather"] .text-gold-400 {
+  color: var(--leather-gold) !important;
 }
 
-/* Comet orbit animation */
-@keyframes comet-orbit {
-  0% {
-    transform: rotate(0deg) translateX(40px) rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg) translateX(40px) rotate(-360deg);
-  }
+/* Gold gradient buttons */
+[data-theme="leather"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather"] .to-gold-400 {
+  --tw-gradient-to: #d4b76a !important;
 }
 
-/* Sparkle trail */
-@keyframes sparkle-trail {
-  0% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
+/* Leather border treatments */
+[data-theme="leather"] .border-zinc-800,
+[data-theme="leather"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+
+/* Leather input fields */
+[data-theme="leather"] input,
+[data-theme="leather"] textarea,
+[data-theme="leather"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+
+[data-theme="leather"] input:focus,
+[data-theme="leather"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(197, 160, 85, 0.3) !important;
+}
+
+/* Leather scrollbar */
+[data-theme="leather"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
+}
+
+/* Fleur-de-lis accent for leather theme */
+[data-theme="leather"] .text-edge::before,
+[data-theme="leather-green"] .text-edge::before,
+[data-theme="leather-purple"] .text-edge::before {
+  content: "⚜ ";
+  opacity: 0.7;
+}
+
+/* ============================================
+   🌲 CUIR FORÊT — Green Leather
+   Deep forest green, antique gold stitching
+   ============================================ */
+[data-theme="leather-green"] {
+  --edge-color: #7ec98a;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+  --leather-bg: #0a1a0f;
+  --leather-surface: #1a2e1a;
+  --leather-raised: #253d25;
+  --leather-gold: #7ec98a;
+  --leather-stitch: rgba(126, 201, 138, 0.4);
+  --leather-text: #d3f0d8;
+  --leather-muted: #80a888;
 }
 
 /* Video reveal animation — cinematic with motion blur dissolve */
@@ -1061,63 +998,137 @@
     opacity: 1;
     filter: blur(0px);
   }
+[data-theme="leather-green"] body,
+[data-theme="leather-green"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
 }
 
-/* Comet loading spinner */
-.comet-loader {
-  position: relative;
-  width: 100px;
-  height: 100px;
-}
-
-.comet-loader::before {
-  content: '☄️';
-  position: absolute;
-  font-size: 2rem;
-  animation: comet-orbit 2s linear infinite, comet-glow 1s ease-in-out infinite;
-}
-
-.comet-loader-track {
-  width: 80px;
-  height: 80px;
-  border: 2px solid rgba(255, 191, 0, 0.1);
-  border-radius: 50%;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-/* Comet icon animation */
-.comet-icon {
-  display: inline-block;
-  animation: comet-glow 2s ease-in-out infinite;
-}
-
-/* Video generation loading state */
-.video-generating {
-  position: relative;
-  overflow: hidden;
-}
-
-.video-generating::after {
-  content: '';
-  position: absolute;
-  inset: 0;
+[data-theme="leather-green"] .rounded-xl,
+[data-theme="leather-green"] .rounded-2xl,
+[data-theme="leather-green"] [class*="card"] {
   background: linear-gradient(
-    135deg,
-    transparent 0%,
-    rgba(255, 191, 0, 0.1) 25%,
-    rgba(255, 191, 0, 0.2) 50%,
-    rgba(255, 191, 0, 0.1) 75%,
-    transparent 100%
-  );
-  animation: shimmer 2s infinite;
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
 }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%) translateY(-100%); }
-  100% { transform: translateX(100%) translateY(100%); }
+[data-theme="leather-green"] .rounded-xl::before,
+[data-theme="leather-green"] .rounded-2xl::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--leather-stitch);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme="leather-green"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-green"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
+}
+[data-theme="leather-green"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
+}
+[data-theme="leather-green"] .bg-black {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-green"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-green"] .text-gold-500,
+[data-theme="leather-green"] .text-gold-400 {
+  color: var(--leather-gold) !important;
+}
+[data-theme="leather-green"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather-green"] .to-gold-400 {
+  --tw-gradient-to: #a8ddb0 !important;
+}
+[data-theme="leather-green"] .border-zinc-800,
+[data-theme="leather-green"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+[data-theme="leather-green"] input,
+[data-theme="leather-green"] textarea,
+[data-theme="leather-green"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-green"] input:focus,
+[data-theme="leather-green"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(126, 201, 138, 0.3) !important;
+}
+[data-theme="leather-green"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather-green"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather-green"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
+}
+
+/* ============================================
+   👑 CUIR ROYAL — Purple Leather
+   Deep royal purple, silver-lavender stitching
+   ============================================ */
+[data-theme="leather-purple"] {
+  --edge-color: #b48ad4;
+  --edge-glow: transparent;
+  --edge-glow-soft: transparent;
+  --leather-bg: #120a1a;
+  --leather-surface: #2a1a3a;
+  --leather-raised: #3a254a;
+  --leather-gold: #b48ad4;
+  --leather-stitch: rgba(180, 138, 212, 0.4);
+  --leather-text: #e8d3f0;
+  --leather-muted: #9880a8;
+}
+
+[data-theme="leather-purple"] body,
+[data-theme="leather-purple"] #root {
+  background-color: var(--leather-bg) !important;
+  color: var(--leather-text);
+}
+
+[data-theme="leather-purple"] .rounded-xl,
+[data-theme="leather-purple"] .rounded-2xl,
+[data-theme="leather-purple"] [class*="card"] {
+  background: linear-gradient(
+    145deg,
+    var(--leather-surface),
+    var(--leather-raised)
+  ) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  box-shadow:
+    inset 0 0 40px rgba(0, 0, 0, 0.3),
+    0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  position: relative;
+}
+
+[data-theme="leather-purple"] .rounded-xl::before,
+[data-theme="leather-purple"] .rounded-2xl::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px dashed var(--leather-stitch);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Generated content reveal — polished cinematic entry */
@@ -1139,15 +1150,14 @@
   -webkit-backface-visibility: hidden;
   -webkit-font-smoothing: subpixel-antialiased;
   image-rendering: -webkit-optimize-contrast;
+[data-theme="leather-purple"] .bg-zinc-900 {
+  background-color: var(--leather-bg) !important;
 }
-
-/* Press feedback for buttons */
-.press-scale {
-  transition: transform 0.1s ease-out;
+[data-theme="leather-purple"] .bg-zinc-800 {
+  background-color: var(--leather-surface) !important;
 }
-
-.press-scale:active {
-  transform: scale(0.95);
+[data-theme="leather-purple"] .bg-zinc-700 {
+  background-color: var(--leather-raised) !important;
 }
 
 /* Video player hover glow — smooth cubic-bezier for premium feel */
@@ -1161,135 +1171,142 @@
 .video-hover-glow:hover {
   box-shadow: 0 0 30px rgba(255, 191, 0, 0.3), 0 0 60px rgba(255, 191, 0, 0.1);
   transform: scale(1.005) translate3d(0, 0, 0);
+[data-theme="leather-purple"] .bg-black {
+  background-color: var(--leather-bg) !important;
+}
+[data-theme="leather-purple"] .text-white {
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-purple"] .text-gold-500,
+[data-theme="leather-purple"] .text-gold-400 {
+  color: var(--leather-gold) !important;
+}
+[data-theme="leather-purple"] .from-gold-500 {
+  --tw-gradient-from: var(--leather-gold) !important;
+}
+[data-theme="leather-purple"] .to-gold-400 {
+  --tw-gradient-to: #cca8e8 !important;
+}
+[data-theme="leather-purple"] .border-zinc-800,
+[data-theme="leather-purple"] .border-zinc-700 {
+  border-color: var(--leather-stitch) !important;
+}
+[data-theme="leather-purple"] input,
+[data-theme="leather-purple"] textarea,
+[data-theme="leather-purple"] select {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid var(--leather-stitch) !important;
+  color: var(--leather-text) !important;
+}
+[data-theme="leather-purple"] input:focus,
+[data-theme="leather-purple"] textarea:focus {
+  border-color: var(--leather-gold) !important;
+  box-shadow: 0 0 0 2px rgba(180, 138, 212, 0.3) !important;
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar {
+  width: 6px;
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar-track {
+  background: var(--leather-bg);
+}
+[data-theme="leather-purple"] ::-webkit-scrollbar-thumb {
+  background: var(--leather-stitch);
+  border-radius: 3px;
 }
 
-/* Haptic pulse animation */
-@keyframes haptic-pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.97); }
-  100% { transform: scale(1); }
+/* ============================================
+   VIDEO PERFORMANCE OPTIMIZATIONS
+   TikTok-style smooth playback
+   ============================================ */
+
+/* GPU Acceleration for video containers */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  -webkit-perspective: 1000;
 }
 
-.haptic-feedback {
-  animation: haptic-pulse 0.15s ease-out;
+/* Smooth scrolling for feed */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
-/* Heart Pump Animation for Double Tap */
-@keyframes heart-pump {
-  0% { transform: scale(0); opacity: 0; }
-  15% { transform: scale(1.2); opacity: 1; }
-  30% { transform: scale(0.95); opacity: 1; }
-  45% { transform: scale(1.1); opacity: 1; }
-  80% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.5); opacity: 0; }
+/* Video element optimizations */
+video {
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+
+  /* Prevent layout shifts */
+  will-change: transform;
+
+  /* Smooth rendering */
+  image-rendering: -webkit-optimize-contrast;
+
+  /* Prevent default iOS styling */
+  -webkit-tap-highlight-color: transparent;
+
+  /* Optimize for compositing */
+  contain: layout style paint;
 }
 
-.animate-heart-pump {
-  animation: heart-pump 0.8s ease-out forwards;
+/* Hide iOS default video controls */
+video::-webkit-media-controls {
+  display: none !important;
 }
 
-/* ============ EDGE LIGHTING SYSTEM ============ */
-
-/* Dynamic Edge Color - Controlled by CSS Variable */
-:root {
-  --edge-color: #C9A227;
-  --edge-glow: rgba(201, 162, 39, 0.6);
-  --edge-glow-soft: rgba(201, 162, 39, 0.3);
-  --edge-glow-strong: rgba(201, 162, 39, 0.8);
+video::-webkit-media-controls-enclosure {
+  display: none !important;
 }
 
-/* Edge Lighting Animation */
-@keyframes edge-pulse {
-  0%, 100% { 
-    box-shadow: 
-      0 0 5px var(--edge-glow-soft),
-      0 0 10px var(--edge-glow-soft),
-      inset 0 0 5px var(--edge-glow-soft);
-  }
-  50% { 
-    box-shadow: 
-      0 0 10px var(--edge-glow),
-      0 0 20px var(--edge-glow-soft),
-      inset 0 0 10px var(--edge-glow-soft);
-  }
+/* Prevent text selection during swipe */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
-/* Base Edge Lighting Class */
-.edge-light {
+/* ============================================
+   FORENSIC UI UTILITIES
+   Embossed textures, etched shadows, high-end polish
+   ============================================ */
+
+.shadow-etched {
+  /* High Performance - Single 1px shadow */
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.8) !important;
+}
+
+.shadow-embossed {
+  /* High Performance - Single 1px border-like shadow */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+}
+
+.glass-frosted {
+  /* NO BLUR - High Performance alternative using deeper opacity */
+  background: rgba(18, 12, 8, 0.9) !important;
+  border: 1px solid rgba(197, 160, 85, 0.15) !important;
+}
+
+.leather-texture {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 86c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm76-52c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm-3-11c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zM10 52c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm58 46c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zM46 2c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm54 20c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM16 47c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM30 6c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM46 90c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM13 54c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM54 39c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM57 80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM59 17c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM80 54c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM47 35c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM41 76c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM15 82c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM36 50c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM67 33c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM45 4c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM31 23c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM66 57c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM86 94c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM25 86c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM58 52c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM68 71c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM33 20c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM33 81c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM28 77c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM33 50c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM52 1c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM10 10c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm65 45c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM90 70c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM70 10c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm20 80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM35 95c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM1 10c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm2 80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM10 10c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm80-35c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM10 90c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm35-65c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zM10 10c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm0 80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm80-80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1zm0 80c0 .552-.448 1-1 1s-1-.448-1-1 .448-1 1-1 .448-1 1-1z' fill='%23000' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+.stitched-gold {
   position: relative;
-  border: 1px solid var(--edge-color);
-  box-shadow: 
-    0 0 5px var(--edge-glow-soft),
-    0 0 10px var(--edge-glow-soft),
-    inset 0 0 5px var(--edge-glow-soft);
-  transition: all 0.3s ease;
+  border: 1px solid rgba(197, 160, 85, 0.4);
 }
 
-.edge-light:hover {
-  box-shadow: 
-    0 0 10px var(--edge-glow),
-    0 0 20px var(--edge-glow-soft),
-    inset 0 0 10px var(--edge-glow-soft);
+.stitched-gold::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 0.5px dashed rgba(255, 215, 0, 0.4);
+  pointer-events: none;
+  border-radius: inherit;
 }
-
-/* Strong Edge Lighting */
-.edge-light-strong {
-  position: relative;
-  border: 2px solid var(--edge-color);
-  box-shadow: 
-    0 0 10px var(--edge-glow),
-    0 0 20px var(--edge-glow-soft),
-    0 0 40px var(--edge-glow-soft),
-    inset 0 0 10px var(--edge-glow-soft);
-}
-
-/* Animated Edge Pulse */
-.edge-light-pulse {
-  animation: edge-pulse 2s ease-in-out infinite;
-}
-
-/* Bottom Edge Only (like status bar) */
-.edge-bottom {
-  border-bottom: 2px solid var(--edge-color);
-  box-shadow: 
-    0 4px 10px var(--edge-glow-soft),
-    0 2px 5px var(--edge-glow-soft);
-}
-
-/* Top Edge Only */
-.edge-top {
-  border-top: 2px solid var(--edge-color);
-  box-shadow: 
-    0 -4px 10px var(--edge-glow-soft),
-    0 -2px 5px var(--edge-glow-soft);
-}
-
-/* Edge Accent Text */
-.text-edge {
-  color: var(--edge-color);
-  text-shadow: 
-    0 0 5px var(--edge-glow-soft),
-    0 0 10px var(--edge-glow-soft);
-}
-
-/* Edge Icon Glow */
-.icon-edge {
-  color: var(--edge-color);
-  filter: drop-shadow(0 0 3px var(--edge-glow)) drop-shadow(0 0 6px var(--edge-glow-soft));
-}
-
-/* Edge Progress Bar */
-.edge-progress {
-  background: linear-gradient(90deg, var(--edge-color), var(--edge-color));
-  box-shadow: 0 0 10px var(--edge-glow);
-}
-
-/* Color Theme Variants */
-[data-theme="gold"] { --edge-color: #C9A227; --edge-glow: rgba(201, 162, 39, 0.6); }
-[data-theme="blue"] { --edge-color: #0066CC; --edge-glow: rgba(0, 102, 204, 0.6); }
-[data-theme="red"] { --edge-color: #CC0000; --edge-glow: rgba(204, 0, 0, 0.6); }
-[data-theme="green"] { --edge-color: #00AA44; --edge-glow: rgba(0, 170, 68, 0.6); }
-[data-theme="purple"] { --edge-color: #8833CC; --edge-glow: rgba(136, 51, 204, 0.6); }
-[data-theme="pink"] { --edge-color: #CC3377; --edge-glow: rgba(204, 51, 119, 0.6); }
-[data-theme="orange"] { --edge-color: #FF6600; --edge-glow: rgba(255, 102, 0, 0.6); }
-[data-theme="teal"] { --edge-color: #00AAAA; --edge-glow: rgba(0, 170, 170, 0.6); }

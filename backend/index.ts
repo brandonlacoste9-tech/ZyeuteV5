@@ -1,4 +1,8 @@
 import "./preload.js";
+// [SSL SECURITY BYPASS] Required for development to allow the server to connect to Supabase/Railway certificates
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 import express from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes.js";
@@ -75,11 +79,38 @@ const httpServer = createServer(app);
 // Initialize Socket.IO for Real-Time Features
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: true,
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST"],
   },
+  // Connection limits for production
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  maxHttpBufferSize: 1e6, // 1MB max message size
 });
+
+// Redis adapter for multi-instance scale (if Redis is available)
+(async () => {
+  const redisUrl = process.env.REDIS_URL;
+  if (redisUrl) {
+    try {
+      const { createAdapter } = await import("@socket.io/redis-adapter");
+      const { createClient } = await import("ioredis").then((m) => ({
+        createClient: (url: string) => new m.default(url),
+      }));
+      const pubClient = createClient(redisUrl);
+      const subClient = createClient(redisUrl);
+      io.adapter(createAdapter(pubClient as any, subClient as any));
+      console.log(
+        "✅ Socket.IO Redis adapter connected (multi-instance ready)",
+      );
+    } catch (err) {
+      console.warn(
+        "⚠️ Socket.IO Redis adapter not available, single-instance mode",
+      );
+    }
+  }
+})();
 
 app.set("io", io);
 
@@ -197,8 +228,6 @@ app.use((req, res, next) => {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
 
-    const { default: debugRouter } = await import("./routes/debug.js");
-    app.use("/api/debug", debugRouter);
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
     app.use("/api/messaging", messagingRouter);
@@ -206,6 +235,11 @@ app.use((req, res, next) => {
     // Seed route for emergency feed population
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
+
+    // Feed routes using Supabase HTTP API (works without DATABASE_URL)
+    const { default: feedSupabaseRouter } =
+      await import("./routes/feed-supabase.js");
+    app.use("/api", feedSupabaseRouter);
 
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);

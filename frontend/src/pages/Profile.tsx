@@ -414,7 +414,7 @@ export const Profile: React.FC = () => {
               >
                 <span className="relative z-10">Posts</span>
                 {activeTab === "posts" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient" />
                 )}
               </button>
               <button
@@ -429,7 +429,7 @@ export const Profile: React.FC = () => {
               >
                 <span className="relative z-10">🔥 Fires</span>
                 {activeTab === "fires" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient" />
                 )}
               </button>
               {isOwnProfile && (
@@ -445,7 +445,7 @@ export const Profile: React.FC = () => {
                 >
                   <span className="relative z-10">Sauvegardés</span>
                   {activeTab === "saved" && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient glow-gold" />
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient" />
                   )}
                 </button>
               )}
@@ -524,7 +524,7 @@ export const Profile: React.FC = () => {
         <p className="flex items-center justify-center gap-2">
           <span className="text-gold-500">⚜️</span>
           <span>Créateur québécois</span>
-          <span className="text-gold-500">🇨🇦</span>
+          <span className="text-gold-500">⚜️</span>
         </p>
       </div>
     </div>

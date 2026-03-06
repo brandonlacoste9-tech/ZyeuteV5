@@ -22,14 +22,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isFeedPage = location.pathname === "/feed";
 
   const goldEdgeGlow: React.CSSProperties = {
-    // Use the customizable borderColor from settings for the edge lighting
-    // We use 8‑digit hex for alpha (e.g. #FFBF0080)
-    boxShadow: `
-      0 0 20px ${borderColor}80,
-      0 0 40px ${borderColor}40,
-      inset 0 0 30px ${borderColor}26
-    `,
-    border: `2px solid ${borderColor}99`,
+    // Edge lighting removed per user request
     transition: "box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out",
   };
 

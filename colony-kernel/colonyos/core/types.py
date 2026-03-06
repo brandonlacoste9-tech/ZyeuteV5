@@ -88,12 +88,16 @@ class IdentityManager:
         self._identities: Dict[str, Identity] = {}
         self._private_keys: Dict[str, bytes] = {}
 
-    def create_identity(self, name: str, description: Optional[str] = None) -> Tuple[Identity, str]:
+    def create_identity(
+        self, name: str, description: Optional[str] = None
+    ) -> Tuple[Identity, str]:
         """Create a new identity."""
 
         private_key = hashlib.sha256(uuid4().bytes).digest()
         public_key = private_key.hex()
-        identity = Identity(id=str(uuid4()), name=name, public_key=public_key, description=description)
+        identity = Identity(
+            id=str(uuid4()), name=name, public_key=public_key, description=description
+        )
         self._identities[identity.id] = identity
         self._private_keys[identity.id] = private_key
         return identity, private_key.hex()
@@ -145,14 +149,14 @@ class Message:
 
     def sign(self, identity_manager: IdentityManager) -> None:
         """Sign the message using the sender's private key."""
-        
+
         # Canonicalize payload for signing (simplified)
         data = json.dumps(self.payload, sort_keys=True).encode("utf-8")
         self.signature = identity_manager.sign_message(self.sender, data)
 
     def verify(self, identity: Identity) -> bool:
         """Verify the message signature."""
-        
+
         if not self.signature:
             return False
         if identity.id != self.sender:
@@ -256,7 +260,9 @@ class Task:
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
             "assigned_worker": self.assigned_worker,
             "timeout_seconds": self.timeout_seconds,
             "requirements": self.requirements,
@@ -365,7 +371,7 @@ class ColonyConfig:
 
 async def gather_with_concurrency(limit: int, tasks: Any) -> List[Any]:
     """Utility helper for running tasks with concurrency limits."""
-    
+
     semaphore = asyncio.Semaphore(limit)
     results: List[Any] = []
 

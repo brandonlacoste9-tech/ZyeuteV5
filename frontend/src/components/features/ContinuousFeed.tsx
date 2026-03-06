@@ -97,20 +97,22 @@ const FeedRow = memo(
 
     const post = posts[index];
     const isPriority = index === currentIndex;
-    const isPredictive = Math.abs(index - currentIndex) === 1;
+    const isNext = index === currentIndex + 1;
 
     // Determine Video Source — skip prefetch for Mux (MuxVideoPlayer handles its own streaming)
     const hasMux = !!(post as Post).mux_playback_id;
     const rawVideoUrl = hasMux
       ? ""
       : (post as Post).hls_url ||
-      (post as Post).enhanced_url ||
-      (post as Post).media_url ||
-      (post as Post).original_url ||
-      "";
+        (post as Post).enhanced_url ||
+        (post as Post).media_url ||
+        (post as Post).original_url ||
+        "";
     // Proxy the URL now — SingleVideoView also proxies via getProxiedMediaUrl,
     // so we pass the SAME proxied URL here to avoid src/chunk mismatch in MSE pipeline.
-    const videoUrl = rawVideoUrl ? (getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl) : "";
+    const videoUrl = rawVideoUrl
+      ? getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl
+      : "";
 
     // Smart Activation
     const { ref, shouldPlay, preloadTier } = useVideoActivation(
@@ -118,7 +120,7 @@ const FeedRow = memo(
       isMediumScrolling,
       isSlowScrolling,
       isPriority,
-      isPredictive,
+      isNext,
     );
 
     // Circuit Breaker: If system is overloaded (high latency), kill prefetching
@@ -142,6 +144,7 @@ const FeedRow = memo(
         className="w-full h-full video-stabilized"
       >
         <UnifiedMediaCard
+          key={post.id}
           post={post}
           user={post.user}
           isActive={shouldPlay && isPageVisible}
@@ -150,8 +153,8 @@ const FeedRow = memo(
           onShare={handleShare}
           priority={isPriority}
           preload={
-            // Adjacent videos (n±1): aggressively buffer for instant swipe
-            isPredictive && !isFastScrolling
+            // Adjacent video (Next): aggressively buffer for instant swipe
+            isNext && !isFastScrolling
               ? "auto"
               : effectivePreloadTier >= 2
                 ? "auto"
@@ -162,7 +165,7 @@ const FeedRow = memo(
           videoSource={source}
           isCached={isCached}
           debug={debug}
-          shouldPrefetch={isPredictive}
+          shouldPrefetch={isNext}
           onVideoProgress={isPriority ? onVideoProgress : undefined}
         />
       </div>
@@ -199,11 +202,9 @@ const FeedRow = memo(
     const nextIsPriority = nextProps.index === nextData.currentIndex;
     if (prevIsPriority !== nextIsPriority) return false;
 
-    const prevIsPredictive =
-      Math.abs(prevProps.index - prevData.currentIndex) === 1;
-    const nextIsPredictive =
-      Math.abs(nextProps.index - nextData.currentIndex) === 1;
-    if (prevIsPredictive !== nextIsPredictive) return false;
+    const prevIsNext = prevProps.index === prevData.currentIndex + 1;
+    const nextIsNext = nextProps.index === nextData.currentIndex + 1;
+    if (prevIsNext !== nextIsNext) return false;
 
     if (prevData.isPageVisible !== nextData.isPageVisible) return false;
 
@@ -230,7 +231,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const isFetchingRef = useRef(false); // Prevent concurrent fetches
   const lastFetchTimeRef = useRef(0); // Rate limit fetches
   // Initialize from saved state or defaults - memoize to prevent loop
-  const savedState = useMemo(() => getFeedState(stateKey), [stateKey, getFeedState]);
+  const savedState = useMemo(
+    () => getFeedState(stateKey),
+    [stateKey, getFeedState],
+  );
 
   // Scroll Velocity Tracking — EMA-smoothed for clean motion decisions
   const { handleScroll, smoothVelocity, isFast, isMedium, isSlow, isDecelerating } = useScrollVelocity();
@@ -340,23 +344,24 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     return pexelsVideos.map((video, index) => ({
       id: `pexels-${video.id}`,
-      type: 'video' as const,
-      caption: video.url?.split('/').pop()?.replace(/-/g, ' ') || 'Video from Pexels',
+      type: "video" as const,
+      caption:
+        video.url?.split("/").pop()?.replace(/-/g, " ") || "Video from Pexels",
       media_url: getBestVideoUrl(video.video_files) || video.url,
       original_url: getBestVideoUrl(video.video_files) || video.url,
       thumbnail_url: video.image,
       user: {
-        id: 'pexels-user',
-        username: 'pexels',
-        display_name: 'Pexels',
-        avatar_url: 'https://images.pexels.com/lib/api/pexels.png',
+        id: "pexels-user",
+        username: "pexels",
+        display_name: "Pexels",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
         is_verified: false,
       },
       fire_count: Math.floor(Math.random() * 1000),
       comment_count: Math.floor(Math.random() * 100),
       created_at: new Date(Date.now() - index * 3600000).toISOString(),
-      visibility: 'public',
-      hive_id: 'quebec',
+      visibility: "public",
+      hive_id: "quebec",
     }));
   }, []);
 
@@ -367,14 +372,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       feedLogger.debug("Fetch already in progress, skipping");
       return;
     }
-    
+
     // GUARD: Rate limit - wait at least 1s between fetches
     const now = Date.now();
     if (now - lastFetchTimeRef.current < 1000) {
       feedLogger.debug("Rate limited, skipping fetch");
       return;
     }
-    
+
     // If we already have posts (restored state), don't fetch initial
     if (savedState?.posts?.length) {
       feedLogger.debug(
@@ -394,8 +399,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       // Fetch first page with Hive filtering
       const data = await getExplorePosts(0, 10, HIVE_ID);
-      feedLogger.info(
-        `fetchVideoFeed: API returned ${data?.length || 0} posts`,
+      console.log(
+        "[ContinuousFeed] API returned:",
+        data?.length || 0,
+        "posts",
+        data,
       );
 
       if (data && Array.isArray(data)) {
@@ -413,7 +421,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (validPosts.length === 0) {
         feedLogger.info("No API posts, fetching Pexels fallback...");
         try {
-          const pexelsRes = await fetch('/api/pexels/curated?per_page=10');
+          const pexelsRes = await fetch("/api/pexels/curated?per_page=10");
           if (pexelsRes.ok) {
             const pexelsData = await pexelsRes.json();
             if (pexelsData.videos?.length > 0) {
@@ -435,10 +443,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       setPage(0);
     } catch (error) {
-      feedLogger.error(
-        "Error fetching API posts:",
-        error,
-      );
+      feedLogger.error("Error fetching API posts:", error);
       setFetchError(true);
     } finally {
       setIsLoading(false);
@@ -454,11 +459,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       const nextPage = page + 1;
       // Fetch next page with Hive filtering
-      const data = await getExplorePosts(
-        nextPage,
-        10,
-        HIVE_ID,
-      );
+      const data = await getExplorePosts(nextPage, 10, HIVE_ID);
 
       if (data && data.length > 0) {
         const validPosts = data.filter((p) => {
@@ -549,7 +550,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     const retainUrls: string[] = [];
     const windowSize = 2; // Keep current ±2 videos
 
-    for (let i = currentIndex - windowSize; i <= currentIndex + windowSize; i++) {
+    for (
+      let i = currentIndex - windowSize;
+      i <= currentIndex + windowSize;
+      i++
+    ) {
       if (i >= 0 && i < posts.length) {
         const p = posts[i];
         if (p?.type === "video") {
@@ -572,8 +577,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       videoCache.evictUrlsNotIn(retainUrls);
 
       // Log memory cleanup for debugging
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[Memory] Retaining ${retainUrls.length} videos, cleaned ${posts.length - (windowSize * 2 + 1)}`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[Memory] Retaining ${retainUrls.length} videos, cleaned ${posts.length - (windowSize * 2 + 1)}`,
+        );
       }
     }, 500); // Increased debounce for smoother scrolling
 
@@ -593,15 +600,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     nextIndices.forEach((idx, priority) => {
       if (idx >= 0 && idx < posts.length) {
         const post = posts[idx];
-        if (post?.type === 'video') {
+        if (post?.type === "video") {
           const url = post.hls_url || post.media_url || post.original_url;
-          if (url && !url.includes('mux')) { // Don't preload MUX - it handles its own
+          if (url && !url.includes("mux")) {
+            // Don't preload MUX - it handles its own
             // Preload with low priority (not blocking current playback)
-            const link = document.createElement('link');
-            link.rel = 'preload';
+            const link = document.createElement("link");
+            link.rel = "preload";
             link.href = url;
-            link.as = 'fetch';
-            link.fetchPriority = priority === 0 ? 'high' : 'low';
+            link.as = "fetch";
+            link.fetchPriority = priority === 0 ? "high" : "low";
             document.head.appendChild(link);
 
             // Cleanup after load
@@ -627,7 +635,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   useEffect(() => {
     const prefetchHeavyChunks = () => {
       feedLogger.debug("Prefetching heavy chunks (Camera) in background...");
-      import("@/components/features/CameraView").catch(() => { });
+      import("@/components/features/CameraView").catch(() => {});
     };
 
     let idleId: any = null;
@@ -797,7 +805,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
       urls.forEach((url) => {
         const proxiedUrl = getProxiedMediaUrl(url) || url;
-        fetch(proxiedUrl, { method: "HEAD" }).catch(() => { });
+        fetch(proxiedUrl, { method: "HEAD" }).catch(() => {});
       });
     },
     [posts, currentIndex],

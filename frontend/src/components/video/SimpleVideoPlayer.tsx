@@ -45,13 +45,16 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
 
-  // Reset state when source changes
+  // Reset state when source changes - using layout effect to avoid cascade warning
   useEffect(() => {
-    console.log("[SimpleVideoPlayer] Source changed:", src);
-    setIsLoading(true);
-    setHasError(false);
-    setProgress(0);
-    setRetryCount(0);
+    const timer = setTimeout(() => {
+      console.log("[SimpleVideoPlayer] Source changed:", src);
+      setIsLoading(true);
+      setHasError(false);
+      setProgress(0);
+      setRetryCount(0);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [src]);
   
   // Log mount
@@ -183,15 +186,6 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         )}
         style={style}
       >
-        {/* Layer 3: Thumbnail placeholder */}
-        {poster && (
-          <img 
-            src={poster} 
-            alt="" 
-            className="absolute inset-0 w-full h-full object-cover opacity-40"
-          />
-        )}
-        
         {/* Error message overlay */}
         <div className="relative z-10 text-center p-4">
           <AlertCircle className="w-10 h-10 text-white/60 mx-auto mb-3" />
