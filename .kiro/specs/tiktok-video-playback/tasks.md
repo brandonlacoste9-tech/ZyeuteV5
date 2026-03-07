@@ -21,7 +21,7 @@ This implementation plan breaks down the TikTok-style video playback feature int
     - Test that processing_status follows valid transitions: pending → processing → completed (or failed)
     - Test that metadata fields are populated according to status
 
-  - [ ] 1.3 Create database migration script
+  - [x] 1.3 Create database migration script
     - Add any missing columns to publications table
     - Create indexes if they don't exist
     - Verify backward compatibility with existing data

@@ -12,6 +12,7 @@ import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { SimpleVideoPlayer } from "@/components/video/SimpleVideoPlayer";
 import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
+import { TikTokVideoPlayer } from "@/components/video/TikTokVideoPlayer";
 import { VideoErrorBoundary } from "@/components/video/VideoErrorBoundary";
 import { useAuth } from "../../hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -163,6 +164,14 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
+          // Priority 1: TikTok embed
+          post.tiktok_url || post.tiktokUrl ? (
+            <TikTokVideoPlayer
+              videoUrl={post.tiktok_url || post.tiktokUrl || ""}
+              className="w-full h-full"
+              autoPlay={autoPlay}
+            />
+          ) : // Priority 2: Mux playback
           post.mux_playback_id ? (
             <MuxVideoPlayer
               playbackId={post.mux_playback_id}
@@ -176,13 +185,16 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
               muted={muted}
               loop
             />
-          ) : post.processing_status === "pending" || post.processing_status === "processing" ? (
+          ) : post.processing_status === "pending" ||
+            post.processing_status === "processing" ? (
             <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
               <div className="animate-spin text-3xl mb-3">⚙️</div>
               <p className="text-white/60 text-xs">Traitement vidéo...</p>
               {post.thumbnail_url && (
                 <img
-                  src={getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url}
+                  src={
+                    getProxiedMediaUrl(post.thumbnail_url) || post.thumbnail_url
+                  }
                   alt="Preview"
                   className="absolute inset-0 w-full h-full object-cover opacity-20 -z-10"
                 />
@@ -199,29 +211,36 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                 mediaUrl: post.media_url ?? post.mediaUrl,
                 originalUrl: post.original_url ?? post.originalUrl,
                 muxPlaybackId: post.mux_playback_id ?? post.muxPlaybackId,
-                processingStatus: post.processing_status ?? post.processingStatus,
+                processingStatus:
+                  post.processing_status ?? post.processingStatus,
                 thumbnailUrl: post.thumbnail_url ?? post.thumbnailUrl,
               });
-              
+
               // Support both snake_case (DB) and camelCase (Drizzle/TS) for compatibility
-              const rawVideoUrl = 
-                post.hls_url ?? post.hlsUrl ?? 
-                post.enhanced_url ?? post.enhancedUrl ?? 
-                post.media_url ?? post.mediaUrl ?? 
-                post.original_url ?? post.originalUrl ?? "";
+              const rawVideoUrl =
+                post.hls_url ??
+                post.hlsUrl ??
+                post.enhanced_url ??
+                post.enhancedUrl ??
+                post.media_url ??
+                post.mediaUrl ??
+                post.original_url ??
+                post.originalUrl ??
+                "";
               const videoSrc = getProxiedMediaUrl(rawVideoUrl) || rawVideoUrl;
 
               // Detect Cloudflare Stream URLs
-              const isCloudflareStream = rawVideoUrl.includes('cloudflarestream.com') || 
-                                         rawVideoUrl.includes('cloudflare-stream.com');
-              const isHLS = rawVideoUrl.includes('.m3u8') || isCloudflareStream;
+              const isCloudflareStream =
+                rawVideoUrl.includes("cloudflarestream.com") ||
+                rawVideoUrl.includes("cloudflare-stream.com");
+              const isHLS = rawVideoUrl.includes(".m3u8") || isCloudflareStream;
 
               console.log("[VideoCard] Resolved:", {
                 rawVideoUrl,
                 videoSrc,
                 needsProxy: getProxiedMediaUrl(rawVideoUrl) !== rawVideoUrl,
-                playerType: isHLS ? 'HLS' : 'Native',
-                isCloudflareStream
+                playerType: isHLS ? "HLS" : "Native",
+                isCloudflareStream,
               });
 
               // Validate video source exists
@@ -229,7 +248,9 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                 console.error("[VideoCard] NO VIDEO SOURCE for post:", post.id);
                 return (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
-                    <p className="text-white/60 text-sm">Vidéo non disponible</p>
+                    <p className="text-white/60 text-sm">
+                      Vidéo non disponible
+                    </p>
                   </div>
                 );
               }
@@ -242,9 +263,16 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                     <VideoPlayer
                       src={videoSrc}
                       poster={
-                        getProxiedMediaUrl(post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl) ||
-                        post.thumbnail_url ?? post.thumbnailUrl ?? 
-                        post.media_url ?? post.mediaUrl
+                        (getProxiedMediaUrl(
+                          post.thumbnail_url ??
+                            post.thumbnailUrl ??
+                            post.media_url ??
+                            post.mediaUrl,
+                        ) ||
+                          post.thumbnail_url) ??
+                        post.thumbnailUrl ??
+                        post.media_url ??
+                        post.mediaUrl
                       }
                       autoPlay={autoPlay}
                       muted={muted}
@@ -254,7 +282,12 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
                   ) : (
                     <SimpleVideoPlayer
                       src={videoSrc}
-                      poster={post.thumbnail_url ?? post.thumbnailUrl ?? post.media_url ?? post.mediaUrl}
+                      poster={
+                        post.thumbnail_url ??
+                        post.thumbnailUrl ??
+                        post.media_url ??
+                        post.mediaUrl
+                      }
                       autoPlay={autoPlay}
                       muted={muted}
                       loop
@@ -346,10 +379,11 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         >
           <button
             onClick={handleFire}
-            className={`flex items-center gap-2 transition-all duration-200 ${isLiked
+            className={`flex items-center gap-2 transition-all duration-200 ${
+              isLiked
                 ? "text-orange-500 scale-110 drop-shadow-[0_0_8px_rgba(255,100,0,0.5)] animate-pulse"
                 : "text-stone-400 hover:text-gold-500 hover:scale-110 active:scale-95"
-              }`}
+            }`}
           >
             <svg
               className="w-7 h-7"

@@ -53,6 +53,28 @@ export interface Post {
   processingStatus?: ProcessingStatus; // Compat
   visual_filter?: string;
   visualFilter?: string; // Compat
+
+  // External video sources
+  tiktok_url?: string | null;
+  tiktokUrl?: string | null; // Compat
+  youtube_url?: string | null;
+  youtubeUrl?: string | null; // Compat
+  video_source?:
+    | "mux"
+    | "tiktok"
+    | "youtube"
+    | "pexels"
+    | "direct"
+    | "hls"
+    | null;
+  videoSource?:
+    | "mux"
+    | "tiktok"
+    | "youtube"
+    | "pexels"
+    | "direct"
+    | "hls"
+    | null; // Compat
 }
 
 export interface Story {
