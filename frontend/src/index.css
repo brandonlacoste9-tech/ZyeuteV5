@@ -5,6 +5,19 @@
 /* Tailwind CSS v4 */
 @import "tailwindcss";
 
+/* Custom Color Definitions for Tailwind v4 */
+@theme {
+  --color-gold-100: #fff9e6;
+  --color-gold-200: #ffedb3;
+  --color-gold-300: #ffe180;
+  --color-gold-400: #ffd54d;
+  --color-gold-500: #ffbf00;
+  --color-gold-600: #cc9900;
+  --color-gold-700: #997300;
+  --color-gold-800: #664d00;
+  --color-gold-900: #332600;
+}
+
 /* Edge Accent Text */
 .text-edge {
   color: var(--edge-color);
@@ -998,6 +1011,8 @@
     opacity: 1;
     filter: blur(0px);
   }
+}
+
 [data-theme="leather-green"] body,
 [data-theme="leather-green"] #root {
   background-color: var(--leather-bg) !important;
@@ -1150,6 +1165,8 @@
   -webkit-backface-visibility: hidden;
   -webkit-font-smoothing: subpixel-antialiased;
   image-rendering: -webkit-optimize-contrast;
+}
+
 [data-theme="leather-purple"] .bg-zinc-900 {
   background-color: var(--leather-bg) !important;
 }
@@ -1311,4 +1328,6 @@ video::-webkit-media-controls-enclosure {
   border: 0.5px dashed rgba(255, 215, 0, 0.4);
   pointer-events: none;
   border-radius: inherit;
+}
+
 }
