@@ -127,6 +127,61 @@ router.get("/infinite", async (req: Request, res: Response) => {
         .json({ error: "Database error", details: error.message });
     }
 
+    // Fallback to Pexels if no posts in database
+    if (!posts || posts.length === 0) {
+      console.log(
+        "[FeedInfinite] No database posts, falling back to Pexels...",
+      );
+      try {
+        const { PexelsService } = await import("../services/pexels-service.js");
+        const pexelsData = await PexelsService.getCuratedVideos(limit, 1);
+
+        // Transform Pexels videos to match post format
+        const pexelsPosts = (pexelsData.videos || []).map((video: any) => ({
+          id: `pexels-${video.id}`,
+          type: "video",
+          caption: `🎬 Pexels Video #${video.id}`,
+          content: `🎬 Pexels Video #${video.id}`,
+          media_url: video.video_files?.[0]?.link || video.image,
+          thumbnail_url: video.image,
+          video_duration: video.duration,
+          visibility: "public",
+          est_masque: false,
+          created_at: new Date().toISOString(),
+          reactions_count: 0,
+          comments_count: 0,
+          user: {
+            id: "pexels",
+            username: "Pexels",
+            display_name: "Pexels",
+            avatar_url:
+              "https://images.pexels.com/videos/3045163/pexels-photo-3045163.jpeg",
+          },
+          // Flag for frontend to use SimpleVideoPlayer
+          is_pexels: true,
+        }));
+
+        return res.json({
+          posts: pexelsPosts,
+          hasMore: pexelsPosts.length >= limit,
+          nextCursor:
+            pexelsPosts.length > 0
+              ? pexelsPosts[pexelsPosts.length - 1].created_at
+              : null,
+          source: "pexels-fallback",
+        });
+      } catch (pexelsError) {
+        console.error("[FeedInfinite] Pexels fallback failed:", pexelsError);
+        // Return empty rather than error
+        return res.json({
+          posts: [],
+          hasMore: false,
+          nextCursor: null,
+          source: "empty",
+        });
+      }
+    }
+
     let hasMore = false;
     let nextCursor = null;
 
