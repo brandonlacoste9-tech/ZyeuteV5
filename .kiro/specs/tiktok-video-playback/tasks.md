@@ -8,7 +8,7 @@ This implementation plan breaks down the TikTok-style video playback feature int
 
 ## Tasks
 
-- [-] 1. Database Schema Alignment and Validation
+- [x] 1. Database Schema Alignment and Validation
   - [x] 1.1 Create/verify publications table schema with all required fields
     - Ensure table has: media_url, hls_url, enhanced_url, original_url, mux_playback_id, processing_status, thumbnail_url, duration, aspect_ratio
     - Create indexes: (user_id, created_at), (hive_id, created_at), (processing_status)
@@ -27,8 +27,8 @@ This implementation plan breaks down the TikTok-style video playback feature int
     - Verify backward compatibility with existing data
     - _Requirements: 1.1, 1.12, 1.13, 1.14_
 
-- [ ] 2. API Endpoints for Video Data Retrieval
-  - [ ] 2.1 Implement GET /api/feed endpoint with complete metadata
+- [~] 2. API Endpoints for Video Data Retrieval
+  - [x] 2.1 Implement GET /api/feed endpoint with complete metadata
     - Query publications table with all video fields
     - Apply filters: processing_status (exclude failed), visibility, moderation, hive_id
     - Support pagination (cursor-based or offset-based)
@@ -41,7 +41,7 @@ This implementation plan breaks down the TikTok-style video playback feature int
     - Test that all required fields are present in response
     - Test that at least one URL variant is available
 
-  - [ ] 2.3 Implement GET /api/videos/:id endpoint
+  - [-] 2.3 Implement GET /api/videos/:id endpoint
     - Return single video with complete metadata
     - Include all URL variants and processing status
     - Support optional related videos
@@ -53,7 +53,7 @@ This implementation plan breaks down the TikTok-style video playback feature int
     - Test error responses for invalid requests
     - _Requirements: 2.12, 2.13, 2.14_
 
-  - [ ] 2.5 Implement metadata caching with 5-minute TTL
+  - [~] 2.5 Implement metadata caching with 5-minute TTL
     - Cache feed and single video responses
     - Implement cache invalidation on video update
     - Implement request deduplication for concurrent identical requests

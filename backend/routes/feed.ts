@@ -62,6 +62,8 @@ router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
 
 // [NEW] Infinite Scroll Feed - Cursor-based Pagination using Supabase HTTP API
 // This bypasses DATABASE_URL issues by using Supabase HTTP API directly
+// Task 2.1: Implements GET /api/feed endpoint with complete metadata
+// Validates Requirements: 2.1, 2.2, 2.6, 2.7, 2.8, 2.9, 2.10, 2.12, 2.13, 2.14, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
 router.get("/infinite", async (req: Request, res: Response) => {
   try {
     const supabaseUrl =
@@ -87,9 +89,16 @@ router.get("/infinite", async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string | undefined;
     const feedType = (req.query.type as string) || "explore";
+    const hiveId = req.query.hive_id as string | undefined;
 
-    console.log("[FeedInfinite] Query params", { limit, cursor, feedType });
+    console.log("[FeedInfinite] Query params", {
+      limit,
+      cursor,
+      feedType,
+      hiveId,
+    });
 
+    // Query publications table with all video fields (Requirement 11.1)
     let query = supabase
       .from("publications")
       .select(
@@ -106,9 +115,17 @@ router.get("/infinite", async (req: Request, res: Response) => {
       .eq("visibility", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
+      // Apply processing_status filter: exclude failed videos (Requirement 11.2)
+      .neq("processing_status", "failed")
       .order("created_at", { ascending: false })
       .limit(limit + 1);
 
+    // Apply hive_id filter for regional content (Requirement 11.5)
+    if (hiveId) {
+      query = query.eq("hive_id", hiveId);
+    }
+
+    // Support cursor-based pagination (Requirement 2.12)
     if (cursor) {
       query = query.lt("created_at", cursor);
     }
@@ -204,6 +221,123 @@ router.get("/infinite", async (req: Request, res: Response) => {
       error: "Failed to load feed",
       details: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
+    });
+  }
+});
+
+// [NEW] Get Single Video by ID - Complete Metadata
+// Task 2.3: Implements GET /api/videos/:id endpoint
+// Validates Requirements: 2.2, 2.6, 2.7, 2.8, 2.9, 2.10
+router.get("/videos/:id", async (req: Request, res: Response) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    console.log("[VideoById] Request received", {
+      videoId: req.params.id,
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey,
+    });
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("[VideoById] Missing Supabase config");
+      return res.status(500).json({ error: "Missing Supabase configuration" });
+    }
+
+    // Dynamically import to avoid top-level issues
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const videoId = req.params.id;
+    const includeRelated = req.query.related === "true";
+
+    // Query single video with all video fields (Requirement 2.2)
+    const { data: video, error } = await supabase
+      .from("publications")
+      .select(
+        `
+        *,
+        user:user_id (
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .eq("id", videoId)
+      .eq("visibility", "public")
+      .eq("est_masque", false)
+      .is("deleted_at", null)
+      .single();
+
+    console.log("[VideoById] Supabase result", {
+      hasVideo: !!video,
+      hasError: !!error,
+    });
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // No rows returned
+        return res.status(404).json({ error: "Video not found" });
+      }
+      console.error("Supabase video error:", error);
+      return res
+        .status(500)
+        .json({ error: "Database error", details: error.message });
+    }
+
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    // Return complete video metadata with all URL variants (Requirements 2.6, 2.7, 2.8, 2.9, 2.10)
+    const response: any = {
+      video,
+      metadata: {
+        generatedAt: new Date().toISOString(),
+      },
+    };
+
+    // Optionally include related videos (same user or same hive)
+    if (includeRelated) {
+      const { data: relatedVideos } = await supabase
+        .from("publications")
+        .select(
+          `
+          *,
+          user:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url
+          )
+        `,
+        )
+        .eq("visibility", "public")
+        .eq("est_masque", false)
+        .is("deleted_at", null)
+        .neq("processing_status", "failed")
+        .neq("id", videoId)
+        .or(
+          `user_id.eq.${video.user_id},hive_id.eq.${video.hive_id || "quebec"}`,
+        )
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (relatedVideos && relatedVideos.length > 0) {
+        response.relatedVideos = relatedVideos;
+      }
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error("[VideoById] Error:", error);
+    res.status(500).json({
+      error: "Failed to load video",
+      details: error instanceof Error ? error.message : String(error),
     });
   }
 });

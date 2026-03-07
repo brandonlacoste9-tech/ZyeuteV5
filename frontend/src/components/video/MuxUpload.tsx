@@ -95,7 +95,9 @@ export function MuxUpload({
           "Mux non disponible. Utilisation de l'upload direct...",
         );
         // Trigger fallback via parent
-        onError?.(new Error("Mux unavailable, use surgical upload"));
+        if (file) {
+          onFallbackUpload?.(file);
+        }
         return;
       }
 

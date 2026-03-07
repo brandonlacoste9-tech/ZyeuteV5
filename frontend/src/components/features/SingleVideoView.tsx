@@ -7,7 +7,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
-import TikTokVideoPlayer from "@/components/video/TikTokVideoPlayer";
+import { TikTokVideoPlayer } from "@/components/video/TikTokVideoPlayer";
 import { Avatar } from "../Avatar";
 import { Image } from "../Image";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -491,14 +491,20 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       <div
         ref={videoRef}
         className="w-full h-full flex-shrink-0 snap-center snap-always relative bg-black select-none video-motion-smooth video-stabilized"
-        style={{
-          transform: swipeOffset !== 0
-            ? `translate3d(${swipeOffset}px, 0, 0) scale(${1 - Math.abs(swipeOffset) * 0.0003})`
-            : "translate3d(0, 0, 0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-          transition: swipeOffset === 0 ? "transform 250ms cubic-bezier(0.25, 0.1, 0.25, 1)" : "none",
-        } as React.CSSProperties}
+        style={
+          {
+            transform:
+              swipeOffset !== 0
+                ? `translate3d(${swipeOffset}px, 0, 0) scale(${1 - Math.abs(swipeOffset) * 0.0003})`
+                : "translate3d(0, 0, 0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            transition:
+              swipeOffset === 0
+                ? "transform 250ms cubic-bezier(0.25, 0.1, 0.25, 1)"
+                : "none",
+          } as React.CSSProperties
+        }
         onClick={handleSingleTap}
         onDoubleClick={handleDoubleTap}
         onTouchStart={handleTouchStart}
@@ -508,14 +514,12 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         {/* Swipe Direction Indicator — smooth momentum overlay */}
         {swipeDirection && (
           <div
-            className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm swipe-overlay-smooth ${swipeDirection === "left" ? "animate-pulse" : ""
-              }`}
-            style={{
-              animation: "fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
-            }}
             className={`absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity ${
               swipeDirection === "left" ? "animate-pulse" : ""
             }`}
+            style={{
+              animation: "fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }}
           >
             <div className="text-center">
               {swipeGesturesEnabled ? (
@@ -577,9 +581,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             isActive={isActive}
           />
         )}
-        {/* Full-screen Media — GPU-composited layer for smooth playback */}
-        <div className="absolute inset-0 w-full h-full video-container-crisp">
-          {!isActive && !priority ? (
         {/* Full-screen Media */}
         {/* MEMORY OPTIMIZATION: Strictly mount only CURRENT and NEXT players (Max 2) */}
         <div className="absolute inset-0 w-full h-full">
@@ -675,7 +676,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 onProgress={isActive ? onVideoProgress : undefined}
               />
             ) : (
-              <TikTokVideoPlayer
+              <VideoPlayer
                 src={videoSrc}
                 poster={
                   post.thumbnail_url ??
@@ -691,7 +692,6 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 priority={priority}
                 preload={isActive ? "auto" : preload}
                 onProgress={isActive ? onVideoProgress : undefined}
-                onError={(err) => setVideoError(err)}
               />
             )
           ) : (

@@ -71,20 +71,22 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   return (
     <div
       className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20 video-motion-smooth"
-      style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
+      style={{
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover video-container-crisp"
+        className={cn(
+          "w-full h-full object-cover video-container-crisp transition-opacity duration-300",
+          isReady ? "opacity-100" : "opacity-0",
+        )}
         style={{
           transform: "translate3d(0, 0, 0)",
           backfaceVisibility: "hidden",
         }}
         poster={poster}
-        className={cn(
-          "w-full h-full object-cover transition-opacity duration-300",
-          isReady ? "opacity-100" : "opacity-0",
-        )}
         onTimeUpdate={handleTimeUpdate}
         onPlaying={() => setIsReady(true)}
         onClick={togglePlay}

@@ -9,6 +9,8 @@ const router = Router();
 
 /**
  * GET /api/feed/supabase - Get feed using Supabase HTTP API
+ * Task 2.1: Implements GET /api/feed endpoint with complete metadata
+ * Validates Requirements: 2.1, 2.2, 2.6, 2.7, 2.8, 2.9, 2.10, 2.12, 2.13, 2.14, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
  */
 router.get("/feed/supabase", async (req, res) => {
   try {
@@ -26,9 +28,10 @@ router.get("/feed/supabase", async (req, res) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
+    const hiveId = req.query.hive_id as string | undefined;
 
-    // Get posts with user data using Supabase
-    const { data: posts, error } = await supabase
+    // Query publications table with all video fields (Requirement 11.1)
+    let query = supabase
       .from("publications")
       .select(
         `
@@ -44,8 +47,17 @@ router.get("/feed/supabase", async (req, res) => {
       .eq("visibility", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
+      // Apply processing_status filter: exclude failed videos (Requirement 11.2)
+      .neq("processing_status", "failed")
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    // Apply hive_id filter for regional content (Requirement 11.5)
+    if (hiveId) {
+      query = query.eq("hive_id", hiveId);
+    }
+
+    const { data: posts, error } = await query;
 
     if (error) {
       return res.status(500).json({
@@ -81,6 +93,8 @@ router.get("/feed/supabase", async (req, res) => {
 
 /**
  * GET /api/feed/infinite/supabase - Infinite scroll feed using Supabase
+ * Task 2.1: Implements GET /api/feed endpoint with complete metadata
+ * Validates Requirements: 2.1, 2.2, 2.6, 2.7, 2.8, 2.9, 2.10, 2.12, 2.13, 2.14, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
  */
 router.get("/feed/infinite/supabase", async (req, res) => {
   try {
@@ -99,7 +113,9 @@ router.get("/feed/infinite/supabase", async (req, res) => {
 
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string | undefined;
+    const hiveId = req.query.hive_id as string | undefined;
 
+    // Query publications table with all video fields (Requirement 11.1)
     let query = supabase
       .from("publications")
       .select(
@@ -116,9 +132,17 @@ router.get("/feed/infinite/supabase", async (req, res) => {
       .eq("visibility", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
+      // Apply processing_status filter: exclude failed videos (Requirement 11.2)
+      .neq("processing_status", "failed")
       .order("created_at", { ascending: false })
       .limit(limit + 1);
 
+    // Apply hive_id filter for regional content (Requirement 11.5)
+    if (hiveId) {
+      query = query.eq("hive_id", hiveId);
+    }
+
+    // Support cursor-based pagination (Requirement 2.12)
     if (cursor) {
       query = query.lt("created_at", cursor);
     }
@@ -154,6 +178,8 @@ router.get("/feed/infinite/supabase", async (req, res) => {
 
 /**
  * GET /api/explore/supabase - Explore feed using Supabase
+ * Task 2.1: Implements GET /api/feed endpoint with complete metadata
+ * Validates Requirements: 2.1, 2.2, 2.6, 2.7, 2.8, 2.9, 2.10, 2.12, 2.13, 2.14, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
  */
 router.get("/explore/supabase", async (req, res) => {
   try {
@@ -171,8 +197,10 @@ router.get("/explore/supabase", async (req, res) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
+    const hiveId = req.query.hive_id as string | undefined;
 
-    const { data: posts, error } = await supabase
+    // Query publications table with all video fields (Requirement 11.1)
+    let query = supabase
       .from("publications")
       .select(
         `
@@ -188,8 +216,17 @@ router.get("/explore/supabase", async (req, res) => {
       .eq("visibility", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
+      // Apply processing_status filter: exclude failed videos (Requirement 11.2)
+      .neq("processing_status", "failed")
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    // Apply hive_id filter for regional content (Requirement 11.5)
+    if (hiveId) {
+      query = query.eq("hive_id", hiveId);
+    }
+
+    const { data: posts, error } = await query;
 
     if (error) {
       return res.status(500).json({

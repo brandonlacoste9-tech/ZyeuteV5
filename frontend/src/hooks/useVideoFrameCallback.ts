@@ -40,12 +40,11 @@ type VideoFrameRequestCallback = (
   metadata: VideoFrameMetadata,
 ) => void;
 
-interface HTMLVideoElementWithCallback extends HTMLVideoElement {
-  requestVideoFrameCallback?: (
-    callback: VideoFrameRequestCallback,
-  ) => number;
+// Use type intersection instead of interface extension to avoid conflicts
+type HTMLVideoElementWithCallback = HTMLVideoElement & {
+  requestVideoFrameCallback?: (callback: VideoFrameRequestCallback) => number;
   cancelVideoFrameCallback?: (handle: number) => void;
-}
+};
 
 const FRAME_HISTORY_SIZE = 30;
 const JANK_THRESHOLD_MS = 25;
@@ -63,6 +62,7 @@ export function useVideoFrameCallback(
   const callbackHandle = useRef<number>(0);
   const rafHandle = useRef<number>(0);
   const frameCountRef = useRef(0);
+  const jankCountRef = useRef(0);
 
   const isNativeSupported =
     typeof HTMLVideoElement !== "undefined" &&
@@ -113,13 +113,15 @@ export function useVideoFrameCallback(
         processFrame(now, metadata.mediaTime, metadata.presentedFrames);
 
         if (!video.paused && !video.ended && video.requestVideoFrameCallback) {
-          callbackHandle.current = video.requestVideoFrameCallback(onVideoFrame);
+          callbackHandle.current =
+            video.requestVideoFrameCallback(onVideoFrame);
         }
       };
 
       const startCallback = () => {
         if (video.requestVideoFrameCallback) {
-          callbackHandle.current = video.requestVideoFrameCallback(onVideoFrame);
+          callbackHandle.current =
+            video.requestVideoFrameCallback(onVideoFrame);
         }
       };
 

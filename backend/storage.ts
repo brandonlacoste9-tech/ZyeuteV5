@@ -86,20 +86,6 @@ console.log(
     ? `${process.env.DATABASE_URL.slice(0, 20)}...`
     : "UNDEFINED",
 );
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
-  idleTimeoutMillis: 30000,
-  ssl: {
-    rejectUnauthorized: false, // Allow self-signed certificates from Supabase/Railway
-  },
-});
-
-// Database error handling - prevent crashes on connection failures
-pool.on("error", (err) => {
-  console.error("❌ Unexpected database pool error:", err);
-  // Don't crash the process - let health checks handle degraded state
-});
 
 // Proxy so all existing `pool` imports work unchanged — delegates to
 // getPool() on first property access, which happens after dotenv loads.

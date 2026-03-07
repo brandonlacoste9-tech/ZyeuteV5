@@ -164,14 +164,7 @@ const VideoCardComponent: React.FC<VideoCardProps> = ({
         )}
       >
         {post.type === "video" ? (
-          // Priority 1: TikTok embed
-          post.tiktok_url || post.tiktokUrl ? (
-            <TikTokVideoPlayer
-              videoUrl={post.tiktok_url || post.tiktokUrl || ""}
-              className="w-full h-full"
-              autoPlay={autoPlay}
-            />
-          ) : // Priority 2: Mux playback
+          // Priority 1: Mux playback
           post.mux_playback_id ? (
             <MuxVideoPlayer
               playbackId={post.mux_playback_id}
