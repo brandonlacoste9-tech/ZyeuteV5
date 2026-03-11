@@ -1171,6 +1171,8 @@
 .video-hover-glow:hover {
   box-shadow: 0 0 30px rgba(255, 191, 0, 0.3), 0 0 60px rgba(255, 191, 0, 0.1);
   transform: scale(1.005) translate3d(0, 0, 0);
+}
+
 [data-theme="leather-purple"] .bg-black {
   background-color: var(--leather-bg) !important;
 }

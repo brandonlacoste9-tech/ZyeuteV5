@@ -332,7 +332,106 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState, posts.length]);
 
-  // Transform Pexels videos to Post format for fallback
+  // Hardcoded demo videos - guaranteed to work without API keys
+const DEMO_VIDEOS = [
+  {
+    id: "demo-1",
+    type: "video" as const,
+    caption: "Welcome to Zyeuté! 🍁 Bienvenue au Québec!",
+    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    thumbnail_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+    user: {
+      id: "demo-user-1",
+      username: "zyeute",
+      display_name: "Zyeuté Officiel",
+      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+      is_verified: true,
+    },
+    fire_count: 1337,
+    comment_count: 42,
+    created_at: new Date().toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+  },
+  {
+    id: "demo-2",
+    type: "video" as const,
+    caption: "Montreal vibes 🏙️⚜️ #Montreal #Quebec",
+    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    thumbnail_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+    user: {
+      id: "demo-user-2",
+      username: "montreal",
+      display_name: "Montréal",
+      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+      is_verified: true,
+    },
+    fire_count: 856,
+    comment_count: 23,
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+  },
+  {
+    id: "demo-3",
+    type: "video" as const,
+    caption: "Beautiful Quebec nature 🍁🌲",
+    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    thumbnail_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+    user: {
+      id: "demo-user-3",
+      username: "quebec_nature",
+      display_name: "Nature Québec",
+      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+      is_verified: false,
+    },
+    fire_count: 421,
+    comment_count: 15,
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+  },
+  {
+    id: "demo-4",
+    type: "video" as const,
+    caption: "Winter in Quebec ❄️❄️❄️",
+    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    thumbnail_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+    user: {
+      id: "demo-user-4",
+      username: "quebec_winter",
+      display_name: "Hiver Québécois",
+      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+      is_verified: false,
+    },
+    fire_count: 692,
+    comment_count: 31,
+    created_at: new Date(Date.now() - 10800000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+  },
+  {
+    id: "demo-5",
+    type: "video" as const,
+    caption: "Quebec City old town 🏰⚜️",
+    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    thumbnail_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg",
+    user: {
+      id: "demo-user-5",
+      username: "vieux_quebec",
+      display_name: "Vieux Québec",
+      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+      is_verified: true,
+    },
+    fire_count: 1024,
+    comment_count: 56,
+    created_at: new Date(Date.now() - 14400000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+  },
+];
+
+// Transform Pexels videos to Post format for fallback
   const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
     // Pick best video quality: HD first, then SD, then anything
     const getBestVideoUrl = (videoFiles: any[]): string => {
@@ -435,7 +534,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         } catch (pexelsErr) {
           feedLogger.error("Pexels fallback failed:", pexelsErr);
         }
-        setFetchError(true);
+
+        // FINAL FALLBACK: Use hardcoded demo videos (guaranteed to work)
+        feedLogger.info("Using demo videos as final fallback");
+        setPosts(DEMO_VIDEOS as Array<Post & { user: User }>);
+        setHasMore(false);
+        setFetchError(false);
+        return;
       } else {
         setPosts(validPosts);
         setHasMore(validPosts.length === 10);
@@ -444,7 +549,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       setPage(0);
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
-      setFetchError(true);
+      // Use demo videos as fallback on error
+      setPosts(DEMO_VIDEOS as Array<Post & { user: User }>);
+      setHasMore(false);
+      setFetchError(false);
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
@@ -498,10 +606,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     let callbackId: any = null;
+    let fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
     if (!savedState || !savedState.posts?.length || posts.length === 0) {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
+
+      // Set a timeout to use demo videos if API takes too long (3 seconds)
+      fallbackTimeout = setTimeout(() => {
+        if (posts.length === 0) {
+          feedLogger.info("API timeout - using demo videos");
+          setPosts(DEMO_VIDEOS as Array<Post & { user: User }>);
+          setHasMore(false);
+          setIsLoading(false);
+        }
+      }, 3000);
 
       if ("requestIdleCallback" in window) {
         callbackId = (window as any).requestIdleCallback(() =>
@@ -522,6 +641,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           clearTimeout(callbackId);
         }
       }
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
     };
   }, [fetchVideoFeed, savedState, posts.length]);
 
