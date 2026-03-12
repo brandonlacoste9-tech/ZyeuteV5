@@ -5,9 +5,10 @@
 
 import { fal } from "@fal-ai/client";
 
-// Configure FAL if not already done
-if (process.env.FAL_API_KEY) {
-  fal.config({ credentials: process.env.FAL_API_KEY });
+// Configure FAL
+const FAL_API_KEY = process.env.FAL_API_KEY || process.env.FAL_KEY;
+if (FAL_API_KEY) {
+  fal.config({ credentials: FAL_API_KEY });
 }
 
 export interface ImageGenerationParams {

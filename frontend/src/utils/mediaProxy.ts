@@ -16,6 +16,7 @@ const PROXY_DOMAINS = [
   // proxy in production and proxying them breaks byte-range seeking.
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
+  "fal.media",
 ];
 
 export function needsMediaProxy(url: string | undefined): boolean {

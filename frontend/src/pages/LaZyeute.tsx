@@ -45,6 +45,7 @@ export const LaZyeute: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
+  const [forceEnter, setForceEnter] = useState(false);
   const [showSplash, setShowSplash] = useState(() => {
     // Check session storage to show splash only once per session
     if (typeof window !== "undefined") {
@@ -92,7 +93,9 @@ export const LaZyeute: React.FC = () => {
       const postIndex = posts.findIndex((p) => p.id === id);
       if (postIndex === currentIndex) {
         if (isPlaying) {
-          video.play().catch(err => console.debug("Auto-play prevented:", err));
+          video
+            .play()
+            .catch((err) => console.debug("Auto-play prevented:", err));
         } else {
           video.pause();
         }
@@ -176,23 +179,37 @@ export const LaZyeute: React.FC = () => {
     setIsPlaying((prev) => !prev);
   }, []);
 
-  if (isLoading) {
+  // Show splash immediately, don't wait for feed if it's the first time
+  if (showSplash) {
+    return (
+      <GoldEditionSplash
+        onComplete={() => {
+          setShowSplash(false);
+          sessionStorage.setItem("zyeute_splash_seen", "true");
+        }}
+      />
+    );
+  }
+
+  if (isLoading && !forceEnter) {
     return (
       <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden items-center justify-center">
         <div className="relative">
           {/* Outer AG Glow Ring */}
           <div className="absolute inset-0 -m-4 rounded-full bg-gold-500/10 blur-xl animate-pulse" />
-          
+
           <div className="relative text-center">
             {/* Custom Premium Spinner */}
             <div className="relative w-24 h-24 mx-auto mb-8">
               <div className="absolute inset-0 border-4 border-gold-900/40 rounded-full" />
               <div className="absolute inset-0 border-4 border-transparent border-t-gold-500 rounded-full animate-spin shadow-[0_0_15px_rgba(212,175,55,0.4)]" />
               <div className="absolute inset-4 border-2 border-transparent border-b-gold-200/50 rounded-full animate-spin-slow rotate-45" />
-              
+
               {/* AG Center Logo Placeholder/Icon */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-gold-400 font-black text-xl tracking-tighter">AG</span>
+                <span className="text-gold-400 font-black text-xl tracking-tighter">
+                  AG
+                </span>
               </div>
             </div>
 
@@ -207,6 +224,14 @@ export const LaZyeute: React.FC = () => {
             <p className="mt-4 text-gold-200/60 text-[0.7rem] uppercase tracking-[0.3em] font-medium">
               Initialisation Sécurisée AG
             </p>
+
+            {/* Failsafe for stuck loading */}
+            <button
+              onClick={() => setForceEnter(true)}
+              className="mt-12 px-6 py-2 rounded-full border border-gold-500/30 text-gold-500/80 text-[10px] uppercase tracking-widest hover:bg-gold-500/10 transition-all"
+            >
+              Accès Manuel Direct
+            </button>
           </div>
         </div>
       </div>
@@ -244,26 +269,16 @@ export const LaZyeute: React.FC = () => {
 
   return (
     <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden">
-      {/* Cinematic Splash Screen */}
-      {showSplash && (
-        <GoldEditionSplash 
-          onComplete={() => {
-            setShowSplash(false);
-            sessionStorage.setItem("zyeute_splash_seen", "true");
-          }} 
-        />
-      )}
-
       {/* Dynamic Edge Lighting (React-optimized) */}
-      <div 
+      <div
         className="fixed inset-0 pointer-events-none z-10 transition-opacity duration-1000"
         style={{
-          boxShadow: isPlaying ? `inset 0 0 100px ${edgeLighting}40, inset 0 0 20px ${edgeLighting}60` : 'none',
-          opacity: isPlaying ? 0.6 : 0
+          boxShadow: isPlaying
+            ? `inset 0 0 100px ${edgeLighting}40, inset 0 0 20px ${edgeLighting}60`
+            : "none",
+          opacity: isPlaying ? 0.6 : 0,
         }}
       />
-
-
 
       {/* Header */}
       <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
@@ -287,7 +302,7 @@ export const LaZyeute: React.FC = () => {
           </svg>
         </button>
         <h1 className="text-gold-400 font-black text-lg flex items-baseline select-none">
-          La Zyeute 
+          La Zyeute
           <span className="text-[0.6rem] uppercase tracking-[0.3em] ml-2 font-bold gold-text-shine whitespace-nowrap">
             AG GOLD EDITION
           </span>
@@ -396,7 +411,7 @@ export const LaZyeute: React.FC = () => {
               className="absolute inset-0 bg-black gold-rim overflow-hidden"
               onClick={
                 (post.media_url || post.mediaUrl)?.includes(".mp4") ||
-                  (post.media_url || post.mediaUrl)?.includes("video")
+                (post.media_url || post.mediaUrl)?.includes("video")
                   ? togglePlayPause
                   : undefined
               }
@@ -435,51 +450,50 @@ export const LaZyeute: React.FC = () => {
                   <img
                     src={getProxiedMediaUrl(post.media_url) || post.media_url}
                     alt={post.caption || "Post image"}
-                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${index === currentIndex ? "scale-110" : "scale-100"
-                      }`}
+                    className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
+                      index === currentIndex ? "scale-110" : "scale-100"
+                    }`}
                   />
                 </div>
               )}
 
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
-                <div
-                  className="px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md bg-gradient-to-r from-gold-400/80 to-gold-600/80 text-black border border-gold-300/50 shadow-lg gold-glow-soft"
-                >
+                <div className="px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md bg-gradient-to-r from-gold-400/80 to-gold-600/80 text-black border border-gold-300/50 shadow-lg gold-glow-soft">
                   {post.type === "video" ? "▶ GOLD V" : "📷 GOLD P"}
                 </div>
               </div>
 
-            {/* Play/Pause Indicator for Videos */}
-            {post.type === "video" &&
-              !isPlaying &&
-              index === currentIndex && (
-                <div className="absolute inset-0 flex items-center justify-center z-20">
-                  <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30">
-                    <svg
-                      className="w-10 h-10 text-white ml-1"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
+              {/* Play/Pause Indicator for Videos */}
+              {post.type === "video" &&
+                !isPlaying &&
+                index === currentIndex && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20">
+                    <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30">
+                      <svg
+                        className="w-10 h-10 text-white ml-1"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-            {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
-            <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
-               {/* Ambient Gold Aura */}
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
-               
-               {/* Sub-pixel Tech Scanlines */}
-               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
-               
-               {/* Localized 'Gold Edition' Lens Flare Glow */}
-               <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
-               <div className="absolute inset-0 gold-glow-soft opacity-50" />
+              {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
+              <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
+                {/* Ambient Gold Aura */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
+
+                {/* Sub-pixel Tech Scanlines */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
+
+                {/* Localized 'Gold Edition' Lens Flare Glow */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
+                <div className="absolute inset-0 gold-glow-soft opacity-50" />
+              </div>
             </div>
-          </div>
 
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
@@ -642,8 +656,8 @@ export const LaZyeute: React.FC = () => {
                   ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
                   : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
                 border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : edgeLighting + "40"}`,
-                boxShadow: (currentPost as PostWithEngagement).is_fired 
-                  ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)" 
+                boxShadow: (currentPost as PostWithEngagement).is_fired
+                  ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)"
                   : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
               }}
             >
@@ -783,142 +797,142 @@ export const LaZyeute: React.FC = () => {
       >
         <div className="gold-nav-accent opacity-50" />
         <div className="flex items-center justify-around py-2">
-        {/* Home */}
-        <button
-          onClick={() => navigate("/feed")}
-          className="flex flex-col items-center gap-1 press-scale"
-        >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill={location.pathname === "/feed" ? edgeLighting : "none"}
-            stroke={edgeLighting}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-            <polyline points="9 22 9 12 15 12 15 22" />
-          </svg>
-          <span
-            className="text-xs"
-            style={{ color: edgeLighting, opacity: 0.9 }}
-          >
-            Home
-          </span>
-        </button>
-
-        {/* Search */}
-        <button
-          onClick={() => navigate("/search")}
-          className="flex flex-col items-center gap-1 press-scale"
-        >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={edgeLighting}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
-          <span
-            className="text-xs"
-            style={{ color: edgeLighting, opacity: 0.9 }}
-          >
-            Search
-          </span>
-        </button>
-
-        {/* Center create (+) */}
-        <button
-          onClick={() => navigate("/create")}
-          className="relative -top-3 press-scale"
-          aria-label="Create"
-        >
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center stitched-double gold-glow gold-edition-halo"
-            style={{
-              background:
-                "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
-              border: "2px solid #8B6914",
-              boxShadow: "0 4px 15px rgba(201, 162, 39, 0.6)",
-            }}
+          {/* Home */}
+          <button
+            onClick={() => navigate("/feed")}
+            className="flex flex-col items-center gap-1 press-scale"
           >
             <svg
-              width="24"
-              height="24"
+              width="26"
+              height="26"
               viewBox="0 0 24 24"
-              fill="#1A0F0A"
-              stroke="#1A0F0A"
+              fill={location.pathname === "/feed" ? edgeLighting : "none"}
+              stroke={edgeLighting}
               strokeWidth={2}
               strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <path d="M12 5v14M5 12h14" />
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-          </div>
-        </button>
+            <span
+              className="text-xs"
+              style={{ color: edgeLighting, opacity: 0.9 }}
+            >
+              Home
+            </span>
+          </button>
 
-        {/* Notifications */}
-        <button
-          onClick={() => navigate("/notifications")}
-          className="flex flex-col items-center gap-1 press-scale"
-        >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill={
-              location.pathname === "/notifications" ? edgeLighting : "none"
-            }
-            stroke={edgeLighting}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {/* Search */}
+          <button
+            onClick={() => navigate("/search")}
+            className="flex flex-col items-center gap-1 press-scale"
           >
-            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-          </svg>
-          <span
-            className="text-xs"
-            style={{ color: edgeLighting, opacity: 0.9 }}
-          >
-            Notifications
-          </span>
-        </button>
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={edgeLighting}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <span
+              className="text-xs"
+              style={{ color: edgeLighting, opacity: 0.9 }}
+            >
+              Search
+            </span>
+          </button>
 
-        {/* Profile */}
-        <button
-          onClick={() => navigate("/profile")}
-          className="flex flex-col items-center gap-1 press-scale"
-        >
-          <svg
-            width="26"
-            height="26"
-            viewBox="0 0 24 24"
-            fill={location.pathname === "/profile" ? edgeLighting : "none"}
-            stroke={edgeLighting}
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {/* Center create (+) */}
+          <button
+            onClick={() => navigate("/create")}
+            className="relative -top-3 press-scale"
+            aria-label="Create"
           >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <span
-            className="text-xs"
-            style={{ color: edgeLighting, opacity: 0.9 }}
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center stitched-double gold-glow gold-edition-halo"
+              style={{
+                background:
+                  "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
+                border: "2px solid #8B6914",
+                boxShadow: "0 4px 15px rgba(201, 162, 39, 0.6)",
+              }}
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="#1A0F0A"
+                stroke="#1A0F0A"
+                strokeWidth={2}
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Notifications */}
+          <button
+            onClick={() => navigate("/notifications")}
+            className="flex flex-col items-center gap-1 press-scale"
           >
-            Profile
-          </span>
-        </button>
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill={
+                location.pathname === "/notifications" ? edgeLighting : "none"
+              }
+              stroke={edgeLighting}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            <span
+              className="text-xs"
+              style={{ color: edgeLighting, opacity: 0.9 }}
+            >
+              Notifications
+            </span>
+          </button>
+
+          {/* Profile */}
+          <button
+            onClick={() => navigate("/profile")}
+            className="flex flex-col items-center gap-1 press-scale"
+          >
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill={location.pathname === "/profile" ? edgeLighting : "none"}
+              stroke={edgeLighting}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span
+              className="text-xs"
+              style={{ color: edgeLighting, opacity: 0.9 }}
+            >
+              Profile
+            </span>
+          </button>
+        </div>
       </div>
-    </div>
 
       {/* TI-GUY Messaging – Voyageur Luxury (dropdown: DMs, Last Chats, File upload, etc.) */}
       <TiGuyMessaging

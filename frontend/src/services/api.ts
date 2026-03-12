@@ -326,6 +326,8 @@ export async function createPost(postData: {
   visibility?: string;
   visualFilter?: string;
   isEphemeral?: boolean;
+  soundId?: string;
+  hive?: string;
   /** MUX direct upload - create post from MUX asset */
   videoType?: "mux" | "pexels";
   muxData?: { assetId: string; playbackId: string; uploadId: string };

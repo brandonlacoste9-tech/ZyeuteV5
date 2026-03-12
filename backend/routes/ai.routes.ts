@@ -176,24 +176,29 @@ router.get("/health", (req, res) => {
   });
 });
 
-// 7. Generate Video (Image-to-Video using Kling)
-// Requires FAL_API_KEY to be set
+// 7. Generate Video (Image-to-Video or Text-to-Video)
+// Requires FAL_API_KEY or FAL_KEY to be set
 router.post("/generate-video", requireAuth, async (req: any, res) => {
+  let modelHint: "kling" | "wan" | "hunyuan_video" = "kling";
   try {
-    const { imageUrl, prompt, duration = 5, aspectRatio = "9:16" } = req.body;
+    const { imageUrl, prompt, duration = 5, modelHint: hint } = req.body;
+    if (hint && ["kling", "wan", "hunyuan_video"].includes(hint)) {
+      modelHint = hint as any;
+    }
 
-    if (!imageUrl) {
-      return res.status(400).json({ error: "Image URL required" });
+    if (!imageUrl && !prompt) {
+      return res.status(400).json({ error: "Image URL or Prompt required" });
     }
 
     console.log(
-      `[AI Routes] Generating video from image: ${imageUrl.substring(0, 50)}...`,
+      `[AI Routes] Generating video (${modelHint}) ${imageUrl ? "from image" : "from prompt"}: ${prompt?.substring(0, 50)}...`,
     );
 
     const result = await generateVideo({
       prompt: prompt || "Animate this image with natural motion",
       imageUrl,
       duration,
+      modelHint,
     });
 
     if (result.model === "placeholder" || !result.url) {
@@ -212,7 +217,10 @@ router.post("/generate-video", requireAuth, async (req: any, res) => {
       success: true,
     });
   } catch (error: any) {
-    console.error("[AI Routes] Video generation error:", error.message);
+    console.error(
+      `[AI Routes] Video generation error (${modelHint}):`,
+      error.message,
+    );
     res.status(500).json({
       error: "Failed to generate video",
       message: error.message,

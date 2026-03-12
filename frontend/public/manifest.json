@@ -1,3 +1,4 @@
+{
   "name": "Zyeuté - L'app sociale du Québec",
   "short_name": "Zyeuté",
   "description": "L'app sociale du Québec, fait au Québec!",
@@ -21,9 +22,7 @@
       "purpose": "any"
     }
   ],
-  "categories": [
-    "social"
-  ],
+  "categories": ["social"],
   "screenshots": [
     {
       "src": "/opengraph.jpg",

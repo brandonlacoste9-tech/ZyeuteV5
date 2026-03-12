@@ -170,16 +170,21 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
               </div>
             )}
           </div>
-          <h2
-            className="text-lg font-semibold"
-            style={{
-              color: gold,
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
-              textShadow: `0 0 12px ${gold}60`,
-            }}
-          >
-            Conversation
-          </h2>
+          <div className="flex flex-col items-center">
+            <h2
+              className="text-lg font-black tracking-tight gold-text-shine"
+              style={{
+                color: gold,
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                textShadow: `0 0 12px ${gold}60`,
+              }}
+            >
+              Ti-Guy
+            </h2>
+            <span className="text-[0.55rem] uppercase tracking-[0.25em] text-gold-200/70 -mt-1 font-bold">
+              Antigravity Gold Edition
+            </span>
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -222,7 +227,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
             msg.from === "user" ? (
               <div key={msg.id} className="flex justify-end">
                 <div
-                  className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md"
+                  className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-br-md stitched-gold"
                   style={{
                     background: BUBBLE_USER,
                     border: `1px solid ${gold}40`,
@@ -308,11 +313,11 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           />
           <button
             type="button"
-            className="w-10 h-10 rounded flex-shrink-0 flex items-center justify-center press-scale"
+            className="w-10 h-10 rounded flex-shrink-0 flex items-center justify-center press-scale stitched-gold gold-edition-halo"
             style={{
               background: `linear-gradient(145deg, ${GOLD_LIGHT} 0%, ${gold} 50%, #8B6914 100%)`,
               border: `1px solid ${gold}`,
-              boxShadow: `0 2px 8px rgba(0,0,0,0.4)`,
+              boxShadow: `0 2px 10px rgba(184, 134, 11, 0.4)`,
             }}
             aria-label="Envoyer"
           >

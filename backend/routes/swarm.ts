@@ -128,7 +128,7 @@ router.post("/generate-video", aiRateLimiter, requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    if (!process.env.FAL_API_KEY) {
+    if (!process.env.FAL_API_KEY && !process.env.FAL_KEY) {
       return res.status(500).json({ error: "FAL API key not configured" });
     }
 
@@ -136,8 +136,8 @@ router.post("/generate-video", aiRateLimiter, requireAuth, async (req, res) => {
     const result = await generateVideo({
       prompt,
       imageUrl,
-      duration: 5,
-      modelHint: "kling",
+      duration: req.body.duration || 5,
+      modelHint: req.body.modelHint || "wan",
     });
 
     if (!result.url) {

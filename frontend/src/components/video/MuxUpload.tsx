@@ -25,12 +25,14 @@ interface MuxUploadProps {
   }) => void;
   onCancel?: () => void;
   onFallbackUpload?: (file: File) => void; // Fallback to surgical upload
+  onError?: (err: Error) => void;
 }
 
 export function MuxUpload({
   onUploadComplete,
   onCancel,
   onFallbackUpload,
+  onError,
 }: MuxUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<
@@ -131,7 +133,7 @@ export function MuxUpload({
         setErrorMessage("Impossible de démarrer l'upload");
       }
     },
-    [pollUploadStatus],
+    [pollUploadStatus, onError],
   );
 
   const onDrop = useCallback(

@@ -140,9 +140,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const effectiveSrc = isHlsSrc
     ? ""
     : mseUrl ||
-    (videoSource?.type === "blob" || videoSource?.type === "url"
-      ? videoSource.src
-      : src);
+      (videoSource?.type === "blob" || videoSource?.type === "url"
+        ? videoSource.src
+        : src);
 
   // HLS.js setup for .m3u8 sources
   useEffect(() => {
@@ -152,8 +152,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (Hls.isSupported()) {
       const hls = new Hls({
         backBufferLength: 30,
-        maxBufferLength: 15,
-        maxMaxBufferLength: 30,
         maxBufferSize: 30 * 1000 * 1000,
         maxBufferHole: 0.3,
         enableWorker: true,
@@ -164,18 +162,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         abrEwmaSlowLive: 9.0,
         abrEwmaFastVoD: 3.0,
         abrEwmaSlowVoD: 9.0,
-        abrBandWidthFactor: 0.95,
-        abrBandWidthUpFactor: 0.7,
         progressive: true,
         lowLatencyMode: false,
         testBandwidth: true,
         nudgeOffset: 0.1,
         nudgeMaxRetry: 5,
-        maxBufferLength: 30,        // 3x bigger: 10s → 30s
-        maxMaxBufferLength: 60,     // 3x bigger: 30s → 60s
-        startFragPrefetch: true,    // Prefetch before media attach
-        abrBandWidthFactor: 0.9,    // Conservative: fewer quality drops
-        abrBandWidthUpFactor: 0.7,  // Stable quality selection
+        maxBufferLength: 30, // 3x bigger: 10s → 30s
+        maxMaxBufferLength: 60, // 3x bigger: 30s → 60s
+        startFragPrefetch: true, // Prefetch before media attach
+        abrBandWidthFactor: 0.9, // Conservative: fewer quality drops
+        abrBandWidthUpFactor: 0.7, // Stable quality selection
       });
       hlsRef.current = hls;
       hls.loadSource(src);
@@ -187,7 +183,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       });
       if (autoPlay) {
         el.muted = true;
-        el.play().catch(() => { });
+        el.play().catch(() => {});
       }
       return () => {
         hls.destroy();
@@ -196,7 +192,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     if (el.canPlayType("application/vnd.apple.mpegurl")) {
       el.src = src;
-      if (autoPlay) el.play().catch(() => { });
+      if (autoPlay) el.play().catch(() => {});
       return () => {
         el.pause();
         el.src = "";
@@ -513,7 +509,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         } else {
           // Near end, try reload
           video.load();
-          video.play().catch(() => { });
+          video.play().catch(() => {});
         }
       }
       stallTimerRef.current = null;
@@ -807,10 +803,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Extract direct URL from proxied URL for fallback
   const getDirectUrl = (proxiedUrl: string): string | null => {
-    if (!proxiedUrl.includes('/api/media-proxy?url=')) return null;
+    if (!proxiedUrl.includes("/api/media-proxy?url=")) return null;
     try {
       const url = new URL(proxiedUrl, window.location.origin);
-      const directUrl = url.searchParams.get('url');
+      const directUrl = url.searchParams.get("url");
       return directUrl;
     } catch {
       return null;
@@ -924,8 +920,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             tier={debug.tier as any}
             playheadByte={
               videoSource?.type === "partial-chunks" &&
-                videoSource.totalSize &&
-                duration
+              videoSource.totalSize &&
+              duration
                 ? (currentTime / duration) * videoSource.totalSize
                 : 0
             }
@@ -955,6 +951,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }}
           fetchPriority={priority ? "high" : "low"}
           onError={() => {}}
+        />
+      )}
       {/* Video Element */}
       {priority && poster && (
         <img
@@ -962,7 +960,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           alt=""
           className="hidden"
           fetchPriority="high"
-          onError={() => { }}
+          onError={() => {}}
         />
       )}
       <video

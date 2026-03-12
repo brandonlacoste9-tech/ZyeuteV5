@@ -26,6 +26,7 @@ export const AIStudio: React.FC = () => {
   const [aspectRatio, setAspectRatio] = React.useState("9:16"); // Default to TikTok vertical format
   const [isGeneratingImage, setIsGeneratingImage] = React.useState(false);
   const [isGeneratingVideo, setIsGeneratingVideo] = React.useState(false);
+  const [videoModel, setVideoModel] = React.useState<"kling" | "wan">("wan");
   const [generatedImage, setGeneratedImage] = React.useState<string | null>(
     null,
   );
@@ -67,8 +68,8 @@ export const AIStudio: React.FC = () => {
   };
 
   const handleGenerateVideo = async () => {
-    if (!sourceImage) {
-      toast.warning("Sélectionne une image source d'abord!");
+    if (!sourceImage && !prompt.trim()) {
+      toast.warning("L'IA nécessite une image ou une description!");
       return;
     }
 
@@ -82,9 +83,10 @@ export const AIStudio: React.FC = () => {
         credentials: "include",
         body: JSON.stringify({
           imageUrl: sourceImage,
-          prompt: prompt || "Anime cette image avec un mouvement naturel pour TikTok",
-          aspectRatio: "9:16", // TikTok vertical format
-          duration: 5, // 5 seconds for TikTok-style short videos
+          prompt:
+            prompt || "Anime cette image avec un mouvement naturel pour TikTok",
+          modelHint: videoModel,
+          duration: 5,
         }),
       });
 
@@ -95,7 +97,9 @@ export const AIStudio: React.FC = () => {
 
       if (validatedData.success) {
         setGeneratedVideo(validatedData.data.videoUrl);
-        toast.success("Vidéo générée! 🎬");
+        toast.success(
+          `Vidéo ${videoModel === "wan" ? "Wan" : "Kling"} générée! 🎬`,
+        );
       } else {
         toast.error(data.error || "Échec de la génération vidéo");
       }
@@ -158,7 +162,7 @@ export const AIStudio: React.FC = () => {
             }`}
             data-testid="tab-video"
           >
-            🎬 Vidéo Kling
+            🎬 Vidéo AI
           </button>
         </div>
 
@@ -200,7 +204,9 @@ export const AIStudio: React.FC = () => {
               </div>
 
               <div className="rounded-lg bg-zinc-800/50 border border-gold-500/10 p-3 text-xs text-zinc-400">
-                💡 <strong className="text-gold-400">Tip TikTok:</strong> Les vidéos 9:16 (vertical) performent mieux sur le feed continu. Génère d'abord une image verticale, puis anime-la en vidéo!
+                💡 <strong className="text-gold-400">Tip TikTok:</strong> Les
+                vidéos 9:16 (vertical) performent mieux sur le feed continu.
+                Génère d'abord une image verticale, puis anime-la en vidéo!
               </div>
 
               <Button
@@ -212,7 +218,7 @@ export const AIStudio: React.FC = () => {
               >
                 {isGeneratingImage
                   ? "☄️ Création en cours..."
-                  : aspectRatio === "9:16" 
+                  : aspectRatio === "9:16"
                     ? "✨ Générer image TikTok (9:16)"
                     : "✨ Générer une image"}
               </Button>
@@ -284,8 +290,36 @@ export const AIStudio: React.FC = () => {
 
         {/* Video Generation Tab */}
         {activeTab === "video" && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
             <div className="rounded-xl border border-gold-500/20 bg-zinc-900 p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gold-300">
+                  Modèle Vidéo
+                </label>
+                <div className="flex gap-1 bg-black/40 p-1 rounded-lg">
+                  <button
+                    onClick={() => setVideoModel("wan")}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                      videoModel === "wan"
+                        ? "bg-gold-500 text-black shadow-lg"
+                        : "text-zinc-500 hover:text-gold-400"
+                    }`}
+                  >
+                    WAN 2.1
+                  </button>
+                  <button
+                    onClick={() => setVideoModel("kling")}
+                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+                      videoModel === "kling"
+                        ? "bg-gold-500 text-black shadow-lg"
+                        : "text-zinc-500 hover:text-gold-400"
+                    }`}
+                  >
+                    KLING V2
+                  </button>
+                </div>
+              </div>
+
               <label className="block text-sm font-medium text-gold-300">
                 Image source
               </label>
@@ -337,19 +371,21 @@ export const AIStudio: React.FC = () => {
               />
 
               <div className="rounded-lg bg-zinc-800/50 border border-gold-500/10 p-3 text-xs text-zinc-400">
-                💡 <strong className="text-gold-400">TikTok Ready:</strong> Vidéos verticales 9:16 optimisées pour le feed continu. Génération 5 secondes, format parfait pour TikTok!
+                💡 <strong className="text-gold-400">TikTok Ready:</strong>{" "}
+                Vidéos verticales 9:16 optimisées pour le feed continu.
+                Génération 5 secondes, format parfait pour TikTok!
               </div>
 
               <Button
                 onClick={handleGenerateVideo}
-                disabled={!sourceImage || isGeneratingVideo}
+                disabled={isGeneratingVideo}
                 isLoading={isGeneratingVideo}
                 className="w-full press-scale"
                 data-testid="button-generate-video"
               >
                 {isGeneratingVideo
-                  ? "☄️ Création vidéo TikTok..."
-                  : "🎬 Générer vidéo TikTok (9:16)"}
+                  ? `☄️ Création ${videoModel === "wan" ? "Wan" : "Kling"}...`
+                  : `🎬 Générer avec ${videoModel === "wan" ? "Wan Video" : "Kling"}`}
               </Button>
             </div>
 

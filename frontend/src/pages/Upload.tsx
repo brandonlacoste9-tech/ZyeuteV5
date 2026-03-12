@@ -87,8 +87,27 @@ export const Upload: React.FC = () => {
   // Sound picker state
   const [selectedSound, setSelectedSound] = React.useState<Sound | null>(null);
   const [showSoundPicker, setShowSoundPicker] = React.useState(false);
+  const [externalMediaUrl, setExternalMediaUrl] = React.useState<string | null>(
+    null,
+  );
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Handle URL parameters (AI Studio redirection)
+  React.useEffect(() => {
+    const mediaUrl = searchParams.get("mediaUrl");
+    if (mediaUrl) {
+      setExternalMediaUrl(mediaUrl);
+      setPreview(mediaUrl);
+      // Auto-set capture to indicate something is ready
+      setCaption("Généré avec l'IA Studio Comète ☄️");
+
+      // Try to determine if it's a video based on URL
+      if (mediaUrl.includes(".mp4") || mediaUrl.includes(".webm")) {
+        // We don't have a File object, so we'll handle this in handleUpload
+      }
+    }
+  }, [searchParams]);
 
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,8 +195,37 @@ export const Upload: React.FC = () => {
         return;
       }
 
+      // [SOVEREIGN] Use AI-generated URL if provided
+      if (externalMediaUrl && !file) {
+        setIsUploading(true);
+        const post = await createPost({
+          type:
+            externalMediaUrl.includes(".mp4") ||
+            externalMediaUrl.includes(".webm")
+              ? "video"
+              : "image",
+          mediaUrl: externalMediaUrl,
+          caption: caption || "Généré avec l'IA Studio Comète ☄️",
+          soundId: selectedSound?.id,
+          hive: "quebec", // Default to quebec for AI generation
+        });
+
+        if (post) {
+          setIsUploading(false);
+          toast.success("Publication réussie !");
+          navigate("/");
+          return;
+        } else {
+          throw new Error("Erreur lors de la création du post");
+        }
+      }
+
       // [SOVEREIGN] Surgical Upload (camera/gallery)
-      const result = await surgicalUpload(file!, caption);
+      if (!file) {
+        toast.error("Veuillez sélectionner un média");
+        return;
+      }
+      const result = await surgicalUpload(file, caption);
       if (!result.success || !result.post) {
         throw new Error(result.error || "Upload failed");
       }

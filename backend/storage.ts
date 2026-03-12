@@ -1,5 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
+import dotenv from "dotenv";
+import path from "path";
 import {
   users,
   posts,
@@ -62,7 +64,28 @@ let _pool: pg.Pool | null = null;
 
 export function getPool(): pg.Pool {
   if (!_pool) {
-    _pool = new Pool({
+    // Purge any environment variables that might conflict with the connection string
+    // This is critical if the environment has PGPORT=5432 set (common in dev containers)
+    delete process.env.PGHOST;
+    delete process.env.PGPORT;
+    delete process.env.PGUSER;
+    delete process.env.PGPASSWORD;
+    delete process.env.PGDATABASE;
+
+    // Explicitly load .env if not already loaded
+    dotenv.config();
+    const envPath = path.join(process.cwd(), ".env");
+    dotenv.config({ path: envPath });
+
+    if (!process.env.DATABASE_URL) {
+      console.warn("⚠️ [STORAGE] DATABASE_URL is not defined in process.env!");
+    } else {
+      console.log(
+        "🔌 [STORAGE] Initializing pool with URL:",
+        process.env.DATABASE_URL.substring(0, 30) + "...",
+      );
+    }
+    _pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
       connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
       idleTimeoutMillis: 30000,
@@ -79,28 +102,6 @@ export function getPool(): pg.Pool {
   }
   return _pool;
 }
-// Database connection
-console.log(
-  "🔍 [Storage] Initializing pool with DATABASE_URL:",
-  process.env.DATABASE_URL
-    ? `${process.env.DATABASE_URL.slice(0, 20)}...`
-    : "UNDEFINED",
-);
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
-  idleTimeoutMillis: 30000,
-  ssl: {
-    rejectUnauthorized: false, // Allow self-signed certificates from Supabase/Railway
-  },
-});
-
-// Database error handling - prevent crashes on connection failures
-pool.on("error", (err) => {
-  console.error("❌ Unexpected database pool error:", err);
-  // Don't crash the process - let health checks handle degraded state
-});
-
 // Proxy so all existing `pool` imports work unchanged — delegates to
 // getPool() on first property access, which happens after dotenv loads.
 export const pool = new Proxy({} as pg.Pool, {

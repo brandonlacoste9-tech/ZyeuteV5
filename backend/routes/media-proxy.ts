@@ -24,6 +24,9 @@ const ALLOWED_HOSTS = [
   // Cloudflare Stream - HLS streaming and direct video files
   "cloudflarestream.com",
   "*.cloudflarestream.com",
+  // AI Generation - FAL AI
+  "fal.media",
+  "*.fal.media",
   // Note: supabase.co is excluded - direct Supabase storage URLs work without
   // proxy in production and proxying them breaks byte-range seeking.
   // Note: stream.mux.com and chunk.mux.com are EXCLUDED - MuxVideoPlayer handles
@@ -120,17 +123,18 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
   try {
     const rangeHeader = req.headers.range;
-    
+
     const fetchHeaders: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       Accept: "video/mp4,video/webm,video/*,*/*;q=0.9",
     };
-    
+
     // Only add referer for domains that require it
-    if (url.includes('mixkit.co')) {
+    if (url.includes("mixkit.co")) {
       fetchHeaders.Referer = "https://mixkit.co/";
     }
-    
+
     if (rangeHeader) fetchHeaders.Range = rangeHeader;
 
     console.log(`[MediaProxy] Fetching: ${url.substring(0, 80)}...`);
@@ -141,8 +145,12 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     });
 
     if (!resp.ok) {
-      console.error(`[MediaProxy] Upstream error ${resp.status}: ${url.substring(0, 80)}`);
-      return res.status(resp.status).json({ error: `Upstream fetch failed: ${resp.status}` });
+      console.error(
+        `[MediaProxy] Upstream error ${resp.status}: ${url.substring(0, 80)}`,
+      );
+      return res
+        .status(resp.status)
+        .json({ error: `Upstream fetch failed: ${resp.status}` });
     }
 
     const contentType =
@@ -195,7 +203,10 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[MediaProxy] Error fetching ${url.substring(0, 80)}:`, errorMsg);
+    console.error(
+      `[MediaProxy] Error fetching ${url.substring(0, 80)}:`,
+      errorMsg,
+    );
     if (!res.headersSent) {
       res.status(502).json({ error: "Proxy fetch failed", details: errorMsg });
     }

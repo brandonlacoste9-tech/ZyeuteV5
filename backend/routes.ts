@@ -205,7 +205,7 @@ export async function registerRoutes(
   app.use("/api", postsRoutes);
 
   // ============ FEED ROUTES ============
-  app.use("/api", feedRoutes);
+  app.use("/api/feed", feedRoutes);
   app.use("/api/feed-supabase", feedSupabaseRoutes);
 
   // ============ EMAIL ROUTES ============

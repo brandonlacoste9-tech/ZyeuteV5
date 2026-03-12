@@ -298,10 +298,6 @@ export async function processVideo(
 }
 
 /** HLS rendition config for vertical-first (9:16 portrait) transcoding */
-const HLS_RENDITIONS = [
-  { name: "360p", width: 360, height: 640, crf: 25 },
-  { name: "720p", width: 720, height: 1280, crf: 23 },
-  { name: "1080p", width: 1080, height: 1920, crf: 21 },
 /** HLS rendition config for vertical-first (portrait) transcoding */
 const HLS_RENDITIONS = [
   { name: "360p", width: 360, height: 640, bitrate: "800k", crf: 28 },
