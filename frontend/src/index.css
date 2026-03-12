@@ -5,6 +5,20 @@
 /* Tailwind CSS v4 */
 @import "tailwindcss";
 
+@theme {
+  --color-gold-50: #fffcf0;
+  --color-gold-100: #fef5d1;
+  --color-gold-200: #fbe6a2;
+  --color-gold-300: #f7d063;
+  --color-gold-400: #f3b026;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #b8860b;
+  --color-gold-700: #926a0a;
+  --color-gold-800: #74520a;
+  --color-gold-900: #61430c;
+  --color-gold-950: #382304;
+}
+
 /* Edge Accent Text */
 .text-edge {
   color: var(--edge-color);
