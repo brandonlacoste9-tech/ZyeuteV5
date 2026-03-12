@@ -481,8 +481,8 @@
   /* Smooth transition phase */
   .video-transitioning {
     transition: filter 180ms cubic-bezier(0.25, 0.1, 0.25, 1),
-                transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
-                opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+ transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+ opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
   }
 
   /* Snap scroll with smooth deceleration */
@@ -998,6 +998,12 @@
     opacity: 1;
     filter: blur(0px);
   }
+}
+
+.animate-video-reveal {
+  animation: video-reveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 [data-theme="leather-green"] body,
 [data-theme="leather-green"] #root {
   background-color: var(--leather-bg) !important;
@@ -1139,8 +1145,8 @@
 /* Swipe transition overlay — smooth directional momentum */
 .swipe-overlay-smooth {
   transition: opacity 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
-              backdrop-filter 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
-              transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+ backdrop-filter 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
+ transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 /* Video container with sub-pixel rendering for crisp edges */
@@ -1150,6 +1156,8 @@
   -webkit-backface-visibility: hidden;
   -webkit-font-smoothing: subpixel-antialiased;
   image-rendering: -webkit-optimize-contrast;
+}
+
 [data-theme="leather-purple"] .bg-zinc-900 {
   background-color: var(--leather-bg) !important;
 }
@@ -1163,7 +1171,7 @@
 /* Video player hover glow — smooth cubic-bezier for premium feel */
 .video-hover-glow {
   transition: box-shadow 300ms cubic-bezier(0.25, 0.1, 0.25, 1),
-              transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
+ transform 300ms cubic-bezier(0.25, 0.1, 0.25, 1);
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
 }
@@ -1311,4 +1319,90 @@ video::-webkit-media-controls-enclosure {
   border: 0.5px dashed rgba(255, 215, 0, 0.4);
   pointer-events: none;
   border-radius: inherit;
+}
+
+/* --- ULTRA GOLD EDITION ENHANCEMENTS --- */
+
+/* Gold Edition Halo - Radiant pulse for critical actions */
+.gold-edition-halo {
+  box-shadow: 0 0 15px rgba(255, 191, 0, 0.3), inset 0 0 10px rgba(255, 191, 0, 0.2);
+  animation: halo-pulse 3s infinite ease-in-out;
+}
+
+@keyframes halo-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 191, 0, 0.3), inset 0 0 10px rgba(255, 191, 0, 0.2); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 215, 0, 0.3); }
+}
+
+/* Gold Rim - Elegant frame for video/panels - Jewelry Grade */
+.gold-rim {
+  border: 1.5px solid #d4af37;
+  box-shadow: 
+    0 0 20px rgba(184, 134, 11, 0.4), 
+    inset 0 0 10px rgba(0, 0, 0, 0.8),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+/* Gold Text Shine - Metallic gradient text effect */
+.gold-text-shine {
+  background: linear-gradient(
+    to right, 
+    #BF953F, 
+    #FCF6BA, 
+    #B38728, 
+    #FBF5B7, 
+    #AA771C
+  );
+  display: inline-block;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: shine 5s linear infinite;
+}
+
+@keyframes shine {
+  to { background-position: 200% center; }
+}
+
+/* Premium Gold Navigation Accent */
+.gold-nav-accent {
+  background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.4) 50%, transparent 100%);
+  height: 1px;
+  width: 100%;
+}
+
+/* Gold Glow Soft - Atmospheric lighting */
+.gold-glow-soft {
+  filter: drop-shadow(0 0 8px rgba(255, 191, 0, 0.4));
+}
+
+/* Gold Edition Cinematic Reveal - Soft atmospheric entrance */
+.gold-reveal {
+  animation: gold-reveal-sweep 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes gold-reveal-sweep {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(10px) brightness(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0) brightness(1);
+  }
+}
+
+/* Beveled Jewel Surface - Ultra Premium Layering */
+.beveled-gold {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }

@@ -19,6 +19,7 @@ import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
+import { GoldEditionSplash } from "@/components/features/GoldEditionSplash";
 import type { Post, User } from "@/types";
 
 /** Post with optional engagement fields from API */
@@ -44,6 +45,13 @@ export const LaZyeute: React.FC = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Check session storage to show splash only once per session
+    if (typeof window !== "undefined") {
+      return !sessionStorage.getItem("zyeute_splash_seen");
+    }
+    return true;
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const touchStartY = useRef<number>(0);
@@ -78,20 +86,22 @@ export const LaZyeute: React.FC = () => {
     }
   }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
 
-  // Video playback control
-  videoRefs.current.forEach((video, id) => {
-    const postIndex = posts.findIndex((p) => p.id === id);
-    if (postIndex === currentIndex) {
-      video.currentTime = 0;
-      if (isPlaying) {
-        video.play().catch(() => { });
+  // Video playback control - Moved to useEffect to avoid render-time side effects
+  useEffect(() => {
+    videoRefs.current.forEach((video, id) => {
+      const postIndex = posts.findIndex((p) => p.id === id);
+      if (postIndex === currentIndex) {
+        if (isPlaying) {
+          video.play().catch(err => console.debug("Auto-play prevented:", err));
+        } else {
+          video.pause();
+        }
       } else {
         video.pause();
+        video.currentTime = 0;
       }
-    } else {
-      video.pause();
-    }
-  });
+    });
+  }, [currentIndex, isPlaying, posts]);
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -168,11 +178,35 @@ export const LaZyeute: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
-            <p className="text-white">Chargement de La Zyeute...</p>
+      <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden items-center justify-center">
+        <div className="relative">
+          {/* Outer AG Glow Ring */}
+          <div className="absolute inset-0 -m-4 rounded-full bg-gold-500/10 blur-xl animate-pulse" />
+          
+          <div className="relative text-center">
+            {/* Custom Premium Spinner */}
+            <div className="relative w-24 h-24 mx-auto mb-8">
+              <div className="absolute inset-0 border-4 border-gold-900/40 rounded-full" />
+              <div className="absolute inset-0 border-4 border-transparent border-t-gold-500 rounded-full animate-spin shadow-[0_0_15px_rgba(212,175,55,0.4)]" />
+              <div className="absolute inset-4 border-2 border-transparent border-b-gold-200/50 rounded-full animate-spin-slow rotate-45" />
+              
+              {/* AG Center Logo Placeholder/Icon */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-gold-400 font-black text-xl tracking-tighter">AG</span>
+              </div>
+            </div>
+
+            <h2 className="text-gold-400 font-black text-2xl tracking-tight mb-2 uppercase">
+              La Zyeute
+            </h2>
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-bounce [animation-delay:-0.3s]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-bounce [animation-delay:-0.15s]" />
+              <div className="w-1.5 h-1.5 rounded-full bg-gold-300 animate-bounce" />
+            </div>
+            <p className="mt-4 text-gold-200/60 text-[0.7rem] uppercase tracking-[0.3em] font-medium">
+              Initialisation Sécurisée AG
+            </p>
           </div>
         </div>
       </div>
@@ -209,8 +243,25 @@ export const LaZyeute: React.FC = () => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col">
-      {/* Edge lighting overlays removed — was covering video playback */}
+    <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden">
+      {/* Cinematic Splash Screen */}
+      {showSplash && (
+        <GoldEditionSplash 
+          onComplete={() => {
+            setShowSplash(false);
+            sessionStorage.setItem("zyeute_splash_seen", "true");
+          }} 
+        />
+      )}
+
+      {/* Dynamic Edge Lighting (React-optimized) */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-10 transition-opacity duration-1000"
+        style={{
+          boxShadow: isPlaying ? `inset 0 0 100px ${edgeLighting}40, inset 0 0 20px ${edgeLighting}60` : 'none',
+          opacity: isPlaying ? 0.6 : 0
+        }}
+      />
 
 
 
@@ -235,7 +286,12 @@ export const LaZyeute: React.FC = () => {
             />
           </svg>
         </button>
-        <h1 className="text-gold-400 font-black text-lg">La Zyeute</h1>
+        <h1 className="text-gold-400 font-black text-lg flex items-baseline select-none">
+          La Zyeute 
+          <span className="text-[0.6rem] uppercase tracking-[0.3em] ml-2 font-bold gold-text-shine whitespace-nowrap">
+            AG GOLD EDITION
+          </span>
+        </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={togglePlayPause}
@@ -337,7 +393,7 @@ export const LaZyeute: React.FC = () => {
             )}
             {/* Media */}
             <div
-              className="absolute inset-0 bg-black"
+              className="absolute inset-0 bg-black gold-rim overflow-hidden"
               onClick={
                 (post.media_url || post.mediaUrl)?.includes(".mp4") ||
                   (post.media_url || post.mediaUrl)?.includes("video")
@@ -356,7 +412,7 @@ export const LaZyeute: React.FC = () => {
                       post.thumbnail_url ||
                       post.media_url
                     }
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover animate-video-reveal"
                     autoPlay={index === currentIndex && isPlaying}
                     muted={isMuted}
                     loop
@@ -367,7 +423,7 @@ export const LaZyeute: React.FC = () => {
                       if (el) videoRefs.current.set(post.id, el);
                     }}
                     src={getProxiedMediaUrl(post.media_url) || post.media_url}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover animate-video-reveal"
                     loop
                     playsInline
                     muted={isMuted}
@@ -388,33 +444,42 @@ export const LaZyeute: React.FC = () => {
               {/* Type Badge */}
               <div className="absolute top-20 left-4 z-30">
                 <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md ${(post.media_url || post.mediaUrl)?.includes(".mp4") ||
-                    (post.media_url || post.mediaUrl)?.includes("video")
-                    ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                    : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                    }`}
+                  className="px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md bg-gradient-to-r from-gold-400/80 to-gold-600/80 text-black border border-gold-300/50 shadow-lg gold-glow-soft"
                 >
-                  {post.type === "video" ? "▶ Vidéo" : "📷 Photo"}
+                  {post.type === "video" ? "▶ GOLD V" : "📷 GOLD P"}
                 </div>
               </div>
 
-              {/* Play/Pause Indicator for Videos */}
-              {post.type === "video" &&
-                !isPlaying &&
-                index === currentIndex && (
-                  <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30">
-                      <svg
-                        className="w-10 h-10 text-white ml-1"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
+            {/* Play/Pause Indicator for Videos */}
+            {post.type === "video" &&
+              !isPlaying &&
+              index === currentIndex && (
+                <div className="absolute inset-0 flex items-center justify-center z-20">
+                  <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30">
+                    <svg
+                      className="w-10 h-10 text-white ml-1"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
                   </div>
-                )}
+                </div>
+              )}
+
+            {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
+            <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
+               {/* Ambient Gold Aura */}
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
+               
+               {/* Sub-pixel Tech Scanlines */}
+               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
+               
+               {/* Localized 'Gold Edition' Lens Flare Glow */}
+               <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
+               <div className="absolute inset-0 gold-glow-soft opacity-50" />
             </div>
+          </div>
 
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
@@ -548,7 +613,7 @@ export const LaZyeute: React.FC = () => {
             data-testid={`link-profile-${currentPost.id}`}
           >
             <div
-              className="w-12 h-12 rounded-full overflow-hidden transition-all duration-300"
+              className="w-12 h-12 rounded-full overflow-hidden transition-all duration-300 gold-glow gold-glow-soft"
               style={{
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -571,12 +636,15 @@ export const LaZyeute: React.FC = () => {
             data-testid={`button-fire-${currentPost.id}`}
           >
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
               style={{
                 background: (currentPost as PostWithEngagement).is_fired
                   ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
-                  : "linear-gradient(145deg, #D4AF37 0%, #B8860B 50%, #8B4513 100%)",
-                border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : "#D4AF37"}`,
+                  : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
+                border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : edgeLighting + "40"}`,
+                boxShadow: (currentPost as PostWithEngagement).is_fired 
+                  ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)" 
+                  : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
               }}
             >
               <svg
@@ -607,8 +675,8 @@ export const LaZyeute: React.FC = () => {
                   : "#D4AF37",
               }}
             >
-              {(currentPost as any).fireCount ??
-                (currentPost as any).fire_count ??
+              {(currentPost as PostWithEngagement).fireCount ??
+                (currentPost as PostWithEngagement).fire_count ??
                 0}
             </span>
           </button>
@@ -620,7 +688,7 @@ export const LaZyeute: React.FC = () => {
             data-testid={`link-comments-${currentPost.id}`}
           >
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
               style={{
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -653,7 +721,7 @@ export const LaZyeute: React.FC = () => {
             data-testid={`button-share-${currentPost.id}`}
           >
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
               style={{
                 background:
                   "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -703,7 +771,7 @@ export const LaZyeute: React.FC = () => {
 
       {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
       <div
-        className="flex-shrink-0 z-40 flex items-center justify-around"
+        className="flex-shrink-0 z-40 flex flex-col leather-dark stitched"
         style={{
           background:
             "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
@@ -713,6 +781,8 @@ export const LaZyeute: React.FC = () => {
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
         }}
       >
+        <div className="gold-nav-accent opacity-50" />
+        <div className="flex items-center justify-around py-2">
         {/* Home */}
         <button
           onClick={() => navigate("/feed")}
@@ -772,7 +842,7 @@ export const LaZyeute: React.FC = () => {
           aria-label="Create"
         >
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center"
+            className="w-14 h-14 rounded-full flex items-center justify-center stitched-double gold-glow gold-edition-halo"
             style={{
               background:
                 "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
@@ -848,6 +918,7 @@ export const LaZyeute: React.FC = () => {
           </span>
         </button>
       </div>
+    </div>
 
       {/* TI-GUY Messaging – Voyageur Luxury (dropdown: DMs, Last Chats, File upload, etc.) */}
       <TiGuyMessaging
