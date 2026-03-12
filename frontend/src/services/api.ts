@@ -751,11 +751,31 @@ export async function updateParentalControls(
 // ============ HELPER FUNCTIONS ============
 
 // Helper to detect video file extensions
+// Helper to detect video content from URLs
 function isVideoUrl(url?: string): boolean {
   if (!url) return false;
-  const videoExtensions = [".mp4", ".mov", ".webm", ".ogg", ".m3u8"];
-  return videoExtensions.some((ext) => url.toLowerCase().includes(ext));
+  const lowerUrl = url.toLowerCase();
+  
+  // Direct extensions
+  const videoExtensions = [".mp4", ".mov", ".webm", ".ogg", ".m3u8", ".ts", ".m4v"];
+  if (videoExtensions.some((ext) => lowerUrl.includes(ext))) return true;
+  
+  // Video service patterns
+  const videoPatterns = [
+    "stream.mux.com",
+    "vimeo.com",
+    "youtube.com",
+    "youtu.be",
+    "tiktok.com",
+    "pexels.com/video",
+    "media.giphy.com",
+    "api/media-proxy" // Often used for videos
+  ];
+  if (videoPatterns.some((pattern) => lowerUrl.includes(pattern))) return true;
+
+  return false;
 }
+
 
 // ============ SURGICAL UPLOAD BYPASS ============
 

@@ -64,70 +64,71 @@ const BaseUserSchema = z
   })
   .strict();
 
-export const UserSchema = z.preprocess((val: any) => {
+export const UserSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
+  const v = val as Record<string, any>;
   return {
-    id: val.id,
-    username: val.username,
+    id: v.id,
+    username: v.username,
     // Camel + Snake population
-    display_name: val.displayName || val.display_name || null,
-    displayName: val.displayName || val.display_name || null,
-    avatar_url: val.avatarUrl || val.avatar_url || null,
-    avatarUrl: val.avatarUrl || val.avatar_url || null,
+    display_name: v.displayName || v.display_name || null,
+    displayName: v.displayName || v.display_name || null,
+    avatar_url: v.avatarUrl || v.avatar_url || null,
+    avatarUrl: v.avatarUrl || v.avatar_url || null,
 
-    bio: val.bio || null,
-    city: val.city || val.location || null,
-    region: val.region || null,
+    bio: v.bio || null,
+    city: v.city || v.location || null,
+    region: v.region || null,
 
-    is_verified: val.isVerified || val.is_verified || false,
-    isVerified: val.isVerified || val.is_verified || false,
-    isPremium: val.isPremium || val.is_premium || false,
-    coins: val.coins || 0,
-    piasse_balance: val.piasse_balance || val.piasseBalance || 0.0,
-    piasseBalance: val.piasse_balance || val.piasseBalance || 0.0,
-    total_karma: val.total_karma || val.totalKarma || 0,
-    totalKarma: val.total_karma || val.totalKarma || 0,
-    fire_score: val.fireScore || val.fire_score || 0,
+    is_verified: v.isVerified || v.is_verified || false,
+    isVerified: v.isVerified || v.is_verified || false,
+    isPremium: v.isPremium || v.is_premium || false,
+    coins: v.coins || 0,
+    piasse_balance: v.piasse_balance || v.piasseBalance || 0.0,
+    piasseBalance: v.piasse_balance || v.piasseBalance || 0.0,
+    total_karma: v.total_karma || v.totalKarma || 0,
+    totalKarma: v.total_karma || v.totalKarma || 0,
+    fire_score: v.fireScore || v.fire_score || 0,
 
-    created_at: val.createdAt || val.created_at || new Date().toISOString(),
-    updated_at: val.updatedAt || val.updated_at || new Date().toISOString(),
+    created_at: v.createdAt || v.created_at || new Date().toISOString(),
+    updated_at: v.updatedAt || v.updated_at || new Date().toISOString(),
 
-    followers_count: val.followersCount || val.followers_count || 0,
-    followersCount: val.followersCount || val.followers_count || 0,
-    following_count: val.followingCount || val.following_count || 0,
-    followingCount: val.followingCount || val.following_count || 0,
-    posts_count: val.postsCount || val.posts_count || 0,
-    postsCount: val.postsCount || val.posts_count || 0,
+    followers_count: v.followersCount || v.followers_count || 0,
+    followersCount: v.followersCount || v.followers_count || 0,
+    following_count: v.followingCount || v.following_count || 0,
+    followingCount: v.followingCount || v.following_count || 0,
+    posts_count: v.postsCount || v.posts_count || 0,
+    postsCount: v.postsCount || v.posts_count || 0,
 
-    is_following: val.isFollowing || val.is_following || false,
-    isFollowing: val.isFollowing || val.is_following || false,
+    is_following: v.isFollowing || v.is_following || false,
+    isFollowing: v.isFollowing || v.is_following || false,
 
-    is_online: val.is_online,
+    is_online: v.is_online,
 
-    role: val.role || "citoyen",
-    custom_permissions: val.custom_permissions || {},
+    role: v.role || "citoyen",
+    custom_permissions: v.custom_permissions || {},
 
     // Ti-Guy
     tiGuyCommentsEnabled:
-      val.tiGuyCommentsEnabled !== undefined
-        ? val.tiGuyCommentsEnabled
-        : val.ti_guy_comments_enabled !== undefined
-          ? val.ti_guy_comments_enabled
+      v.tiGuyCommentsEnabled !== undefined
+        ? v.tiGuyCommentsEnabled
+        : v.ti_guy_comments_enabled !== undefined
+          ? v.ti_guy_comments_enabled
           : true,
     ti_guy_comments_enabled:
-      val.tiGuyCommentsEnabled !== undefined
-        ? val.tiGuyCommentsEnabled
-        : val.ti_guy_comments_enabled !== undefined
-          ? val.ti_guy_comments_enabled
+      v.tiGuyCommentsEnabled !== undefined
+        ? v.tiGuyCommentsEnabled
+        : v.ti_guy_comments_enabled !== undefined
+          ? v.ti_guy_comments_enabled
           : true,
 
     // Gamification
-    last_daily_bonus: val.lastDailyBonus || val.last_daily_bonus || null,
-    nectar_points: val.nectarPoints || val.nectar_points || 0,
+    last_daily_bonus: v.lastDailyBonus || v.last_daily_bonus || null,
+    nectar_points: v.nectarPoints || v.nectar_points || 0,
 
     // Parent Link
-    parent_id: val.parentId || val.parent_id || null,
-    parentId: val.parentId || val.parent_id || null,
+    parent_id: v.parentId || v.parent_id || null,
+    parentId: v.parentId || v.parent_id || null,
   };
 }, BaseUserSchema);
 
@@ -153,12 +154,13 @@ const BaseCommentSchema = z
   })
   .strict();
 
-export const CommentSchema = z.preprocess((val: any) => {
+export const CommentSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
+  const v = val as Record<string, any>;
   return {
-    ...val,
-    content: val.content || val.text || "",
-    text: val.text || val.content || "",
+    ...v,
+    content: v.content || v.text || "",
+    text: v.text || v.content || "",
   };
 }, BaseCommentSchema);
 
@@ -241,19 +243,20 @@ const BaseStorySchema = z
   })
   .strict();
 
-export const StorySchema = z.preprocess((val: any) => {
+export const StorySchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
-  const mediaType = val.mediaType || val.media_type || "photo";
+  const v = val as Record<string, any>;
+  const mediaType = v.mediaType || v.media_type || "photo";
   return {
-    id: val.id,
-    user_id: val.user_id || val.userId,
-    media_url: val.media_url || val.mediaUrl || "",
+    id: v.id,
+    user_id: v.user_id || v.userId,
+    media_url: v.media_url || v.mediaUrl || "",
     type: mediaType === "video" ? "video" : "photo",
-    duration: val.duration || 5,
-    created_at: val.created_at || val.createdAt,
-    expires_at: val.expires_at || val.expiresAt,
-    is_viewed: val.is_viewed || val.isViewed || false,
-    user: val.user,
+    duration: v.duration || 5,
+    created_at: v.created_at || v.createdAt,
+    expires_at: v.expires_at || v.expiresAt,
+    is_viewed: v.is_viewed || v.isViewed || false,
+    user: v.user,
   };
 }, BaseStorySchema);
 
@@ -267,6 +270,9 @@ const PostBase = z.object({
   id: z.string(),
   user_id: z.string(),
   userId: z.string().optional(), // Compat
+  hive_id: z.string().nullable().optional(), // Added
+  hiveId: z.string().nullable().optional(), // Compat
+  visibility: z.string().nullable().optional(), // Added
   media_url: z.string(),
   mediaUrl: z.string().optional(), // Compat
   type: z.enum(["photo", "video"]), // Base type, overridden in discriminated but field exists here for structure
@@ -290,7 +296,7 @@ const PostBase = z.object({
   createdAt: z.string().optional(), // Compat
 
   // Relations
-  user: BaseUserSchema.optional(),
+  user: z.lazy(() => UserSchema).optional(),
   user_fire: FireSchema.optional(),
   comments: z.array(CommentSchema).optional(),
 
@@ -348,12 +354,14 @@ const VideoPost = PostBase.extend({
 // Discriminated Union
 const BasePostSchema = z.discriminatedUnion("type", [PhotoPost, VideoPost]);
 
-export const PostSchema = z.preprocess((val: any) => {
+export const PostSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
 
-  const rawHls = val.hls_url || val.hlsUrl;
-  const mediaUrl = rawHls || val.media_url || val.mediaUrl || val.original_url;
-  let type = val.type;
+  const v = val as Record<string, any>;
+
+  const rawHls = v.hls_url || v.hlsUrl;
+  const mediaUrl = rawHls || v.media_url || v.mediaUrl || v.original_url;
+  let type = v.type;
 
   // Auto-detect type logic from api.ts
   const isVideoUrl = (url?: string) => {
@@ -367,75 +375,75 @@ export const PostSchema = z.preprocess((val: any) => {
   }
 
   return {
-    ...val,
-    id: val.id,
-    user_id: val.user_id || val.userId,
-    userId: val.user_id || val.userId,
+    ...v,
+    id: v.id,
+    user_id: v.user_id || v.userId,
+    userId: v.user_id || v.userId,
     media_url: mediaUrl,
     mediaUrl: mediaUrl,
     hls_url: rawHls,
     hlsUrl: rawHls,
-    thumbnail_url: val.thumbnail_url || val.thumbnailUrl,
-    thumbnailUrl: val.thumbnail_url || val.thumbnailUrl,
-    caption: val.caption,
+    thumbnail_url: v.thumbnail_url || v.thumbnailUrl,
+    thumbnailUrl: v.thumbnail_url || v.thumbnailUrl,
+    caption: v.caption,
 
-    fire_count: val.reactions_count || val.fire_count || val.fireCount || 0,
-    fireCount: val.reactions_count || val.fire_count || val.fireCount || 0,
+    fire_count: v.reactions_count || v.fire_count || v.fireCount || 0,
+    fireCount: v.reactions_count || v.fire_count || v.fireCount || 0,
     comment_count:
-      val.comments_count || val.comment_count || val.commentCount || 0,
+      v.comments_count || v.comment_count || v.commentCount || 0,
     commentCount:
-      val.comments_count || val.comment_count || val.commentCount || 0,
-    gift_count: val.gift_count || val.giftCount || 0,
-    giftCount: val.gift_count || val.giftCount || 0,
+      v.comments_count || v.comment_count || v.commentCount || 0,
+    gift_count: v.gift_count || v.giftCount || 0,
+    giftCount: v.gift_count || v.giftCount || 0,
 
-    created_at: val.created_at || val.createdAt,
-    createdAt: val.created_at || val.createdAt,
+    created_at: v.created_at || v.createdAt,
+    createdAt: v.created_at || v.createdAt,
 
     type: type || "photo",
-    region: val.region_id || val.region,
-    city: val.city,
+    region: v.region_id || v.region,
+    city: v.city,
     // Video enhancement fields - normalize both cases
-    original_url: val.original_url || val.originalUrl,
-    originalUrl: val.original_url || val.originalUrl,
-    enhanced_url: val.enhanced_url || val.enhancedUrl,
-    enhancedUrl: val.enhanced_url || val.enhancedUrl,
-    mux_playback_id: val.mux_playback_id || val.muxPlaybackId,
-    muxPlaybackId: val.mux_playback_id || val.muxPlaybackId,
+    original_url: v.original_url || v.originalUrl,
+    originalUrl: v.original_url || v.originalUrl,
+    enhanced_url: v.enhanced_url || v.enhancedUrl,
+    enhancedUrl: v.enhanced_url || v.enhancedUrl,
+    mux_playback_id: v.mux_playback_id || v.muxPlaybackId,
+    muxPlaybackId: v.mux_playback_id || v.muxPlaybackId,
     processing_status:
-      val.processing_status || val.processingStatus || (type === "video" ? "completed" : undefined),
+      v.processing_status || v.processingStatus || (type === "video" ? "completed" : undefined),
     processingStatus:
-      val.processing_status || val.processingStatus || (type === "video" ? "completed" : undefined),
-    visual_filter: val.visual_filter || val.visualFilter,
-    visualFilter: val.visual_filter || val.visualFilter,
+      v.processing_status || v.processingStatus || (type === "video" ? "completed" : undefined),
+    visual_filter: v.visual_filter || v.visualFilter,
+    visualFilter: v.visual_filter || v.visualFilter,
 
     // Moderation
-    is_moderated: val.is_moderated || val.isModerated || false,
+    is_moderated: v.is_moderated || v.isModerated || false,
     moderation_approved:
-      val.moderation_approved !== undefined
-        ? val.moderation_approved
-        : val.moderationApproved !== undefined
-          ? val.moderationApproved
+      v.moderation_approved !== undefined
+        ? v.moderation_approved
+        : v.moderationApproved !== undefined
+          ? v.moderationApproved
           : true,
     moderationApproved:
-      val.moderation_approved || val.moderationApproved || true,
-    is_hidden: val.is_hidden || val.isHidden || false,
-    isHidden: val.is_hidden || val.isHidden || false,
+      v.moderation_approved || v.moderationApproved || true,
+    is_hidden: v.is_hidden || v.isHidden || false,
+    isHidden: v.is_hidden || v.isHidden || false,
     // AI Enrichment
-    ai_description: val.ai_description || val.aiDescription,
-    aiDescription: val.ai_description || val.aiDescription,
-    ai_labels: val.ai_labels || val.aiLabels || [],
-    aiLabels: val.ai_labels || val.aiLabels || [],
-    promo_url: val.promo_url || val.promoUrl,
-    promoUrl: val.promo_url || val.promoUrl,
-    detected_items: val.detected_items || val.detectedItems || [],
-    detectedItems: val.detected_items || val.detectedItems || [],
+    ai_description: v.ai_description || v.aiDescription,
+    aiDescription: v.ai_description || v.aiDescription,
+    ai_labels: v.ai_labels || v.aiLabels || [],
+    aiLabels: v.ai_labels || v.aiLabels || [],
+    promo_url: v.promo_url || v.promoUrl,
+    promoUrl: v.promo_url || v.promoUrl,
+    detected_items: v.detected_items || v.detectedItems || [],
+    detectedItems: v.detected_items || v.detectedItems || [],
 
     // Ephemeral Protocol
-    is_ephemeral: val.is_ephemeral || val.isEphemeral || false,
-    view_count: val.view_count || val.viewCount || 0,
-    max_views: val.max_views || val.maxViews || 1,
-    expires_at: val.expires_at || val.expiresAt,
-    burned_at: val.burned_at || val.burnedAt,
+    is_ephemeral: v.is_ephemeral || v.isEphemeral || false,
+    view_count: v.view_count || v.viewCount || 0,
+    max_views: v.max_views || v.maxViews || 1,
+    expires_at: v.expires_at || v.expiresAt,
+    burned_at: v.burned_at || v.burnedAt,
   };
 }, BasePostSchema);
 
@@ -480,8 +488,9 @@ const BaseNotificationSchema = z
   })
   .strict();
 
-export const NotificationSchema = z.preprocess((val: any) => {
+export const NotificationSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
+  const v = val as Record<string, any>;
 
   // Map database notification types to schema types
   const typeMapping: Record<
@@ -497,29 +506,29 @@ export const NotificationSchema = z.preprocess((val: any) => {
     story_view: "story_view",
   };
 
-  const mappedType = typeMapping[val.type] || "fire"; // Default to "fire" for unknown types
+  const mappedType = typeMapping[v.type] || "fire"; // Default to "fire" for unknown types
 
   // Handle actor_id - use from_user_id if actor_id is null
-  const actorId = val.actor_id || val.fromUserId || val.from_user_id;
+  const actorId = v.actor_id || v.fromUserId || v.from_user_id;
 
   return {
-    id: val.id,
-    user_id: val.user_id || val.userId,
+    id: v.id,
+    user_id: v.user_id || v.userId,
     type: mappedType,
     actor_id: actorId || "", // Provide empty string fallback if still null
-    post_id: val.postId || val.post_id || null,
-    comment_id: val.commentId || val.comment_id || null,
-    story_id: val.storyId || val.story_id || null,
-    reference_id: val.referenceId || val.reference_id || null,
+    post_id: v.postId || v.post_id || null,
+    comment_id: v.commentId || v.comment_id || null,
+    story_id: v.storyId || v.story_id || null,
+    reference_id: v.referenceId || v.reference_id || null,
     is_read:
-      val.isRead !== undefined
-        ? val.isRead
-        : val.is_read !== undefined
-          ? val.is_read
+      v.isRead !== undefined
+        ? v.isRead
+        : v.is_read !== undefined
+          ? v.is_read
           : false,
-    created_at: val.createdAt || val.created_at || new Date().toISOString(),
-    actor: val.actor || val.fromUser,
-    post: val.post,
+    created_at: v.createdAt || v.created_at || new Date().toISOString(),
+    actor: v.actor || v.fromUser,
+    post: v.post,
   };
 }, BaseNotificationSchema);
 

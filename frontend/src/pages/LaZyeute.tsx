@@ -16,6 +16,7 @@ import { getCurrentUser, togglePostFire } from "@/services/api";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
@@ -54,7 +55,7 @@ export const LaZyeute: React.FC = () => {
     return true;
   });
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+
   const touchStartY = useRef<number>(0);
   const touchEndY = useRef<number>(0);
 
@@ -87,24 +88,7 @@ export const LaZyeute: React.FC = () => {
     }
   }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
 
-  // Video playback control - Moved to useEffect to avoid render-time side effects
-  useEffect(() => {
-    videoRefs.current.forEach((video, id) => {
-      const postIndex = posts.findIndex((p) => p.id === id);
-      if (postIndex === currentIndex) {
-        if (isPlaying) {
-          video
-            .play()
-            .catch((err) => console.debug("Auto-play prevented:", err));
-        } else {
-          video.pause();
-        }
-      } else {
-        video.pause();
-        video.currentTime = 0;
-      }
-    });
-  }, [currentIndex, isPlaying, posts]);
+
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -407,15 +391,8 @@ export const LaZyeute: React.FC = () => {
               />
             )}
             {/* Media */}
-            <div
-              className="absolute inset-0 bg-black gold-rim overflow-hidden"
-              onClick={
-                (post.media_url || post.mediaUrl)?.includes(".mp4") ||
-                (post.media_url || post.mediaUrl)?.includes("video")
-                  ? togglePlayPause
-                  : undefined
-              }
-            >
+            <div className="absolute inset-0 bg-black gold-rim overflow-hidden">
+
               {post.type === "video" ? (
                 (post as Post).mux_playback_id ? (
                   <MuxVideoPlayer
@@ -433,16 +410,19 @@ export const LaZyeute: React.FC = () => {
                     loop
                   />
                 ) : (
-                  <video
-                    ref={(el) => {
-                      if (el) videoRefs.current.set(post.id, el);
-                    }}
+                  <VideoPlayer
                     src={getProxiedMediaUrl(post.media_url) || post.media_url}
+                    poster={
+                      getProxiedMediaUrl(
+                        post.thumbnail_url || post.media_url,
+                      ) ||
+                      post.thumbnail_url ||
+                      post.media_url
+                    }
                     className="w-full h-full object-cover animate-video-reveal"
-                    loop
-                    playsInline
-                    muted={isMuted}
                     autoPlay={index === currentIndex && isPlaying}
+                    muted={isMuted}
+                    loop
                   />
                 )
               ) : (
@@ -464,22 +444,7 @@ export const LaZyeute: React.FC = () => {
                 </div>
               </div>
 
-              {/* Play/Pause Indicator for Videos */}
-              {post.type === "video" &&
-                !isPlaying &&
-                index === currentIndex && (
-                  <div className="absolute inset-0 flex items-center justify-center z-20">
-                    <div className="w-20 h-20 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border-2 border-white/30">
-                      <svg
-                        className="w-10 h-10 text-white ml-1"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
+
 
               {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
               <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">

@@ -8,7 +8,7 @@ import React from "react";
 import { SingleVideoView } from "./SingleVideoView";
 import { SingleImageView } from "./SingleImageView";
 import type { Post, User } from "@/types";
-import type { VideoSource } from "@/hooks/usePrefetchVideo";
+import type { VideoSource, PreloadTier } from "@/hooks/usePrefetchVideo";
 
 interface UnifiedMediaCardProps {
   post: Post;
@@ -24,7 +24,7 @@ interface UnifiedMediaCardProps {
   debug?: {
     activeRequests: number;
     concurrency: number;
-    tier: number;
+    tier: PreloadTier;
   };
   /** For image prefetching - whether to prefetch adjacent images */
   shouldPrefetch?: boolean;
@@ -56,17 +56,18 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
   }) => {
     // Route to appropriate component based on post type
     // type field may be null for older seeded posts - detect via URL if so
+    const rawPost = post as any;
     const isVideo =
       post.type === "video" ||
       (!post.type && (
-        !!(post as any).mediaUrl?.includes(".mp4") ||
-        !!(post as any).media_url?.includes(".mp4") ||
-        !!(post as any).hlsUrl ||
-        !!(post as any).hls_url ||
-        !!(post as any).mediaUrl?.includes("pexels.com/video") ||
-        !!(post as any).media_url?.includes("pexels.com/video") ||
-        !!(post as any).muxPlaybackId ||
-        !!(post as any).mux_playback_id
+        !!rawPost.mediaUrl?.includes(".mp4") ||
+        !!rawPost.media_url?.includes(".mp4") ||
+        !!rawPost.hlsUrl ||
+        !!rawPost.hls_url ||
+        !!rawPost.mediaUrl?.includes("pexels.com/video") ||
+        !!rawPost.media_url?.includes("pexels.com/video") ||
+        !!rawPost.muxPlaybackId ||
+        !!rawPost.mux_playback_id
       ));
     if (isVideo) {
       return (

@@ -13,7 +13,7 @@ import React, {
 import Hls from "hls.js";
 import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
-import { VideoSource } from "@/hooks/usePrefetchVideo";
+import { VideoSource, PreloadTier } from "@/hooks/usePrefetchVideo";
 import { videoCache } from "@/lib/videoWarmCache";
 import { mediaTelemetry } from "@/lib/mediaTelemetry";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -24,6 +24,7 @@ const StreamingDebugOverlay = React.lazy(
 );
 
 const videoPlayerLogger = logger.withContext("VideoPlayer");
+const lastByteMap = new WeakMap<SourceBuffer, number>();
 
 // Extend HTML attributes to support fetchPriority (Chrome 102+)
 declare module "react" {
@@ -55,7 +56,7 @@ export interface VideoPlayerProps {
   debug?: {
     activeRequests: number;
     concurrency: number;
-    tier: number;
+    tier: PreloadTier;
   };
 }
 
@@ -99,12 +100,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [bufferProgress, setBufferProgress] = useState(0);
 
   // TikTok-style speed controls
-  const [playbackRate, setPlaybackRate] = useState(1.0);
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const speedOptions = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+
 
   // Frame-accurate playback tracking (uses requestVideoFrameCallback when available)
-  const { isSmooth: isFrameSmooth } = useVideoFrameCallback(
+  useVideoFrameCallback(
     videoRef,
     (time, _frames) => {
       if (onProgress && duration > 0 && !progress70FiredRef.current) {
@@ -116,6 +116,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     },
   );
+
 
   // Check for debug mode
   useEffect(() => {
@@ -136,8 +137,58 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     typeof src === "string" &&
     (src.endsWith(".m3u8") || src.includes(".m3u8"));
 
-  // Determine effective source (empty when HLS - HLS manages playback)
-  const effectiveSrc = isHlsSrc
+  // Social media embed detection
+  const getSocialEmbedDetails = (url: string) => {
+    const lowerUrl = url.toLowerCase();
+    
+    // TikTok
+    if (lowerUrl.includes("tiktok.com")) {
+      // Extract ID: tiktok.com/@user/video/123456789
+      const match = url.match(/\/video\/(\d+)/);
+      if (match) {
+        return {
+          type: "tiktok",
+          id: match[1],
+          embedUrl: `https://www.tiktok.com/embed/v2/${match[1]}`,
+        };
+      }
+      return { type: "tiktok", embedUrl: url }; // Fallback
+    }
+    
+    // YouTube
+    if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) {
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|\/embed\/|\/v\/))([^?&"'>]+)/);
+      if (match) {
+        return {
+          type: "youtube",
+          id: match[1],
+          embedUrl: `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=${muted ? 1 : 0}&loop=1&playlist=${match[1]}`,
+        };
+      }
+    }
+
+    // Vimeo
+    if (lowerUrl.includes("vimeo.com")) {
+      const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:\w+\/)?|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+      if (match) {
+        return {
+          type: "vimeo",
+          id: match[1],
+          embedUrl: `https://player.vimeo.com/video/${match[1]}?autoplay=1&muted=${muted ? 1 : 0}&loop=1`,
+        };
+      }
+    }
+
+    return null;
+  };
+
+  const socialEmbed = src ? getSocialEmbedDetails(src) : null;
+  const isSocial = !!socialEmbed;
+
+  // Determine effective source
+  const effectiveSrc = isSocial
+    ? ""
+    : isHlsSrc
     ? ""
     : mseUrl ||
       (videoSource?.type === "blob" || videoSource?.type === "url"
@@ -258,18 +309,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
-    if (!videoRef.current) return;
+    if (!videoRef.current || videoSource?.type !== "partial-chunks") return;
 
     if (mseRef.current && sourceBufferRef.current) {
       const sb = sourceBufferRef.current;
       const currentChunks = videoSource.chunks;
-      const lastAppendedByte = (sb as any)._lastByte || -1;
+      const lastAppendedByte = lastByteMap.get(sb) ?? -1;
 
       const newChunks = currentChunks.filter((c) => c.start > lastAppendedByte);
       if (newChunks.length > 0) {
         newChunks.forEach((c) => {
           pendingChunksRef.current.push(c.data);
-          (sb as any)._lastByte = Math.max((sb as any)._lastByte || 0, c.end);
+          lastByteMap.set(sb, Math.max(lastByteMap.get(sb) || 0, c.end));
         });
 
         if (!sb.updating && pendingChunksRef.current.length > 0) {
@@ -288,7 +339,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const processQueue = () => {
       const ms = mseRef.current;
       const sb = sourceBufferRef.current;
-      // Validate MediaSource still open before any append (avoids "SourceBuffer removed" / invalid state)
       if (!ms || ms.readyState !== "open") return;
       if (!sb || sb.updating || pendingChunksRef.current.length === 0) return;
 
@@ -296,12 +346,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (data) {
         try {
           sb.appendBuffer(data);
-        } catch (e: any) {
-          if (e.name === "QuotaExceededError") {
+        } catch (e: unknown) {
+          if (e instanceof Error && e.name === "QuotaExceededError") {
             videoPlayerLogger.warn(
               "MSE Quota Exceeded. Clearing played buffer to reduce memory...",
             );
-            // Clear played content: keep ~30s behind playhead for seek stability
             const video = videoRef.current;
             if (video && sb.buffered.length > 0 && !sb.updating) {
               const start = 0;
@@ -309,15 +358,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               if (end > start) {
                 try {
                   sb.remove(start, end);
-                } catch (removeErr: any) {
+                } catch (removeErr: unknown) {
                   videoPlayerLogger.warn(
                     "MSE remove failed:",
-                    removeErr?.message,
+                    removeErr instanceof Error
+                      ? removeErr.message
+                      : String(removeErr),
                   );
                 }
               }
             }
-            // Chunk stays in queue; updateend will call processQueue again
             pendingChunksRef.current.unshift(data);
           }
           videoPlayerLogger.error("MSE Append Error:", e);
@@ -329,39 +379,34 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       try {
         if (mediaSource.readyState !== "open") return;
 
+        // Type guard for partial-chunks properties
+        if (videoSource.type !== "partial-chunks") return;
+
         const mimeType =
           videoSource.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
-        if (videoSource.mimeType && !mimeType.toLowerCase().includes("avc1")) {
-          videoPlayerLogger.warn(
-            "Non-H.264 codec in MSE path may cause decoder switches mid-feed:",
-            mimeType,
-          );
-        }
         if (!MediaSource.isTypeSupported(mimeType)) {
           videoPlayerLogger.warn(
             `MSE Type not supported: ${mimeType}. Falling back to URL.`,
           );
-          setMseUrl(null); // Force fallback to URL
+          setMseUrl(null);
           return;
         }
 
         const sb = mediaSource.addSourceBuffer(mimeType);
         sourceBufferRef.current = sb;
-        // 'sequence' mode: browser assigns timestamps so segments have no gaps. Use for concat/range fetches with possible discontinuities.
         try {
           sb.mode = "sequence";
         } catch {
-          // Some environments may not support changing mode; default 'segments' is fine for strict MP4.
+          // ignore
         }
 
         sb.addEventListener("updateend", () => {
-          // Guard: queued updateend can fire after rapid source change / MediaSource close—must check before any SB/MS use.
           if (mediaSource.readyState !== "open") return;
-          // SourceBuffer.remove() is async: we only run processQueue/endOfStream after updateend (when sb.updating is false).
           processQueue();
           if (
+            videoSource.type === "partial-chunks" &&
             videoSource.totalSize &&
-            (sb as any)._lastByte >= videoSource.totalSize - 1
+            (lastByteMap.get(sb) ?? 0) >= videoSource.totalSize - 1
           ) {
             if (!sb.updating) {
               mediaSource.endOfStream();
@@ -371,8 +416,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         videoSource.chunks.forEach((c) => {
           pendingChunksRef.current.push(c.data);
-          (sb as any)._lastByte = Math.max((sb as any)._lastByte || 0, c.end);
+          lastByteMap.set(sb, Math.max(lastByteMap.get(sb) || 0, c.end));
         });
+
         processQueue();
       } catch (e) {
         videoPlayerLogger.error("MSE Init Error:", e);
@@ -391,10 +437,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       pendingChunksRef.current = [];
       sourceBufferRef.current = null;
       mseRef.current = null;
-      // Revoke blob URL after a tick so any in-flight operations can complete
       setTimeout(() => URL.revokeObjectURL(url), 100);
     };
-  }, [videoSource, mseRetryCount]);
+  }, [videoSource, mseRetryCount, mseUrl, src, duration]);
+
 
   // Handle video source errors with exponential backoff retry
   const handleError = useCallback(
@@ -606,11 +652,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (autoPlay) {
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch((error) => {
-          // Auto-play was prevented
-          // videoPlayerLogger.debug('Autoplay prevented:', error);
+        playPromise.catch((_error) => {
           setIsPlaying(false);
         });
+
       }
       setIsPlaying(true);
     } else {
@@ -626,21 +671,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(muted);
   }, [muted]);
 
-  // Apply playback speed (TikTok-style)
-  useEffect(() => {
-    if (!videoRef.current) return;
-    videoRef.current.playbackRate = playbackRate;
-  }, [playbackRate]);
+
 
   // Handle speed change
-  const handleSpeedChange = useCallback(
-    (speed: number) => {
-      setPlaybackRate(speed);
-      setShowSpeedMenu(false);
-      tap();
-    },
-    [tap],
-  );
+
 
   // Play/Pause toggle (handle play() promise to avoid unhandled rejection)
   const togglePlay = useCallback(() => {
@@ -708,19 +742,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (!isFullscreen) {
         if (videoRef.current.requestFullscreen) {
           await videoRef.current.requestFullscreen();
-        } else if ((videoRef.current as any).webkitRequestFullscreen) {
-          await (videoRef.current as any).webkitRequestFullscreen();
+        } else if ("webkitRequestFullscreen" in videoRef.current) {
+          await (videoRef.current as HTMLVideoElement & { webkitRequestFullscreen(): Promise<void> }).webkitRequestFullscreen();
         }
         setIsFullscreen(true);
       } else {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
+        } else if ("webkitExitFullscreen" in document) {
+          await (document as Document & { webkitExitFullscreen(): Promise<void> }).webkitExitFullscreen();
         }
         setIsFullscreen(false);
         impact();
       }
+
+
     } catch (error) {
       videoPlayerLogger.error("Fullscreen error:", error);
     }
@@ -730,6 +766,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+
+    const metrics = metricsRef.current;
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
@@ -758,15 +796,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       progress70FiredRef.current = false;
 
       // Log Metrics on unmount
-      if (metricsRef.current.startTime) {
+      if (metrics.startTime) {
         videoPlayerLogger.info(`Playback Metrics for ${src.slice(-15)}:`, {
-          ttff: metricsRef.current.timeToFirstFrame,
-          stalls: metricsRef.current.stalledCount,
-          totalStallTime: metricsRef.current.totalStalledTime,
+          ttff: metrics.timeToFirstFrame,
+          stalls: metrics.stalledCount,
+          totalStallTime: metrics.totalStalledTime,
           mse: !!mseUrl,
           fallback: !mseUrl && videoSource?.type === "partial-chunks",
         });
       }
+
 
       // Clear stall recovery timer
       if (stallTimerRef.current) {
@@ -788,11 +827,21 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Validate video source URL (must be a playable video, not an image)
+  // Validate video source URL (must be a playable video, a stream, or a social link)
   const isValidVideoUrl = (url: string | undefined): boolean => {
     if (!url || typeof url !== "string") return false;
+    
+    // If it's a social link, it's valid for our iframe path
+    if (url.includes("tiktok.com") || url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com")) {
+      return true;
+    }
+
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|avif|bmp|svg)(\?|$)/i;
-    if (imageExtensions.test(url)) return false;
+    // Don't reject if it's a stream (m3u8) or has mux in it even if it has an extension later
+    if (imageExtensions.test(url) && !url.includes(".m3u8") && !url.includes("mux.com")) {
+      return false;
+    }
+
     try {
       new URL(url);
       return true;
@@ -801,17 +850,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  // Extract direct URL from proxied URL for fallback
-  const getDirectUrl = (proxiedUrl: string): string | null => {
-    if (!proxiedUrl.includes("/api/media-proxy?url=")) return null;
-    try {
-      const url = new URL(proxiedUrl, window.location.origin);
-      const directUrl = url.searchParams.get("url");
-      return directUrl;
-    } catch {
-      return null;
-    }
-  };
+
 
   // Native HTML5 path logging
   videoPlayerLogger.info("[VideoPlayer] Using NATIVE HTML5 path:", {
@@ -901,10 +940,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         backfaceVisibility: "hidden",
       }}
       onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => {
-        setShowControls(false);
-        setShowSpeedMenu(false);
-      }}
+      onMouseLeave={() => setShowControls(false)}
+
       onClick={(e) => {
         e.stopPropagation(); // Prevent parent (e.g. VideoCard) from catching and navigating away
         togglePlay();
@@ -917,7 +954,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             url={src}
             activeRequests={debug.activeRequests}
             concurrency={debug.concurrency}
-            tier={debug.tier as any}
+            tier={debug.tier}
+
             playheadByte={
               videoSource?.type === "partial-chunks" &&
               videoSource.totalSize &&
@@ -963,29 +1001,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onError={() => {}}
         />
       )}
-      <video
-        ref={videoRef}
-        src={effectiveSrc}
-        playsInline
-        muted={muted}
-        autoPlay={autoPlay}
-        loop={loop}
-        preload={preload}
-        fetchPriority={priority ? "high" : "low"}
-        className="w-full h-full object-cover video-container-crisp"
-        style={{
-          ...videoStyle,
-          transform: "translate3d(0, 0, 0)",
-          backfaceVisibility: "hidden",
-          WebkitBackfaceVisibility: "hidden",
-        }}
-        onError={handleError}
-        onCanPlay={handleCanPlay}
-        onLoadStart={handleLoadStart}
-        onPlaying={handlePlaying}
-        onWaiting={handleWaiting}
-        onProgress={handleProgress}
-      />
+
+      {isSocial && socialEmbed ? (
+        <iframe
+          src={socialEmbed.embedUrl}
+          className="w-full h-full border-0 absolute inset-0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          onLoad={() => setReadiness("ready")}
+          title="Social Content"
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          src={effectiveSrc}
+          playsInline
+          muted={muted}
+          autoPlay={autoPlay}
+          loop={loop}
+          preload={preload}
+          fetchPriority={priority ? "high" : "low"}
+          className="w-full h-full object-cover video-container-crisp"
+          style={{
+            ...videoStyle,
+            transform: "translate3d(0, 0, 0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+          }}
+          onError={handleError}
+          onCanPlay={handleCanPlay}
+          onLoadStart={handleLoadStart}
+          onPlaying={handlePlaying}
+          onWaiting={handleWaiting}
+          onProgress={handleProgress}
+        />
+      )}
       {/* Loading / Buffering State — smooth fade overlay */}
       {readiness === "loading" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 video-transitioning">

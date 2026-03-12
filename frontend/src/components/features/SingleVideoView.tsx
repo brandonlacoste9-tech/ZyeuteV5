@@ -18,6 +18,7 @@ import { InteractiveText } from "../InteractiveText";
 import { TiGuyInsight } from "../TiGuyInsight";
 import { EphemeralBadge } from "../ui/EphemeralBadge";
 import type { Post, User } from "@/types";
+import type { VideoSource, PreloadTier } from "@/hooks/usePrefetchVideo";
 import { useVideoVision } from "@/hooks/useVideoVision";
 import { validatePostType } from "@shared/utils/validatePostType";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
@@ -39,12 +40,12 @@ interface SingleVideoViewProps {
   isNext?: boolean;
   isEngaged?: boolean;
   preload?: "auto" | "metadata" | "none";
-  videoSource?: import("@/hooks/usePrefetchVideo").VideoSource;
+  videoSource?: VideoSource;
   isCached?: boolean;
   debug?: {
     activeRequests: number;
     concurrency: number;
-    tier: number;
+    tier: PreloadTier;
   };
   shouldPrefetch?: boolean;
   /** Called when playback reaches 70% (for prefetching next videos) */

@@ -75,14 +75,13 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
     >
       <video
         ref={videoRef}
-        className="w-full h-full object-cover video-container-crisp"
         style={{
           transform: "translate3d(0, 0, 0)",
           backfaceVisibility: "hidden",
         }}
         poster={poster}
         className={cn(
-          "w-full h-full object-cover transition-opacity duration-300",
+          "w-full h-full object-cover video-container-crisp transition-opacity duration-300",
           isReady ? "opacity-100" : "opacity-0",
         )}
         onTimeUpdate={handleTimeUpdate}
