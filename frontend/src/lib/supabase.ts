@@ -24,10 +24,29 @@ const isValidUrl = (url: string | undefined) => {
   }
 };
 
-if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
+const isPlaceholderCredentials = (key: string | undefined) => {
+  if (!key) return true;
+  // Detect placeholder/dummy/invalid keys
+  const lowerKey = key.toLowerCase();
+  return (
+    lowerKey.includes("placeholder") ||
+    lowerKey.includes("your_") ||
+    lowerKey.includes("mock") ||
+    lowerKey.includes("dummy") ||
+    key.length < 20
+  ); // Real Supabase anon keys are much longer
+};
+
+if (
+  !isValidUrl(supabaseUrl) ||
+  !supabaseAnonKey ||
+  isPlaceholderCredentials(supabaseAnonKey)
+) {
   console.warn(
     "Supabase credentials missing or invalid, using mock client. URL:",
     supabaseUrl,
+    "Key preview:",
+    supabaseAnonKey?.substring(0, 15),
   );
 }
 
@@ -57,7 +76,9 @@ const noOpLock = async <R>(
 
 // Create real Supabase client if credentials exist and are valid, otherwise use mock
 export const supabase =
-  isValidUrl(supabaseUrl) && supabaseAnonKey
+  isValidUrl(supabaseUrl) &&
+  supabaseAnonKey &&
+  !isPlaceholderCredentials(supabaseAnonKey)
     ? createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
           persistSession: true,
