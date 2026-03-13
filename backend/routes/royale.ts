@@ -14,7 +14,8 @@ router.get("/tournaments", async (_req, res) => {
     const tournaments = await RoyaleService.getActiveTournaments();
     res.json(tournaments);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Get tournaments error:", error);
+    res.status(500).json({ error: "Failed to load tournaments" });
   }
 });
 
@@ -27,7 +28,8 @@ router.post("/join", requireAuth, async (req, res) => {
     );
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    console.error("Join tournament error:", error);
+    res.status(400).json({ error: "Failed to join tournament" });
   }
 });
 
@@ -44,7 +46,8 @@ router.post("/submit", requireAuth, async (req, res) => {
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Submit score error:", error);
+    res.status(500).json({ error: "Failed to submit score" });
   }
 });
 
@@ -56,7 +59,8 @@ router.get("/leaderboard/:tournamentId", async (req, res) => {
     );
     res.json(leaderboard);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Get leaderboard error:", error);
+    res.status(500).json({ error: "Failed to load leaderboard" });
   }
 });
 

@@ -22,7 +22,8 @@ router.post("/hive-tap/token", requireAuth, async (req, res) => {
     );
     res.json({ token });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Hive tap token error:", error);
+    res.status(500).json({ error: "Failed to generate tap token" });
   }
 });
 
@@ -37,7 +38,8 @@ router.post("/hive-tap/process", requireAuth, async (req, res) => {
     );
     res.json(result);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    console.error("Hive tap process error:", error);
+    res.status(400).json({ error: "Tap processing failed" });
   }
 });
 

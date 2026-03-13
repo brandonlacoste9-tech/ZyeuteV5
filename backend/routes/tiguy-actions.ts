@@ -541,9 +541,64 @@ router.post("/image/generate", async (req, res) => {
   } catch (error: any) {
     console.error("Image generation error:", error);
     res.status(500).json({
-      error: error.message,
+      error: "Image generation failed",
       response: "La génération d'image a planté! Réessaie! 🎨",
     });
+  }
+});
+
+/**
+ * POST /api/tiguy/image/dalle
+ * Generate an image via OpenAI DALL-E 3 — server-side only.
+ * The OPENAI_API_KEY env var is never exposed to the browser.
+ */
+router.post("/image/dalle", async (req, res) => {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
+    return res.status(503).json({ error: "Image generation not configured" });
+  }
+
+  const { prompt, style = "cinematic" } = req.body;
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    return res.status(400).json({ error: "prompt is required" });
+  }
+
+  const enhancedPrompt = `${prompt.trim()}, style ${style}, high quality, detailed. CONTEXTE QUÉBÉCOIS: Include subtle Quebec elements if fitting (snow, nature, architecture).`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: "dall-e-3",
+        prompt: enhancedPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error(`[DALL-E] API error ${response.status}:`, body.substring(0, 200));
+      return res.status(502).json({ error: "Image generation failed" });
+    }
+
+    const data = await response.json();
+    const imageUrl = data.data?.[0]?.url;
+    const revisedPrompt = data.data?.[0]?.revised_prompt;
+
+    if (!imageUrl) {
+      return res.status(502).json({ error: "No image returned" });
+    }
+
+    res.json({ url: imageUrl, prompt, revised_prompt: revisedPrompt || enhancedPrompt, style });
+  } catch (error: any) {
+    console.error("[DALL-E] Request failed:", error);
+    res.status(500).json({ error: "Image generation failed" });
   }
 });
 
@@ -1392,7 +1447,7 @@ router.post("/voice", async (req, res) => {
     });
   } catch (error: any) {
     console.error("❌ Erreur Voix Ti-Guy:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Voice processing failed" });
   }
 });
 
@@ -1410,7 +1465,8 @@ router.post("/tts", async (req, res) => {
     });
     return res.json({ audio: tts.audioBase64 });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("TTS error:", error);
+    res.status(500).json({ error: "Text-to-speech failed" });
   }
 });
 
@@ -1478,7 +1534,8 @@ router.get("/admin/feed-status", async (req: any, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("Feed status error:", error);
+    res.status(500).json({ error: "Failed to get feed status" });
   }
 });
 

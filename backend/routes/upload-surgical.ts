@@ -14,8 +14,7 @@ const upload = multer({
 });
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // WARN: Do not crash if Supabase is missing, just disable upload features
 let supabase: ReturnType<typeof createClient> | null = null;
@@ -45,20 +44,15 @@ surgicalUploadRouter.post(
         });
       }
 
-      // 1. Authenticate
+      // 1. Authenticate — require a valid Bearer JWT; no fallback allowed.
       let userId: string | null = null;
       const authHeader = req.headers.authorization;
       if (authHeader?.startsWith("Bearer ")) {
         userId = await verifyAuthToken(authHeader.split(" ")[1]);
       }
 
-      if (!userId) {
-        // Support for testing/demo if auth is failing
-        userId = req.body.userId || (await storage.getSystemUserId());
-      }
-
       if (!userId)
-        return res.status(401).json({ error: "Unauthorized credentials" });
+        return res.status(401).json({ error: "Unauthorized" });
 
       const { buffer, originalname, mimetype } = req.file;
       const fileExt = originalname.split(".").pop();
@@ -126,7 +120,7 @@ surgicalUploadRouter.post(
       });
     } catch (err: any) {
       console.error("❌ Surgical upload crash:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Upload failed" });
     }
   },
 );

@@ -3,20 +3,21 @@ import { traceSupabase } from "./tracer.js";
 import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage.js";
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-// FALLBACK: Prioritize Anon Key for verification as Service Role Key is reporting invalid
-const SUPABASE_KEY =
-  process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+// Always prefer the service role key so the backend client has the correct
+// privileges. The anon key is a public key embedded in the JS bundle and must
+// NOT be used for server-side service operations.
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Track if Supabase is properly configured
 const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY);
 
 if (!isSupabaseConfigured) {
   console.warn(
-    "⚠️ Supabase environment variables missing. JWT Auth will fail.",
+    "⚠️ SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing. JWT Auth will fail.",
   );
   console.warn(
-    "   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY.",
+    "   Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in server environment variables.",
   );
 }
 

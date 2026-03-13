@@ -30,8 +30,15 @@ export class HiveTapService {
   private readonly MAX_DISTANCE_METERS = 15;
 
   constructor() {
-    this.secretKey =
-      process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "zyeute_default_secret_key";
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) {
+      tapLogger.error(
+        "SUPABASE_SERVICE_ROLE_KEY is not set. HiveTap token signing is disabled.",
+      );
+    }
+    // Empty string makes HMAC signatures non-functional but avoids crashing the
+    // module at load time. All signing methods check this.secretKey before use.
+    this.secretKey = key ?? "";
   }
 
   /**
@@ -43,6 +50,9 @@ export class HiveTapService {
     amount: number,
     location: { lat: number; lng: number },
   ): Promise<string> {
+    if (!this.secretKey) {
+      throw new Error("HiveTap signing key not configured");
+    }
     const nonce = crypto.randomBytes(8).toString("hex");
     const timestamp = Date.now();
 

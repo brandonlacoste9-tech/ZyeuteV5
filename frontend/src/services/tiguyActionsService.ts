@@ -19,6 +19,7 @@ async function tiguyFetch<T>(
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+  if (!response.ok) throw new Error(`TI-GUY unavailable (${response.status})`);
   return response.json();
 }
 

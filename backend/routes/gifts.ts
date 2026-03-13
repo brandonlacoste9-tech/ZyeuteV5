@@ -93,9 +93,7 @@ router.post("/create-payment-intent", requireAuth, async (req, res) => {
     });
   } catch (error: any) {
     console.error("Gift payment intent error:", error);
-    res
-      .status(500)
-      .json({ error: error.message || "Failed to create payment intent" });
+    res.status(500).json({ error: "Failed to create payment intent" });
   }
 });
 
@@ -165,7 +163,7 @@ router.post("/confirm", requireAuth, async (req: Request, res: Response) => {
     res.json({ success: true, gift, giftInfo });
   } catch (error: any) {
     console.error("Gift confirm error:", error);
-    res.status(500).json({ error: error.message || "Failed to confirm gift" });
+    res.status(500).json({ error: "Failed to confirm gift" });
   }
 });
 

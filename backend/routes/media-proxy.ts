@@ -10,6 +10,9 @@ import rateLimit from "express-rate-limit";
 
 const router = Router();
 
+// Exact hostnames and base domains whose subdomains are also allowed.
+// isAllowedUrl() matches h === hostname OR hostname.endsWith('.'+h).
+// Do NOT use glob/wildcard entries here — they are never matched.
 const ALLOWED_HOSTS = [
   "assets.mixkit.co",
   "mixkit.co",
@@ -22,11 +25,11 @@ const ALLOWED_HOSTS = [
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
   // Cloudflare Stream - HLS streaming and direct video files
+  // Subdomains (e.g. customer-xxx.cloudflarestream.com) are matched via endsWith
   "cloudflarestream.com",
-  "*.cloudflarestream.com",
-  // AI Generation - FAL AI
+  // FAL AI - image / video generation CDN
+  // Subdomains (e.g. v3.fal.media) are matched via endsWith
   "fal.media",
-  "*.fal.media",
   // Note: supabase.co is excluded - direct Supabase storage URLs work without
   // proxy in production and proxying them breaks byte-range seeking.
   // Note: stream.mux.com and chunk.mux.com are EXCLUDED - MuxVideoPlayer handles
@@ -76,7 +79,7 @@ function rewriteHLSManifest(content: string, manifestUrl: string): string {
       // Pass through empty lines and HLS tag / comment lines unchanged
       if (!trimmed || trimmed.startsWith("#")) return line;
 
-      // Resolve to an absolute GCS URL
+      // Resolve to an absolute URL
       let absoluteUrl: string;
       if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
         absoluteUrl = trimmed;
@@ -91,7 +94,15 @@ function rewriteHLSManifest(content: string, manifestUrl: string): string {
         absoluteUrl = `${baseDirUrl}${trimmed}`;
       }
 
-      // Route the absolute GCS URL back through the proxy
+      // Reject any URL that resolves to a host outside the allowlist.
+      // This prevents an attacker-controlled manifest from injecting
+      // arbitrary hosts into the proxy and using it as an SSRF probe.
+      if (!isAllowedUrl(absoluteUrl)) {
+        console.warn(`[MediaProxy] HLS manifest contained disallowed URL, dropping: ${absoluteUrl.substring(0, 80)}`);
+        return line;
+      }
+
+      // Route the absolute URL back through the proxy
       return `/api/media-proxy?url=${encodeURIComponent(absoluteUrl)}`;
     })
     .join("\n");
@@ -167,7 +178,10 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
       const text = await resp.text();
       const rewritten = rewriteHLSManifest(text, url);
       res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-      res.setHeader("Cache-Control", "public, max-age=86400");
+      // Short TTL: HLS playlists often embed time-limited signed segment URLs.
+      // 5 minutes lets CDN/browser cache reduce repeated manifest fetches without
+      // serving stale manifests after token expiry.
+      res.setHeader("Cache-Control", "public, max-age=300");
       res.setHeader("Access-Control-Allow-Origin", "*");
       return res.send(rewritten);
     }
