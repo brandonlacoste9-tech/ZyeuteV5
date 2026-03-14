@@ -10,6 +10,8 @@ import rateLimit from "express-rate-limit";
 
 const router = Router();
 
+// Exact hostnames OR base domains (subdomains matched via .endsWith check).
+// Do NOT use "*.domain" notation — the matching logic doesn't support it.
 const ALLOWED_HOSTS = [
   "assets.mixkit.co",
   "mixkit.co",
@@ -21,15 +23,13 @@ const ALLOWED_HOSTS = [
   "player.vimeo.com",
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
-  // Cloudflare Stream - HLS streaming and direct video files
+  // Cloudflare Stream — matches cloudflarestream.com and *.cloudflarestream.com
   "cloudflarestream.com",
-  "*.cloudflarestream.com",
-  // AI Generation - FAL AI
+  // FAL AI — matches fal.media and *.fal.media
   "fal.media",
-  "*.fal.media",
-  // Note: supabase.co is excluded - direct Supabase storage URLs work without
+  // Note: supabase.co is excluded — direct Supabase storage URLs work without
   // proxy in production and proxying them breaks byte-range seeking.
-  // Note: stream.mux.com and chunk.mux.com are EXCLUDED - MuxVideoPlayer handles
+  // Note: stream.mux.com and chunk.mux.com are EXCLUDED — MuxVideoPlayer handles
   // its own HLS streaming natively and must never go through this proxy.
 ];
 
@@ -139,10 +139,34 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     console.log(`[MediaProxy] Fetching: ${url.substring(0, 80)}...`);
 
-    const resp = await fetch(url, {
+    let resp = await fetch(url, {
       headers: fetchHeaders,
-      redirect: "follow",
+      redirect: "manual",
     });
+
+    // Follow redirects manually so we can validate each target against the allowlist
+    let redirectCount = 0;
+    const MAX_REDIRECTS = 5;
+    while (
+      resp.status >= 300 &&
+      resp.status < 400 &&
+      resp.headers.get("location")
+    ) {
+      if (++redirectCount > MAX_REDIRECTS) {
+        return res.status(502).json({ error: "Too many redirects" });
+      }
+      const location = new URL(resp.headers.get("location")!, url).toString();
+      if (!isAllowedUrl(location)) {
+        console.error(
+          `[MediaProxy] Redirect target not allowed: ${location.substring(0, 80)}`,
+        );
+        return res.status(403).json({ error: "Redirect target not allowed" });
+      }
+      resp = await fetch(location, {
+        headers: fetchHeaders,
+        redirect: "manual",
+      });
+    }
 
     if (!resp.ok) {
       console.error(
@@ -202,13 +226,12 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
       res.status(502).json({ error: "No response body" });
     }
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error(
       `[MediaProxy] Error fetching ${url.substring(0, 80)}:`,
-      errorMsg,
+      err instanceof Error ? err.message : err,
     );
     if (!res.headersSent) {
-      res.status(502).json({ error: "Proxy fetch failed", details: errorMsg });
+      res.status(502).json({ error: "Proxy fetch failed" });
     }
   }
 });
