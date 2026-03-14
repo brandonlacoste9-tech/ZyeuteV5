@@ -1,35 +1,34 @@
-import pg from "pg";
-import dotenv from "dotenv";
+import { config } from "dotenv";
 import { join } from "path";
+import pg from "pg";
 
-dotenv.config();
+config({ path: join(process.cwd(), ".env") });
 
-const { Pool } = pg;
-
-async function test() {
-  const connectionString =
-    "postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-ca-central-1.pooler.supabase.com:5432/postgres";
-  console.log(
-    "Testing session pooler connection to:",
-    connectionString.replace(/:[^:]*@/, ":****@"),
-  );
-  const pool = new Pool({
-    connectionString: connectionString,
-    ssl: { rejectUnauthorized: false },
+async function main() {
+  console.log("Testing DB connection...");
+  
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
   });
 
   try {
-    console.log("Connecting...");
     const client = await pool.connect();
-    console.log("✅ Connected successfully!");
-    const res = await client.query("SELECT now()");
-    console.log("Time from DB:", res.rows[0]);
+    console.log("✅ Connected");
+    
+    const res = await client.query('SELECT count(*) FROM "user_profiles"');
+    console.log("User count:", res.rows[0].count);
+    
+    const users = await client.query('SELECT id, username FROM "user_profiles" LIMIT 5');
+    console.log("Some users:");
+    users.rows.forEach(u => console.log(` - ${u.username} (${u.id})`));
+    
     client.release();
-  } catch (err) {
-    console.error("❌ Connection failed:", err);
+  } catch (err: any) {
+    console.error("❌ Error:", err.message);
   } finally {
     await pool.end();
   }
 }
 
-test();
+main();

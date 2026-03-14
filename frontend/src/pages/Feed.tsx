@@ -14,6 +14,7 @@ import { ContinuousFeed } from "@/components/features/ContinuousFeed";
 import ChoixDuGrandCastor from "@/components/features/ChoixDuGrandCastor";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { AvatarSkeleton } from "@/components/ui/Skeleton";
+import { HamburgerMenu } from "@/components/layout/HamburgerMenu";
 
 import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
@@ -157,9 +158,12 @@ export const Feed: React.FC = () => {
       <div className="flex-none z-30 bg-neutral-900/95 backdrop-blur-md border-b border-gold-500/30 shadow-lg shadow-black/50">
         <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-black text-gold-400 embossed tracking-tight drop-shadow-sm">
-              Zyeuté
-            </h1>
+            <div className="flex items-center gap-3">
+              <HamburgerMenu />
+              <h1 className="text-2xl font-black text-gold-400 embossed tracking-tight drop-shadow-sm">
+                Zyeuté
+              </h1>
+            </div>
             <div className="flex items-center gap-3">
               <Link
                 to="/notifications"

@@ -61,7 +61,7 @@ export function MuxVideoPlayer({
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-zinc-900 rounded-xl",
+          "relative w-full h-full flex items-center justify-center bg-zinc-900",
           className,
         )}
       >
@@ -80,7 +80,7 @@ export function MuxVideoPlayer({
 
   return (
     <div
-      className={cn("relative video-motion-smooth", className)}
+      className={cn("relative w-full h-full video-motion-smooth", className)}
       style={{
         ...style,
         transform: "translate3d(0, 0, 0)",
@@ -88,7 +88,7 @@ export function MuxVideoPlayer({
       }}
     >
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 rounded-xl z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 z-10">
           <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />
         </div>
       )}
@@ -101,7 +101,7 @@ export function MuxVideoPlayer({
         loop={loop}
         muted={muted}
         playsInline
-        className="w-full h-full rounded-xl object-cover"
+        className="w-full h-full object-cover"
         onLoadStart={handleLoadStart}
         onLoadedData={handleLoadedData}
         onError={handleError}

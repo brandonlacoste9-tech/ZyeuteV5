@@ -66,7 +66,7 @@ const BaseUserSchema = z
 
 export const UserSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
-  const v = val as Record<string, any>;
+  const v = val as Record<string, unknown>;
   return {
     id: v.id,
     username: v.username,
@@ -156,7 +156,7 @@ const BaseCommentSchema = z
 
 export const CommentSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
-  const v = val as Record<string, any>;
+  const v = val as Record<string, unknown>;
   return {
     ...v,
     content: v.content || v.text || "",
@@ -245,7 +245,7 @@ const BaseStorySchema = z
 
 export const StorySchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
-  const v = val as Record<string, any>;
+  const v = val as Record<string, unknown>;
   const mediaType = v.mediaType || v.media_type || "photo";
   return {
     id: v.id,
@@ -357,7 +357,7 @@ const BasePostSchema = z.discriminatedUnion("type", [PhotoPost, VideoPost]);
 export const PostSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
 
-  const v = val as Record<string, any>;
+  const v = val as Record<string, unknown>;
 
   const rawHls = v.hls_url || v.hlsUrl;
   const mediaUrl = rawHls || v.media_url || v.mediaUrl || v.original_url;
@@ -490,7 +490,7 @@ const BaseNotificationSchema = z
 
 export const NotificationSchema = z.preprocess((val: unknown) => {
   if (!val || typeof val !== "object") return val;
-  const v = val as Record<string, any>;
+  const v = val as Record<string, unknown>;
 
   // Map database notification types to schema types
   const typeMapping: Record<

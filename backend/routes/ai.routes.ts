@@ -179,10 +179,10 @@ router.get("/health", (req, res) => {
 // 7. Generate Video (Image-to-Video or Text-to-Video)
 // Requires FAL_API_KEY or FAL_KEY to be set
 router.post("/generate-video", requireAuth, async (req: any, res) => {
-  let modelHint: "kling" | "wan" | "hunyuan_video" = "kling";
+  let modelHint: "kling" | "wan" | "hunyuan_video" | "ltx2" | "ltx-2" = "kling";
   try {
     const { imageUrl, prompt, duration = 5, modelHint: hint } = req.body;
-    if (hint && ["kling", "wan", "hunyuan_video"].includes(hint)) {
+    if (hint && ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2"].includes(hint)) {
       modelHint = hint as any;
     }
 

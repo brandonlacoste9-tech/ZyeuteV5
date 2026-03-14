@@ -104,13 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // GUARD: Prevent duplicate initialization
-    if (hasInitialized.current) {
-      console.log("🕯️ [Auth] Already initialized, skipping");
-      return;
-    }
-    hasInitialized.current = true;
-
     const startTime = Date.now();
     console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;

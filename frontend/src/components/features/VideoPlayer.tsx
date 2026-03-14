@@ -867,7 +867,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div
         className={cn(
-          "relative flex items-center justify-center bg-zinc-900",
+          "relative w-full h-full flex items-center justify-center bg-zinc-900",
           className,
         )}
         style={style}
@@ -884,7 +884,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return (
       <div
         className={cn(
-          "relative flex items-center justify-center bg-zinc-900",
+          "relative w-full h-full flex items-center justify-center bg-zinc-900",
           className,
         )}
         style={style}
@@ -931,7 +931,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <div
       className={cn(
-        "relative group video-hover-glow video-motion-smooth rounded-xl overflow-hidden",
+        "relative w-full h-full group video-hover-glow video-motion-smooth overflow-hidden",
         className,
       )}
       style={{

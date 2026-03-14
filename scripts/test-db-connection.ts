@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const { Pool } = pg;
 
@@ -34,12 +35,9 @@ async function run() {
   const original = process.env.DATABASE_URL || "";
 
   const alternatives = [
-    original,
-    original
-      .replace(":6543", ":5432")
-      .replace("postgres.vuanulvyqkfefmjcikfk", "postgres"),
-    original.replace("postgres.vuanulvyqkfefmjcikfk", "postgres"),
-    original.replace(":6543", ":5432"),
+    `postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres`,
+    `postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-ca-central-1.pooler.supabase.com:5432/postgres`,
+    `postgresql://postgres:HOEqEZsZeycL9PRE@db.vuanulvyqkfefmjcikfk.supabase.co:5432/postgres`
   ];
 
   for (const url of alternatives) {

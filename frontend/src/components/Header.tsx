@@ -26,21 +26,22 @@ export const Header: React.FC<HeaderProps> = ({
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
 
+  const isCustomStyles = className?.includes("bg-") || className?.includes("border-");
+
   return (
     <header
       className={cn(
         "sticky top-0 z-50",
-        "backdrop-blur-md",
-        "shadow-lg",
+        !isCustomStyles && "backdrop-blur-md shadow-lg",
         className,
       )}
-      style={{
+      style={!isCustomStyles ? {
         background:
           "linear-gradient(to bottom, rgba(26, 20, 24, 0.98) 0%, rgba(15, 12, 14, 0.95) 100%)",
         borderBottom: "1px solid rgba(255, 191, 0, 0.4)",
         boxShadow:
           "0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 15px rgba(255, 191, 0, 0.1)",
-      }}
+      } : {}}
     >
       {/* Gold Glow Line at Bottom */}
       <div

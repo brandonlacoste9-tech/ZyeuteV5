@@ -273,6 +273,24 @@ export const HamburgerMenu: React.FC = () => {
       to: "/swarm",
     },
     {
+      label: "Manus AI Agent",
+      icon: <span className="text-lg">🦾</span>,
+      to: "/manus",
+      isNew: true,
+    },
+    {
+      label: "GravityClaw Compliance",
+      icon: <span className="text-lg">🦞</span>,
+      to: "/gravityclaw",
+      isNew: true,
+    },
+    {
+      label: "NullClaw Infrastructure",
+      icon: <span className="text-lg">⚙️</span>,
+      to: "/nullclaw",
+      isNew: true,
+    },
+    {
       label: "Arcade",
       icon: <span className="text-lg">🎮</span>,
       to: "/arcade",

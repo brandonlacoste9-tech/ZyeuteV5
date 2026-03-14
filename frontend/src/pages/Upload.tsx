@@ -572,7 +572,7 @@ export const Upload: React.FC = () => {
                 onClick={handleUpload}
                 disabled={
                   isUploading ||
-                  (!file && !muxData && !pexelsData) ||
+                  (!file && !muxData && !pexelsData && !externalMediaUrl) ||
                   !caption.trim()
                 }
                 className="flex-[2] btn-gold py-4 rounded-2xl font-black text-lg shadow-2xl disabled:opacity-50 flex items-center justify-center gap-3 group"
