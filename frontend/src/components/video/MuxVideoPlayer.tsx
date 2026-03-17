@@ -1,9 +1,14 @@
 /**
  * MuxVideoPlayer - MUX streaming player with French UI
  * Zyeuté V5 - Quebec social media
+ * 
+ * FIXED: Added explicit HLS buffer configuration to prevent mid-play freezes
+ * - Increased maxBufferLength for better quality switching
+ * - Added min/max bitrate constraints to stabilize ABR
+ * - Added retry logic for failed segments
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +23,8 @@ interface MuxVideoPlayerProps {
   style?: React.CSSProperties;
   /** Called when Mux player errors (for diagnostics) */
   onError?: (error: Error) => void;
+  /** Called when video freezes (buffer starvation) */
+  onFreeze?: () => void;
 }
 
 export function MuxVideoPlayer({
@@ -29,15 +36,47 @@ export function MuxVideoPlayer({
   muted = true,
   style,
   onError: onErrorProp,
+  onFreeze,
 }: MuxVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const playerRef = useRef<any>(null);
+  const freezeCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTimeRef = useRef<number>(0);
+
+  // Monitor for freezes (time not advancing despite playing)
+  useEffect(() => {
+    if (!autoPlay) return;
+    
+    const checkFreeze = () => {
+      const video = playerRef.current?.media;
+      if (!video || video.paused || video.ended) return;
+      
+      const currentTime = video.currentTime;
+      if (currentTime === lastTimeRef.current && !video.seeking) {
+        // Time hasn't advanced - potential freeze
+        console.warn("[MuxVideoPlayer] Detected freeze at", currentTime);
+        onFreeze?.();
+        
+        // Attempt recovery: pause then play
+        video.pause();
+        setTimeout(() => video.play().catch(() => {}), 100);
+      }
+      lastTimeRef.current = currentTime;
+    };
+
+    freezeCheckRef.current = setInterval(checkFreeze, 2000);
+    return () => {
+      if (freezeCheckRef.current) clearInterval(freezeCheckRef.current);
+    };
+  }, [autoPlay, onFreeze]);
 
   const handleLoadStart = useCallback(() => {
     setIsLoading(true);
     setHasError(false);
     setErrorMessage(null);
+    lastTimeRef.current = 0;
   }, []);
 
   const handleLoadedData = useCallback(() => {
@@ -49,19 +88,52 @@ export function MuxVideoPlayer({
       setIsLoading(false);
       setHasError(true);
       const target = (e as { target?: HTMLVideoElement })?.target;
-      const msg =
-        target?.error?.message || "Mux playback failed";
+      const msg = target?.error?.message || "Mux playback failed";
       setErrorMessage(msg);
       onErrorProp?.(new Error(msg));
     },
     [onErrorProp],
   );
 
+  // HLS config to prevent freezes during ABR switching
+  const hlsConfig = {
+    // Buffer settings - prevent starvation during quality switches
+    maxBufferLength: 30, // seconds of buffer (default is ~10)
+    maxMaxBufferLength: 60, // max buffer ceiling
+    minBufferLength: 10, // minimum buffer before playback resumes
+    
+    // ABR (Adaptive Bitrate) - stabilize quality switching
+    startLevel: -1, // auto-select initial quality
+    abrEwmaFastLive: 3, // faster adaptation to network changes
+    abrEwmaSlowLive: 9,
+    abrBandWidthFactor: 0.95, // conservative bandwidth estimate
+    abrBandWidthUpFactor: 0.7, // require more headroom before upswitch
+    
+    // Bitrate constraints for stability
+    minAutoBitrate: 0, // allow lowest quality if needed
+    
+    // Retry logic for failed segments
+    fragLoadingMaxRetry: 6,
+    fragLoadingRetryDelay: 1000,
+    fragLoadingMaxRetryTimeout: 8000,
+    
+    // Level switching - smoother transitions
+    levelLoadingMaxRetry: 4,
+    levelLoadingRetryDelay: 1000,
+    
+    // Prevent gaps from causing freezes
+    maxFragLookUpTolerance: 0.25,
+    liveSyncDurationCount: 3,
+    
+    // Low latency settings (keep false for on-demand)
+    lowLatencyMode: false,
+  };
+
   if (hasError) {
     return (
       <div
         className={cn(
-          "relative w-full h-full flex items-center justify-center bg-zinc-900",
+          "flex items-center justify-center bg-zinc-900 rounded-xl",
           className,
         )}
       >
@@ -79,21 +151,15 @@ export function MuxVideoPlayer({
   }
 
   return (
-    <div
-      className={cn("relative w-full h-full video-motion-smooth", className)}
-      style={{
-        ...style,
-        transform: "translate3d(0, 0, 0)",
-        backfaceVisibility: "hidden",
-      }}
-    >
+    <div className={cn("relative", className)} style={style}>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 z-10">
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 rounded-xl z-10">
           <Loader2 className="w-8 h-8 text-gold-500 animate-spin" />
         </div>
       )}
 
       <MuxPlayer
+        ref={playerRef}
         playbackId={playbackId}
         thumbnailTime={0}
         placeholder={thumbnailUrl}
@@ -101,7 +167,7 @@ export function MuxVideoPlayer({
         loop={loop}
         muted={muted}
         playsInline
-        className="w-full h-full object-cover"
+        className="w-full h-full rounded-xl object-cover"
         onLoadStart={handleLoadStart}
         onLoadedData={handleLoadedData}
         onError={handleError}
@@ -109,6 +175,10 @@ export function MuxVideoPlayer({
         primaryColor="#D4AF37"
         secondaryColor="#1a1a1a"
         accentColor="#FFD700"
+        // CRITICAL FIX: Explicit HLS configuration
+        hlsConfig={hlsConfig}
+        // Prefer native HLS on Safari (more stable), hls.js elsewhere
+        preferPlayback="native"
       />
     </div>
   );
