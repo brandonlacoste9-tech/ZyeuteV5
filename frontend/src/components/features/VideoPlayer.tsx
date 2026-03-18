@@ -101,22 +101,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // TikTok-style speed controls
 
-
-
   // Frame-accurate playback tracking (uses requestVideoFrameCallback when available)
-  useVideoFrameCallback(
-    videoRef,
-    (time, _frames) => {
-      if (onProgress && duration > 0 && !progress70FiredRef.current) {
-        const progress = time / duration;
-        if (progress >= 0.7) {
-          progress70FiredRef.current = true;
-          onProgress(progress);
-        }
+  useVideoFrameCallback(videoRef, (time, _frames) => {
+    if (onProgress && duration > 0 && !progress70FiredRef.current) {
+      const progress = time / duration;
+      if (progress >= 0.7) {
+        progress70FiredRef.current = true;
+        onProgress(progress);
       }
-    },
-  );
-
+    }
+  });
 
   // Check for debug mode
   useEffect(() => {
@@ -140,7 +134,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Social media embed detection
   const getSocialEmbedDetails = (url: string) => {
     const lowerUrl = url.toLowerCase();
-    
+
     // TikTok
     if (lowerUrl.includes("tiktok.com")) {
       // Extract ID: tiktok.com/@user/video/123456789
@@ -154,10 +148,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
       return { type: "tiktok", embedUrl: url }; // Fallback
     }
-    
+
     // YouTube
     if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) {
-      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|\/embed\/|\/v\/))([^?&"'>]+)/);
+      const match = url.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:.*v=|\/embed\/|\/v\/))([^?&"'>]+)/,
+      );
       if (match) {
         return {
           type: "youtube",
@@ -169,7 +165,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // Vimeo
     if (lowerUrl.includes("vimeo.com")) {
-      const match = url.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:\w+\/)?|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/);
+      const match = url.match(
+        /vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:\w+\/)?|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?)/,
+      );
       if (match) {
         return {
           type: "vimeo",
@@ -189,11 +187,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const effectiveSrc = isSocial
     ? ""
     : isHlsSrc
-    ? ""
-    : mseUrl ||
-      (videoSource?.type === "blob" || videoSource?.type === "url"
-        ? videoSource.src
-        : src);
+      ? ""
+      : mseUrl ||
+        (videoSource?.type === "blob" || videoSource?.type === "url"
+          ? videoSource.src
+          : src);
 
   // HLS.js setup for .m3u8 sources
   useEffect(() => {
@@ -229,7 +227,37 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hls.attachMedia(el);
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
-          videoPlayerLogger.warn("[VideoPlayer] HLS fatal error:", data);
+          videoPlayerLogger.warn(
+            "[VideoPlayer] HLS fatal error:",
+            data.type,
+            data.details,
+          );
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              videoPlayerLogger.warn(
+                "[VideoPlayer] HLS network error — attempting startLoad recovery",
+              );
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              videoPlayerLogger.warn(
+                "[VideoPlayer] HLS media error — attempting recoverMediaError",
+              );
+              hls.recoverMediaError();
+              break;
+            default:
+              videoPlayerLogger.warn(
+                "[VideoPlayer] HLS unrecoverable — falling back to direct src",
+              );
+              hls.destroy();
+              hlsRef.current = null;
+              if (el && src) {
+                el.src = src;
+                if (autoPlay) el.play().catch(() => {});
+              }
+              setReadiness("error");
+              break;
+          }
         }
       });
       if (autoPlay) {
@@ -440,7 +468,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setTimeout(() => URL.revokeObjectURL(url), 100);
     };
   }, [videoSource, mseRetryCount, mseUrl, src, duration]);
-
 
   // Handle video source errors with exponential backoff retry
   const handleError = useCallback(
@@ -655,7 +682,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         playPromise.catch((_error) => {
           setIsPlaying(false);
         });
-
       }
       setIsPlaying(true);
     } else {
@@ -671,10 +697,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(muted);
   }, [muted]);
 
-
-
   // Handle speed change
-
 
   // Play/Pause toggle (handle play() promise to avoid unhandled rejection)
   const togglePlay = useCallback(() => {
@@ -743,20 +766,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (videoRef.current.requestFullscreen) {
           await videoRef.current.requestFullscreen();
         } else if ("webkitRequestFullscreen" in videoRef.current) {
-          await (videoRef.current as HTMLVideoElement & { webkitRequestFullscreen(): Promise<void> }).webkitRequestFullscreen();
+          await (
+            videoRef.current as HTMLVideoElement & {
+              webkitRequestFullscreen(): Promise<void>;
+            }
+          ).webkitRequestFullscreen();
         }
         setIsFullscreen(true);
       } else {
         if (document.exitFullscreen) {
           await document.exitFullscreen();
         } else if ("webkitExitFullscreen" in document) {
-          await (document as Document & { webkitExitFullscreen(): Promise<void> }).webkitExitFullscreen();
+          await (
+            document as Document & { webkitExitFullscreen(): Promise<void> }
+          ).webkitExitFullscreen();
         }
         setIsFullscreen(false);
         impact();
       }
-
-
     } catch (error) {
       videoPlayerLogger.error("Fullscreen error:", error);
     }
@@ -806,7 +833,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         });
       }
 
-
       // Clear stall recovery timer
       if (stallTimerRef.current) {
         clearTimeout(stallTimerRef.current);
@@ -830,15 +856,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Validate video source URL (must be a playable video, a stream, or a social link)
   const isValidVideoUrl = (url: string | undefined): boolean => {
     if (!url || typeof url !== "string") return false;
-    
+
     // If it's a social link, it's valid for our iframe path
-    if (url.includes("tiktok.com") || url.includes("youtube.com") || url.includes("youtu.be") || url.includes("vimeo.com")) {
+    if (
+      url.includes("tiktok.com") ||
+      url.includes("youtube.com") ||
+      url.includes("youtu.be") ||
+      url.includes("vimeo.com")
+    ) {
       return true;
     }
 
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|avif|bmp|svg)(\?|$)/i;
     // Don't reject if it's a stream (m3u8) or has mux in it even if it has an extension later
-    if (imageExtensions.test(url) && !url.includes(".m3u8") && !url.includes("mux.com")) {
+    if (
+      imageExtensions.test(url) &&
+      !url.includes(".m3u8") &&
+      !url.includes("mux.com")
+    ) {
       return false;
     }
 
@@ -849,8 +884,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return url.startsWith("/") || url.startsWith("blob:");
     }
   };
-
-
 
   // Native HTML5 path logging
   videoPlayerLogger.info("[VideoPlayer] Using NATIVE HTML5 path:", {
@@ -941,7 +974,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }}
       onMouseEnter={() => setShowControls(true)}
       onMouseLeave={() => setShowControls(false)}
-
       onClick={(e) => {
         e.stopPropagation(); // Prevent parent (e.g. VideoCard) from catching and navigating away
         togglePlay();
@@ -955,7 +987,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             activeRequests={debug.activeRequests}
             concurrency={debug.concurrency}
             tier={debug.tier}
-
             playheadByte={
               videoSource?.type === "partial-chunks" &&
               videoSource.totalSize &&

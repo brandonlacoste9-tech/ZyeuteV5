@@ -237,7 +237,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   );
 
   // Scroll Velocity Tracking — EMA-smoothed for clean motion decisions
-  const { handleScroll, smoothVelocity, isFast, isMedium, isSlow, isDecelerating } = useScrollVelocity();
+  const {
+    handleScroll,
+    smoothVelocity,
+    isFast,
+    isMedium,
+    isSlow,
+    isDecelerating,
+  } = useScrollVelocity();
   const [isSystemOverloaded, setIsSystemOverloaded] = useState(false);
   const isPageVisible = usePageVisibility();
 
@@ -333,200 +340,210 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }, [savedState, posts.length]);
 
   // Hardcoded demo videos - guaranteed to work without API keys
-const DEMO_VIDEOS: Array<Post & { user: User }> = [
-  {
-    id: "demo-1",
-    user_id: "demo-user-1",
-    type: "video" as const,
-    caption: "Welcome to Zyeuté! 🍁 Bienvenue au Québec!",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    thumbnail_url: "/demo/branding.png",
-    thumbnailUrl: "/demo/branding.png",
-    user: {
-      id: "demo-user-1",
-      username: "zyeute",
-      display_name: "Zyeuté Officiel",
-      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true,
+  const DEMO_VIDEOS: Array<Post & { user: User }> = [
+    {
+      id: "demo-1",
+      user_id: "demo-user-1",
+      type: "video" as const,
+      caption: "Welcome to Zyeuté! 🍁 Bienvenue au Québec!",
+      media_url:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      mediaUrl:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      thumbnail_url: "/demo/branding.png",
+      thumbnailUrl: "/demo/branding.png",
+      user: {
+        id: "demo-user-1",
+        username: "zyeute",
+        display_name: "Zyeuté Officiel",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        is_verified: true,
+        created_at: new Date().toISOString(),
+        coins: 0,
+        piasse_balance: 0,
+        total_karma: 0,
+        fire_score: 0,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen",
+      } as User,
+      fire_count: 1337,
+      comment_count: 42,
       created_at: new Date().toISOString(),
-      coins: 0,
-      piasse_balance: 0,
-      total_karma: 0,
-      fire_score: 0,
-      followers_count: 0,
-      following_count: 0,
-      posts_count: 0,
-      is_following: false,
-      role: "citoyen",
-    } as User,
-    fire_count: 1337,
-    comment_count: 42,
-    created_at: new Date().toISOString(),
-    visibility: "public",
-    hive_id: "quebec",
-    is_moderated: false,
-    moderation_approved: true,
-    is_hidden: false,
-    is_ephemeral: false,
-    view_count: 0,
-    max_views: 1,
-  },
-  {
-    id: "demo-2",
-    user_id: "demo-user-2",
-    type: "video" as const,
-    caption: "Montreal vibes 🏙️⚜️ #Montreal #Quebec",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    thumbnail_url: "/demo/montreal.png",
-    thumbnailUrl: "/demo/montreal.png",
-    user: {
-      id: "demo-user-2",
-      username: "montreal",
-      display_name: "Montréal",
-      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true,
-      created_at: new Date().toISOString(),
-      coins: 0,
-      piasse_balance: 0,
-      total_karma: 0,
-      fire_score: 0,
-      followers_count: 0,
-      following_count: 0,
-      posts_count: 0,
-      is_following: false,
-      role: "citoyen",
-    } as User,
-    fire_count: 856,
-    comment_count: 23,
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    visibility: "public",
-    hive_id: "quebec",
-    is_moderated: false,
-    moderation_approved: true,
-    is_hidden: false,
-    is_ephemeral: false,
-    view_count: 0,
-    max_views: 1,
-  },
-  {
-    id: "demo-3",
-    user_id: "demo-user-3",
-    type: "video" as const,
-    caption: "Beautiful Quebec nature 🍁🌲",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    thumbnail_url: "/demo/nature.png",
-    thumbnailUrl: "/demo/nature.png",
-    user: {
-      id: "demo-user-3",
-      username: "quebec_nature",
-      display_name: "Nature Québec",
-      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: false,
-      created_at: new Date().toISOString(),
-      coins: 0,
-      piasse_balance: 0,
-      total_karma: 0,
-      fire_score: 0,
-      followers_count: 0,
-      following_count: 0,
-      posts_count: 0,
-      is_following: false,
-      role: "citoyen",
-    } as User,
-    fire_count: 421,
-    comment_count: 15,
-    created_at: new Date(Date.now() - 7200000).toISOString(),
-    visibility: "public",
-    hive_id: "quebec",
-    is_moderated: false,
-    moderation_approved: true,
-    is_hidden: false,
-    is_ephemeral: false,
-    view_count: 0,
-    max_views: 1,
-  },
-  {
-    id: "demo-4",
-    user_id: "demo-user-4",
-    type: "video" as const,
-    caption: "Winter in Quebec ❄️❄️❄️",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    thumbnail_url: "/demo/winter.png",
-    thumbnailUrl: "/demo/winter.png",
-    user: {
-      id: "demo-user-4",
-      username: "quebec_winter",
-      display_name: "Hiver Québécois",
-      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: false,
-      created_at: new Date().toISOString(),
-      coins: 0,
-      piasse_balance: 0,
-      total_karma: 0,
-      fire_score: 0,
-      followers_count: 0,
-      following_count: 0,
-      posts_count: 0,
-      is_following: false,
-      role: "citoyen",
-    } as User,
-    fire_count: 692,
-    comment_count: 31,
-    created_at: new Date(Date.now() - 10800000).toISOString(),
-    visibility: "public",
-    hive_id: "quebec",
-    is_moderated: false,
-    moderation_approved: true,
-    is_hidden: false,
-    is_ephemeral: false,
-    view_count: 0,
-    max_views: 1,
-  },
-  {
-    id: "demo-5",
-    user_id: "demo-user-5",
-    type: "video" as const,
-    caption: "Quebec City old town 🏰⚜️",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-    thumbnail_url: "/demo/quebec_city.png",
-    thumbnailUrl: "/demo/quebec_city.png",
-    user: {
-      id: "demo-user-5",
-      username: "vieux_quebec",
-      display_name: "Vieux Québec",
-      avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true,
-      created_at: new Date().toISOString(),
-      coins: 0,
-      piasse_balance: 0,
-      total_karma: 0,
-      fire_score: 0,
-      followers_count: 0,
-      following_count: 0,
-      posts_count: 0,
-      is_following: false,
-      role: "citoyen",
-    } as User,
-    fire_count: 1024,
-    comment_count: 56,
-    created_at: new Date(Date.now() - 14400000).toISOString(),
-    visibility: "public",
-    hive_id: "quebec",
-    is_moderated: false,
-    moderation_approved: true,
-    is_hidden: false,
-    is_ephemeral: false,
-    view_count: 0,
-    max_views: 1,
-  },
-];
+      visibility: "public",
+      hive_id: "quebec",
+      is_moderated: false,
+      moderation_approved: true,
+      is_hidden: false,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    },
+    {
+      id: "demo-2",
+      user_id: "demo-user-2",
+      type: "video" as const,
+      caption: "Montreal vibes 🏙️⚜️ #Montreal #Quebec",
+      media_url:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      mediaUrl:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      thumbnail_url: "/demo/montreal.png",
+      thumbnailUrl: "/demo/montreal.png",
+      user: {
+        id: "demo-user-2",
+        username: "montreal",
+        display_name: "Montréal",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        is_verified: true,
+        created_at: new Date().toISOString(),
+        coins: 0,
+        piasse_balance: 0,
+        total_karma: 0,
+        fire_score: 0,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen",
+      } as User,
+      fire_count: 856,
+      comment_count: 23,
+      created_at: new Date(Date.now() - 3600000).toISOString(),
+      visibility: "public",
+      hive_id: "quebec",
+      is_moderated: false,
+      moderation_approved: true,
+      is_hidden: false,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    },
+    {
+      id: "demo-3",
+      user_id: "demo-user-3",
+      type: "video" as const,
+      caption: "Beautiful Quebec nature 🍁🌲",
+      media_url:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      mediaUrl:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      thumbnail_url: "/demo/nature.png",
+      thumbnailUrl: "/demo/nature.png",
+      user: {
+        id: "demo-user-3",
+        username: "quebec_nature",
+        display_name: "Nature Québec",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        is_verified: false,
+        created_at: new Date().toISOString(),
+        coins: 0,
+        piasse_balance: 0,
+        total_karma: 0,
+        fire_score: 0,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen",
+      } as User,
+      fire_count: 421,
+      comment_count: 15,
+      created_at: new Date(Date.now() - 7200000).toISOString(),
+      visibility: "public",
+      hive_id: "quebec",
+      is_moderated: false,
+      moderation_approved: true,
+      is_hidden: false,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    },
+    {
+      id: "demo-4",
+      user_id: "demo-user-4",
+      type: "video" as const,
+      caption: "Winter in Quebec ❄️❄️❄️",
+      media_url:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      mediaUrl:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      thumbnail_url: "/demo/winter.png",
+      thumbnailUrl: "/demo/winter.png",
+      user: {
+        id: "demo-user-4",
+        username: "quebec_winter",
+        display_name: "Hiver Québécois",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        is_verified: false,
+        created_at: new Date().toISOString(),
+        coins: 0,
+        piasse_balance: 0,
+        total_karma: 0,
+        fire_score: 0,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen",
+      } as User,
+      fire_count: 692,
+      comment_count: 31,
+      created_at: new Date(Date.now() - 10800000).toISOString(),
+      visibility: "public",
+      hive_id: "quebec",
+      is_moderated: false,
+      moderation_approved: true,
+      is_hidden: false,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    },
+    {
+      id: "demo-5",
+      user_id: "demo-user-5",
+      type: "video" as const,
+      caption: "Quebec City old town 🏰⚜️",
+      media_url:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      mediaUrl:
+        "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      thumbnail_url: "/demo/quebec_city.png",
+      thumbnailUrl: "/demo/quebec_city.png",
+      user: {
+        id: "demo-user-5",
+        username: "vieux_quebec",
+        display_name: "Vieux Québec",
+        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        is_verified: true,
+        created_at: new Date().toISOString(),
+        coins: 0,
+        piasse_balance: 0,
+        total_karma: 0,
+        fire_score: 0,
+        followers_count: 0,
+        following_count: 0,
+        posts_count: 0,
+        is_following: false,
+        role: "citoyen",
+      } as User,
+      fire_count: 1024,
+      comment_count: 56,
+      created_at: new Date(Date.now() - 14400000).toISOString(),
+      visibility: "public",
+      hive_id: "quebec",
+      is_moderated: false,
+      moderation_approved: true,
+      is_hidden: false,
+      is_ephemeral: false,
+      view_count: 0,
+      max_views: 1,
+    },
+  ];
 
-// Transform Pexels videos to Post format for fallback
+  // Transform Pexels videos to Post format for fallback
   const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
     // Pick best video quality: HD first, then SD, then anything
     const getBestVideoUrl = (videoFiles: any[]): string => {
@@ -628,8 +645,35 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
         }) as Array<Post & { user: User }>;
       }
 
-      // If API has no posts, fallback to Pexels curated videos
+      // If API has no posts, try to auto-seed DB first, then Pexels fallback
       if (validPosts.length === 0) {
+        feedLogger.info(
+          "No API posts — attempting auto-seed then Pexels fallback...",
+        );
+        // Try to auto-seed the DB with sample videos
+        try {
+          const seedRes = await fetch("/api/seed/feed", { method: "POST" });
+          if (seedRes.ok) {
+            const seedData = await seedRes.json();
+            if (seedData.posts?.length > 0) {
+              feedLogger.info("Auto-seed successful, re-fetching feed...");
+              const reseeded = await getExplorePosts(0, 10, HIVE_ID);
+              if (reseeded && reseeded.length > 0) {
+                const valid = reseeded.filter((p: any) => p && p.user) as Array<
+                  Post & { user: User }
+                >;
+                if (valid.length > 0) {
+                  setPosts(valid);
+                  setHasMore(valid.length === 10);
+                  setPage(0);
+                  return;
+                }
+              }
+            }
+          }
+        } catch (seedErr) {
+          feedLogger.warn("Auto-seed failed:", seedErr);
+        }
         feedLogger.info("No API posts, fetching Pexels fallback...");
         try {
           const pexelsRes = await fetch("/api/pexels/curated?per_page=10");
@@ -1114,7 +1158,14 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
   }
 
   return (
-    <div className={cn("w-full h-full leather-dark feed-root", motionClass, className)} style={motionStyle}>
+    <div
+      className={cn(
+        "w-full h-full leather-dark feed-root",
+        motionClass,
+        className,
+      )}
+      style={motionStyle}
+    >
       {!isOnline && posts.length > 0 && (
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-center py-2 text-sm font-medium">
           Tu es hors ligne. Les actions seront synchronisées à la reconnexion.
@@ -1132,12 +1183,14 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
             <List
               listRef={listRef}
               className="no-scrollbar snap-smooth-decel"
-              style={{
-                height,
-                width,
-                willChange: "scroll-position",
-                WebkitOverflowScrolling: "touch",
-              } as React.CSSProperties}
+              style={
+                {
+                  height,
+                  width,
+                  willChange: "scroll-position",
+                  WebkitOverflowScrolling: "touch",
+                } as React.CSSProperties
+              }
               rowCount={posts.length}
               rowHeight={height}
               rowProps={{ data: itemData }}

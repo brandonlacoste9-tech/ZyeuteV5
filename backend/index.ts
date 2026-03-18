@@ -188,6 +188,74 @@ app.use((req, res, next) => {
         client.release();
         console.log("✅ [Startup] Database Connected Successfully");
 
+        // Run critical migrations that are safe to run on every startup
+        // (they all use IF NOT EXISTS / safe guards)
+        try {
+          const { readFileSync } = await import("fs");
+          const { join } = await import("path");
+          const migClient = await pool.connect();
+          const migrations = [
+            "20260202_add_hls_url.sql",
+            "20260221_video_playback_schema.sql",
+            "20260224_add_type_column.sql",
+          ];
+          for (const file of migrations) {
+            try {
+              const sql = readFileSync(
+                join(process.cwd(), "backend/migrations", file),
+                "utf-8",
+              );
+              await migClient.query(sql);
+              console.log(`✅ [Startup] Migration applied: ${file}`);
+            } catch (migErr: any) {
+              console.warn(
+                `⚠️ [Startup] Migration skipped (${file}): ${migErr.message?.split("\n")[0]}`,
+              );
+            }
+          }
+          migClient.release();
+        } catch (migSetupErr: any) {
+          console.warn(
+            "⚠️ [Startup] Migration runner skipped:",
+            migSetupErr.message,
+          );
+        }
+
+        // Auto-seed feed if empty (ensures first boot has content)
+        try {
+          const checkClient = await pool.connect();
+          const countResult = await checkClient.query(
+            "SELECT COUNT(*) FROM publications WHERE processing_status = 'completed' AND COALESCE(est_masque, false) = false AND deleted_at IS NULL",
+          );
+          checkClient.release();
+          const postCount = parseInt(countResult.rows[0]?.count || "0");
+          if (postCount === 0) {
+            console.log("🌱 [Startup] Feed is empty — triggering auto-seed...");
+            fetch(`http://127.0.0.1:${port}/api/seed/feed`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            })
+              .then((r) => r.json())
+              .then((d) => {
+                console.log(
+                  `✅ [Startup] Auto-seed complete: ${d.message || JSON.stringify(d)}`,
+                );
+              })
+              .catch((e) => {
+                console.warn("⚠️ [Startup] Auto-seed failed:", e.message);
+              });
+          } else {
+            console.log(
+              `✅ [Startup] Feed has ${postCount} posts — no seeding needed`,
+            );
+          }
+        } catch (seedCheckErr: any) {
+          console.warn(
+            "⚠️ [Startup] Feed check skipped:",
+            seedCheckErr.message,
+          );
+        }
+
         // [CRITICAL] Run Database Migrations
         // TEMPORARILY DISABLED - Migration causing startup crash
         // console.log("📦 [Startup] Running Schema Migrations...");
@@ -235,11 +303,6 @@ app.use((req, res, next) => {
     // Seed route for emergency feed population
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
-
-    // Feed routes using Supabase HTTP API (works without DATABASE_URL)
-    const { default: feedSupabaseRouter } =
-      await import("./routes/feed-supabase.js");
-    app.use("/api", feedSupabaseRouter);
 
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);

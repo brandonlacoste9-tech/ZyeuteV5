@@ -1,7 +1,7 @@
 /**
  * MuxVideoPlayer - MUX streaming player with French UI
  * Zyeuté V5 - Quebec social media
- * 
+ *
  * FIXED: Added explicit HLS buffer configuration to prevent mid-play freezes
  * - Increased maxBufferLength for better quality switching
  * - Added min/max bitrate constraints to stabilize ABR
@@ -48,17 +48,17 @@ export function MuxVideoPlayer({
   // Monitor for freezes (time not advancing despite playing)
   useEffect(() => {
     if (!autoPlay) return;
-    
+
     const checkFreeze = () => {
       const video = playerRef.current?.media;
       if (!video || video.paused || video.ended) return;
-      
+
       const currentTime = video.currentTime;
       if (currentTime === lastTimeRef.current && !video.seeking) {
         // Time hasn't advanced - potential freeze
         console.warn("[MuxVideoPlayer] Detected freeze at", currentTime);
         onFreeze?.();
-        
+
         // Attempt recovery: pause then play
         video.pause();
         setTimeout(() => video.play().catch(() => {}), 100);
@@ -94,40 +94,6 @@ export function MuxVideoPlayer({
     },
     [onErrorProp],
   );
-
-  // HLS config to prevent freezes during ABR switching
-  const hlsConfig = {
-    // Buffer settings - prevent starvation during quality switches
-    maxBufferLength: 30, // seconds of buffer (default is ~10)
-    maxMaxBufferLength: 60, // max buffer ceiling
-    minBufferLength: 10, // minimum buffer before playback resumes
-    
-    // ABR (Adaptive Bitrate) - stabilize quality switching
-    startLevel: -1, // auto-select initial quality
-    abrEwmaFastLive: 3, // faster adaptation to network changes
-    abrEwmaSlowLive: 9,
-    abrBandWidthFactor: 0.95, // conservative bandwidth estimate
-    abrBandWidthUpFactor: 0.7, // require more headroom before upswitch
-    
-    // Bitrate constraints for stability
-    minAutoBitrate: 0, // allow lowest quality if needed
-    
-    // Retry logic for failed segments
-    fragLoadingMaxRetry: 6,
-    fragLoadingRetryDelay: 1000,
-    fragLoadingMaxRetryTimeout: 8000,
-    
-    // Level switching - smoother transitions
-    levelLoadingMaxRetry: 4,
-    levelLoadingRetryDelay: 1000,
-    
-    // Prevent gaps from causing freezes
-    maxFragLookUpTolerance: 0.25,
-    liveSyncDurationCount: 3,
-    
-    // Low latency settings (keep false for on-demand)
-    lowLatencyMode: false,
-  };
 
   if (hasError) {
     return (
@@ -175,10 +141,6 @@ export function MuxVideoPlayer({
         primaryColor="#D4AF37"
         secondaryColor="#1a1a1a"
         accentColor="#FFD700"
-        // CRITICAL FIX: Explicit HLS configuration
-        hlsConfig={hlsConfig}
-        // Prefer native HLS on Safari (more stable), hls.js elsewhere
-        preferPlayback="native"
       />
     </div>
   );

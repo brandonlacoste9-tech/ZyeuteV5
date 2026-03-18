@@ -433,8 +433,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
 
     if (isVideo) {
       // Priority: hls_url (adaptive) > enhanced_url > media_url > original_url
+      const processingStatus = post.processing_status ?? post.processingStatus;
       const processingReady =
-        (post.processing_status ?? post.processingStatus) === "completed";
+        !processingStatus ||
+        processingStatus === "completed" ||
+        (processingStatus as string) === "ready";
       if (post.hls_url ?? post.hlsUrl) {
         videoSrc = post.hls_url ?? post.hlsUrl ?? "";
       } else if (processingReady && (post.enhanced_url ?? post.enhancedUrl)) {
@@ -616,8 +619,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                 loop
                 onError={(err) => setVideoError(err)}
               />
-            ) : post.processing_status === "pending" ||
-              post.processing_status === "processing" ? (
+            ) : (post.processing_status === "pending" ||
+                post.processing_status === "processing") &&
+              !videoSrc ? (
               // 🐝 FIX: Show loading state instead of black screen
               <div className="w-full h-full flex flex-col items-center justify-center bg-black/80">
                 <div className="animate-spin text-4xl mb-4">⚙️</div>

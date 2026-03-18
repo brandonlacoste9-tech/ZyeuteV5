@@ -165,6 +165,7 @@ export const posts = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").default("video"),
     mediaUrl: text("media_url"), // Optional in some cases?
     originalUrl: text("original_url"), // Backup of original upload
     enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version

@@ -89,7 +89,12 @@ router.get("/infinite", async (req: Request, res: Response) => {
     const feedType = (req.query.type as string) || "explore";
     const hiveId = req.query.hive as string | undefined;
 
-    console.log("[FeedInfinite] Query params", { limit, cursor, feedType, hiveId });
+    console.log("[FeedInfinite] Query params", {
+      limit,
+      cursor,
+      feedType,
+      hiveId,
+    });
 
     let query = supabase
       .from("publications")
@@ -110,11 +115,6 @@ router.get("/infinite", async (req: Request, res: Response) => {
       .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
       .order("created_at", { ascending: false })
       .limit(limit + 1);
-
-    // Filter by hive if provided
-    if (hiveId) {
-      query = query.eq("hive_id", hiveId);
-    }
 
     if (cursor) {
       query = query.lt("created_at", cursor);

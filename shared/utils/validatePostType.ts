@@ -47,7 +47,11 @@ const VIDEO_HOSTS = [
   "cloudflare-stream.com",
   "bunnycdn.com",
   "gtv-videos-bucket", // Google sample videos
-  "videos.pexels.com", // ✅ Pexels video CDN
+  "videos.pexels.com", // Pexels video CDN
+  "stream.mux.com", // Mux HLS streaming
+  "chunk.mux.com", // Mux video chunks
+  "image.mux.com", // Mux thumbnails (video content)
+  "storage.googleapis.com", // GCS uploaded videos
 ];
 
 // Known image hosting platforms

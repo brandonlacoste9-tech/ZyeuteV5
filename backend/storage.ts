@@ -600,7 +600,17 @@ export class DatabaseStorage implements IStorage {
       try {
         const result = await client.query(
           `SELECT
-            p.id, p.user_id, p.media_url, p.hls_url, p.thumbnail_url, COALESCE(p.type, 'video') as type,
+            p.id, p.user_id, p.media_url, p.hls_url, p.thumbnail_url,
+            CASE
+              WHEN p.mux_playback_id IS NOT NULL THEN 'video'
+              WHEN p.hls_url IS NOT NULL THEN 'video'
+              WHEN p.media_url ILIKE '%.mp4' THEN 'video'
+              WHEN p.media_url ILIKE '%.webm' THEN 'video'
+              WHEN p.media_url ILIKE '%.m3u8' THEN 'video'
+              WHEN p.media_url ILIKE '%stream.mux.com%' THEN 'video'
+              WHEN p.media_url ILIKE '%pexels.com/video%' THEN 'video'
+              ELSE 'video'
+            END as type,
             p.content, p.caption, p.visibility,
             COALESCE(p.reactions_count, 0) as reactions_count,
             COALESCE(p.comments_count, 0) as comments_count,
@@ -625,6 +635,12 @@ export class DatabaseStorage implements IStorage {
           WHERE
             COALESCE(p.est_masque, false) = false
             AND p.deleted_at IS NULL
+            AND COALESCE(p.visibility, 'public') = 'public'
+            AND (
+              p.processing_status IS NULL
+              OR p.processing_status = 'completed'
+              OR p.mux_playback_id IS NOT NULL
+            )
             AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
           ORDER BY p.created_at DESC
           LIMIT $2`,
@@ -646,6 +662,7 @@ export class DatabaseStorage implements IStorage {
               mediaUrl: row.media_url,
               hlsUrl: row.hls_url,
               thumbnailUrl: row.thumbnail_url,
+              type: (row.type as "video" | "photo") || "video",
               content: row.content || "",
               caption: row.caption,
               visibility: row.visibility || "public",
@@ -711,7 +728,9 @@ export class DatabaseStorage implements IStorage {
                   id: row.u_id,
                   username: row.username,
                   displayName: row.display_name,
+                  display_name: row.display_name,
                   avatarUrl: row.avatar_url,
+                  avatar_url: row.avatar_url,
                   email: row.email,
                   region: row.region,
                   hiveId: row.u_hive_id || "quebec",

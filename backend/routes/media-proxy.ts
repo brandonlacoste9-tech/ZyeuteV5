@@ -180,6 +180,10 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Range");
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "Content-Length, Content-Range, Accept-Ranges",
+    );
     const contentRange = resp.headers.get("content-range");
     const contentLength = resp.headers.get("content-length");
     if (resp.status === 206 && contentRange) {

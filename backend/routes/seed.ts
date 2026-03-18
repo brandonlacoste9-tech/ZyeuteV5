@@ -11,29 +11,74 @@ const router = Router();
 // Sample Pexels video URLs for Quebec-themed content
 const SAMPLE_VIDEOS = [
   {
-    caption: "🎬 Bienvenue sur Zyeuté! #Quebec #Video",
-    media_url: "https://videos.pexels.com/video-files/857251/857251-hd_1920_1080_25fps.mp4",
-    thumbnail: "https://images.pexels.com/videos/857251/pexels-photo-857251.jpeg",
+    caption: "🎬 Bienvenue sur Zyeuté! #Quebec #Video",
+    media_url:
+      "https://videos.pexels.com/video-files/857251/857251-hd_1920_1080_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/857251/pexels-photo-857251.jpeg",
   },
   {
-    caption: "🌆 La ville de Montréal la nuit #Montreal #Night",
-    media_url: "https://videos.pexels.com/video-files/3214448/3214448-uhd_2560_1440_25fps.mp4",
-    thumbnail: "https://images.pexels.com/videos/3214448/pexels-photo-3214448.jpeg",
+    caption: "🌆 La ville de Montréal la nuit #Montreal #Night",
+    media_url:
+      "https://videos.pexels.com/video-files/3214448/3214448-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/3214448/pexels-photo-3214448.jpeg",
   },
   {
-    caption: "🍁 Beauté du Québec #Nature #Quebec",
-    media_url: "https://videos.pexels.com/video-files/4824363/4824363-uhd_2560_1440_30fps.mp4",
-    thumbnail: "https://images.pexels.com/videos/4824363/pexels-photo-4824363.jpeg",
+    caption: "🍁 Beauté du Québec #Nature #Quebec",
+    media_url:
+      "https://videos.pexels.com/video-files/4824363/4824363-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4824363/pexels-photo-4824363.jpeg",
   },
   {
     caption: "💃 Danse et culture #Dance #Culture",
-    media_url: "https://videos.pexels.com/video-files/5896379/5896379-uhd_2560_1440_25fps.mp4",
-    thumbnail: "https://images.pexels.com/videos/5896379/pexels-photo-5896379.jpeg",
+    media_url:
+      "https://videos.pexels.com/video-files/5896379/5896379-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/5896379/pexels-photo-5896379.jpeg",
   },
   {
     caption: "🏙️ Vie urbaine #CityLife #Urban",
-    media_url: "https://videos.pexels.com/video-files/4763824/4763824-uhd_2560_1440_24fps.mp4",
-    thumbnail: "https://images.pexels.com/videos/4763824/pexels-photo-4763824.jpeg",
+    media_url:
+      "https://videos.pexels.com/video-files/4763824/4763824-uhd_2560_1440_24fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4763824/pexels-photo-4763824.jpeg",
+  },
+  {
+    caption: "🎵 Musique québécoise #Musique #Quebec",
+    media_url:
+      "https://videos.pexels.com/video-files/2278095/2278095-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/2278095/pexels-photo-2278095.jpeg",
+  },
+  {
+    caption: "🏔️ Les Laurentides en été #Nature #Laurentides",
+    media_url:
+      "https://videos.pexels.com/video-files/1448735/1448735-uhd_2560_1440_24fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/1448735/pexels-photo-1448735.jpeg",
+  },
+  {
+    caption: "🍺 Microbrasserie québécoise #Bière #Quebec",
+    media_url:
+      "https://videos.pexels.com/video-files/3066561/3066561-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/3066561/pexels-photo-3066561.jpeg",
+  },
+  {
+    caption: "❄️ Carnaval de Québec #Carnaval #HiverQC",
+    media_url:
+      "https://videos.pexels.com/video-files/2611709/2611709-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/2611709/pexels-photo-2611709.jpeg",
+  },
+  {
+    caption: "🎨 Art de rue Montréal #StreetArt #Montreal",
+    media_url:
+      "https://videos.pexels.com/video-files/4761395/4761395-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4761395/pexels-photo-4761395.jpeg",
   },
 ];
 
@@ -42,7 +87,8 @@ const SAMPLE_VIDEOS = [
  */
 router.post("/feed", async (req, res) => {
   try {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
@@ -91,11 +137,15 @@ router.post("/feed", async (req, res) => {
           visibility: "public",
           hive_id: "quebec",
           region_id: "montreal",
-          city: "Montréal",
+          city: "Montréal",
           reactions_count: Math.floor(Math.random() * 50) + 5,
           comments_count: Math.floor(Math.random() * 10),
+          shares_count: 0,
+          piasse_count: 0,
           processing_status: "completed",
           est_masque: false,
+          moderation_approved: true,
+          deleted_at: null,
         })
         .select("id, caption, media_url")
         .single();
@@ -127,7 +177,8 @@ router.post("/feed", async (req, res) => {
  */
 router.get("/status", async (req, res) => {
   try {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {

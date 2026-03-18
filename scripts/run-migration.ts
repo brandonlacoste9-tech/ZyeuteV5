@@ -1,11 +1,10 @@
 #!/usr/bin/env tsx
-// Run database migration directly
+// Run all database migrations in chronological order
 import { Pool } from "pg";
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
-async function runMigration() {
-  // Use DATABASE_PUBLIC_URL for external access, fallback to DATABASE_URL
+async function runMigrations() {
   const databaseUrl =
     process.env.DATABASE_PUBLIC_URL || process.env.DATABASE_URL;
 
@@ -23,31 +22,73 @@ async function runMigration() {
     ssl: { rejectUnauthorized: false },
   });
 
+  const client = await pool.connect();
+  console.log("✅ Connected to database");
+
   try {
-    const client = await pool.connect();
-    console.log("✅ Connected to database");
+    // Create migrations tracking table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS _zyeute_migrations (
+        filename TEXT PRIMARY KEY,
+        applied_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
 
-    const migrationPath = join(
-      process.cwd(),
-      "backend/migrations/20260206_add_remix_type_column.sql",
+    // Get list of already-applied migrations
+    const applied = await client.query(
+      "SELECT filename FROM _zyeute_migrations",
     );
-    const migrationSQL = readFileSync(migrationPath, "utf-8");
+    const appliedSet = new Set(applied.rows.map((r: any) => r.filename));
 
-    console.log("📊 Running migration...");
-    await client.query(migrationSQL);
-    console.log("✅ Migration completed successfully!");
+    // Read all SQL files from backend/migrations directory
+    const migrationsDir = join(process.cwd(), "backend/migrations");
+    const files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort(); // Alphabetical = chronological (YYYYMMDD_ prefix)
 
+    console.log(`\n📋 Found ${files.length} migration files`);
+
+    let applied_count = 0;
+    let skipped_count = 0;
+
+    for (const file of files) {
+      if (appliedSet.has(file)) {
+        console.log(`   ⏭️  Skipping (already applied): ${file}`);
+        skipped_count++;
+        continue;
+      }
+
+      const filePath = join(migrationsDir, file);
+      const sql = readFileSync(filePath, "utf-8");
+
+      console.log(`   🔄 Running: ${file}`);
+      try {
+        await client.query("BEGIN");
+        await client.query(sql);
+        await client.query(
+          "INSERT INTO _zyeute_migrations (filename) VALUES ($1)",
+          [file],
+        );
+        await client.query("COMMIT");
+        console.log(`   ✅ Done: ${file}`);
+        applied_count++;
+      } catch (err: any) {
+        await client.query("ROLLBACK");
+        console.error(`   ❌ Failed: ${file} — ${err.message}`);
+        // Continue with next migration (don't abort entire run)
+      }
+    }
+
+    console.log(`\n🚀 Migration complete!`);
+    console.log(`   Applied: ${applied_count}`);
+    console.log(`   Skipped: ${skipped_count}`);
+  } finally {
     client.release();
     await pool.end();
-
-    console.log("");
-    console.log("🚀 Videos should now load! Test at:");
-    console.log("   https://zyeutev5-production.up.railway.app/api/posts/feed");
-  } catch (error: any) {
-    console.error("❌ Migration failed:", error.message);
-    console.error(error);
-    process.exit(1);
   }
 }
 
-runMigration();
+runMigrations().catch((err) => {
+  console.error("❌ Migration runner crashed:", err);
+  process.exit(1);
+});

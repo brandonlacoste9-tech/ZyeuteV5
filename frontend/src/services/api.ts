@@ -755,11 +755,19 @@ export async function updateParentalControls(
 function isVideoUrl(url?: string): boolean {
   if (!url) return false;
   const lowerUrl = url.toLowerCase();
-  
+
   // Direct extensions
-  const videoExtensions = [".mp4", ".mov", ".webm", ".ogg", ".m3u8", ".ts", ".m4v"];
+  const videoExtensions = [
+    ".mp4",
+    ".mov",
+    ".webm",
+    ".ogg",
+    ".m3u8",
+    ".ts",
+    ".m4v",
+  ];
   if (videoExtensions.some((ext) => lowerUrl.includes(ext))) return true;
-  
+
   // Video service patterns
   const videoPatterns = [
     "stream.mux.com",
@@ -769,13 +777,12 @@ function isVideoUrl(url?: string): boolean {
     "tiktok.com",
     "pexels.com/video",
     "media.giphy.com",
-    "api/media-proxy" // Often used for videos
+    "api/media-proxy", // Often used for videos
   ];
   if (videoPatterns.some((pattern) => lowerUrl.includes(pattern))) return true;
 
   return false;
 }
-
 
 // ============ SURGICAL UPLOAD BYPASS ============
 
@@ -886,6 +893,15 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   let type: "photo" | "video" = p.type;
   if (!type && mediaUrl) {
     type = isVideoUrl(mediaUrl) ? "video" : "photo";
+  }
+  // Also detect video from mux playback ID or hls_url
+  if (
+    type !== "video" &&
+    (muxPlaybackId ||
+      rawHls ||
+      (typeof mediaUrl === "string" && mediaUrl.includes(".m3u8")))
+  ) {
+    type = "video";
   }
 
   return {

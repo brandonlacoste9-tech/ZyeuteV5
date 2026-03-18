@@ -338,7 +338,9 @@ const PostBase = z.object({
   processing_status: z
     .enum(["pending", "processing", "completed", "failed"])
     .optional(),
-  processingStatus: z.enum(["pending", "processing", "completed", "failed"]).optional(), // Compat
+  processingStatus: z
+    .enum(["pending", "processing", "completed", "failed"])
+    .optional(), // Compat
   visual_filter: z.string().optional(),
   visualFilter: z.string().optional(), // Compat
 });
@@ -370,8 +372,8 @@ export const PostSchema = z.preprocess((val: unknown) => {
     return videoExtensions.some((ext) => url.toLowerCase().includes(ext));
   };
 
-  if (!type && mediaUrl) {
-    type = isVideoUrl(mediaUrl) ? "video" : "photo";
+  if (!type && typeof mediaUrl === "string" && mediaUrl) {
+    type = isVideoUrl(mediaUrl as string) ? "video" : "photo";
   }
 
   return {
@@ -389,10 +391,8 @@ export const PostSchema = z.preprocess((val: unknown) => {
 
     fire_count: v.reactions_count || v.fire_count || v.fireCount || 0,
     fireCount: v.reactions_count || v.fire_count || v.fireCount || 0,
-    comment_count:
-      v.comments_count || v.comment_count || v.commentCount || 0,
-    commentCount:
-      v.comments_count || v.comment_count || v.commentCount || 0,
+    comment_count: v.comments_count || v.comment_count || v.commentCount || 0,
+    commentCount: v.comments_count || v.comment_count || v.commentCount || 0,
     gift_count: v.gift_count || v.giftCount || 0,
     giftCount: v.gift_count || v.giftCount || 0,
 
@@ -410,9 +410,13 @@ export const PostSchema = z.preprocess((val: unknown) => {
     mux_playback_id: v.mux_playback_id || v.muxPlaybackId,
     muxPlaybackId: v.mux_playback_id || v.muxPlaybackId,
     processing_status:
-      v.processing_status || v.processingStatus || (type === "video" ? "completed" : undefined),
+      v.processing_status ||
+      v.processingStatus ||
+      (type === "video" ? "completed" : undefined),
     processingStatus:
-      v.processing_status || v.processingStatus || (type === "video" ? "completed" : undefined),
+      v.processing_status ||
+      v.processingStatus ||
+      (type === "video" ? "completed" : undefined),
     visual_filter: v.visual_filter || v.visualFilter,
     visualFilter: v.visual_filter || v.visualFilter,
 
@@ -424,8 +428,7 @@ export const PostSchema = z.preprocess((val: unknown) => {
         : v.moderationApproved !== undefined
           ? v.moderationApproved
           : true,
-    moderationApproved:
-      v.moderation_approved || v.moderationApproved || true,
+    moderationApproved: v.moderation_approved || v.moderationApproved || true,
     is_hidden: v.is_hidden || v.isHidden || false,
     isHidden: v.is_hidden || v.isHidden || false,
     // AI Enrichment
@@ -506,7 +509,7 @@ export const NotificationSchema = z.preprocess((val: unknown) => {
     story_view: "story_view",
   };
 
-  const mappedType = typeMapping[v.type] || "fire"; // Default to "fire" for unknown types
+  const mappedType = typeMapping[v.type as string] || "fire"; // Default to "fire" for unknown types
 
   // Handle actor_id - use from_user_id if actor_id is null
   const actorId = v.actor_id || v.fromUserId || v.from_user_id;
