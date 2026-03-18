@@ -429,6 +429,35 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
       );
     }
 
+    // Detect social embed URLs that need an iframe, not a <video> tag
+    const isSocialEmbedUrl = (url: string): boolean => {
+      if (!url) return false;
+      const u = url.toLowerCase();
+      return (
+        (u.includes("tiktok.com") && u.includes("/video/")) ||
+        u.includes("instagram.com/reel/") ||
+        u.includes("instagram.com/p/") ||
+        (u.includes("youtube.com") && u.includes("watch")) ||
+        u.includes("youtu.be/")
+      );
+    };
+    const getSocialEmbedUrl = (url: string): string | null => {
+      const u = url.toLowerCase();
+      if (u.includes("tiktok.com") && u.includes("/video/")) {
+        const parts = url.split("/video/");
+        const tid = parts[1]?.split(/[?/#]/)[0];
+        return tid ? "https://www.tiktok.com/embed/v2/" + tid : null;
+      }
+      if (u.includes("youtube.com") || u.includes("youtu.be")) {
+        const yid = url.includes("youtu.be/")
+          ? url.split("youtu.be/")[1]?.split(/[?&#]/)[0]
+          : new URLSearchParams(url.split("?")[1] || "").get("v");
+        return yid
+          ? "https://www.youtube.com/embed/" + yid + "?autoplay=0&rel=0"
+          : null;
+      }
+      return null;
+    };
     let videoSrc = "";
 
     if (isVideo) {
@@ -644,6 +673,31 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
                   />
                 )}
               </div>
+            ) : !videoSrc &&
+              isSocialEmbedUrl(post.media_url ?? post.mediaUrl ?? "") ? (
+              // Social embed (TikTok, YouTube) — use iframe
+              (() => {
+                const embedUrl = getSocialEmbedUrl(
+                  post.media_url ?? post.mediaUrl ?? "",
+                );
+                return embedUrl ? (
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full border-0 absolute inset-0"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    title="Social Content"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900">
+                    <AlertCircle className="w-12 h-12 text-white/30 mb-3" />
+                    <p className="text-white/60 text-sm">
+                      Contenu non disponible
+                    </p>
+                  </div>
+                );
+              })()
             ) : !videoSrc ? (
               // No video source available - show error state
               <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900">

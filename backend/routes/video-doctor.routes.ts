@@ -218,4 +218,62 @@ router.get("/stats", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/video-doctor/bulk-repair
+ * Run all SQL repair fixes in one shot — safe to call repeatedly (idempotent)
+ */
+router.post("/bulk-repair", async (req, res) => {
+  try {
+    const { pool } = await import("../storage.js");
+    const { readFileSync } = await import("fs");
+    const { join } = await import("path");
+
+    const migrationPath = join(
+      process.cwd(),
+      "backend/migrations/20260225_bulk_repair_videos.sql",
+    );
+    const sql = readFileSync(migrationPath, "utf-8");
+
+    const client = await pool.connect();
+    try {
+      await client.query(sql);
+    } finally {
+      client.release();
+    }
+
+    // Get updated stats after repair
+    const statsClient = await pool.connect();
+    let stats: any = {};
+    try {
+      const result = await statsClient.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE processing_status = 'completed' AND COALESCE(est_masque, false) = false) as visible_completed,
+          COUNT(*) FILTER (WHERE processing_status = 'failed') as failed,
+          COUNT(*) FILTER (WHERE COALESCE(est_masque, false) = true) as hidden,
+          COUNT(*) FILTER (WHERE mux_playback_id IS NOT NULL AND hls_url IS NOT NULL) as mux_with_hls,
+          COUNT(*) FILTER (WHERE thumbnail_url IS NOT NULL) as with_thumbnail,
+          COUNT(*) as total
+        FROM publications
+        WHERE type = 'video' AND deleted_at IS NULL
+      `);
+      stats = result.rows[0];
+    } finally {
+      statsClient.release();
+    }
+
+    res.json({
+      success: true,
+      message: "Bulk repair complete — all fixes applied",
+      stats,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    logger.error("[VideoDoctor] Bulk repair error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

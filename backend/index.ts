@@ -198,6 +198,7 @@ app.use((req, res, next) => {
             "20260202_add_hls_url.sql",
             "20260221_video_playback_schema.sql",
             "20260224_add_type_column.sql",
+            "20260225_bulk_repair_videos.sql",
           ];
           for (const file of migrations) {
             try {
