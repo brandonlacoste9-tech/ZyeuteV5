@@ -20,7 +20,7 @@ export interface VideoGenerationParams {
   prompt: string;
   imageUrl?: string; // For image-to-video
   duration?: number;
-  modelHint?: "kling" | "wan" | "hunyuan_video" | "ltx2" | "ltx-2";
+  modelHint?: "kling" | "wan" | "hunyuan_video" | "ltx2" | "ltx-2" | "pollo";
 }
 
 export interface VideoGenerationResult {
@@ -104,7 +104,9 @@ export async function generateVideo(
         ? "fal-ai/ltx-2-19b/image-to-video"
         : "fal-ai/ltx-2-19b/text-to-video";
 
-      console.log(`[Video Engine] Running LTX-2 Video generation (${model})...`);
+      console.log(
+        `[Video Engine] Running LTX-2 Video generation (${model})...`,
+      );
 
       const input: any = {
         prompt,
@@ -131,6 +133,50 @@ export async function generateVideo(
         model: `ltx2-19b-${imageUrl ? "i2v" : "t2v"}`,
         duration: 5,
       };
+    }
+
+    // -------------------------------------------------------------
+    // POLLO AI MODEL (NEW)
+    // -------------------------------------------------------------
+    if (modelHint === "pollo") {
+      console.log(`[Video Engine] Running Pollo AI generation...`);
+      const { PolloService } = await import("../../services/tikapi-service.js");
+
+      const task = await PolloService.generateVideo({
+        prompt,
+        aspect_ratio: "9:16",
+        quality: "hd",
+        duration: duration === 10 ? 10 : 5,
+      });
+
+      // Pollo is asynchronous, we poll or wait for the first check
+      // For this engine's synchronous contract, we'll wait briefly for completion
+      let attempts = 0;
+      while (attempts < 30) {
+        // 30 * 5s = 150s max wait
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        const status = await PolloService.getTaskStatus(task.taskId);
+
+        if (status.status === "completed" && status.videoUrl) {
+          return {
+            url: status.videoUrl,
+            cost: 1.2, // Pollo HD cost
+            model: "pollo-hd-v1",
+            duration: duration,
+          };
+        }
+
+        if (status.status === "failed") {
+          throw new Error(`Pollo AI generation failed: ${status.error}`);
+        }
+
+        attempts++;
+        console.log(
+          `[Video Engine] Pollo AI task ${task.taskId} still processing (attempt ${attempts})...`,
+        );
+      }
+
+      throw new Error("Pollo AI generation timed out");
     }
 
     // -------------------------------------------------------------
