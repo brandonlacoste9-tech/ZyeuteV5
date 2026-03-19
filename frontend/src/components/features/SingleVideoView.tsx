@@ -467,7 +467,9 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
         !processingStatus ||
         processingStatus === "completed" ||
         (processingStatus as string) === "ready";
-      if (post.hls_url ?? post.hlsUrl) {
+      if (post.mux_playback_id || post.muxPlaybackId) {
+        videoSrc = `https://stream.mux.com/${post.mux_playback_id || post.muxPlaybackId}.m3u8`;
+      } else if (post.hls_url ?? post.hlsUrl) {
         videoSrc = post.hls_url ?? post.hlsUrl ?? "";
       } else if (processingReady && (post.enhanced_url ?? post.enhancedUrl)) {
         videoSrc = post.enhanced_url ?? post.enhancedUrl ?? "";
@@ -489,6 +491,7 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
             enhancedUrl: post.enhanced_url ?? post.enhancedUrl,
             mediaUrl: post.media_url ?? post.mediaUrl,
             originalUrl: post.original_url ?? post.originalUrl,
+            muxPlaybackId: post.mux_playback_id ?? post.muxPlaybackId,
             processingStatus: post.processing_status ?? post.processingStatus,
           },
         );
@@ -592,11 +595,11 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
           <VideoPlaybackDiagnostic
             postId={post.id}
             postType={post.type}
-            muxPlaybackId={post.mux_playback_id}
-            mediaUrl={post.media_url}
+            muxPlaybackId={post.mux_playback_id || post.muxPlaybackId}
+            mediaUrl={post.media_url || post.mediaUrl}
             videoSrc={
-              post.mux_playback_id
-                ? `https://stream.mux.com/${post.mux_playback_id}.m3u8`
+              post.mux_playback_id || post.muxPlaybackId
+                ? `https://stream.mux.com/${post.mux_playback_id || post.muxPlaybackId}.m3u8`
                 : videoSrc
             }
             playerPath={
@@ -633,13 +636,20 @@ export const SingleVideoView = React.memo<SingleVideoViewProps>(
               )}
             </div>
           ) : post.type === "video" ? (
-            post.mux_playback_id ? (
+            post.mux_playback_id || post.muxPlaybackId ? (
               <MuxVideoPlayer
-                playbackId={post.mux_playback_id}
+                playbackId={post.mux_playback_id || post.muxPlaybackId}
                 thumbnailUrl={
-                  getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
+                  getProxiedMediaUrl(
+                    post.thumbnail_url ||
+                      post.thumbnailUrl ||
+                      post.media_url ||
+                      post.mediaUrl,
+                  ) ||
                   post.thumbnail_url ||
-                  post.media_url
+                  post.thumbnailUrl ||
+                  post.media_url ||
+                  post.mediaUrl
                 }
                 className="w-full h-full object-cover"
                 style={filterStyle}

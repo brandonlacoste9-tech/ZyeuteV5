@@ -10,7 +10,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import MuxPlayer from "@mux/mux-player-react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MuxVideoPlayerProps {
@@ -40,10 +40,19 @@ export function MuxVideoPlayer({
 }: MuxVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
   const freezeCheckRef = useRef<NodeJS.Timeout | null>(null);
   const lastTimeRef = useRef<number>(0);
+
+  // Reset error state and loading when playbackId changes
+  useEffect(() => {
+    setHasError(false);
+    setErrorMessage(null);
+    setIsLoading(true);
+    setRetryKey(0);
+  }, [playbackId]);
 
   // Monitor for freezes (time not advancing despite playing)
   useEffect(() => {
@@ -84,33 +93,53 @@ export function MuxVideoPlayer({
   }, []);
 
   const handleError = useCallback(
-    (e?: unknown) => {
+    (e?: any) => {
+      console.error("[MuxVideoPlayer] Error Event:", e);
       setIsLoading(false);
       setHasError(true);
-      const target = (e as { target?: HTMLVideoElement })?.target;
-      const msg = target?.error?.message || "Mux playback failed";
+
+      // Extract detailed error information if available
+      const muxError = e?.detail;
+      const msg =
+        muxError?.message || e?.target?.error?.message || "Mux playback failed";
+
       setErrorMessage(msg);
       onErrorProp?.(new Error(msg));
     },
     [onErrorProp],
   );
 
+  const handleRetry = useCallback(() => {
+    setHasError(false);
+    setErrorMessage(null);
+    setIsLoading(true);
+    setRetryKey((prev) => prev + 1);
+  }, []);
+
   if (hasError) {
     return (
       <div
         className={cn(
-          "flex items-center justify-center bg-zinc-900 rounded-xl",
+          "flex items-center justify-center bg-zinc-900 rounded-xl overflow-hidden",
           className,
         )}
+        style={style}
       >
-        <div className="text-center p-4">
-          <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-          <p className="text-sm text-leather-400">
-            Erreur de chargement de la vidéo
+        <div className="text-center p-6 bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10">
+          <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+          <p className="text-base font-bold text-white mb-1">
+            Signal Interrompu
           </p>
-          <p className="text-xs text-leather-500 mt-1">
-            Vérifie ta connexion ou réessaie
+          <p className="text-xs text-zinc-400 mb-4 max-w-[200px] mx-auto">
+            {errorMessage || "Une erreur est survenue lors de la lecture."}
           </p>
+          <button
+            onClick={handleRetry}
+            className="flex items-center gap-2 px-4 py-2 bg-gold-500 hover:bg-gold-600 text-black text-xs font-bold rounded-full transition-all active:scale-95"
+          >
+            <RefreshCw className="w-3 h-3" />
+            RÉESSAYER
+          </button>
         </div>
       </div>
     );
@@ -125,6 +154,7 @@ export function MuxVideoPlayer({
       )}
 
       <MuxPlayer
+        key={`${playbackId}-${retryKey}`}
         ref={playerRef}
         playbackId={playbackId}
         thumbnailTime={0}
@@ -138,6 +168,12 @@ export function MuxVideoPlayer({
         onLoadedData={handleLoadedData}
         onError={handleError}
         streamType="on-demand"
+        metadata={{
+          video_id: playbackId,
+          video_title: `Post ${playbackId}`,
+          viewer_user_id: "anonymous",
+        }}
+        maxResolution="1080p"
         primaryColor="#D4AF37"
         secondaryColor="#1a1a1a"
         accentColor="#FFD700"

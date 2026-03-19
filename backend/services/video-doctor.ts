@@ -7,6 +7,7 @@
 import { pool } from "../storage.js";
 import { logger } from "../utils/logger.js";
 import { fetch } from "undici";
+import Mux from "@mux/mux-node";
 
 export interface VideoHealthReport {
   postId: string;
@@ -21,6 +22,7 @@ export interface VideoIssue {
     | "source_missing"
     | "source_403"
     | "source_404"
+    | "mux_playback_broken"
     | "thumbnail_missing"
     | "processing_stuck"
     | "codec_unsupported"
@@ -50,8 +52,8 @@ export async function diagnoseVideo(
     // Get video data
     const result = await pool.query(
       `
-      SELECT 
-        p.id, p.type, p.media_url, p.thumbnail_url, 
+      SELECT
+        p.id, p.type, p.media_url, p.thumbnail_url,
         p.processing_status, p.duration, p.mux_playback_id,
         p.hls_url, p.enhanced_url, p.original_url,
         p.created_at, p.updated_at
@@ -99,14 +101,41 @@ export async function diagnoseVideo(
     }
 
     // Check 2: Is source URL accessible?
-    if (video.media_url && !video.media_url.includes("stream.mux.com")) {
+    if (video.media_url) {
+      const isMux =
+        video.media_url.includes("stream.mux.com") || !!video.mux_playback_id;
       const sourceCheck = await checkSourceUrl(video.media_url);
+
       if (!sourceCheck.ok) {
         issues.push({
-          type: sourceCheck.status === 403 ? "source_403" : "source_404",
-          severity: "high",
-          message: `Source URL returns ${sourceCheck.status}: ${sourceCheck.error}`,
-          autoFixable: sourceCheck.status === 403, // Can try proxy fix
+          type: isMux
+            ? "mux_playback_broken"
+            : sourceCheck.status === 403
+              ? "source_403"
+              : "source_404",
+          severity: isMux ? "critical" : "high",
+          message: `${isMux ? "Mux" : "Source"} URL returns ${sourceCheck.status}: ${sourceCheck.error}`,
+          autoFixable: isMux
+            ? !!video.mux_asset_id
+            : sourceCheck.status === 403,
+        });
+      }
+    }
+
+    // Check 2b: Explicit Mux Playback ID Check
+    if (
+      video.mux_playback_id &&
+      (!video.media_url || !video.media_url.includes(video.mux_playback_id))
+    ) {
+      const muxCheck = await checkSourceUrl(
+        `https://stream.mux.com/${video.mux_playback_id}.m3u8`,
+      );
+      if (!muxCheck.ok) {
+        issues.push({
+          type: "mux_playback_broken",
+          severity: "critical",
+          message: `Mux Playback ID ${video.mux_playback_id} is invalid`,
+          autoFixable: !!video.mux_asset_id,
         });
       }
     }
@@ -228,6 +257,9 @@ export async function fixVideo(postId: string): Promise<VideoDoctorFix> {
         case "source_403":
           return await fix403Error(postId);
 
+        case "mux_playback_broken":
+          return await fixMuxPlayback(postId);
+
         case "processing_stuck":
           return await restartProcessing(postId);
 
@@ -294,6 +326,81 @@ async function fix403Error(postId: string): Promise<VideoDoctorFix> {
 }
 
 /**
+ * 🛠️ Fix broken Mux playback IDs by resyncing with Mux API
+ */
+async function fixMuxPlayback(postId: string): Promise<VideoDoctorFix> {
+  logger.info(`[VideoDoctor] Fixing Mux playback for ${postId}`);
+
+  const MUX_TOKEN_ID = process.env.MUX_TOKEN_ID;
+  const MUX_TOKEN_SECRET = process.env.MUX_TOKEN_SECRET;
+
+  if (!MUX_TOKEN_ID || !MUX_TOKEN_SECRET) {
+    return {
+      success: false,
+      action: "mux_fix",
+      message: "Mux credentials missing",
+    };
+  }
+
+  const result = await pool.query(
+    `SELECT mux_asset_id FROM publications WHERE id = $1`,
+    [postId],
+  );
+
+  if (result.rows.length === 0 || !result.rows[0].mux_asset_id) {
+    return {
+      success: false,
+      action: "mux_fix",
+      message: "Mux Asset ID not found",
+    };
+  }
+
+  const assetId = result.rows[0].mux_asset_id;
+
+  try {
+    const mux = new Mux({
+      tokenId: MUX_TOKEN_ID,
+      tokenSecret: MUX_TOKEN_SECRET,
+    });
+    const asset = await mux.video.assets.retrieve(assetId);
+    const playbackId = asset.playback_ids?.[0]?.id;
+
+    if (!playbackId) {
+      return {
+        success: false,
+        action: "mux_fix",
+        message: "Asset has no active playback IDs",
+      };
+    }
+
+    const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+    const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+
+    await pool.query(
+      `UPDATE publications
+       SET mux_playback_id = $1,
+           media_url = $2,
+           hls_url = $2,
+           thumbnail_url = $3,
+           processing_status = 'completed',
+           updated_at = NOW()
+       WHERE id = $4`,
+      [playbackId, hlsUrl, posterUrl, postId],
+    );
+
+    return {
+      success: true,
+      action: "mux_fix",
+      message: "Successfully recovered Mux playback ID from Asset",
+      newUrl: hlsUrl,
+    };
+  } catch (error: any) {
+    logger.error(`[VideoDoctor] Mux fix failed for ${postId}:`, error);
+    return { success: false, action: "mux_fix", message: error.message };
+  }
+}
+
+/**
  * 🔄 Restart stuck processing
  */
 async function restartProcessing(postId: string): Promise<VideoDoctorFix> {
@@ -301,10 +408,10 @@ async function restartProcessing(postId: string): Promise<VideoDoctorFix> {
 
   // Reset processing status to pending
   await pool.query(
-    `UPDATE publications 
-     SET processing_status = 'pending', 
+    `UPDATE publications
+     SET processing_status = 'pending',
          processing_error = NULL,
-         updated_at = NOW() 
+         updated_at = NOW()
      WHERE id = $1`,
     [postId],
   );
@@ -422,6 +529,11 @@ function generateRecommendations(issues: VideoIssue[], video: any): string[] {
           "❌ Source file deleted from storage - needs re-upload",
         );
         break;
+      case "mux_playback_broken":
+        recommendations.push(
+          "🛠️ Attempt to recover Playback ID from Mux Asset",
+        );
+        break;
       case "processing_stuck":
         recommendations.push("🔄 Restart video processing");
         break;
@@ -449,9 +561,9 @@ export async function healthCheckAllVideos(
 
   const result = await pool.query(
     `
-    SELECT id FROM publications 
-    WHERE type = 'video' 
-    ORDER BY created_at DESC 
+    SELECT id FROM publications
+    WHERE type = 'video'
+    ORDER BY created_at DESC
     LIMIT $1
   `,
     [limit],
@@ -487,13 +599,13 @@ export async function autoFixVideos(
 
   const result = await pool.query(
     `
-    SELECT id FROM publications 
-    WHERE type = 'video' 
-      AND (processing_status = 'failed' 
-           OR processing_status = 'pending' 
+    SELECT id FROM publications
+    WHERE type = 'video'
+      AND (processing_status = 'failed'
+           OR processing_status = 'pending'
            OR media_url LIKE '%403%'
            OR thumbnail_url IS NULL)
-    ORDER BY created_at DESC 
+    ORDER BY created_at DESC
     LIMIT $1
   `,
     [limit],

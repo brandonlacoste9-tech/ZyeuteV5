@@ -1,5 +1,10 @@
 import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
+import multer from "multer";
+import fs from "fs/promises";
+import path from "path";
+import { tmpdir } from "os";
+import ffmpeg from "fluent-ffmpeg";
 import {
   generateWithTIGuy,
   moderateContent,
@@ -19,6 +24,8 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
   next();
 };
+
+const upload = multer({ dest: tmpdir() });
 
 const aiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -170,6 +177,43 @@ router.post("/transcribe", aiRateLimiter, requireAuth, async (req, res) => {
   } catch (error: any) {
     console.error("Transcription error:", error);
     res.status(500).json({ error: "Transcription failed" });
+  }
+});
+
+// Video Transcription
+router.post("/transcribe-video", aiRateLimiter, requireAuth, upload.single("video"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Video file is required" });
+
+    const videoPath = req.file.path;
+    const audioPath = path.join(tmpdir(), `audio-${Date.now()}.wav`);
+
+    // Extract audio from video
+    await new Promise((resolve, reject) => {
+      ffmpeg(videoPath)
+        .audioCodec('pcm_s16le')
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .output(audioPath)
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+    });
+
+    // Read audio buffer
+    const audioBuffer = await fs.readFile(audioPath);
+
+    // Transcribe
+    const result: TranscriptionResult = await transcribeAudio(audioBuffer, "fr-CA");
+
+    // Cleanup
+    await fs.unlink(videoPath).catch(() => {});
+    await fs.unlink(audioPath).catch(() => {});
+
+    res.json({ transcript: result.transcript });
+  } catch (error: any) {
+    console.error("Video transcription error:", error);
+    res.status(500).json({ error: "Video transcription failed" });
   }
 });
 

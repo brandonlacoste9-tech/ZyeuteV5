@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
-import { Play, Pause, Volume2, AlertTriangle } from "lucide-react";
+import { Play, Pause, Volume2, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ZyeutePlayerProps {
@@ -17,6 +17,7 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPaused, setIsPaused] = useState(!autoPlay);
   const [hasError, setHasError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
@@ -39,7 +40,29 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
       });
       hls.loadSource(src);
       hls.attachMedia(video);
-      hls.on(Hls.Events.ERROR, () => setHasError(true));
+      hls.on(Hls.Events.ERROR, (_event, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              console.error(
+                "[ZyeuteVideoPlayer] Fatal network error, trying to recover...",
+              );
+              hls.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              console.error(
+                "[ZyeuteVideoPlayer] Fatal media error, trying to recover...",
+              );
+              hls.recoverMediaError();
+              break;
+            default:
+              console.error("[ZyeuteVideoPlayer] Unrecoverable error:", data);
+              setHasError(true);
+              hls.destroy();
+              break;
+          }
+        }
+      });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       // For Safari native HLS support
       video.src = src;
@@ -48,7 +71,13 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
     return () => {
       if (hls) hls.destroy();
     };
-  }, [src]);
+  }, [src, retryKey]);
+
+  const handleRetry = () => {
+    setHasError(false);
+    setIsReady(false);
+    setRetryKey((prev) => prev + 1);
+  };
 
   const togglePlay = () => {
     if (videoRef.current?.paused) {
@@ -71,7 +100,10 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
   return (
     <div
       className="relative w-full aspect-video bg-black overflow-hidden group border-b border-gold/20 video-motion-smooth"
-      style={{ transform: "translate3d(0, 0, 0)", backfaceVisibility: "hidden" }}
+      style={{
+        transform: "translate3d(0, 0, 0)",
+        backfaceVisibility: "hidden",
+      }}
     >
       <video
         ref={videoRef}
@@ -112,11 +144,21 @@ const ZyeuteVideoPlayer: React.FC<ZyeutePlayerProps> = ({
 
       {/* Error State: Broken Signal */}
       {hasError && (
-        <div className="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center text-gold">
-          <AlertTriangle className="w-10 h-10 mb-2" />
-          <span className="text-xs uppercase tracking-tighter">
+        <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md flex flex-col items-center justify-center text-gold z-50">
+          <AlertTriangle className="w-12 h-12 mb-4 animate-pulse" />
+          <span className="text-sm font-bold uppercase tracking-widest mb-4">
             Signal Interrompu
           </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRetry();
+            }}
+            className="flex items-center gap-2 px-6 py-2 bg-gold text-black rounded-full font-bold text-xs hover:bg-gold/80 transition-all active:scale-95"
+          >
+            <RefreshCw className="w-3 h-3" />
+            RÉESSAYER
+          </button>
         </div>
       )}
 

@@ -21,7 +21,7 @@ const aspectRatios = [
 export const AIStudio: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = React.useState<"image" | "video">("image");
+  const [activeTab, setActiveTab] = React.useState<"image" | "video" | "transcribe">("image");
   const [prompt, setPrompt] = React.useState("");
   const [aspectRatio, setAspectRatio] = React.useState("9:16"); // Default to TikTok vertical format
   const [isGeneratingImage, setIsGeneratingImage] = React.useState(false);
@@ -36,6 +36,9 @@ export const AIStudio: React.FC = () => {
     null,
   );
   const [sourceImage, setSourceImage] = React.useState<string | null>(null);
+  const [uploadedVideo, setUploadedVideo] = React.useState<File | null>(null);
+  const [transcribedText, setTranscribedText] = React.useState<string>("");
+  const [isTranscribing, setIsTranscribing] = React.useState(false);
 
   React.useEffect(() => {
     const imgUrl = searchParams.get("imageUrl");
@@ -138,6 +141,40 @@ export const AIStudio: React.FC = () => {
 
   const handleUseForPost = (url: string) => {
     navigate(`/upload?mediaUrl=${encodeURIComponent(url)}`);
+  };
+
+  const handleTranscribeVideo = async () => {
+    if (!uploadedVideo) {
+      toast.warning("Sélectionne une vidéo d'abord!");
+      return;
+    }
+
+    setIsTranscribing(true);
+    setTranscribedText("");
+
+    try {
+      const formData = new FormData();
+      formData.append("video", uploadedVideo);
+
+      const response = await fetch("/api/ai/transcribe-video", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.transcript) {
+        setTranscribedText(data.transcript);
+        toast.success("Transcription terminée! 🎙️");
+      } else {
+        toast.error(data.error || "Échec de la transcription");
+      }
+    } catch (err) {
+      toast.error("Une erreur est survenue");
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   return (
@@ -315,11 +352,17 @@ export const AIStudio: React.FC = () => {
           >
             IMAGE
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("video")}
             className={`transition-all hover:tracking-[0.6em] ${activeTab === "video" ? "text-gold-500 drop-shadow-[0_0_8px_rgba(255,191,0,0.4)]" : "hover:text-zinc-300"}`}
           >
             VIDÉO
+          </button>
+          <button
+            onClick={() => setActiveTab("transcribe")}
+            className={`transition-all hover:tracking-[0.6em] ${activeTab === "transcribe" ? "text-gold-500 drop-shadow-[0_0_8px_rgba(255,191,0,0.4)]" : "hover:text-zinc-300"}`}
+          >
+            TRANSCRIBE
           </button>
         </div>
       </div>

@@ -100,7 +100,9 @@ const FeedRow = memo(
     const isNext = index === currentIndex + 1;
 
     // Determine Video Source — skip prefetch for Mux (MuxVideoPlayer handles its own streaming)
-    const hasMux = !!(post as Post).mux_playback_id;
+    const hasMux = !!(
+      (post as any).mux_playback_id || (post as any).muxPlaybackId
+    );
     const rawVideoUrl = hasMux
       ? ""
       : (post as Post).hls_url ||
