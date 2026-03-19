@@ -96,6 +96,8 @@ const FeedRow = memo(
     } = data;
 
     const post = posts[index];
+    if (!post) return <div style={style} />;
+
     const isPriority = index === currentIndex;
     const isNext = index === currentIndex + 1;
 
@@ -135,8 +137,6 @@ const FeedRow = memo(
       videoUrl,
       effectivePreloadTier,
     );
-
-    if (!post) return <div style={style} />;
 
     return (
       <div
