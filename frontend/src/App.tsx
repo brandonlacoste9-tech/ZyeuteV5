@@ -19,8 +19,8 @@ import {
   useRef,
   useCallback,
 } from "react";
+import { lazy, Suspense } from "react";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
-import { LaZyeute } from "./pages/LaZyeute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { supabase, getSessionWithTimeout } from "@/lib/supabase";
 import {
@@ -29,10 +29,29 @@ import {
   TIGuyButton,
   useTIGuy,
 } from "@/components/tiguy";
-import { VideoDoctorDashboard } from "@/components/admin/VideoDoctorDashboard";
-import { AIStudio } from "./pages/AIStudio";
 
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+
+// Lazy-loaded pages for Pro-Tier Bundle Optimization
+const LaZyeute = lazy(() =>
+  import("./pages/LaZyeute").then((m) => ({ default: m.LaZyeute })),
+);
+const AIStudio = lazy(() =>
+  import("./pages/AIStudio").then((m) => ({ default: m.AIStudio })),
+);
+const VideoDoctorDashboard = lazy(() =>
+  import("@/components/admin/VideoDoctorDashboard").then((m) => ({
+    default: m.VideoDoctorDashboard,
+  })),
+);
+const TikTokCuration = lazy(() =>
+  import("./components/features/TikTokCuration").then((m) => ({
+    default: m.TikTokCuration,
+  })),
+);
+
+// Note: If other pages like Profile, Settings, Search, etc. are also heavy, they should be lazy-loaded here too.
+// For now, focusing on the heaviest identified components.
 
 // ===== CONSTANTS - ANTIQUE GOLD & RICH LEATHER =====
 const COLORS = {
@@ -2456,20 +2475,36 @@ function Logout() {
 // ===== MANUS & GRAVITYCLAW PLACEHOLDERS =====
 function ManusPage() {
   return (
-    <div className="min-h-screen flex flex-col pt-12" style={{ background: COLORS.brown }}>
+    <div
+      className="min-h-screen flex flex-col pt-12"
+      style={{ background: COLORS.brown }}
+    >
       <div className="p-8 text-center">
         <div className="text-6xl mb-6">🦾</div>
-        <h1 className="text-4xl font-bold mb-4" style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}>
+        <h1
+          className="text-4xl font-bold mb-4"
+          style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}
+        >
           Manus AI Agent
         </h1>
-        <p className="text-xl opacity-80 max-w-lg mx-auto mb-8" style={{ color: COLORS.text }}>
+        <p
+          className="text-xl opacity-80 max-w-lg mx-auto mb-8"
+          style={{ color: COLORS.text }}
+        >
           The autonomous general-purpose agent is being integrated.
         </p>
-        <div className="p-6 rounded-2xl border-2 border-dashed mx-auto max-w-md" style={{ borderColor: COLORS.gold+'40', background: COLORS.leather }}>
-           <p className="font-mono text-sm" style={{ color: COLORS.gold }}>
-             $ gh repo clone FoundationAgents/OpenManus<br/>
-             Status: INSTALLED & READY ⚜️
-           </p>
+        <div
+          className="p-6 rounded-2xl border-2 border-dashed mx-auto max-w-md"
+          style={{
+            borderColor: COLORS.gold + "40",
+            background: COLORS.leather,
+          }}
+        >
+          <p className="font-mono text-sm" style={{ color: COLORS.gold }}>
+            $ gh repo clone FoundationAgents/OpenManus
+            <br />
+            Status: INSTALLED & READY ⚜️
+          </p>
         </div>
       </div>
       <BottomNav />
@@ -2479,22 +2514,37 @@ function ManusPage() {
 
 function GravityClawPage() {
   return (
-    <div className="min-h-screen flex flex-col pt-12" style={{ background: COLORS.brown }}>
+    <div
+      className="min-h-screen flex flex-col pt-12"
+      style={{ background: COLORS.brown }}
+    >
       <div className="p-8 text-center">
         <div className="text-6xl mb-6">🦞</div>
-        <h1 className="text-4xl font-bold mb-4" style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}>
+        <h1
+          className="text-4xl font-bold mb-4"
+          style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}
+        >
           GravityClaw Compliance
         </h1>
-        <p className="text-xl opacity-80 max-w-lg mx-auto mb-8" style={{ color: COLORS.text }}>
+        <p
+          className="text-xl opacity-80 max-w-lg mx-auto mb-8"
+          style={{ color: COLORS.text }}
+        >
           Bill 96 Forensic Compliance & Remediation Swarm.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
           <div className="p-4 rounded-xl border border-gold/20 bg-black/40">
-            <h3 className="font-bold mb-2" style={{ color: COLORS.gold }}>Audit Engine</h3>
-            <p className="text-sm opacity-70">Live scanning of business assets.</p>
+            <h3 className="font-bold mb-2" style={{ color: COLORS.gold }}>
+              Audit Engine
+            </h3>
+            <p className="text-sm opacity-70">
+              Live scanning of business assets.
+            </p>
           </div>
           <div className="p-4 rounded-xl border border-gold/20 bg-black/40">
-            <h3 className="font-bold mb-2" style={{ color: COLORS.gold }}>Remediation Swarm</h3>
+            <h3 className="font-bold mb-2" style={{ color: COLORS.gold }}>
+              Remediation Swarm
+            </h3>
             <p className="text-sm opacity-70">Automated patch generation.</p>
           </div>
         </div>
@@ -2506,20 +2556,36 @@ function GravityClawPage() {
 
 function NullClawPage() {
   return (
-    <div className="min-h-screen flex flex-col pt-12" style={{ background: '#000' }}>
+    <div
+      className="min-h-screen flex flex-col pt-12"
+      style={{ background: "#000" }}
+    >
       <div className="p-8 text-center">
         <div className="text-6xl mb-6">⚙️</div>
-        <h1 className="text-4xl font-bold mb-4" style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}>
+        <h1
+          className="text-4xl font-bold mb-4"
+          style={{ color: COLORS.gold, fontFamily: COLORS.fontDisplay }}
+        >
           NullClaw Infrastructure
         </h1>
-        <p className="text-xl opacity-80 max-w-lg mx-auto mb-8" style={{ color: COLORS.text }}>
+        <p
+          className="text-xl opacity-80 max-w-lg mx-auto mb-8"
+          style={{ color: COLORS.text }}
+        >
           100% Zig. Null overhead. The smallest autonomous AI infrastructure.
         </p>
-        <div className="p-6 rounded-2xl border-2 border-dashed mx-auto max-w-md" style={{ borderColor: COLORS.gold+'40', background: COLORS.leather }}>
-           <p className="font-mono text-sm" style={{ color: COLORS.gold }}>
-             $ gh repo clone nullclaw/nullclaw<br/>
-             Status: 678 KB BINARY · READY ⚡
-           </p>
+        <div
+          className="p-6 rounded-2xl border-2 border-dashed mx-auto max-w-md"
+          style={{
+            borderColor: COLORS.gold + "40",
+            background: COLORS.leather,
+          }}
+        >
+          <p className="font-mono text-sm" style={{ color: COLORS.gold }}>
+            $ gh repo clone nullclaw/nullclaw
+            <br />
+            Status: 678 KB BINARY · READY ⚡
+          </p>
         </div>
       </div>
       <BottomNav />
@@ -2547,27 +2613,35 @@ function AppContent() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/logout" element={<Logout />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/feed" element={<LaZyeute />} />
-        <Route path="/explore" element={<LaZyeute />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/create" element={<Create />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/manus" element={<ManusPage />} />
-        <Route path="/gravityclaw" element={<GravityClawPage />} />
-        <Route path="/nullclaw" element={<NullClawPage />} />
-        <Route path="/admin/video-doctor" element={<VideoDoctorDashboard />} />
-        <Route path="/ai-studio" element={<AIStudio />} />
-        <Route
-          path="/"
-          element={<Navigate to={user ? "/feed" : "/login"} replace />}
-        />
-      </Routes>
+      <Suspense
+        fallback={<LoadingScreen message="Initialisation du module..." />}
+      >
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/feed" element={<LaZyeute />} />
+          <Route path="/explore" element={<LaZyeute />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/create" element={<Create />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/manus" element={<ManusPage />} />
+          <Route path="/gravityclaw" element={<GravityClawPage />} />
+          <Route path="/nullclaw" element={<NullClawPage />} />
+          <Route
+            path="/admin/video-doctor"
+            element={<VideoDoctorDashboard />}
+          />
+          <Route path="/admin/tiktok-curation" element={<TikTokCuration />} />
+          <Route path="/ai-studio" element={<AIStudio />} />
+          <Route
+            path="/"
+            element={<Navigate to={user ? "/feed" : "/login"} replace />}
+          />
+        </Routes>
+      </Suspense>
       {/* 🦫 TI-GUY Chat - Available on all pages when logged in */}
       {user && (
         <>

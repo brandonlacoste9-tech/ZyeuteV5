@@ -32,6 +32,7 @@ import pexelsRoutes from "./routes/pexels.js";
 import studioRoutes from "./routes/studio.js";
 import muxRoutes from "./routes/mux.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
+import tiktokRoutes from "./routes/tiktok.js";
 
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
 import tiguyRoutes from "./routes/tiguy-routes.js";
@@ -170,6 +171,7 @@ export async function registerRoutes(
 
   // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
   app.use("/api/media-proxy", mediaProxyRoutes);
+  app.use("/api/tiktok", tiktokRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);

@@ -4,6 +4,7 @@ import { getSwarmBridge } from "../ai/swarm-bridge";
 import { analyzeImageWithGenAI } from "../ai/genai-app-builder.js";
 import { creditCheckMiddleware } from "../ai/credit-manager.js";
 import { generateVideo } from "../ai/media/video-engine.js";
+import { generateImage } from "../ai/media/image-engine.js";
 
 const router = Router();
 
@@ -176,13 +177,51 @@ router.get("/health", (req, res) => {
   });
 });
 
+// 6.5 Generate Image (Flux)
+router.post("/generate-image", requireAuth, async (req: any, res) => {
+  try {
+    const { prompt, aspectRatio } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt required" });
+
+    // Map frontend aspect ratio to backend engine size
+    let imageSize: "square" | "portrait" | "landscape" = "square";
+    if (aspectRatio === "9:16") imageSize = "portrait";
+    else if (aspectRatio === "16:9") imageSize = "landscape";
+
+    const result = await generateImage({
+      prompt,
+      imageSize,
+      modelHint: "flux",
+    });
+
+    if (result.model === "placeholder") {
+      return res.status(503).json({
+        error: "Image generation not available",
+        message: "FAL_API_KEY not configured",
+      });
+    }
+
+    res.json({
+      imageUrl: result.url,
+      prompt: result.prompt,
+      success: true,
+    });
+  } catch (error: any) {
+    console.error("[AI Routes] Image generation error:", error.message);
+    res.status(500).json({ error: "Failed to generate image" });
+  }
+});
+
 // 7. Generate Video (Image-to-Video or Text-to-Video)
 // Requires FAL_API_KEY or FAL_KEY to be set
 router.post("/generate-video", requireAuth, async (req: any, res) => {
   let modelHint: "kling" | "wan" | "hunyuan_video" | "ltx2" | "ltx-2" = "kling";
   try {
     const { imageUrl, prompt, duration = 5, modelHint: hint } = req.body;
-    if (hint && ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2"].includes(hint)) {
+    if (
+      hint &&
+      ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2"].includes(hint)
+    ) {
       modelHint = hint as any;
     }
 
@@ -214,6 +253,7 @@ router.post("/generate-video", requireAuth, async (req: any, res) => {
       cost: result.cost,
       model: result.model,
       duration: result.duration,
+      prompt: prompt || "Animate this image with natural motion",
       success: true,
     });
   } catch (error: any) {

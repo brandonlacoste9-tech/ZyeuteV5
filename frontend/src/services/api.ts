@@ -696,18 +696,20 @@ export async function generateImage(
 
 export async function generateVideo(
   prompt: string,
-  imageUrl: string,
-): Promise<{ videoUrl: string; prompt: string } | null> {
-  const { data, error } = await apiCall<{ videoUrl: string; prompt: string }>(
-    "/ai/generate-video",
-    {
-      method: "POST",
-      body: JSON.stringify({ prompt, imageUrl }),
-    },
-  );
+  imageUrl?: string | null,
+  modelHint: string = "wan",
+  duration: number = 5,
+): Promise<AIVideoResponse | null> {
+  const { data, error } = await apiCall<AIVideoResponse>("/ai/generate-video", {
+    method: "POST",
+    body: JSON.stringify({ prompt, imageUrl, modelHint, duration }),
+  });
 
   if (error || !data) return null;
-  return data;
+
+  // Validate with Zod
+  const result = AIVideoResponseSchema.safeParse(data);
+  return result.success ? result.data : null;
 }
 
 // ============ PARENTAL CONTROLS FUNCTIONS ============

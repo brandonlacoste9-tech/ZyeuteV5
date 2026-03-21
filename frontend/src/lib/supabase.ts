@@ -3,19 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log(
-  "DEBUG SUPABASE ENV:",
-  JSON.stringify(
-    {
-      url: supabaseUrl,
-      keyLength: supabaseAnonKey?.length,
-      keyPreview: supabaseAnonKey?.substring(0, 15),
-    },
-    null,
-    2,
-  ),
-);
-
 const isValidUrl = (url: string | undefined) => {
   try {
     return url && new URL(url).protocol.startsWith("http");
@@ -23,13 +10,6 @@ const isValidUrl = (url: string | undefined) => {
     return false;
   }
 };
-
-if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
-  console.warn(
-    "Supabase credentials missing or invalid, using mock client. URL:",
-    supabaseUrl,
-  );
-}
 
 /** getSession with timeout - prevents feed/API from hanging if auth is slow. */
 export async function getSessionWithTimeout(ms = 3000): Promise<{
@@ -55,124 +35,23 @@ const noOpLock = async <R>(
   fn: () => Promise<R>,
 ): Promise<R> => fn();
 
-// Create real Supabase client if credentials exist and are valid, otherwise use mock
-export const supabase =
-  isValidUrl(supabaseUrl) && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          lock: noOpLock,
-        },
-      })
-    : createMockClient();
-
-// Mock implementation for development without Supabase
-function createMockClient() {
-  type SubscriptionCallback = (event: string, session: any) => void;
-  const subscribers = new Set<SubscriptionCallback>();
-
-  const notifySubscribers = (event: string, session: any) => {
-    subscribers.forEach((callback) => callback(event, session));
-  };
-
-  const mockUser = {
-    id: "mock-user-id",
-    email: "demo@example.com",
-    user_metadata: {
-      username: "demo_user",
-      avatar_url: "https://github.com/shadcn.png",
-    },
-  };
-
-  const mockSession = {
-    user: mockUser,
-    access_token: "mock-token",
-    refresh_token: "mock-refresh-token",
-  };
-
-  return {
-    auth: {
-      getUser: async () => ({ data: { user: mockUser }, error: null }),
-      getSession: async () => ({ data: { session: mockSession }, error: null }),
-      signInWithPassword: async (credentials: any) => {
-        notifySubscribers("SIGNED_IN", mockSession);
-        return { data: { user: mockUser, session: mockSession }, error: null };
-      },
-      signUp: async (credentials: any) => ({
-        data: { user: mockUser, session: mockSession },
-        error: null,
-      }),
-      signOut: async () => {
-        notifySubscribers("SIGNED_OUT", null);
-        return { error: null };
-      },
-      signInWithOAuth: async (options: any) => ({
-        data: { url: window.location.origin },
-        error: null,
-      }),
-      onAuthStateChange: (callback: SubscriptionCallback) => {
-        subscribers.add(callback);
-        callback("SIGNED_IN", mockSession);
-        return {
-          data: {
-            subscription: { unsubscribe: () => subscribers.delete(callback) },
-          },
-        };
-      },
-    },
-    from: (table: string) => {
-      const queryBuilder: any = {
-        select: () => queryBuilder,
-        insert: () => queryBuilder,
-        update: () => queryBuilder,
-        delete: () => queryBuilder,
-        eq: () => queryBuilder,
-        neq: () => queryBuilder,
-        gt: () => queryBuilder,
-        lt: () => queryBuilder,
-        gte: () => queryBuilder,
-        lte: () => queryBuilder,
-        in: () => queryBuilder,
-        is: () => queryBuilder,
-        like: () => queryBuilder,
-        ilike: () => queryBuilder,
-        contains: () => queryBuilder,
-        range: () => queryBuilder,
-        order: () => queryBuilder,
-        limit: () => queryBuilder,
-        single: () => Promise.resolve({ data: {}, error: null }),
-        maybeSingle: () => Promise.resolve({ data: {}, error: null }),
-        then: (resolve: (value: any) => void) =>
-          resolve({ data: [], error: null }),
-      };
-      return queryBuilder;
-    },
-    storage: {
-      from: (bucket: string) => ({
-        upload: async () => ({ data: { path: "mock-path" }, error: null }),
-        getPublicUrl: (path: string) => ({
-          data: { publicUrl: "https://placehold.co/600x400" },
-        }),
-        remove: async () => ({ data: {}, error: null }),
-        list: async () => ({ data: [], error: null }),
-      }),
-    },
-    channel: (name: string, _opts?: any) => {
-      const ch: any = {
-        on: () => ch, // chainable
-        subscribe: (_cb?: any) => ch,
-        unsubscribe: () => {},
-        untrack: () => ch,
-        track: () => ch,
-        send: () => Promise.resolve("ok"),
-      };
-      return ch;
-    },
-    removeChannel: () => {},
-  } as any;
+// Create real Supabase client
+if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("CRITICAL: Supabase credentials missing in production!");
+  } else {
+    console.warn("⚠️ [SECURITY] Supabase credentials missing or invalid.");
+  }
 }
+
+export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    lock: noOpLock,
+  },
+});
 
 // Helper function to get dynamic redirect URL based on current domain
 function getRedirectUrl(): string {

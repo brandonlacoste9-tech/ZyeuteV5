@@ -7,7 +7,7 @@ import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Button } from "../components/Button";
-import { generateImage } from "../services/api";
+import { generateImage, generateVideo } from "../services/api";
 import { toast } from "../components/Toast";
 import { AIVideoResponseSchema } from "../schemas/ai";
 
@@ -84,26 +84,15 @@ export const AIStudio: React.FC = () => {
     setGeneratedVideo(null);
 
     try {
-      const response = await fetch("/api/ai/generate-video", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          imageUrl: sourceImage,
-          prompt:
-            prompt || "Anime cette image avec un mouvement naturel pour TikTok",
-          modelHint: videoModel,
-          duration: 5,
-        }),
-      });
+      const result = await generateVideo(
+        prompt || "Anime cette image avec un mouvement naturel pour TikTok",
+        sourceImage,
+        videoModel,
+        5,
+      );
 
-      const data = await response.json();
-
-      // Validate AI response
-      const validatedData = AIVideoResponseSchema.safeParse(data);
-
-      if (validatedData.success) {
-        setGeneratedVideo(validatedData.data.videoUrl);
+      if (result) {
+        setGeneratedVideo(result.videoUrl);
         const modelNames: Record<string, string> = {
           wan: "Wan 2.2",
           kling: "Kling V2",
@@ -112,7 +101,7 @@ export const AIStudio: React.FC = () => {
         };
         toast.success(`Vidéo ${modelNames[videoModel]} générée! 🎬`);
       } else {
-        toast.error(data.error || "Échec de la génération vidéo");
+        toast.error("Échec de la génération vidéo");
       }
     } catch (err) {
       toast.error("Une erreur est survenue");
@@ -359,9 +348,11 @@ export const AIStudio: React.FC = () => {
               className="w-full bg-transparent border-none text-white text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-0 py-2.5 font-medium"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  activeTab === "video"
-                    ? handleGenerateVideo()
-                    : handleGenerateImage();
+                  if (activeTab === "video") {
+                    handleGenerateVideo();
+                  } else {
+                    handleGenerateImage();
+                  }
                 }
               }}
             />

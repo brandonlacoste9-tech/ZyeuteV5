@@ -33,105 +33,200 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     user_id: "demo-user-1",
     type: "video" as const,
     caption: "Welcome to Zyeuté! 🍁 Bienvenue au Québec!",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    media_url:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    mediaUrl:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
     thumbnail_url: "/demo/branding.png",
     thumbnailUrl: "/demo/branding.png",
     user: {
-      id: "demo-user-1", username: "zyeute", display_name: "Zyeuté Officiel",
+      id: "demo-user-1",
+      username: "zyeute",
+      display_name: "Zyeuté Officiel",
       avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true, created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0,
-      followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen",
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
-    fire_count: 1337, comment_count: 42, created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec",
-    is_moderated: false, moderation_approved: true, is_hidden: false,
-    is_ephemeral: false, view_count: 0, max_views: 1,
+    fire_count: 1337,
+    comment_count: 42,
+    created_at: new Date().toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-2",
     user_id: "demo-user-2",
     type: "video" as const,
     caption: "Montreal vibes 🏙️⚜️ #Montreal #Quebec",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    media_url:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    mediaUrl:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
     thumbnail_url: "/demo/montreal.png",
     thumbnailUrl: "/demo/montreal.png",
     user: {
-      id: "demo-user-2", username: "montreal", display_name: "Montréal",
+      id: "demo-user-2",
+      username: "montreal",
+      display_name: "Montréal",
       avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true, created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0,
-      followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen",
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
-    fire_count: 856, comment_count: 23, created_at: new Date(Date.now() - 3600000).toISOString(),
-    visibility: "public", hive_id: "quebec",
-    is_moderated: false, moderation_approved: true, is_hidden: false,
-    is_ephemeral: false, view_count: 0, max_views: 1,
+    fire_count: 856,
+    comment_count: 23,
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-3",
     user_id: "demo-user-3",
     type: "video" as const,
     caption: "Beautiful Quebec nature 🍁🌲",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    media_url:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    mediaUrl:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
     thumbnail_url: "/demo/nature.png",
     thumbnailUrl: "/demo/nature.png",
     user: {
-      id: "demo-user-3", username: "quebec_nature", display_name: "Nature Québec",
+      id: "demo-user-3",
+      username: "quebec_nature",
+      display_name: "Nature Québec",
       avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: false, created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0,
-      followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen",
+      is_verified: false,
+      created_at: new Date().toISOString(),
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
-    fire_count: 421, comment_count: 15, created_at: new Date(Date.now() - 7200000).toISOString(),
-    visibility: "public", hive_id: "quebec",
-    is_moderated: false, moderation_approved: true, is_hidden: false,
-    is_ephemeral: false, view_count: 0, max_views: 1,
+    fire_count: 421,
+    comment_count: 15,
+    created_at: new Date(Date.now() - 7200000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-4",
     user_id: "demo-user-4",
     type: "video" as const,
     caption: "Winter in Quebec ❄️❄️❄️",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    media_url:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+    mediaUrl:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
     thumbnail_url: "/demo/winter.png",
     thumbnailUrl: "/demo/winter.png",
     user: {
-      id: "demo-user-4", username: "quebec_winter", display_name: "Hiver Québécois",
+      id: "demo-user-4",
+      username: "quebec_winter",
+      display_name: "Hiver Québécois",
       avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: false, created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0,
-      followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen",
+      is_verified: false,
+      created_at: new Date().toISOString(),
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
-    fire_count: 692, comment_count: 31, created_at: new Date(Date.now() - 10800000).toISOString(),
-    visibility: "public", hive_id: "quebec",
-    is_moderated: false, moderation_approved: true, is_hidden: false,
-    is_ephemeral: false, view_count: 0, max_views: 1,
+    fire_count: 692,
+    comment_count: 31,
+    created_at: new Date(Date.now() - 10800000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-5",
     user_id: "demo-user-5",
     type: "video" as const,
     caption: "Quebec City old town 🏰⚜️",
-    media_url: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-    mediaUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    media_url:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+    mediaUrl:
+      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
     thumbnail_url: "/demo/quebec_city.png",
     thumbnailUrl: "/demo/quebec_city.png",
     user: {
-      id: "demo-user-5", username: "vieux_quebec", display_name: "Vieux Québec",
+      id: "demo-user-5",
+      username: "vieux_quebec",
+      display_name: "Vieux Québec",
       avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-      is_verified: true, created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0,
-      followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen",
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
-    fire_count: 1024, comment_count: 56, created_at: new Date(Date.now() - 14400000).toISOString(),
-    visibility: "public", hive_id: "quebec",
-    is_moderated: false, moderation_approved: true, is_hidden: false,
-    is_ephemeral: false, view_count: 0, max_views: 1,
+    fire_count: 1024,
+    comment_count: 56,
+    created_at: new Date(Date.now() - 14400000).toISOString(),
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
 ];
 
@@ -150,8 +245,13 @@ export const LaZyeute: React.FC = () => {
   const { edgeLighting } = useTheme();
 
   // Infinite scroll hook
-  const { posts: apiPosts, loadMoreRef, isLoading, isFetchingNextPage, hasNextPage } =
-    useInfiniteFeed("explore");
+  const {
+    posts: apiPosts,
+    loadMoreRef,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+  } = useInfiniteFeed("explore");
 
   // Fallback: Use demo videos when API returns empty
   const posts = useMemo(() => {
@@ -206,8 +306,6 @@ export const LaZyeute: React.FC = () => {
       console.log("Near end of feed, pre-fetching...");
     }
   }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
-
-
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
@@ -384,7 +482,7 @@ export const LaZyeute: React.FC = () => {
       />
 
       {/* Header */}
-      <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+      <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between glass-amber-strong border-b border-gold-500/20">
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate(-1)}
@@ -407,7 +505,7 @@ export const LaZyeute: React.FC = () => {
           </button>
           <HamburgerMenu />
         </div>
-        <h1 className="text-gold-400 font-black text-lg flex items-baseline select-none">
+        <h1 className="text-gold-500 font-black text-xl flex items-baseline select-none amber-glow">
           La Zyeute
           <span className="text-[0.6rem] uppercase tracking-[0.3em] ml-2 font-bold gold-text-shine whitespace-nowrap">
             AG GOLD EDITION
@@ -514,7 +612,6 @@ export const LaZyeute: React.FC = () => {
             )}
             {/* Media */}
             <div className="absolute inset-0 bg-black gold-rim overflow-hidden">
-
               {post.type === "video" ? (
                 (post as Post).mux_playback_id ? (
                   <MuxVideoPlayer
@@ -565,8 +662,6 @@ export const LaZyeute: React.FC = () => {
                   {post.type === "video" ? "▶ GOLD V" : "📷 GOLD P"}
                 </div>
               </div>
-
-
 
               {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
               <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">

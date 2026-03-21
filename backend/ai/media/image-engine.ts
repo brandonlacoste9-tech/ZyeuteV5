@@ -21,6 +21,7 @@ export interface ImageGenerationResult {
   url: string;
   cost: number;
   model: string;
+  prompt: string;
 }
 
 export async function generateImage(
@@ -30,7 +31,8 @@ export async function generateImage(
 
   console.log("[Image Engine] Generating image:", prompt.substring(0, 50));
 
-  if (!process.env.FAL_API_KEY) {
+  const currentKey = process.env.FAL_API_KEY || process.env.FAL_KEY;
+  if (!currentKey) {
     console.warn(
       "[Image Engine] FAL API key not configured, returning placeholder",
     );
@@ -38,6 +40,7 @@ export async function generateImage(
       url: "https://placehold.co/1024x1024/1a1a1a/gold?text=Image+Generation+Disabled",
       cost: 0,
       model: "placeholder",
+      prompt,
     };
   }
 
@@ -74,6 +77,7 @@ export async function generateImage(
       url: images[0].url,
       cost: 0.003, // Approximate cost per Flux schnell generation
       model: "flux-schnell",
+      prompt, // Ensure prompt is returned for frontend schema validation
     };
   } catch (error: any) {
     console.error("[Image Engine] Generation failed:", error.message);

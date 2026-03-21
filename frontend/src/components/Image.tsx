@@ -83,8 +83,22 @@ export const Image: React.FC<ImageProps> = ({
 
   return (
     <div className={cn("relative overflow-hidden", className)}>
+      {/* Progressive Loading Blur-up Effect */}
       {!isLoaded && (
-        <div className="absolute inset-0 bg-neutral-800 animate-pulse" />
+        <div
+          className="absolute inset-0 bg-neutral-900 animate-pulse flex items-center justify-center"
+          style={{
+            backgroundImage: `url(${currentSrc})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "blur(20px) saturate(1.5)",
+            transform: "scale(1.1)",
+            opacity: 0.5,
+          }}
+        >
+          {/* Amber Glow Loader */}
+          <div className="w-8 h-8 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin amber-border-glow" />
+        </div>
       )}
       <img
         src={currentSrc} // 1x source

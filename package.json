@@ -1,6 +1,7 @@
 {
   "name": "zyeute-v5",
   "private": true,
+  "type": "module",
   "packageManager": "npm@10.8.2",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx backend/index.ts",
