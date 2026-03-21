@@ -68,10 +68,9 @@ router.post("/import", async (req, res) => {
     // 2. Prepare the post data - Use HD URL if available
     const postData: InsertPost = {
       userId: user.id,
-      mediaUrl:
-        metadata?.media?.hd_video_url ||
-        metadata?.media?.video_url ||
-        video_url,
+      mediaUrl: video_url, // Always store the TikTok page URL (permanent for social embed)
+      hlsUrl:
+        metadata?.media?.hd_video_url || metadata?.media?.video_url || null, // Store temporary direct URL as fallback if needed
       thumbnailUrl: metadata?.thumbnails?.cover_url || "",
       caption: metadata?.caption || "Imported from TikTok",
       content: metadata?.caption || "TikTok Import",
