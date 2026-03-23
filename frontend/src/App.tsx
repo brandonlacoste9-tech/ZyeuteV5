@@ -29,7 +29,6 @@ import {
   TIGuyButton,
   useTIGuy,
 } from "@/components/tiguy";
-
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 // Lazy-loaded pages for Pro-Tier Bundle Optimization

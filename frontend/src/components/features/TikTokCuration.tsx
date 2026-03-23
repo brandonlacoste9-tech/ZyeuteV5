@@ -1,6 +1,5 @@
 /**
- * 🍁 TikTok Curation Dashboard
- * Allows finding and importing TikTok videos directly into Zyeuté V5
+ * TikTok curation dashboard — search/import via backend (Bearer auth, staff-only).
  */
 
 import React, { useState } from "react";
@@ -9,7 +8,6 @@ import {
   Download,
   CheckCircle2,
   Loader2,
-  ExternalLink,
   Play,
   AlertCircle,
 } from "lucide-react";
@@ -22,16 +20,16 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiCall } from "@/services/api";
 
 interface TikTokVideo {
   video_id: string;
   caption: string;
   author: { handle: string; nickname: string; avatar: string };
   thumbnails: { cover_url: string };
-  media: { video_url: string; hd_video_url: string };
+  media: { video_url: string; hd_video_url?: string };
   stats: { likes: number; views: number; shares: number };
   original_url?: string;
 }
@@ -50,15 +48,19 @@ export function TikTokCuration() {
 
     setIsSearching(true);
     try {
-      // In a real app, this would call your backend API which proxies to Omkar/TikTok API
-      // For this demo, we'll simulate the search results based on the Omkar schema
-      const response = await fetch(
-        `/api/tiktok/search?q=${encodeURIComponent(query)}`,
+      const { data, error } = await apiCall<{ videos: TikTokVideo[] }>(
+        `/tiktok/search?q=${encodeURIComponent(query.trim())}`,
       );
-      if (!response.ok) throw new Error("Échec de la recherche");
-      const data = await response.json();
-      setResults(data.videos || []);
-    } catch (error) {
+      if (error) throw new Error(error);
+      setResults(data?.videos || []);
+      if (!data?.videos?.length) {
+        toast({
+          title: "Aucun résultat",
+          description:
+            "Essaie un autre mot-clé, ou vérifie TIKTOK_SCRAPER_API_KEY sur le serveur.",
+        });
+      }
+    } catch {
       toast({
         title: "Erreur de recherche",
         description: "Impossible de contacter le service de curation TikTok.",
@@ -73,28 +75,31 @@ export function TikTokCuration() {
     setImportingIds((prev) => new Set(prev).add(video.video_id));
 
     try {
-      const response = await fetch("/api/tiktok/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          video_url:
-            video.original_url ||
-            `https://www.tiktok.com/@${video.author.handle}/video/${video.video_id}`,
-          metadata: video,
-        }),
-      });
+      const { error } = await apiCall<{ post?: { id: string } }>(
+        "/tiktok/import",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            video,
+            video_url:
+              video.original_url ||
+              `https://www.tiktok.com/@${video.author.handle}/video/${video.video_id}`,
+            metadata: video,
+          }),
+        },
+      );
 
-      if (!response.ok) throw new Error("Échec de l'importation");
+      if (error) throw new Error(error);
 
       setImportedIds((prev) => new Set(prev).add(video.video_id));
       toast({
         title: "Vidéo importée !",
-        description: "La vidéo est maintenant disponible dans le feed Zyeuté.",
+        description: "La vidéo est maintenant disponible dans le fil Zyeuté.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Erreur d'importation",
-        description: "Impossible d'ajouter cette vidéo au projet.",
+        description: "Impossible d'ajouter cette vidéo.",
         variant: "destructive",
       });
     } finally {
@@ -107,11 +112,11 @@ export function TikTokCuration() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
-      <Card className="bg-zinc-900 border-zinc-800 text-white shadow-xl">
+    <div className="mx-auto max-w-6xl space-y-8 p-6">
+      <Card className="border-zinc-800 bg-zinc-900 text-white shadow-xl">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gold-500 rounded-lg">
+            <div className="rounded-lg bg-amber-600 p-2">
               <Search className="text-black" size={24} />
             </div>
             <div>
@@ -119,8 +124,8 @@ export function TikTokCuration() {
                 Curation TikTok
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Trouvez et importez les meilleures vidéos pour la communauté
-                Zyeuté.
+                Trouve et importe des vidéos (compte équipe requis). Clé serveur
+                : TIKTOK_SCRAPER_API_KEY.
               </CardDescription>
             </div>
           </div>
@@ -128,15 +133,15 @@ export function TikTokCuration() {
         <CardContent>
           <form onSubmit={handleSearch} className="flex gap-3">
             <Input
-              placeholder="Rechercher par mot-clé ou hashtag (ex: #quebec, poutine...)"
+              placeholder="Mot-clé ou hashtag (ex: #quebec, poutine...)"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 h-12"
+              className="h-12 border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
             />
             <Button
               type="submit"
               disabled={isSearching}
-              className="bg-gold-500 hover:bg-gold-600 text-black font-bold px-8 h-12"
+              className="h-12 bg-amber-600 px-8 font-bold text-black hover:bg-amber-500"
             >
               {isSearching ? (
                 <Loader2 className="animate-spin" />
@@ -149,46 +154,47 @@ export function TikTokCuration() {
       </Card>
 
       {results.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {results.map((video) => (
             <Card
               key={video.video_id}
-              className="bg-zinc-900 border-zinc-800 overflow-hidden group hover:border-gold-500/50 transition-all duration-300"
+              className="group overflow-hidden border-zinc-800 bg-zinc-900 transition-all duration-300 hover:border-amber-600/50"
             >
               <div className="relative aspect-[9/16] bg-black">
                 <img
                   src={video.thumbnails.cover_url}
                   alt={video.caption}
-                  className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                  className="h-full w-full object-cover opacity-80 transition-opacity group-hover:opacity-100"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
 
-                <div className="absolute top-3 left-3 flex items-center gap-2">
+                <div className="absolute left-3 top-3 flex items-center gap-2">
                   <img
                     src={video.author.avatar}
-                    className="w-8 h-8 rounded-full border border-white/20"
+                    className="h-8 w-8 rounded-full border border-white/20"
                     alt=""
                   />
-                  <span className="text-white text-xs font-bold shadow-sm">
+                  <span className="text-xs font-bold text-white shadow-sm">
                     @{video.author.handle}
                   </span>
                 </div>
 
                 <div className="absolute bottom-4 left-4 right-4 space-y-3">
-                  <p className="text-white text-sm line-clamp-2 font-medium leading-snug">
+                  <p className="line-clamp-2 text-sm font-medium leading-snug text-white">
                     {video.caption}
                   </p>
-                  <div className="flex items-center gap-4 text-white/60 text-[10px] font-bold uppercase tracking-wider">
-                    <span>{video.stats.views.toLocaleString()} Vues</span>
-                    <span>{video.stats.likes.toLocaleString()} J'aime</span>
+                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-white/60">
+                    <span>{video.stats.views.toLocaleString()} vues</span>
+                    <span>{video.stats.likes.toLocaleString()} j&apos;aime</span>
                   </div>
                 </div>
 
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
                   <Button
                     variant="secondary"
                     size="icon"
-                    className="rounded-full w-12 h-12 bg-white/10 backdrop-blur-md hover:bg-white/20"
+                    type="button"
+                    className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
                     onClick={() =>
                       window.open(
                         `https://www.tiktok.com/@${video.author.handle}/video/${video.video_id}`,
@@ -196,17 +202,18 @@ export function TikTokCuration() {
                       )
                     }
                   >
-                    <Play fill="white" className="text-white ml-1" />
+                    <Play fill="white" className="ml-1 text-white" />
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-4 bg-zinc-900">
+              <CardContent className="bg-zinc-900 p-4">
                 <Button
+                  type="button"
                   className={cn(
                     "w-full font-bold transition-all",
                     importedIds.has(video.video_id)
-                      ? "bg-green-600 hover:bg-green-600 text-white cursor-default"
-                      : "bg-zinc-800 hover:bg-gold-500 hover:text-black text-white",
+                      ? "cursor-default bg-green-600 text-white hover:bg-green-600"
+                      : "bg-zinc-800 text-white hover:bg-amber-600 hover:text-black",
                   )}
                   disabled={
                     importingIds.has(video.video_id) ||
@@ -238,8 +245,8 @@ export function TikTokCuration() {
       {results.length === 0 && !isSearching && query && (
         <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
           <AlertCircle size={48} className="mb-4 opacity-20" />
-          <p>Aucune vidéo trouvée pour "{query}".</p>
-          <p className="text-sm">Essayez un autre mot-clé ou hashtag.</p>
+          <p>Aucune vidéo trouvée pour &quot;{query}&quot;.</p>
+          <p className="text-sm">Essaie un autre mot-clé ou hashtag.</p>
         </div>
       )}
     </div>

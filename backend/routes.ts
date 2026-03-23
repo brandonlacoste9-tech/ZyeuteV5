@@ -17,6 +17,7 @@ import { verifyAuthToken } from "./supabase-auth.js";
 import aiRoutes from "./routes/ai.routes.js";
 
 import adminRoutes from "./routes/admin.js";
+import tiktokRoutes from "./routes/tiktok.js";
 import moderationRoutes from "./routes/moderation.js";
 import healthRoutes from "./routes/health.js";
 import genaiBuilderRoutes from "./routes/genai-builder.routes.js";
@@ -32,7 +33,6 @@ import pexelsRoutes from "./routes/pexels.js";
 import studioRoutes from "./routes/studio.js";
 import muxRoutes from "./routes/mux.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
-import tiktokRoutes from "./routes/tiktok.js";
 
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
 import tiguyRoutes from "./routes/tiguy-routes.js";
@@ -155,6 +155,9 @@ export async function registerRoutes(
   // [NEW] Admin Observability Dashboard
   app.use("/api/admin", requireAuth, adminRoutes);
 
+  // TikTok curation (Omkar Cloud proxy + import; staff-only inside router)
+  app.use("/api/tiktok", requireAuth, tiktokRoutes);
+
   // Apply general rate limiting to all other API routes
   // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
   app.use("/api", (req, res, next) => {
@@ -171,7 +174,6 @@ export async function registerRoutes(
 
   // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
   app.use("/api/media-proxy", mediaProxyRoutes);
-  app.use("/api/tiktok", tiktokRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
   app.use("/api/ai", aiRoutes);
