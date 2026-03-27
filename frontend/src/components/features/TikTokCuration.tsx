@@ -10,6 +10,8 @@ import {
   Loader2,
   Play,
   AlertCircle,
+  TrendingUp,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +38,10 @@ interface TikTokVideo {
 
 export function TikTokCuration() {
   const [query, setQuery] = useState("");
+  const [pasteUrl, setPasteUrl] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(false);
+  const [isUrlImporting, setIsUrlImporting] = useState(false);
   const [results, setResults] = useState<TikTokVideo[]>([]);
   const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
   const [importedIds, setImportedIds] = useState<Set<string>>(new Set());
@@ -57,7 +62,7 @@ export function TikTokCuration() {
         toast({
           title: "Aucun résultat",
           description:
-            "Essaie un autre mot-clé, ou vérifie TIKTOK_SCRAPER_API_KEY sur le serveur.",
+            "Essaie un autre mot-clé, ou configure TIKTOK_SCRAPER_API_KEY et/ou TIKAPI_KEY sur le serveur.",
         });
       }
     } catch {
@@ -68,6 +73,83 @@ export function TikTokCuration() {
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleLoadTrending = async () => {
+    setIsTrendingLoading(true);
+    setQuery("");
+    try {
+      const { data, error, code } = await apiCall<{ videos: TikTokVideo[] }>(
+        "/tiktok/trending?max_results=15",
+      );
+      if (error) {
+        setResults([]);
+        toast({
+          title: "Tendances indisponibles",
+          description: error,
+          variant: code === 503 ? "default" : "destructive",
+        });
+        return;
+      }
+      setResults(data?.videos || []);
+      if (!data?.videos?.length) {
+        toast({
+          title: "Tendances vides",
+          description:
+            "Réessaie plus tard ou lance une recherche par mot-clé.",
+        });
+      }
+    } catch {
+      setResults([]);
+      toast({
+        title: "Erreur tendances",
+        description: "Impossible de charger les tendances TikTok.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTrendingLoading(false);
+    }
+  };
+
+  const handleImportFromUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const url = pasteUrl.trim();
+    if (!url.includes("tiktok.com")) {
+      toast({
+        title: "URL invalide",
+        description: "Colle un lien de vidéo TikTok (tiktok.com/.../video/...).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUrlImporting(true);
+    try {
+      const { data, error } = await apiCall<{ post?: { id: string } }>(
+        "/tiktok/import",
+        {
+          method: "POST",
+          body: JSON.stringify({ video_url: url }),
+        },
+      );
+      if (error) throw new Error(error);
+      toast({
+        title: "Vidéo importée !",
+        description: data?.post?.id
+          ? `Publication ${data.post.id.slice(0, 8)}…`
+          : "La vidéo est dans le fil Zyeuté.",
+      });
+      setPasteUrl("");
+    } catch {
+      toast({
+        title: "Import par lien impossible",
+        description:
+          "Vérifie TIKTOK_SCRAPER_API_KEY (Omkar) pour les imports par URL, ou importe depuis la grille.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUrlImporting(false);
     }
   };
 
@@ -124,13 +206,30 @@ export function TikTokCuration() {
                 Curation TikTok
               </CardTitle>
               <CardDescription className="text-zinc-400">
-                Trouve et importe des vidéos (compte équipe requis). Clé serveur
-                : TIKTOK_SCRAPER_API_KEY.
+                Trouve et importe des vidéos (compte équipe). Serveur :{" "}
+                TIKTOK_SCRAPER_API_KEY (Omkar) et/ou TIKAPI_KEY (recherche /
+                tendances en secours).
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isTrendingLoading}
+              onClick={handleLoadTrending}
+              className="h-12 border-zinc-600 bg-zinc-800 text-white hover:bg-zinc-700"
+            >
+              {isTrendingLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <TrendingUp className="mr-2 h-4 w-4" />
+              )}
+              Tendances CA
+            </Button>
+          </div>
           <form onSubmit={handleSearch} className="flex gap-3">
             <Input
               placeholder="Mot-clé ou hashtag (ex: #quebec, poutine...)"
@@ -147,6 +246,31 @@ export function TikTokCuration() {
                 <Loader2 className="animate-spin" />
               ) : (
                 "RECHERCHER"
+              )}
+            </Button>
+          </form>
+          <form
+            onSubmit={handleImportFromUrl}
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+          >
+            <div className="flex flex-1 items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800 px-3">
+              <Link2 className="h-4 w-4 shrink-0 text-zinc-500" />
+              <Input
+                placeholder="Coller un lien vidéo TikTok (import direct — Omkar requis)"
+                value={pasteUrl}
+                onChange={(e) => setPasteUrl(e.target.value)}
+                className="h-11 border-0 bg-transparent px-0 text-white placeholder:text-zinc-500 focus-visible:ring-0"
+              />
+            </div>
+            <Button
+              type="submit"
+              disabled={isUrlImporting || !pasteUrl.trim()}
+              className="h-11 bg-zinc-700 font-bold text-white hover:bg-zinc-600"
+            >
+              {isUrlImporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "IMPORTER LE LIEN"
               )}
             </Button>
           </form>

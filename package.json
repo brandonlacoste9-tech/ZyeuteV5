@@ -42,6 +42,7 @@
     "db:push": "drizzle-kit push",
     "db:deploy": "tsx scripts/db-deploy.ts",
     "db:seed": "tsx scripts/run-seed-migration.ts",
+    "tiktok:feed-once": "tsx scripts/run-tiktok-feed-job-once.ts",
     "db:setup": "tsx scripts/railway-setup-db.ts",
     "db:backup": "tsx backend/backup-db.ts",
     "verify:vertex": "tsx scripts/verify-vertex-ai.ts",

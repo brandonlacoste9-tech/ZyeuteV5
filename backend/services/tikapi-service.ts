@@ -9,14 +9,12 @@
 import axios from "axios";
 import TikAPI from "tikapi";
 
-const TIKAPI_KEY =
-  process.env.TIKAPI_KEY || "VTeqFTRgu4MIQ4p1eKKVr7cQSmfiVET9GOt9ZvWGMLVFenIR";
-const POLLO_API_KEY =
-  process.env.POLLO_API_KEY ||
-  "pollo_DEvgXk5otVtmUtJLP9e666bbMaSTNGyxjeiUK2VuhdQD";
+const TIKAPI_KEY = process.env.TIKAPI_KEY ?? "";
 
-// Initialize TikAPI client
-const api = TikAPI(TIKAPI_KEY);
+/** TikAPI client; null when TIKAPI_KEY is unset (callers must check). */
+const tikapi = TIKAPI_KEY ? TikAPI(TIKAPI_KEY) : null;
+
+const POLLO_API_KEY = process.env.POLLO_API_KEY ?? "";
 
 export interface TikVideo {
   id: string;
@@ -43,9 +41,13 @@ export const TikApiService = {
    */
   async getTrendingVideos(region: string = "CA", count: number = 10) {
     try {
+      if (!tikapi) {
+        console.warn("[TikAPI] TIKAPI_KEY missing; skip trending.");
+        return [];
+      }
       console.log(`[TikAPI] Fetching trending videos for region: ${region}`);
 
-      const response: any = await api.public.explore({
+      const response: any = await tikapi.public.explore({
         country: region,
         count: count,
       });
@@ -88,8 +90,12 @@ export const TikApiService = {
    */
   async searchByHashtag(hashtag: string, count: number = 10) {
     try {
+      if (!tikapi) {
+        console.warn("[TikAPI] TIKAPI_KEY missing; skip hashtag search.");
+        return [];
+      }
       const cleanTag = hashtag.replace("#", "");
-      const response: any = await api.public.hashtag({
+      const response: any = await tikapi.public.hashtag({
         name: cleanTag,
         count: count,
       });
@@ -123,6 +129,10 @@ export const PolloService = {
       console.log(
         `[Pollo AI] Generating video with prompt: ${params.prompt.substring(0, 50)}...`,
       );
+
+      if (!POLLO_API_KEY) {
+        throw new Error("POLLO_API_KEY is not set");
+      }
 
       const response = await axios.post(
         `${POLLO_BASE_URL}/video/generate`,
@@ -161,6 +171,9 @@ export const PolloService = {
    */
   async getTaskStatus(taskId: string) {
     try {
+      if (!POLLO_API_KEY) {
+        return { status: "error" as const, error: "POLLO_API_KEY is not set" };
+      }
       const response = await axios.get(
         `${POLLO_BASE_URL}/video/task/${taskId}`,
         {

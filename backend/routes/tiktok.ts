@@ -2,13 +2,15 @@
  * TikTok curation: Omkar Cloud search/trending/details + import (staff-only).
  */
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { db, storage } from "../storage.js";
-import { posts, users } from "../../shared/schema.js";
-import { sql } from "drizzle-orm";
-import { v3Mod } from "../v3-swarm.js";
+import { storage } from "../storage.js";
+import {
+  hasImportableVideoPayload,
+  importTikTokVideoToFeed,
+  resolveTikTokVideoForImport,
+} from "../services/tiktok-feed-import.js";
 import {
   TikTokScraperService,
-  type TikTokVideo,
+  missingTikTokProviderErrorMessage,
 } from "../services/tiktok-scraper-service.js";
 
 const router = Router();
@@ -32,15 +34,6 @@ async function requireStaff(
     return res.status(403).json({ error: "Accès réservé à l'équipe." });
   }
   next();
-}
-
-async function resolveImportAuthorId(): Promise<string | null> {
-  const bot = await storage.getUserByUsername("ti_guy_bot");
-  if (bot) return bot.id;
-  const scout = await storage.getUserByUsername("zyeute_scout");
-  if (scout) return scout.id;
-  const row = await db.select({ id: users.id }).from(users).limit(1);
-  return row[0]?.id ?? null;
 }
 
 function pickVideoPayload(body: Record<string, unknown>): unknown | null {
@@ -67,10 +60,9 @@ router.get("/search", requireStaff, async (req, res) => {
     res.json({ videos, query: q });
   } catch (e: any) {
     const msg = e?.message || String(e);
-    if (msg.includes("TIKTOK_SCRAPER_API_KEY")) {
+    if (msg === missingTikTokProviderErrorMessage()) {
       return res.status(503).json({
-        error:
-          "TIKTOK_SCRAPER_API_KEY manquant côté serveur. Configure la clé Omkar Cloud.",
+        error: missingTikTokProviderErrorMessage(),
         videos: [],
         query: q,
       });
@@ -92,9 +84,9 @@ router.get("/trending", requireStaff, async (req, res) => {
     res.json({ videos });
   } catch (e: any) {
     const msg = e?.message || String(e);
-    if (msg.includes("TIKTOK_SCRAPER_API_KEY")) {
+    if (msg === missingTikTokProviderErrorMessage()) {
       return res.status(503).json({
-        error: "TIKTOK_SCRAPER_API_KEY manquant côté serveur.",
+        error: missingTikTokProviderErrorMessage(),
         videos: [],
       });
     }
@@ -105,12 +97,6 @@ router.get("/trending", requireStaff, async (req, res) => {
 
 // POST /api/tiktok/import — { video }, { videoUrl }, or { video_url, metadata? }
 router.post("/import", requireStaff, async (req, res) => {
-  if (!process.env.TIKTOK_SCRAPER_API_KEY) {
-    return res.status(503).json({
-      error: "TIKTOK_SCRAPER_API_KEY manquant côté serveur.",
-    });
-  }
-
   const body = req.body as Record<string, unknown>;
   let raw: unknown = pickVideoPayload(body);
   const videoUrlParam =
@@ -120,119 +106,54 @@ router.post("/import", requireStaff, async (req, res) => {
         ? (body.video_url as string).trim()
         : "";
 
-  if (!raw && videoUrlParam) {
-    raw = await TikTokScraperService.getVideoDetails(videoUrlParam);
+  const resolved = await resolveTikTokVideoForImport(raw, videoUrlParam || undefined);
+  if ("error" in resolved) {
+    const e = resolved.error;
+    switch (e.reason) {
+      case "details_fetch_failed":
+        return res.status(503).json({ error: e.detail || "Détails TikTok indisponibles." });
+      case "invalid_payload":
+        return res.status(400).json({
+          error:
+            "Fournis video / metadata (objet), videoUrl, ou video_url (lien TikTok).",
+        });
+      default:
+        return res.status(400).json({ error: e.detail || "Requête invalide." });
+    }
   }
 
-  if (!raw || typeof raw !== "object") {
-    return res.status(400).json({
-      error:
-        "Fournis video / metadata (objet), videoUrl, ou video_url (lien TikTok).",
-    });
+  const result = await importTikTokVideoToFeed(resolved.video, {
+    videoUrlHint: videoUrlParam || undefined,
+    metadataSource: "tiktok-scraper",
+  });
+
+  if (result.ok) {
+    const post = await storage.getPost(result.postId);
+    return res.status(201).json({ post: post ?? { id: result.postId } });
   }
 
-  const v = raw as TikTokVideo & Record<string, any>;
-  const videoId = v.video_id;
-  if (!videoId) {
-    return res.status(400).json({ error: "Réponse TikTok invalide (video_id)." });
-  }
-
-  const existing = await db
-    .select({ id: posts.id })
-    .from(posts)
-    .where(sql`${posts.mediaMetadata}->>'tiktok_id' = ${videoId}`)
-    .limit(1);
-
-  if (existing.length > 0) {
-    return res.status(409).json({
-      error: "Cette vidéo est déjà dans le fil.",
-      postId: existing[0].id,
-    });
-  }
-
-  const caption =
-    typeof v.caption === "string" ? v.caption : "TikTok — import curation";
-  const content = caption || "TikTok Import";
-  const modResult = await v3Mod(`${caption} ${content}`);
-  if (modResult.is_minor_danger || modResult.status !== "approved") {
-    return res.status(403).json({
-      error: "Import refusé par la modération texte.",
-      detail: modResult.reason,
-    });
-  }
-
-  const pageUrl =
-    videoUrlParam ||
-    v.original_url ||
-    (v.author?.handle
-      ? `https://www.tiktok.com/@${v.author.handle}/video/${videoId}`
-      : "");
-
-  const mediaUrl =
-    v.media?.video_url ||
-    v.media?.hd_video_url ||
-    (v.media as { download_addr?: string } | undefined)?.download_addr;
-  if (!mediaUrl || typeof mediaUrl !== "string") {
-    return res.status(422).json({ error: "Aucune URL média exploitable." });
-  }
-
-  const hlsOrHd =
-    v.media?.hd_video_url && v.media.hd_video_url !== mediaUrl
-      ? v.media.hd_video_url
-      : null;
-
-  const thumbnailUrl =
-    v.thumbnails?.cover_url ||
-    (v.thumbnails as { origin_cover_url?: string })?.origin_cover_url ||
-    (v as { video?: { cover?: string } }).video?.cover ||
-    null;
-
-  const authorHandle =
-    v.author?.handle ||
-    (v.author as { unique_id?: string } | undefined)?.unique_id ||
-    v.author?.nickname ||
-    null;
-
-  const userId = await resolveImportAuthorId();
-  if (!userId) {
-    return res.status(500).json({
-      error:
-        "Aucun utilisateur système (ti_guy_bot / zyeute_scout) ni profil de repli.",
-    });
-  }
-
-  const hiveUser = await storage.getUser(userId);
-  const hiveId = hiveUser?.hiveId || "quebec";
-
-  try {
-    const post = await storage.createPost({
-      userId,
-      type: "video",
-      mediaUrl,
-      hlsUrl: hlsOrHd || undefined,
-      thumbnailUrl: thumbnailUrl || undefined,
-      content,
-      caption,
-      visibility: "public",
-      hiveId,
-      processingStatus: "completed",
-      fireCount: typeof v.stats?.likes === "number" ? v.stats.likes : 0,
-      mediaMetadata: {
-        tiktok_id: videoId,
-        author: authorHandle,
-        source: "tiktok-scraper",
-        stats: v.stats ?? {},
-        original_url: pageUrl || undefined,
-      },
-      isModerated: true,
-      moderationApproved: true,
-      isHidden: false,
-    } as any);
-
-    res.status(201).json({ post });
-  } catch (e: any) {
-    console.error("[TikTok] import insert failed:", e);
-    res.status(500).json({ error: e?.message || "Échec de l'import." });
+  switch (result.reason) {
+    case "duplicate":
+      return res.status(409).json({
+        error: "Cette vidéo est déjà dans le fil.",
+        postId: result.postId,
+      });
+    case "moderation":
+      return res.status(403).json({
+        error: "Import refusé par la modération texte.",
+        detail: result.detail,
+      });
+    case "no_media":
+      return res.status(422).json({ error: "Aucune URL média exploitable." });
+    case "no_system_user":
+      return res.status(500).json({
+        error:
+          "Aucun utilisateur système (ti_guy_bot / zyeute_scout) ni profil de repli.",
+      });
+    default:
+      return res.status(500).json({
+        error: result.detail || "Échec de l'import.",
+      });
   }
 });
 

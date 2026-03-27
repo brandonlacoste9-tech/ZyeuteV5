@@ -334,6 +334,16 @@ app.use((req, res, next) => {
     isSystemReady = true;
     console.log("🚀 ZYEUTÉ IS FULLY ARMED AND OPERATIONAL! (Traffic Allowed)");
     console.log(`   → Open app: http://127.0.0.1:${port}`);
+
+    try {
+      const { startTikTokFeedPopulatorJob } = await import(
+        "./services/tiktok-feed-populator-job.js"
+      );
+      startTikTokFeedPopulatorJob();
+    } catch (jobErr: unknown) {
+      const msg = jobErr instanceof Error ? jobErr.message : String(jobErr);
+      console.warn("⚠️ [Startup] TikTok feed job not started:", msg);
+    }
   } catch (error) {
     console.error("❌ Failed to start server logic:", error);
     // Don't exit, let the server run 503s so we can see logs

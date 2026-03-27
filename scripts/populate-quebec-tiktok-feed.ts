@@ -16,8 +16,7 @@ import { v4 as uuidv4 } from "uuid";
 const { Pool } = pg;
 
 // 1. Configuration
-const TIKAPI_KEY =
-  process.env.TIKAPI_KEY || "VTeqFTRgu4MIQ4p1eKKVr7cQSmfiVET9GOt9ZvWGMLVFenIR";
+const TIKAPI_KEY = process.env.TIKAPI_KEY;
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 const DATABASE_URL =
   process.env.DATABASE_URL || process.env.DATABASE_URL_NON_POOLING;
@@ -28,7 +27,7 @@ if (!DATABASE_URL) {
 }
 
 // 2. Initialize Clients
-const api = TikAPI(TIKAPI_KEY);
+const api = TIKAPI_KEY ? TikAPI(TIKAPI_KEY) : null;
 const pool = new Pool({
   connectionString: DATABASE_URL,
   ssl: { rejectUnauthorized: false },
@@ -82,23 +81,27 @@ async function populateFeed() {
     }
 
     // --- PHASE 1: TikAPI (Real TikToks) ---
-    console.log("📱 Fetching from TikTok via TikAPI...");
     let tiktokItems: any[] = [];
+    if (api) {
+      console.log("📱 Fetching from TikTok via TikAPI...");
 
-    for (const tag of QUEBEC_HASHTAGS.slice(0, 3)) {
-      try {
-        console.log(`   🔍 Searching hashtag: #${tag}`);
-        const response: any = await api.public.hashtag({
-          name: tag,
-          count: 10,
-        });
+      for (const tag of QUEBEC_HASHTAGS.slice(0, 3)) {
+        try {
+          console.log(`   🔍 Searching hashtag: #${tag}`);
+          const response: any = await api.public.hashtag({
+            name: tag,
+            count: 10,
+          });
 
-        if (response?.item_list) {
-          tiktokItems = [...tiktokItems, ...response.item_list];
+          if (response?.item_list) {
+            tiktokItems = [...tiktokItems, ...response.item_list];
+          }
+        } catch (e) {
+          console.error(`   ⚠️ Failed to fetch #${tag}:`, e);
         }
-      } catch (e) {
-        console.error(`   ⚠️ Failed to fetch #${tag}:`, e);
       }
+    } else {
+      console.warn("⚠️ TIKAPI_KEY missing — skipping TikTok phase.");
     }
 
     // --- PHASE 2: Pexels Fallback ---
