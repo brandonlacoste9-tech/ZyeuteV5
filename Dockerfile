@@ -39,6 +39,8 @@ COPY --from=builder /app/backend ./backend
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+# Copy env fallback file for secrets not yet in Render dashboard
+COPY --from=builder /app/.env.render ./.env.render
 
 # Ensure startup script is executable
 RUN chmod +x scripts/railway-startup.sh
