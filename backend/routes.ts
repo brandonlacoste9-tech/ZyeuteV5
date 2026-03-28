@@ -168,16 +168,30 @@ export async function registerRoutes(
     };
     try {
       const axios = (await import("axios")).default;
-      const r = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
-        params: { search_query: "quebec", market: "ca", max_results: 1 },
+      // Test with market=ca (original)
+      const r1 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
+        params: { search_query: "quebec", market: "ca", max_results: 2 },
         headers: { "API-Key": key || "" },
         timeout: 15000,
       });
-      diag.omkarStatus = r.status;
-      diag.omkarVideoCount = r.data?.videos?.length ?? 0;
-      diag.omkarSample = r.data?.videos?.[0]?.video_id ?? null;
-      diag.omkarRawKeys = Object.keys(r.data || {});
-      diag.omkarRaw = JSON.stringify(r.data).substring(0, 500);
+      diag.withMarketCA = r1.data?.videos?.length ?? 0;
+
+      // Test without market param
+      const r2 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
+        params: { search_query: "quebec", max_results: 2 },
+        headers: { "API-Key": key || "" },
+        timeout: 15000,
+      });
+      diag.withoutMarket = r2.data?.videos?.length ?? 0;
+
+      // Test with market=us
+      const r3 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
+        params: { search_query: "quebec", market: "us", max_results: 2 },
+        headers: { "API-Key": key || "" },
+        timeout: 15000,
+      });
+      diag.withMarketUS = r3.data?.videos?.length ?? 0;
+      diag.sampleVideoId = r2.data?.videos?.[0]?.video_id ?? r3.data?.videos?.[0]?.video_id ?? null;
     } catch (e: any) {
       diag.omkarError = e?.response?.status || e?.code || e?.message || String(e);
       diag.omkarErrorDetail = e?.response?.data || null;
