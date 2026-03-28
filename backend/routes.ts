@@ -156,6 +156,32 @@ export async function registerRoutes(
   app.use("/api/admin", requireAuth, adminRoutes);
 
   // TikTok curation (Omkar Cloud proxy + import; staff-only inside router)
+  // Temporary public diagnostic endpoint (no auth)
+  app.get("/api/tiktok/diag", async (_req, res) => {
+    const key = process.env.TIKTOK_SCRAPER_API_KEY;
+    const diag: Record<string, unknown> = {
+      hasKey: !!key,
+      keyPrefix: key ? key.substring(0, 6) + "..." : null,
+      hasTikApiKey: !!process.env.TIKAPI_KEY,
+      nodeEnv: process.env.NODE_ENV,
+      tlsReject: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+    };
+    try {
+      const axios = (await import("axios")).default;
+      const r = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
+        params: { search_query: "quebec", market: "ca", max_results: 1 },
+        headers: { "API-Key": key || "" },
+        timeout: 15000,
+      });
+      diag.omkarStatus = r.status;
+      diag.omkarVideoCount = r.data?.videos?.length ?? 0;
+      diag.omkarSample = r.data?.videos?.[0]?.video_id ?? null;
+    } catch (e: any) {
+      diag.omkarError = e?.response?.status || e?.code || e?.message || String(e);
+      diag.omkarErrorDetail = e?.response?.data || null;
+    }
+    res.json(diag);
+  });
   app.use("/api/tiktok", requireAuth, tiktokRoutes);
 
   // Apply general rate limiting to all other API routes
