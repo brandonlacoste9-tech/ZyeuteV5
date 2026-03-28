@@ -43,8 +43,8 @@ function pickVideoPayload(body: Record<string, unknown>): unknown | null {
   return null;
 }
 
-// GET /api/tiktok/diag — quick env + connectivity check (staff-only)
-router.get("/diag", requireStaff, async (_req, res) => {
+// GET /api/tiktok/diag — quick env + connectivity check (temporarily public for debug)
+router.get("/diag", async (_req, res) => {
   const key = process.env.TIKTOK_SCRAPER_API_KEY;
   const diag: Record<string, unknown> = {
     hasKey: !!key,
