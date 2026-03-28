@@ -43,6 +43,30 @@ function pickVideoPayload(body: Record<string, unknown>): unknown | null {
   return null;
 }
 
+// GET /api/tiktok/diag — quick env + connectivity check (staff-only)
+router.get("/diag", requireStaff, async (_req, res) => {
+  const key = process.env.TIKTOK_SCRAPER_API_KEY;
+  const diag: Record<string, unknown> = {
+    hasKey: !!key,
+    keyPrefix: key ? key.substring(0, 6) + "..." : null,
+    hasTikApiKey: !!process.env.TIKAPI_KEY,
+  };
+  try {
+    const axios = (await import("axios")).default;
+    const r = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
+      params: { search_query: "quebec", market: "ca", max_results: 1 },
+      headers: { "API-Key": key || "" },
+      timeout: 10000,
+    });
+    diag.omkarStatus = r.status;
+    diag.omkarVideoCount = r.data?.videos?.length ?? 0;
+    diag.omkarSample = r.data?.videos?.[0]?.video_id ?? null;
+  } catch (e: any) {
+    diag.omkarError = e?.response?.status || e?.code || e?.message || String(e);
+  }
+  res.json(diag);
+});
+
 // GET /api/tiktok/search?q=...
 router.get("/search", requireStaff, async (req, res) => {
   const q = (req.query.q as string)?.trim();
