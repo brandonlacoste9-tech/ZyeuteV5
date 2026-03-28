@@ -176,6 +176,8 @@ export async function registerRoutes(
       diag.omkarStatus = r.status;
       diag.omkarVideoCount = r.data?.videos?.length ?? 0;
       diag.omkarSample = r.data?.videos?.[0]?.video_id ?? null;
+      diag.omkarRawKeys = Object.keys(r.data || {});
+      diag.omkarRaw = JSON.stringify(r.data).substring(0, 500);
     } catch (e: any) {
       diag.omkarError = e?.response?.status || e?.code || e?.message || String(e);
       diag.omkarErrorDetail = e?.response?.data || null;
