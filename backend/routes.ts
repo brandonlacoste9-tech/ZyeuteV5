@@ -165,6 +165,9 @@ export async function registerRoutes(
       hasTikApiKey: !!process.env.TIKAPI_KEY,
       nodeEnv: process.env.NODE_ENV,
       tlsReject: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+      hasMuxTokenId: !!process.env.MUX_TOKEN_ID,
+      hasMuxTokenSecret: !!process.env.MUX_TOKEN_SECRET,
+      hasMuxApiToken: !!process.env.MUX_API_TOKEN,
     };
     try {
       const axios = (await import("axios")).default;
