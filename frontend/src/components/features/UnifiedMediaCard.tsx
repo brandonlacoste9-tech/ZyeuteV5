@@ -59,16 +59,15 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
     const rawPost = post as any;
     const isVideo =
       post.type === "video" ||
-      (!post.type && (
-        !!rawPost.mediaUrl?.includes(".mp4") ||
-        !!rawPost.media_url?.includes(".mp4") ||
-        !!rawPost.hlsUrl ||
-        !!rawPost.hls_url ||
-        !!rawPost.mediaUrl?.includes("pexels.com/video") ||
-        !!rawPost.media_url?.includes("pexels.com/video") ||
-        !!rawPost.muxPlaybackId ||
-        !!rawPost.mux_playback_id
-      ));
+      (!post.type &&
+        (!!rawPost.mediaUrl?.includes(".mp4") ||
+          !!rawPost.media_url?.includes(".mp4") ||
+          !!rawPost.hlsUrl ||
+          !!rawPost.hls_url ||
+          !!rawPost.mediaUrl?.includes("pexels.com/video") ||
+          !!rawPost.media_url?.includes("pexels.com/video") ||
+          !!rawPost.muxPlaybackId ||
+          !!rawPost.mux_playback_id));
     if (isVideo) {
       return (
         <SingleVideoView
@@ -116,7 +115,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
       // Video-specific checks
       (prevProps.post.type === "video"
         ? prevProps.videoSource === nextProps.videoSource &&
-        prevProps.isCached === nextProps.isCached
+          prevProps.isCached === nextProps.isCached
         : true)
     );
   },

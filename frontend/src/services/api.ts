@@ -796,24 +796,34 @@ export async function surgicalUpload(
     const formData = new FormData();
     formData.append("video", file);
     if (caption) formData.append("caption", caption);
-
-    // Add hive context
     formData.append("hiveId", "quebec");
 
-    const { data, error } = await apiCall<{ success: boolean; post: Post }>(
-      "/upload/simple",
-      {
-        method: "POST",
-        body: formData,
-        // Note: we don't set Content-Type header manually for FormData,
-        // fetch will automatically set it with the boundary.
-      },
-    );
+    // Get auth token for the upload
+    const {
+      data: { session },
+    } = await getSessionWithTimeout(3000);
+    const token = session?.access_token;
 
-    if (error || !data) {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    // DO NOT set Content-Type — the browser must set it automatically
+    // with the correct multipart/form-data boundary for FormData.
+
+    const response = await fetch(`${API_BASE_URL}/api/upload/simple`, {
+      method: "POST",
+      body: formData,
+      headers,
+      credentials: "include",
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data) {
       return {
         success: false,
-        error: error || "Erreur de téléversement",
+        error: data?.error || `Upload failed (${response.status})`,
       };
     }
 

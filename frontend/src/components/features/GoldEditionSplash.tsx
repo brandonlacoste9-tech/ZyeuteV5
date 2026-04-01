@@ -6,9 +6,9 @@ interface GoldEditionSplashProps {
   videoSrc?: string;
 }
 
-export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({ 
-  onComplete, 
-  videoSrc = "/mgm_intro.mp4" 
+export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
+  onComplete,
+  videoSrc = "/mgm_intro.mp4",
 }) => {
   const [canSkip, setCanSkip] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -42,7 +42,7 @@ export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
         >
           {/* Cinema Lighting Gradient */}
           <div className="absolute inset-0 bg-radial-at-center from-transparent via-black/40 to-black pointer-events-none" />
-          
+
           <video
             ref={videoRef}
             autoPlay
@@ -51,8 +51,8 @@ export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
             onEnded={handleEnded}
             className="w-full h-full object-cover md:object-contain scale-105"
             onError={() => {
-               console.warn("Splash video failed to load, skipping...");
-               onComplete();
+              console.warn("Splash video failed to load, skipping...");
+              onComplete();
             }}
           >
             <source src={videoSrc} type="video/mp4" />
@@ -60,7 +60,7 @@ export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
 
           {/* Overlay Effects */}
           <div className="absolute inset-0 gold-glow-soft pointer-events-none mix-blend-overlay opacity-30" />
-          
+
           {/* Skip Button */}
           {canSkip && (
             <motion.button
@@ -74,7 +74,7 @@ export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
           )}
 
           {/* Branding Subtitle */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             transition={{ delay: 5, duration: 2 }}
