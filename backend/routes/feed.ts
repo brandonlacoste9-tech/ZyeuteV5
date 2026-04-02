@@ -1,35 +1,61 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
 import { cacheMiddleware } from "../utils/cache.js";
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
 
 const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
-  // Pass through, token extracted asynchronously if needed
   next();
 };
 
+/** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
+async function getPostsViaSupabase(limit: number, page: number, hiveId = "quebec") {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const offset = page * limit;
+
+  const { data, error } = await supabase
+    .from("publications")
+    .select(`*, user:user_id(id, username, display_name, avatar_url)`)
+    .eq("visibility", "public")
+    .eq("est_masque", false)
+    .is("deleted_at", null)
+    .eq("processing_status", "completed")
+    .not("media_url", "is", null)
+    .eq("hive_id", hiveId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
 const router = Router();
 
-// Get feed posts - supports guest mode (returns explore posts for guests)
-// Cached for 30 seconds to handle viral spike loads
+// Get feed posts — uses Supabase HTTP API (no DATABASE_URL dependency)
 router.get(
   "/",
-  cacheMiddleware(30),
   optionalAuth,
   async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 0;
       const limit = parseInt(req.query.limit as string) || 20;
+      const hive = (req.query.hive as string) || "quebec";
 
-      // If authenticated, return personalized feed
-      // If guest (no auth), return explore posts
+      // Try Supabase HTTP first (always works)
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const posts = await getPostsViaSupabase(limit, page, hive);
+        return res.json({ posts, isGuestMode: !req.userId, source: "supabase" });
+      }
+
+      // Fallback to pool if Supabase not configured
       if (req.userId) {
         const posts = await storage.getFeedPosts(req.userId, page, limit);
-        res.json({ posts });
-      } else {
-        // Guest mode: return explore posts
-        const posts = await storage.getExplorePosts(page, limit);
-        res.json({ posts, isGuestMode: true });
+        return res.json({ posts });
       }
+      const posts = await storage.getExplorePosts(page, limit);
+      res.json({ posts, isGuestMode: true });
     } catch (error) {
       console.error("Get feed error:", error);
       res.status(500).json({ error: "Failed to get feed" });
