@@ -12,7 +12,9 @@ import type { ProcessedHLSResult } from "./videoProcessor.js";
 
 // ─── Supabase Storage client ───────────────────────────────────────────────
 const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  "https://vuanulvyqkfefmjcikfk.supabase.co"; // fallback: your zyeuté project
 const SUPABASE_SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
 
