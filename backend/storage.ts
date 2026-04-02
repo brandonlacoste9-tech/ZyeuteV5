@@ -64,14 +64,6 @@ let _pool: pg.Pool | null = null;
 
 export function getPool(): pg.Pool {
   if (!_pool) {
-    // Purge any environment variables that might conflict with the connection string
-    // This is critical if the environment has PGPORT=5432 set (common in dev containers)
-    delete process.env.PGHOST;
-    delete process.env.PGPORT;
-    delete process.env.PGUSER;
-    delete process.env.PGPASSWORD;
-    delete process.env.PGDATABASE;
-
     // Explicitly load .env if not already loaded
     dotenv.config();
     const envPath = path.join(process.cwd(), ".env");
@@ -85,11 +77,25 @@ export function getPool(): pg.Pool {
         process.env.DATABASE_URL.substring(0, 30) + "...",
       );
     }
+
+    // Parse the connection string so pg ignores ambient PG* env vars
+    // (e.g. PGPORT set by dev containers). Explicit params always win.
+    const connUrl = process.env.DATABASE_URL
+      ? new URL(process.env.DATABASE_URL)
+      : null;
+
     _pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
+      ...(connUrl && {
+        host: connUrl.hostname,
+        port: Number(connUrl.port) || 5432,
+        user: decodeURIComponent(connUrl.username),
+        password: decodeURIComponent(connUrl.password),
+        database: connUrl.pathname.slice(1),
+      }),
+      connectionTimeoutMillis: 60000,
       idleTimeoutMillis: 30000,
-      ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
+      ssl: { rejectUnauthorized: false },
     });
     // Database error handling - prevent crashes on connection failures
     _pool.on("error", (err) => {

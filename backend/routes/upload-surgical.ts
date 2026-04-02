@@ -45,20 +45,16 @@ surgicalUploadRouter.post(
         });
       }
 
-      // 1. Authenticate
-      let userId: string | null = null;
+      // 1. Authenticate — valid JWT required, no fallbacks
       const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        userId = await verifyAuthToken(authHeader.split(" ")[1]);
+      if (!authHeader?.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Authentication required" });
       }
 
+      const userId = await verifyAuthToken(authHeader.split(" ")[1]);
       if (!userId) {
-        // Support for testing/demo if auth is failing
-        userId = req.body.userId || (await storage.getSystemUserId());
+        return res.status(401).json({ error: "Invalid or expired token" });
       }
-
-      if (!userId)
-        return res.status(401).json({ error: "Unauthorized credentials" });
 
       const { buffer, originalname, mimetype } = req.file;
       const fileExt = originalname.split(".").pop();
@@ -124,9 +120,9 @@ surgicalUploadRouter.post(
         success: true,
         post,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Surgical upload crash:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Internal server error" });
     }
   },
 );
