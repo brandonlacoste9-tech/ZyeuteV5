@@ -641,17 +641,9 @@ export class DatabaseStorage implements IStorage {
               OR p.processing_status = 'completed'
               OR p.mux_playback_id IS NOT NULL
             )
-            AND NOT (
-              COALESCE(p.mux_playback_id, '') = ''
-              AND COALESCE(p.hls_url, '') = ''
-              AND (
-                p.media_url ILIKE '%tiktok.com/%/video/%'
-                OR p.media_url ILIKE '%instagram.com/reel/%'
-                OR p.media_url ILIKE '%instagram.com/p/%'
-                OR p.media_url ILIKE '%youtube.com/watch%'
-                OR p.media_url ILIKE '%youtu.be/%'
-              )
-            )
+            -- Allow all video sources including TikTok embed URLs
+            AND p.media_url IS NOT NULL
+            AND p.media_url != ''
             AND (p.hive_id::text = $1 OR p.hive_id::text = 'global' OR p.hive_id IS NULL)
           ORDER BY p.created_at DESC
           LIMIT $2`,
