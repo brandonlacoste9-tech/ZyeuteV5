@@ -1,40 +1,132 @@
 services:
+  # ─── Main Web API ─────────────────────────────────────────────────────────
   - type: web
     name: zyeute-api
     env: node
-    plan: free  # Change to 'starter' for always-on ($7/mo)
+    plan: free  # Upgrade to 'starter' ($7/mo) for always-on
     buildCommand: npm install && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
-      # Database - using Supabase (not Render's Postgres)
+      - key: PORT
+        value: "10000"
+
+      # ── Database ──────────────────────────────────────────────────────────
       - key: DATABASE_URL
-        sync: false  # Add your Supabase connection string in dashboard
-      # Supabase
+        sync: false  # postgresql://postgres.wbpuiqozntavxsqaemcz:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+
+      # ── Supabase ──────────────────────────────────────────────────────────
+      - key: VITE_SUPABASE_URL
+        value: https://wbpuiqozntavxsqaemcz.supabase.co
       - key: SUPABASE_URL
+        value: https://wbpuiqozntavxsqaemcz.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      # AI Services
-      - key: DIALOGFLOW_CX_AGENT_ID
-        sync: false
-      - key: GOOGLE_SERVICE_ACCOUNT_JSON
-        sync: false
+        sync: false   # Required for worker uploads to storage
+
+      # ── Redis (Upstash) ───────────────────────────────────────────────────
+      - key: REDIS_URL
+        sync: false   # rediss://default:...@...upstash.io:6379
+
+      # ── Mux Video ─────────────────────────────────────────────────────────
+      - key: MUX_TOKEN_ID
+        value: f6fab3e6-f183-4b26-9c2a-eae624b3f618
+      - key: MUX_TOKEN_SECRET
+        sync: false   # from .env.render
+      - key: MUX_WEBHOOK_SECRET
+        value: jd5147g8hk2512bhiu4tjj70nncr4ose
+      - key: FRONTEND_URL
+        value: https://zyeute.vercel.app
+
+      # ── AI Services ───────────────────────────────────────────────────────
       - key: GOOGLE_CLOUD_PROJECT
         value: spatial-garden-483401-g8
       - key: GOOGLE_CLOUD_REGION
         value: us-central1
       - key: VERTEX_LOCATION
         value: us-central1
-      # API Keys
+      - key: DIALOGFLOW_CX_AGENT_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+      # ── Payments ──────────────────────────────────────────────────────────
       - key: STRIPE_SECRET_KEY
         sync: false
-      - key: DEEPSEEK_API_KEY
+      - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: VITE_COLONY_API_URL
+
+      # ── TikTok Feed ───────────────────────────────────────────────────────
+      - key: TIKAPI_KEY
+        value: yXLCoviSdnsjASe0N2aso6kmdnGPeZt8Ud9vJlRIPKKVtfUf
+      - key: PEXELS_API_KEY
         sync: false
-      # Port
-      - key: PORT
-        value: "10000"
+
+      # ── Security ──────────────────────────────────────────────────────────
+      - key: SESSION_SECRET
+        sync: false
+      - key: MAX_API_TOKEN
+        sync: false
+
     healthCheckPath: /api/health
+
+  # ─── Video Worker (Background) ────────────────────────────────────────────
+  # Handles: video transcoding, HLS generation, AI safety scouting,
+  #          memory mining, and privacy auditing
+  - type: worker
+    name: zyeute-worker
+    env: node
+    plan: free  # Upgrade to 'starter' for reliable always-on processing
+    buildCommand: npm install
+    startCommand: npx tsx backend/startWorker.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # ── Database ──────────────────────────────────────────────────────────
+      - key: DATABASE_URL
+        sync: false
+
+      # ── Supabase Storage (where processed videos go) ──────────────────────
+      - key: VITE_SUPABASE_URL
+        value: https://wbpuiqozntavxsqaemcz.supabase.co
+      - key: SUPABASE_URL
+        value: https://wbpuiqozntavxsqaemcz.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false   # Needed to upload to zyeute-videos bucket
+
+      # ── Redis (BullMQ queues) ─────────────────────────────────────────────
+      - key: REDIS_URL
+        sync: false   # rediss://default:...@...upstash.io:6379
+
+      # ── Mux (HLS video ingestion) ─────────────────────────────────────────
+      - key: MUX_TOKEN_ID
+        value: f6fab3e6-f183-4b26-9c2a-eae624b3f618
+      - key: MUX_TOKEN_SECRET
+        sync: false
+      - key: MUX_WEBHOOK_SECRET
+        value: jd5147g8hk2512bhiu4tjj70nncr4ose
+
+      # ── AI Scouting (Gemini) ──────────────────────────────────────────────
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        value: spatial-garden-483401-g8
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+
+      # ── Worker tuning ─────────────────────────────────────────────────────
+      - key: WORKER_CONCURRENCY
+        value: "2"
+      - key: HLS_WORKER_CONCURRENCY
+        value: "1"
