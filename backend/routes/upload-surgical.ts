@@ -53,8 +53,8 @@ surgicalUploadRouter.post(
       }
 
       if (!userId) {
-        // Support for testing/demo if auth is failing
-        userId = req.body.userId || (await storage.getSystemUserId());
+        // Allow explicit userId in body for testing only
+        userId = req.body.userId || null;
       }
 
       if (!userId)
