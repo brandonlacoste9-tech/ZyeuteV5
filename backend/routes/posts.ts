@@ -8,6 +8,11 @@ import { getVideoQueue, getHLSVideoQueue } from "../queue.js";
 import { evaluerPublication } from "../lib/evaluateur-video.js";
 import { GovernanceBee } from "../ai/bees/governance-bee.js";
 import { cacheMiddleware } from "../utils/cache.js";
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseRest = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 // Import existing auth middlewares
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -354,18 +359,52 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
             (parsed.data as any).type || "photo",
           );
 
-    const post = await storage.createPost({
-      ...parsed.data,
-      type: validatedType,
-      processingStatus: "completed",
-      isModerated: true,
-      moderationApproved:
-        modResult.status === "approved" && videoModerationApproved,
-      isHidden: modResult.status !== "approved" || !videoModerationApproved,
-      isEphemeral,
-      maxViews,
-      expiresAt,
-    } as any);
+    // Use Supabase REST to create post (no DATABASE_URL dependency)
+    let post: any;
+    if (supabaseRest) {
+      const { data: postData, error: postErr } = await supabaseRest
+        .from("publications")
+        .insert({
+          user_id: parsed.data.userId,
+          content: parsed.data.content || parsed.data.caption,
+          caption: parsed.data.caption,
+          media_url: parsed.data.mediaUrl,
+          hls_url: (parsed.data as any).hlsUrl || null,
+          thumbnail_url: (parsed.data as any).thumbnailUrl || null,
+          type: validatedType,
+          processing_status: "completed",
+          is_moderated: true,
+          moderation_approved: modResult.status === "approved" && videoModerationApproved,
+          est_masque: modResult.status !== "approved" || !videoModerationApproved,
+          hive_id: parsed.data.hiveId || "quebec",
+          region: (parsed.data as any).region || "montreal",
+          visibility: (parsed.data as any).visibility || "public",
+          visibilite: (parsed.data as any).visibility || "public",
+          mux_asset_id: (parsed.data as any).muxAssetId || null,
+          mux_upload_id: (parsed.data as any).muxUploadId || null,
+          mux_playback_id: (parsed.data as any).muxPlaybackId || null,
+          is_ephemeral: isEphemeral,
+          max_views: maxViews || null,
+          expires_at: expiresAt || null,
+          video_source: body.videoType || "upload",
+        })
+        .select()
+        .single();
+      if (postErr) throw new Error("Failed to create post: " + postErr.message);
+      post = { ...postData, id: postData.id, mediaUrl: postData.media_url, hlsUrl: postData.hls_url, userId: postData.user_id };
+    } else {
+      post = await storage.createPost({
+        ...parsed.data,
+        type: validatedType,
+        processingStatus: "completed",
+        isModerated: true,
+        moderationApproved: modResult.status === "approved" && videoModerationApproved,
+        isHidden: modResult.status !== "approved" || !videoModerationApproved,
+        isEphemeral,
+        maxViews,
+        expiresAt,
+      } as any);
+    }
 
     const isMuxOrPexels =
       req.body.videoType === "mux" || req.body.videoType === "pexels";

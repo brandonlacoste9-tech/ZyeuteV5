@@ -92,37 +92,39 @@ surgicalUploadRouter.post(
         `🛡️ [Guardrail] Inferred type "${inferredType}" for ${originalname} (mime: ${mimetype})`,
       );
 
-      // 5. Create Database Record with validated type
-      const post = await storage.createPost({
-        userId,
-        content:
-          req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`,
-        caption: req.body.caption || originalname,
-        mediaUrl: publicUrl,
-        mediaMetadata: { type: inferredType }, // 🛡️ Store validated type in metadata
-        processingStatus: "completed",
-        hiveId: req.body.hiveId || "quebec",
-        visibility: "public",
-      });
+      // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
+      const caption = req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
+      const { data: postData, error: postError } = await supabase
+        .from("publications")
+        .insert({
+          user_id: userId,
+          content: caption,
+          caption,
+          media_url: publicUrl,
+          type: inferredType,
+          processing_status: "completed",
+          hive_id: req.body.hiveId || "quebec",
+          visibility: "public",
+          visibilite: "public",
+          est_masque: false,
+          is_moderated: true,
+          moderation_approved: true,
+          region: req.body.region || "montreal",
+          video_source: "upload",
+        })
+        .select()
+        .single();
 
-      // 7. [GAMIFICATION] Nectar Bonus Strike
-      try {
-        const userPosts = await storage.getPostsByUser(userId);
-        if (userPosts.length === 1) {
-          console.log(
-            `🍯 [Nectar Bonus] First post for ${userId}! Awarding 50 credits.`,
-          );
-          await storage.updateUserCredits(userId, 50);
-        }
-      } catch (gammaErr) {
-        console.error("⚠️ Failed to award Nectar bonus:", gammaErr);
+      if (postError) {
+        console.error("❌ Post insert error:", postError);
+        return res.status(500).json({ error: "Failed to create post: " + postError.message });
       }
 
-      console.log(`✅ [Surgical Upload] Success! Post created: ${post.id}`);
+      console.log(`✅ [Surgical Upload] Success! Post created: ${postData.id}`);
 
       res.status(201).json({
         success: true,
-        post,
+        post: postData,
       });
     } catch (err: any) {
       console.error("❌ Surgical upload crash:", err);
