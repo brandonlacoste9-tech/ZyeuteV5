@@ -23,8 +23,11 @@ async function getPostsViaSupabase(limit: number, page: number, hiveId = "quebec
     .is("deleted_at", null)
     .eq("processing_status", "completed")
     .not("media_url", "is", null)
+    // Only serve permanent video sources (Pexels, Mux, Supabase storage)
+    .or("media_url.ilike.%pexels.com%,media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8")
     .eq("hive_id", hiveId)
-    .order("created_at", { ascending: false })
+    .order("viral_score", { ascending: false })
+    .order("reactions_count", { ascending: false })
     .range(offset, offset + limit - 1);
 
   if (error) throw new Error(error.message);
