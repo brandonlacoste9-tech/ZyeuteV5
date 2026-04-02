@@ -1,4 +1,4 @@
-import "dotenv/config";
+// env vars are injected by Render at runtime — no dotenv needed in production
 import {
   videoWorker,
   memoryWorker,
