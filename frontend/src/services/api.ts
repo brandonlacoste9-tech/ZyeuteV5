@@ -92,7 +92,7 @@ export async function apiCall<T>(
       const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), endpoint.includes("generate") ? 120000 : 15000); // 2min for AI, 15s otherwise
 
       const response = await fetch(apiUrl, {
         ...options,
