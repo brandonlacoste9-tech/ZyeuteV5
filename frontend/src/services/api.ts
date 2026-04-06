@@ -894,6 +894,22 @@ export function normalizePostForFeed(p: Record<string, any>): Post | null {
   return mapBackendPost(p);
 }
 
+/** When DB only stores stream.mux.com URL, derive id so La Zyeute uses MuxVideoPlayer (not Hls.js). */
+function extractMuxPlaybackIdFromUrl(
+  url: string | undefined | null,
+): string | undefined {
+  if (!url || typeof url !== "string") return undefined;
+  if (!url.includes("mux.com") || !url.includes(".m3u8")) return undefined;
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes("stream.mux.com")) return undefined;
+    const m = u.pathname.match(/\/([A-Za-z0-9_-]+)\.m3u8$/);
+    return m?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
 function mapBackendPost(p: Record<string, any>): Post | null {
   // Return a default safe object or throw/return null if critical data is missing
   if (!p || !p.id) {
@@ -904,7 +920,13 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const rawOriginal = p.original_url || p.originalUrl;
   const rawEnhanced = p.enhanced_url || p.enhancedUrl;
   const rawHls = p.hls_url || p.hlsUrl;
-  const muxPlaybackId = p.mux_playback_id || p.muxPlaybackId;
+  const muxPlaybackIdFromRow = p.mux_playback_id || p.muxPlaybackId;
+  const muxPlaybackId =
+    muxPlaybackIdFromRow ||
+    extractMuxPlaybackIdFromUrl(rawHls) ||
+    extractMuxPlaybackIdFromUrl(rawMedia) ||
+    extractMuxPlaybackIdFromUrl(rawOriginal) ||
+    extractMuxPlaybackIdFromUrl(rawEnhanced);
   const processingReady =
     (p.processing_status || p.processingStatus) === "completed" ||
     (p.processing_status || p.processingStatus) === "ready";
@@ -956,7 +978,7 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     enhanced_url: rawEnhanced || undefined,
     original_url: rawOriginal || undefined,
     processing_status: p.processing_status || p.processingStatus,
-    mux_playback_id: p.mux_playback_id || p.muxPlaybackId || undefined,
+    mux_playback_id: muxPlaybackId || undefined,
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,
     view_count: p.view_count || p.viewCount || 0,
