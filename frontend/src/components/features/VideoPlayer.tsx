@@ -203,7 +203,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         backBufferLength: 30,
         maxBufferSize: 30 * 1000 * 1000,
         maxBufferHole: 0.3,
-        enableWorker: true,
+        // Main-thread demux avoids CSP / cross-origin worker issues on some hosts
+        enableWorker: false,
         capLevelToPlayerSize: true,
         startLevel: -1,
         abrEwmaDefaultEstimate: 1_000_000,
@@ -225,17 +226,30 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hlsRef.current = hls;
       hls.loadSource(src);
       hls.attachMedia(el);
+      let hlsRecoverAttempts = 0;
+      const maxHlsRecover = 5;
       hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          videoPlayerLogger.warn("[VideoPlayer] HLS fatal error:", data);
+        if (!data.fatal) return;
+        videoPlayerLogger.warn("[VideoPlayer] HLS fatal error:", data);
+        if (hlsRecoverAttempts >= maxHlsRecover) {
+          hls.destroy();
+          hlsRef.current = null;
+          setReadiness("error");
+          return;
         }
-      });
-      // Manifest ready = stream is reachable; avoid false "unavailable" when
-      // many concurrent HLS loads delay canplay past the 15s + 10s timeouts.
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
+        hlsRecoverAttempts++;
+        try {
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            hls.startLoad();
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError();
+          } else {
+            hls.destroy();
+            hlsRef.current = null;
+            setReadiness("error");
+          }
+        } catch {
+          setReadiness("error");
         }
       });
       if (autoPlay) {
@@ -613,35 +627,82 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
     }
     if (stallTimerRef.current) {
       clearTimeout(stallTimerRef.current);
       stallTimerRef.current = null;
     }
 
-    // Timeout: if video hasn't loaded in 15s, trigger retry mechanism
-    loadingTimeoutRef.current = setTimeout(() => {
-      videoPlayerLogger.warn(
-        `Video loading timeout for ${src.substring(0, 50)}...`,
-      );
+    const m3u8 =
+      src &&
+      typeof src === "string" &&
+      (src.endsWith(".m3u8") || src.includes(".m3u8"));
+    const hlsJsPipeline = !!(m3u8 && Hls.isSupported());
 
-      if (videoRef.current && src) {
-        videoPlayerLogger.info("Attempting auto-retry for failed video");
-        retryCountRef.current = 0; // Allow fresh retries from timeout
-        videoRef.current.load();
-
-        loadingTimeoutRef.current = setTimeout(() => {
-          videoPlayerLogger.error("Video failed to load after retry");
-          setReadiness("error");
-        }, 10000);
-      } else {
+    if (hlsJsPipeline) {
+      // hls.js drives MSE on the element — calling video.load() from a timer
+      // tears down the pipeline and produces false "Vidéo non disponible".
+      loadingTimeoutRef.current = setTimeout(() => {
+        videoPlayerLogger.error(
+          `HLS (hls.js) still not playable after 90s: ${src.substring(0, 60)}`,
+        );
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
         setReadiness("error");
-      }
-    }, 15000); // Reduced from 30s to 15s for faster feedback
+        loadingTimeoutRef.current = null;
+      }, 90_000);
+    } else if (m3u8) {
+      // Safari / native HLS: src is set on <video>; load() is safe.
+      const t1 = 32_000;
+      const t2 = 22_000;
+      loadingTimeoutRef.current = setTimeout(() => {
+        videoPlayerLogger.warn(
+          `Native HLS slow load (${t1}ms), retrying: ${src.substring(0, 50)}`,
+        );
+        if (videoRef.current && src) {
+          retryCountRef.current = 0;
+          videoRef.current.load();
+          loadingTimeoutRef.current = setTimeout(() => {
+            videoPlayerLogger.error("Native HLS failed after retry");
+            setReadiness("error");
+            loadingTimeoutRef.current = null;
+          }, t2);
+        } else {
+          setReadiness("error");
+          loadingTimeoutRef.current = null;
+        }
+      }, t1);
+    } else {
+      // Progressive MP4 / blob / other
+      const t1 = 24_000;
+      const t2 = 20_000;
+      loadingTimeoutRef.current = setTimeout(() => {
+        videoPlayerLogger.warn(
+          `Video loading timeout (${t1}ms) for ${src.substring(0, 50)}...`,
+        );
+        if (videoRef.current && src) {
+          videoPlayerLogger.info("Attempting auto-retry for failed video");
+          retryCountRef.current = 0;
+          videoRef.current.load();
+          loadingTimeoutRef.current = setTimeout(() => {
+            videoPlayerLogger.error("Video failed to load after retry");
+            setReadiness("error");
+            loadingTimeoutRef.current = null;
+          }, t2);
+        } else {
+          setReadiness("error");
+          loadingTimeoutRef.current = null;
+        }
+      }, t1);
+    }
 
     return () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
       }
       if (stallTimerRef.current) {
         clearTimeout(stallTimerRef.current);
@@ -784,7 +845,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       }
     };
-    const handleLoadedMetadata = () => setDuration(video.duration);
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+      const m3u8 =
+        src &&
+        typeof src === "string" &&
+        (src.endsWith(".m3u8") || src.includes(".m3u8"));
+      // HLS (native or hls.js): keep the long/slow-network timers until canplay.
+      if (!m3u8 && loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
     const handleEnded = () => {
       setIsPlaying(false);
       onEnded?.();
