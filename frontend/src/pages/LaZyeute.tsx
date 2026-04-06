@@ -265,12 +265,16 @@ export const LaZyeute: React.FC = () => {
     refetch,
   } = useInfiniteFeed(feedSource);
 
-  // Fallback: Use demo videos when API returns empty
+  // Demo clips only with ?demo=1 — avoids filling the feed with test videos in production
+  const demoFeed = useMemo(
+    () => new URLSearchParams(location.search).get("demo") === "1",
+    [location.search],
+  );
   const posts = useMemo(() => {
     if (apiPosts.length > 0) return apiPosts;
-    if (!isLoading) return DEMO_VIDEOS;
+    if (!isLoading && demoFeed) return DEMO_VIDEOS;
     return [];
-  }, [apiPosts, isLoading]);
+  }, [apiPosts, isLoading, demoFeed]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);

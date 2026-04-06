@@ -47,7 +47,16 @@ import {
   getExplorePosts,
   togglePostFire,
   getCurrentUser,
+  postHasPlayableMedia,
+  postLooksLikeTestInject,
 } from "@/services/api";
+
+function allowDemoVideos(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("demo") === "1"
+  );
+}
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
 import { logger } from "../../lib/logger";
@@ -643,6 +652,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           // Filter out burned or expired posts (Client-side safety net)
           if (p.burned_at) return false;
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
+          if (postLooksLikeTestInject(p)) return false;
+          if (!postHasPlayableMedia(p)) return false;
           return true;
         }) as Array<Post & { user: User }>;
       }
@@ -661,9 +672,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
               feedLogger.info("Auto-seed successful, re-fetching feed...");
               const reseeded = await getExplorePosts(0, 10, HIVE_ID);
               if (reseeded && reseeded.length > 0) {
-                const valid = reseeded.filter((p: any) => p && p.user) as Array<
-                  Post & { user: User }
-                >;
+                const valid = reseeded.filter((p: any) => {
+                  if (!p || !p.user) return false;
+                  if (postLooksLikeTestInject(p)) return false;
+                  if (!postHasPlayableMedia(p)) return false;
+                  return true;
+                }) as Array<Post & { user: User }>;
                 if (valid.length > 0) {
                   setPosts(valid);
                   setHasMore(valid.length === 10);
@@ -693,9 +707,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           feedLogger.error("Pexels fallback failed:", pexelsErr);
         }
 
-        // FINAL FALLBACK: Use hardcoded demo videos (guaranteed to work)
-        feedLogger.info("Using demo videos as final fallback");
-        setPosts(DEMO_VIDEOS);
+        if (allowDemoVideos()) {
+          feedLogger.info("Using demo videos (?demo=1)");
+          setPosts(DEMO_VIDEOS);
+          setHasMore(false);
+          setFetchError(false);
+          return;
+        }
+        feedLogger.info("No posts and no ?demo=1 — empty feed");
+        setPosts([]);
         setHasMore(false);
         setFetchError(false);
         return;
@@ -707,10 +727,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       setPage(0);
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
-      // Use demo videos as fallback on error
-      setPosts(DEMO_VIDEOS as Array<Post & { user: User }>);
+      setPosts(
+        allowDemoVideos()
+          ? (DEMO_VIDEOS as Array<Post & { user: User }>)
+          : [],
+      );
       setHasMore(false);
-      setFetchError(false);
+      setFetchError(!allowDemoVideos());
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
@@ -732,6 +755,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           if (!p.user) return false;
           if (p.burned_at) return false;
           if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
+          if (postLooksLikeTestInject(p)) return false;
+          if (!postHasPlayableMedia(p)) return false;
           return true;
         }) as Array<Post & { user: User }>;
         setPosts((prev) => [...prev, ...validPosts]);
@@ -764,21 +789,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     let callbackId: any = null;
-    let fallbackTimeout: ReturnType<typeof setTimeout> | null = null;
 
     if (!savedState || !savedState.posts?.length || posts.length === 0) {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
-
-      // Set a timeout to use demo videos if API takes too long (3 seconds)
-      fallbackTimeout = setTimeout(() => {
-        if (posts.length === 0) {
-          feedLogger.info("API timeout - using demo videos");
-          setPosts(DEMO_VIDEOS);
-          setHasMore(false);
-          setIsLoading(false);
-        }
-      }, 3000);
 
       if ("requestIdleCallback" in window) {
         callbackId = (window as any).requestIdleCallback(() =>
@@ -799,7 +813,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           clearTimeout(callbackId);
         }
       }
-      if (fallbackTimeout) clearTimeout(fallbackTimeout);
     };
   }, [fetchVideoFeed, savedState, posts.length]);
 

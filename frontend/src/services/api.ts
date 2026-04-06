@@ -894,6 +894,30 @@ export function normalizePostForFeed(p: Record<string, any>): Post | null {
   return mapBackendPost(p);
 }
 
+/** True when the post has a real http(s) stream/file or Mux id (drops empty / junk rows). */
+export function postHasPlayableMedia(p: Post): boolean {
+  const mux = String(p.mux_playback_id ?? "").trim();
+  if (mux.length >= 8) return true;
+  const hls = String(p.hls_url ?? "").trim();
+  if (hls.length >= 12 && /^https?:\/\//i.test(hls)) return true;
+  const media = String(p.media_url ?? "").trim();
+  if (media.length >= 12 && /^https?:\/\//i.test(media)) return true;
+  return false;
+}
+
+/** Obvious QA / inject / diagnostic rows to hide from feeds. */
+export function postLooksLikeTestInject(p: Post): boolean {
+  const cap = String(p.caption ?? "").toUpperCase();
+  const content = String(
+    (p as Post & { content?: string }).content ?? "",
+  ).toUpperCase();
+  if (cap.includes("DIAGNOSTIC") || content.includes("DIAGNOSTIC")) return true;
+  if (cap.includes("TEST VIDEO") || content.includes("TEST VIDEO")) return true;
+  if ((cap.includes("INJECT") || content.includes("INJECT")) && cap.includes("TEST"))
+    return true;
+  return false;
+}
+
 /**
  * Derive Mux playback id from any stored URL so La Zyeute uses MuxVideoPlayer (not Hls.js on stream.mux.com).
  * Covers stream manifests, image.mux.com thumbnails when mux_playback_id column is empty, etc.

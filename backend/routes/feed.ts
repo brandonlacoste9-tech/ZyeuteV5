@@ -176,6 +176,11 @@ router.get("/infinite", attachOptionalUser, async (req: Request, res: Response) 
       .eq("est_masque", false)
       .is("deleted_at", null)
       .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
+      // Drop obvious QA / inject rows and stuck pipeline posts (blank players)
+      .not("caption", "ilike", "%DIAGNOSTIC%")
+      .not("content", "ilike", "%DIAGNOSTIC%")
+      .not("processing_status", "eq", "pending")
+      .not("processing_status", "eq", "failed")
       .order("created_at", { ascending: false })
       .limit(limit + 1);
 

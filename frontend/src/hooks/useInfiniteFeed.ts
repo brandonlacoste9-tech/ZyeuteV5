@@ -11,7 +11,11 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useEffect, useMemo } from "react";
 import type { Post } from "@/types";
-import { normalizePostForFeed } from "@/services/api";
+import {
+  normalizePostForFeed,
+  postHasPlayableMedia,
+  postLooksLikeTestInject,
+} from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
 
 interface FeedResponse {
@@ -76,7 +80,8 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
           (p: Post | null): p is Post =>
             p != null &&
             !!p.id &&
-            !!(p.media_url || p.hls_url || p.mux_playback_id),
+            postHasPlayableMedia(p) &&
+            !postLooksLikeTestInject(p),
         );
       // Debug: log feed structure when ?debug=1
       if (
