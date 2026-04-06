@@ -230,6 +230,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           videoPlayerLogger.warn("[VideoPlayer] HLS fatal error:", data);
         }
       });
+      // Manifest ready = stream is reachable; avoid false "unavailable" when
+      // many concurrent HLS loads delay canplay past the 15s + 10s timeouts.
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+      });
       if (autoPlay) {
         el.muted = true;
         el.play().catch(() => {});
