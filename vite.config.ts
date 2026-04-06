@@ -7,6 +7,55 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
 const __dirname = process.cwd();
 
+/** Rolldown (Vite 8+) requires `manualChunks` to be a function, not an object. */
+function manualChunks(id: string): string | undefined {
+  if (!id.includes("node_modules")) return;
+
+  if (
+    id.includes("node_modules/react/") ||
+    id.includes("node_modules/react-dom/") ||
+    id.includes("node_modules/react-router")
+  ) {
+    return "react-vendor";
+  }
+  if (id.includes("node_modules/@radix-ui/")) {
+    return "ui-radix";
+  }
+  if (id.includes("lucide-react") || id.includes("node_modules/react-icons")) {
+    return "ui-icons";
+  }
+  if (id.includes("@supabase/supabase-js")) {
+    return "supabase";
+  }
+  if (id.includes("framer-motion")) {
+    return "ui-motion";
+  }
+  if (id.includes("recharts")) {
+    return "ui-charts";
+  }
+  if (id.includes("@stripe/stripe-js") || id.includes("@stripe/react-stripe-js")) {
+    return "payments";
+  }
+  if (
+    id.includes("react-hook-form") ||
+    id.includes("@hookform/resolvers") ||
+    id.includes("/zod/") ||
+    id.includes("\\zod\\")
+  ) {
+    return "forms";
+  }
+  if (
+    id.includes("/clsx/") ||
+    id.includes("class-variance-authority") ||
+    id.includes("tailwind-merge") ||
+    id.includes("/date-fns/")
+  ) {
+    return "utils";
+  }
+
+  return undefined;
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), metaImagesPlugin()],
   optimizeDeps: {
@@ -45,48 +94,7 @@ export default defineConfig({
     // Rollup options for advanced bundling
     rollupOptions: {
       output: {
-        // Manual chunk splitting for better caching
-        manualChunks: {
-          // React core vendorchunks (changes infrequently)
-          "react-vendor": ["react", "react-dom", "react-router-dom"],
-
-          // UI library chunks
-          "ui-radix": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-progress",
-            "@radix-ui/react-slot",
-            "@radix-ui/react-switch",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-toast",
-            "@radix-ui/react-tooltip",
-            "@radix-ui/react-avatar",
-            "@radix-ui/react-label",
-          ],
-
-          // Icon library
-          "ui-icons": ["lucide-react", "react-icons"],
-
-          // Supabase chunk
-          supabase: ["@supabase/supabase-js"],
-
-          // Additional large libraries (Phase 5 Optimization)
-          "ui-motion": ["framer-motion"],
-          "ui-charts": ["recharts"],
-          payments: ["@stripe/stripe-js", "@stripe/react-stripe-js"],
-
-          // Form handling
-          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
-
-          // Utilities
-          utils: [
-            "clsx",
-            "class-variance-authority",
-            "tailwind-merge",
-            "date-fns",
-          ],
-        },
+        manualChunks,
         // Naming pattern for chunks
         chunkFileNames: "assets/[name]-[hash].js",
         entryFileNames: "assets/[name]-[hash].js",
