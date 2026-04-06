@@ -9,7 +9,12 @@ import type { Post, User, Story, Comment, Notification } from "@/types";
 const apiLogger = logger.withContext("API");
 
 import { getSessionWithTimeout } from "@/lib/supabase";
-import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
+import {
+  AIImageResponseSchema,
+  AIVideoResponseSchema,
+  type AIImageResponse,
+  type AIVideoResponse,
+} from "@/schemas/ai";
 
 // [CONFIG] API Base URL
 // Use relative URLs so requests route through the hosting platform's proxy:
@@ -123,9 +128,12 @@ export async function apiCall<T>(
             code,
           };
         }
+        const msg = [data?.error, (data as { message?: string })?.message]
+          .filter(Boolean)
+          .join(": ");
         return {
           data: null,
-          error: (data && data.error) || "Request failed",
+          error: msg || "Request failed",
           code,
         };
       }
@@ -730,6 +738,62 @@ export async function generateVideo(
   // Validate with Zod
   const result = AIVideoResponseSchema.safeParse(data);
   return result.success ? result.data : null;
+}
+
+/** AI Studio: returns server error text for toasts (e.g. 401, FAL missing, validation). */
+export async function aiStudioGenerateVideo(params: {
+  prompt: string;
+  imageUrl?: string | null;
+  modelHint: string;
+  duration?: number;
+}): Promise<
+  { ok: true; videoUrl: string; prompt: string } | { ok: false; error: string }
+> {
+  const { prompt, imageUrl, modelHint, duration = 5 } = params;
+  const { data, error } = await apiCall<
+    AIVideoResponse & { message?: string }
+  >("/ai/generate-video", {
+    method: "POST",
+    body: JSON.stringify({ prompt, imageUrl, modelHint, duration }),
+  });
+  if (error) return { ok: false, error };
+  if (!data) return { ok: false, error: "Pas de réponse du serveur" };
+  const parsed = AIVideoResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        (data as { message?: string }).message || "Réponse vidéo invalide",
+    };
+  }
+  return {
+    ok: true,
+    videoUrl: parsed.data.videoUrl,
+    prompt: parsed.data.prompt,
+  };
+}
+
+export async function aiStudioGenerateImage(
+  prompt: string,
+  aspectRatio: string,
+): Promise<{ ok: true; imageUrl: string } | { ok: false; error: string }> {
+  const { data, error } = await apiCall<
+    AIImageResponse & { message?: string }
+  >("/ai/generate-image", {
+    method: "POST",
+    body: JSON.stringify({ prompt, aspectRatio }),
+  });
+  if (error) return { ok: false, error };
+  if (!data) return { ok: false, error: "Pas de réponse du serveur" };
+  const parsed = AIImageResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        (data as { message?: string }).message || "Réponse image invalide",
+    };
+  }
+  return { ok: true, imageUrl: parsed.data.imageUrl };
 }
 
 // ============ PARENTAL CONTROLS FUNCTIONS ============

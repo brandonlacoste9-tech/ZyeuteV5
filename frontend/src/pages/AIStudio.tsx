@@ -7,9 +7,11 @@ import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Button } from "../components/Button";
-import { generateImage, generateVideo } from "../services/api";
+import {
+  aiStudioGenerateImage,
+  aiStudioGenerateVideo,
+} from "../services/api";
 import { toast } from "../components/Toast";
-import { AIVideoResponseSchema } from "../schemas/ai";
 import { supabase } from "../lib/supabase";
 
 const aspectRatios = [
@@ -74,12 +76,12 @@ export const AIStudio: React.FC = () => {
     setGeneratedImage(null);
 
     try {
-      const result = await generateImage(prompt, aspectRatio);
-      if (result) {
+      const result = await aiStudioGenerateImage(prompt, aspectRatio);
+      if (result.ok) {
         setGeneratedImage(result.imageUrl);
         toast.success("Image générée! 🎨");
       } else {
-        toast.error("Échec de la génération");
+        toast.error(result.error);
       }
     } catch (err) {
       toast.error("Une erreur est survenue");
@@ -98,14 +100,16 @@ export const AIStudio: React.FC = () => {
     setGeneratedVideo(null);
 
     try {
-      const result = await generateVideo(
-        prompt || "Anime cette image avec un mouvement naturel pour TikTok",
-        sourceImage,
-        videoModel,
-        5,
-      );
+      const result = await aiStudioGenerateVideo({
+        prompt:
+          prompt ||
+          "Anime cette image avec un mouvement naturel pour TikTok",
+        imageUrl: sourceImage,
+        modelHint: videoModel,
+        duration: 5,
+      });
 
-      if (result) {
+      if (result.ok) {
         setGeneratedVideo(result.videoUrl);
         const modelNames: Record<string, string> = {
           wan: "Wan 2.2",
@@ -115,7 +119,7 @@ export const AIStudio: React.FC = () => {
         };
         toast.success(`Vidéo ${modelNames[videoModel]} générée! 🎬`);
       } else {
-        toast.error("Échec de la génération vidéo");
+        toast.error(result.error);
       }
     } catch (err) {
       toast.error("Une erreur est survenue");

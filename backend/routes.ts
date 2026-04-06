@@ -110,6 +110,21 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
   return res.status(401).json({ error: "Unauthorized" });
 }
 
+/** Populate req.userId from Supabase JWT when present (does not 401). Route-level requireAuth in routers still enforces login. */
+async function attachBearerUserId(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+    if (userId) (req as any).userId = userId;
+  }
+  next();
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express,
@@ -221,7 +236,8 @@ export async function registerRoutes(
   app.use("/api/media-proxy", mediaProxyRoutes);
 
   // ============ BOOTSTRAP AI / SWARM ROUTES (PUBLIC/HYBRID) ============
-  app.use("/api/ai", aiRoutes);
+  // Bearer → req.userId so ai.routes.ts requireAuth sees logged-in Studio users
+  app.use("/api/ai", attachBearerUserId, aiRoutes);
 
   // ============ GENAI APP BUILDER & SEARCH ROUTES (Uses $1,367.95 credits) ============
   app.use("/api/genai", genaiBuilderRoutes);

@@ -220,7 +220,9 @@ router.post("/generate-video", requireAuth, async (req: any, res) => {
     const { imageUrl, prompt, duration = 5, modelHint: hint } = req.body;
     if (
       hint &&
-      ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2"].includes(hint)
+      ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2", "pollo"].includes(
+        hint,
+      )
     ) {
       modelHint = hint as any;
     }
