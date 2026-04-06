@@ -6,30 +6,23 @@
 import { BrowserRouter as Router } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import {
-  TIGuyFullScreen,
-  TIGuyButton,
-  useTIGuy,
-} from "@/components/tiguy";
+import { TIGuyFullScreen, TIGuyButton, useTIGuy } from "@/components/tiguy";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { ColonyProvider } from "@/components/providers/colony-provider";
 import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
 import { AgeGateModal } from "@/components/system/AgeGateModal";
 
 function LoadingScreen({ message }: { message?: string }) {
-  return (
-    <LoadingScreenComponent message={message || "Chargement..."} />
-  );
+  return <LoadingScreenComponent message={message || "Chargement..."} />;
 }
 
 function AppContent() {
   const { isLoading, user } = useAuth();
-  const { isOpen, openChat, closeChat } = useTIGuy(
-    user?.id ?? "anonymous",
-  );
+  const { isOpen, openChat, closeChat } = useTIGuy(user?.id ?? "anonymous");
 
   if (isLoading) {
     return <LoadingScreen message="Chargement..." />;
@@ -62,7 +55,9 @@ export default function App() {
         <BorderColorProvider>
           <NavigationStateProvider>
             <NotificationProvider>
-              <AppContent />
+              <ColonyProvider>
+                <AppContent />
+              </ColonyProvider>
             </NotificationProvider>
           </NavigationStateProvider>
         </BorderColorProvider>

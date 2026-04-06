@@ -7,12 +7,8 @@ import React from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Button } from "../components/Button";
-import {
-  aiStudioGenerateImage,
-  aiStudioGenerateVideo,
-} from "../services/api";
+import { aiStudioGenerateImage, aiStudioGenerateVideo } from "../services/api";
 import { toast } from "../components/Toast";
-import { supabase } from "../lib/supabase";
 
 const aspectRatios = [
   { label: "TikTok (9:16)", value: "9:16" }, // TikTok vertical format - first priority
@@ -24,22 +20,10 @@ const aspectRatios = [
 export const AIStudio: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [isLoggedIn, setIsLoggedIn] = React.useState<boolean | null>(null);
   const [activeTab, setActiveTab] = React.useState<
     "image" | "video" | "transcribe"
   >("image");
 
-  // Auth check on mount
-  React.useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        toast.error("Tu dois être connecté pour utiliser l'IA Studio!");
-        navigate("/login");
-      } else {
-        setIsLoggedIn(true);
-      }
-    });
-  }, [navigate]);
   const [prompt, setPrompt] = React.useState("");
   const [aspectRatio, setAspectRatio] = React.useState("9:16"); // Default to TikTok vertical format
   const [isGeneratingImage, setIsGeneratingImage] = React.useState(false);
@@ -102,8 +86,7 @@ export const AIStudio: React.FC = () => {
     try {
       const result = await aiStudioGenerateVideo({
         prompt:
-          prompt ||
-          "Anime cette image avec un mouvement naturel pour TikTok",
+          prompt || "Anime cette image avec un mouvement naturel pour TikTok",
         imageUrl: sourceImage,
         modelHint: videoModel,
         duration: 5,

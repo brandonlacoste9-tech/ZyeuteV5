@@ -97,7 +97,10 @@ export async function apiCall<T>(
       const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), endpoint.includes("generate") ? 120000 : 15000); // 2min for AI, 15s otherwise
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        endpoint.includes("generate") ? 120000 : 15000,
+      ); // 2min for AI, 15s otherwise
 
       const response = await fetch(apiUrl, {
         ...options,
@@ -592,7 +595,9 @@ export async function reportPostContent(
   return !error;
 }
 
-export async function requestBlockUser(blockedUserId: string): Promise<boolean> {
+export async function requestBlockUser(
+  blockedUserId: string,
+): Promise<boolean> {
   const { error } = await apiCall("/moderation/block-user", {
     method: "POST",
     body: JSON.stringify({ blockedUserId }),
@@ -750,20 +755,20 @@ export async function aiStudioGenerateVideo(params: {
   { ok: true; videoUrl: string; prompt: string } | { ok: false; error: string }
 > {
   const { prompt, imageUrl, modelHint, duration = 5 } = params;
-  const { data, error } = await apiCall<
-    AIVideoResponse & { message?: string }
-  >("/ai/generate-video", {
-    method: "POST",
-    body: JSON.stringify({ prompt, imageUrl, modelHint, duration }),
-  });
+  const { data, error } = await apiCall<AIVideoResponse & { message?: string }>(
+    "/ai/generate-video",
+    {
+      method: "POST",
+      body: JSON.stringify({ prompt, imageUrl, modelHint, duration }),
+    },
+  );
   if (error) return { ok: false, error };
   if (!data) return { ok: false, error: "Pas de réponse du serveur" };
   const parsed = AIVideoResponseSchema.safeParse(data);
   if (!parsed.success) {
     return {
       ok: false,
-      error:
-        (data as { message?: string }).message || "Réponse vidéo invalide",
+      error: (data as { message?: string }).message || "Réponse vidéo invalide",
     };
   }
   return {
@@ -777,20 +782,20 @@ export async function aiStudioGenerateImage(
   prompt: string,
   aspectRatio: string,
 ): Promise<{ ok: true; imageUrl: string } | { ok: false; error: string }> {
-  const { data, error } = await apiCall<
-    AIImageResponse & { message?: string }
-  >("/ai/generate-image", {
-    method: "POST",
-    body: JSON.stringify({ prompt, aspectRatio }),
-  });
+  const { data, error } = await apiCall<AIImageResponse & { message?: string }>(
+    "/ai/generate-image",
+    {
+      method: "POST",
+      body: JSON.stringify({ prompt, aspectRatio }),
+    },
+  );
   if (error) return { ok: false, error };
   if (!data) return { ok: false, error: "Pas de réponse du serveur" };
   const parsed = AIImageResponseSchema.safeParse(data);
   if (!parsed.success) {
     return {
       ok: false,
-      error:
-        (data as { message?: string }).message || "Réponse image invalide",
+      error: (data as { message?: string }).message || "Réponse image invalide",
     };
   }
   return { ok: true, imageUrl: parsed.data.imageUrl };
@@ -963,10 +968,15 @@ export function postHasPlayableMedia(p: Post): boolean {
   const mux = String(p.mux_playback_id ?? "").trim();
   if (mux.length >= 8) return true;
   const hls = String(p.hls_url ?? "").trim();
-  if (hls.length >= 12 && /^https?:\/\//i.test(hls)) return true;
+  if (hls.length >= 12 && /^https?:\/\//i.test(hls)) {
+    if (/fal\.media|\.fal\.run/i.test(hls) && mux.length < 8) return false;
+    return true;
+  }
   const media = String(p.media_url ?? "").trim();
-  if (media.length >= 12 && /^https?:\/\//i.test(media)) return true;
-  return false;
+  if (media.length < 12 || !/^https?:\/\//i.test(media)) return false;
+  // FAL temporary URLs expire → black player; still allow if we have a Mux id above
+  if (/fal\.media|\.fal\.run/i.test(media)) return false;
+  return true;
 }
 
 /** Obvious QA / inject / diagnostic rows to hide from feeds. */
@@ -975,10 +985,21 @@ export function postLooksLikeTestInject(p: Post): boolean {
   const content = String(
     (p as Post & { content?: string }).content ?? "",
   ).toUpperCase();
-  if (cap.includes("DIAGNOSTIC") || content.includes("DIAGNOSTIC")) return true;
-  if (cap.includes("TEST VIDEO") || content.includes("TEST VIDEO")) return true;
-  if ((cap.includes("INJECT") || content.includes("INJECT")) && cap.includes("TEST"))
+  const hay = `${cap}\n${content}`;
+  if (hay.includes("DIAGNOSTIC")) return true;
+  if (hay.includes("TEST VIDEO") || hay.includes("VIDEO TEST")) return true;
+  if (
+    (hay.includes("INJECT") || hay.includes("INJECTION")) &&
+    (hay.includes("TEST") || hay.includes("QA"))
+  )
     return true;
+  if (
+    hay.includes("PLACEHOLDER") ||
+    hay.includes("DUMMY VIDEO") ||
+    hay.includes("SEED CONTENT")
+  )
+    return true;
+  if (hay.includes("LIPSYNC") && hay.includes("TEST")) return true;
   return false;
 }
 

@@ -15,9 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LoadingScreen as LoadingScreenComponent } from "@/components/LoadingScreen";
 
 function LoadingScreen({ message }: { message?: string }) {
-  return (
-    <LoadingScreenComponent message={message || "Chargement..."} />
-  );
+  return <LoadingScreenComponent message={message || "Chargement..."} />;
 }
 
 const LoginPage = lazy(() => import("@/pages/Login"));
@@ -47,31 +45,37 @@ const TikTokCuration = lazy(() =>
 const CreatorHubPage = lazy(() => import("@/pages/CreatorHub"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
-const CommentsSettings = lazy(() => import("@/pages/settings/CommentsSettings"));
+const CommentsSettings = lazy(
+  () => import("@/pages/settings/CommentsSettings"),
+);
 const SharingSettings = lazy(() => import("@/pages/settings/SharingSettings"));
-const RestrictedAccountsSettings = lazy(() =>
-  import("@/pages/settings/RestrictedAccountsSettings"),
+const RestrictedAccountsSettings = lazy(
+  () => import("@/pages/settings/RestrictedAccountsSettings"),
 );
-const FavoritesSettings = lazy(() => import("@/pages/settings/FavoritesSettings"));
-const MutedAccountsSettings = lazy(() =>
-  import("@/pages/settings/MutedAccountsSettings"),
+const FavoritesSettings = lazy(
+  () => import("@/pages/settings/FavoritesSettings"),
 );
-const ContentPreferencesSettings = lazy(() =>
-  import("@/pages/settings/ContentPreferencesSettings"),
+const MutedAccountsSettings = lazy(
+  () => import("@/pages/settings/MutedAccountsSettings"),
+);
+const ContentPreferencesSettings = lazy(
+  () => import("@/pages/settings/ContentPreferencesSettings"),
 );
 const MediaSettings = lazy(() => import("@/pages/settings/MediaSettings"));
 const AudioSettings = lazy(() => import("@/pages/settings/AudioSettings"));
 const StorageSettings = lazy(() => import("@/pages/settings/StorageSettings"));
 const AppSettings = lazy(() => import("@/pages/settings/AppSettings"));
 const RegionSettings = lazy(() => import("@/pages/settings/RegionSettings"));
-const LanguageSettings = lazy(() => import("@/pages/settings/LanguageSettings"));
+const LanguageSettings = lazy(
+  () => import("@/pages/settings/LanguageSettings"),
+);
 const VoiceSettingsPage = lazy(() => import("@/pages/VoiceSettingsPage"));
-const ProfileEditSettings = lazy(() =>
-  import("@/pages/settings/ProfileEditSettings"),
+const ProfileEditSettings = lazy(
+  () => import("@/pages/settings/ProfileEditSettings"),
 );
 const PrivacySettings = lazy(() => import("@/pages/settings/PrivacySettings"));
-const NotificationSettings = lazy(() =>
-  import("@/pages/settings/NotificationSettings"),
+const NotificationSettings = lazy(
+  () => import("@/pages/settings/NotificationSettings"),
 );
 
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
@@ -81,8 +85,8 @@ const Observability = lazy(() => import("@/pages/admin/Observability"));
 
 const TermsOfService = lazy(() => import("@/pages/legal/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("@/pages/legal/PrivacyPolicy"));
-const CommunityGuidelines = lazy(() =>
-  import("@/pages/legal/CommunityGuidelines"),
+const CommunityGuidelines = lazy(
+  () => import("@/pages/legal/CommunityGuidelines"),
 );
 
 function LogoutRoute() {
@@ -106,6 +110,23 @@ function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    const from = `${location.pathname}${location.search}`;
+    return <Navigate to="/login" replace state={{ from }} />;
+  }
+
+  return <>{children}</>;
+}
+
+/** Real Supabase profile — blocks guest mode (RequireAuth alone allows guests). */
+function RequireRealAccount({ children }: { children: ReactNode }) {
+  const { user, isGuest, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return <LoadingScreen message="Chargement..." />;
+  }
+
+  if (!user || isGuest) {
     const from = `${location.pathname}${location.search}`;
     return <Navigate to="/login" replace state={{ from }} />;
   }
@@ -197,7 +218,9 @@ export function AppRoutes() {
           path="/upload"
           element={
             <RequireAuth>
-              <UploadPage />
+              <RequireRealAccount>
+                <UploadPage />
+              </RequireRealAccount>
             </RequireAuth>
           }
         />
@@ -205,7 +228,9 @@ export function AppRoutes() {
           path="/creator"
           element={
             <RequireAuth>
-              <CreatorHubPage />
+              <RequireRealAccount>
+                <CreatorHubPage />
+              </RequireRealAccount>
             </RequireAuth>
           }
         />
@@ -213,7 +238,9 @@ export function AppRoutes() {
           path="/create"
           element={
             <RequireAuth>
-              <Navigate to="/upload" replace />
+              <RequireRealAccount>
+                <Navigate to="/upload" replace />
+              </RequireRealAccount>
             </RequireAuth>
           }
         />
@@ -402,7 +429,9 @@ export function AppRoutes() {
           path="/ai-studio"
           element={
             <RequireAuth>
-              <AIStudio />
+              <RequireRealAccount>
+                <AIStudio />
+              </RequireRealAccount>
             </RequireAuth>
           }
         />
