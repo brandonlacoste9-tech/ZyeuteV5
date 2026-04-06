@@ -23,6 +23,9 @@
       "@testing-library/jest-dom"
     ],
     "paths": {
+      "@/components/ui/avatar": [
+        "./frontend/src/components/ui/avatar-compat.tsx"
+      ],
       "@/*": ["./frontend/src/*"],
       "@shared/*": ["./shared/*"]
     }

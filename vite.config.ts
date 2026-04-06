@@ -14,6 +14,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Must be before `@` so `import … from '@/components/ui/avatar'` resolves on Linux
+      "@/components/ui/avatar": path.resolve(
+        __dirname,
+        "frontend",
+        "src",
+        "components",
+        "ui",
+        "avatar-compat.tsx",
+      ),
       "@": path.resolve(__dirname, "frontend", "src"),
       "@shared": path.resolve(__dirname, "shared"),
       "@assets": path.resolve(__dirname, "attached_assets"),
