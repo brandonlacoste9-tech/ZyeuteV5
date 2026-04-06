@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Post, User } from "@shared/schema";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -33,14 +33,8 @@ import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import VideoPlaybackDiagnostic from "@/components/video/VideoPlaybackDiagnostic";
+import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 
 interface SingleVideoViewProps {
   post: Post & { user?: User };
@@ -84,17 +78,9 @@ export function SingleVideoView({
   }, [post]);
 
   // Video Activation & Prefetching
-  const { shouldPrefetch, preloadTier, debug } = usePrefetchVideo(
+  const { source: videoSource, debug } = usePrefetchVideo(
     videoSrc,
     isActive ? 3 : priority ? 2 : 0,
-  );
-
-  const videoSource = useMemo(
-    () => ({
-      src: videoSrc,
-      type: "url" as const,
-    }),
-    [videoSrc],
   );
 
   const filterStyle = useMemo(() => {
@@ -126,10 +112,12 @@ export function SingleVideoView({
         {isActive && (
           <VideoPlaybackDiagnostic
             postId={post.id}
+            postType={post.type ?? undefined}
+            muxPlaybackId={post.mux_playback_id || post.muxPlaybackId}
             mediaUrl={videoSrc}
             videoSrc={videoSrc}
             playerPath={
-              post.mux_playback_id || post.muxPlaybackId ? "mux" : "unified"
+              post.mux_playback_id || post.muxPlaybackId ? "mux" : "native"
             }
             isActive={isActive}
             error={videoError}
@@ -137,7 +125,7 @@ export function SingleVideoView({
         )}
 
         {/* Video Player Selection */}
-        {!isActive && !priority && !shouldPrefetch ? (
+        {!isActive && !priority ? (
           <img
             src={post.thumbnail_url || post.thumbnailUrl || ""}
             alt=""
@@ -187,15 +175,19 @@ export function SingleVideoView({
         <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6 z-30">
           {/* Creator Avatar */}
           <div className="relative mb-2">
-            <Avatar className="w-12 h-12 border-2 border-white shadow-lg">
-              <AvatarImage src={post.user?.avatarUrl || ""} />
-              <AvatarFallback className="bg-gold-500 text-black font-bold">
-                {post.user?.username?.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <Avatar
+              src={
+                post.user?.avatarUrl ||
+                (post.user as User & { avatar_url?: string })?.avatar_url
+              }
+              alt={post.user?.username || "User"}
+              size="sm"
+              className="border-2 border-white shadow-lg"
+              userId={post.user?.id}
+            />
             <Button
-              size="icon"
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-gold-500 hover:bg-gold-600 text-black p-0 border-2 border-black"
+              size="sm"
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 min-w-5 min-h-5 rounded-full bg-gold-500 hover:bg-gold-600 text-black p-0 border-2 border-black"
             >
               <UserPlus size={12} />
             </Button>
@@ -205,9 +197,9 @@ export function SingleVideoView({
           <div className="flex flex-col items-center">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={handleLike}
-              className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white"
+              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
             >
               <Heart
                 size={28}
@@ -227,9 +219,9 @@ export function SingleVideoView({
           <div className="flex flex-col items-center">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={onCommentClick}
-              className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white"
+              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
             >
               <MessageCircle size={28} />
             </Button>
@@ -242,9 +234,9 @@ export function SingleVideoView({
           <div className="flex flex-col items-center">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={onShareClick}
-              className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white"
+              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
             >
               <Share2 size={28} />
             </Button>
@@ -278,12 +270,12 @@ export function SingleVideoView({
         {/* Mute/Unmute Overlay */}
         <Button
           variant="ghost"
-          size="icon"
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onToggleMute();
           }}
-          className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm text-white z-30"
+          className="absolute top-4 right-4 w-10 h-10 min-w-10 min-h-10 rounded-full bg-black/20 backdrop-blur-sm text-white z-30 p-0"
         >
           {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
         </Button>
