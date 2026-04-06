@@ -57,6 +57,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:external": "playwright test --config=playwright.config.external.ts",
+    "db:cleanup-junk:dry": "tsx scripts/cleanup-junk-publications.ts --dry-run",
     "populate:feed": "tsx scripts/populate-feed.ts",
     "generate:videos": "tsx scripts/generate-quebec-videos.ts",
     "test:e2e:ui": "playwright test --ui",
