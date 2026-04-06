@@ -94,24 +94,26 @@ surgicalUploadRouter.post(
 
       // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
       const caption = req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
+      const insertRow = {
+        user_id: userId,
+        content: caption,
+        caption,
+        media_url: publicUrl,
+        type: inferredType,
+        processing_status: "completed",
+        hive_id: req.body.hiveId || "quebec",
+        visibility: "public",
+        visibilite: "public",
+        est_masque: false,
+        is_moderated: true,
+        moderation_approved: true,
+        region: req.body.region || "montreal",
+        video_source: "upload",
+      };
+      // Untyped Supabase client (no generated Database) — publications row shape is valid at runtime
       const { data: postData, error: postError } = await supabase
         .from("publications")
-        .insert({
-          user_id: userId,
-          content: caption,
-          caption,
-          media_url: publicUrl,
-          type: inferredType,
-          processing_status: "completed",
-          hive_id: req.body.hiveId || "quebec",
-          visibility: "public",
-          visibilite: "public",
-          est_masque: false,
-          is_moderated: true,
-          moderation_approved: true,
-          region: req.body.region || "montreal",
-          video_source: "upload",
-        })
+        .insert(insertRow as never)
         .select()
         .single();
 
@@ -120,11 +122,12 @@ surgicalUploadRouter.post(
         return res.status(500).json({ error: "Failed to create post: " + postError.message });
       }
 
-      console.log(`✅ [Surgical Upload] Success! Post created: ${postData.id}`);
+      const created = postData as { id: string };
+      console.log(`✅ [Surgical Upload] Success! Post created: ${created.id}`);
 
       res.status(201).json({
         success: true,
-        post: postData,
+        post: created,
       });
     } catch (err: any) {
       console.error("❌ Surgical upload crash:", err);

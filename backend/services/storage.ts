@@ -212,7 +212,7 @@ export async function uploadHLSToStorage(
 
       // Ingest the Supabase-hosted HLS manifest into Mux for CDN delivery
       const asset = await mux.video.assets.create({
-        input: [{ url: manifestPublicUrl }],
+        inputs: [{ url: manifestPublicUrl }],
         playback_policy: ["public"],
       });
 

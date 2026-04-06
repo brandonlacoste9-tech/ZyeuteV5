@@ -23,6 +23,12 @@ export type TikTokFeedImportResult =
       detail?: string;
     };
 
+/** Failure shape only — used when resolving payload before import. */
+export type TikTokResolveImportError = Extract<
+  TikTokFeedImportResult,
+  { ok: false }
+>;
+
 export async function resolveImportAuthorId(): Promise<string | null> {
   const bot = await storage.getUserByUsername("ti_guy_bot");
   if (bot) return bot.id;
@@ -56,7 +62,7 @@ export type ImportTikTokOptions = {
 export async function resolveTikTokVideoForImport(
   raw: unknown,
   videoUrl: string | undefined,
-): Promise<{ video: TikTokVideo } | { error: TikTokFeedImportResult }> {
+): Promise<{ video: TikTokVideo } | { error: TikTokResolveImportError }> {
   let v = raw;
   if (!hasImportableVideoPayload(v)) {
     const url = videoUrl?.trim();
