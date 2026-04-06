@@ -84,17 +84,9 @@ export function SingleVideoView({
   }, [post]);
 
   // Video Activation & Prefetching
-  const { shouldPrefetch, preloadTier, debug } = usePrefetchVideo(
+  const { source, isCached, debug } = usePrefetchVideo(
     videoSrc,
     isActive ? 3 : priority ? 2 : 0,
-  );
-
-  const videoSource = useMemo(
-    () => ({
-      src: videoSrc,
-      type: "url" as const,
-    }),
-    [videoSrc],
   );
 
   const filterStyle = useMemo(() => {
@@ -137,7 +129,7 @@ export function SingleVideoView({
         )}
 
         {/* Video Player Selection */}
-        {!isActive && !priority && !shouldPrefetch ? (
+        {!isActive && !priority && !isCached ? (
           <img
             src={post.thumbnail_url || post.thumbnailUrl || ""}
             alt=""
@@ -176,7 +168,7 @@ export function SingleVideoView({
             style={filterStyle}
             priority={priority}
             preload={isActive ? "auto" : "metadata"}
-            videoSource={videoSource}
+            videoSource={source}
             debug={debug}
             onProgress={isActive ? onVideoProgress : undefined}
             onEnded={onVideoEnd}

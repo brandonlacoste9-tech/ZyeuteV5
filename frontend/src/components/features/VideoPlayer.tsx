@@ -231,7 +231,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       });
       if (autoPlay) {
-        el.muted = true;
+        el.muted = muted;
         el.play().catch(() => {});
       }
       return () => {
@@ -1015,7 +1015,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       ) : (
         <video
           ref={videoRef}
-          src={effectiveSrc}
+          src={effectiveSrc || undefined}
           playsInline
           muted={muted}
           autoPlay={autoPlay}
