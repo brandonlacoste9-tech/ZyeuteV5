@@ -166,6 +166,8 @@ export function MuxVideoPlayer({
         className="w-full h-full rounded-xl object-cover"
         onLoadStart={handleLoadStart}
         onLoadedData={handleLoadedData}
+        onLoadedMetadata={handleLoadedData}
+        onCanPlay={handleLoadedData}
         onError={handleError}
         streamType="on-demand"
         metadata={{

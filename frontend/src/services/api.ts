@@ -894,20 +894,31 @@ export function normalizePostForFeed(p: Record<string, any>): Post | null {
   return mapBackendPost(p);
 }
 
-/** When DB only stores stream.mux.com URL, derive id so La Zyeute uses MuxVideoPlayer (not Hls.js). */
+/**
+ * Derive Mux playback id from any stored URL so La Zyeute uses MuxVideoPlayer (not Hls.js on stream.mux.com).
+ * Covers stream manifests, image.mux.com thumbnails when mux_playback_id column is empty, etc.
+ */
 function extractMuxPlaybackIdFromUrl(
   url: string | undefined | null,
 ): string | undefined {
   if (!url || typeof url !== "string") return undefined;
-  if (!url.includes("mux.com") || !url.includes(".m3u8")) return undefined;
+  if (!url.includes("mux.com")) return undefined;
   try {
     const u = new URL(url);
-    if (!u.hostname.includes("stream.mux.com")) return undefined;
-    const m = u.pathname.match(/\/([A-Za-z0-9_-]+)\.m3u8$/);
-    return m?.[1];
+    const host = u.hostname.toLowerCase();
+    if (host === "stream.mux.com" || host.endsWith(".stream.mux.com")) {
+      if (!url.includes(".m3u8")) return undefined;
+      const m = u.pathname.match(/\/([A-Za-z0-9_-]+)\.m3u8/);
+      return m?.[1];
+    }
+    if (host === "image.mux.com" || host.endsWith(".image.mux.com")) {
+      const m = u.pathname.match(/^\/([A-Za-z0-9_-]+)\//);
+      return m?.[1];
+    }
   } catch {
     return undefined;
   }
+  return undefined;
 }
 
 function mapBackendPost(p: Record<string, any>): Post | null {
@@ -920,28 +931,36 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const rawOriginal = p.original_url || p.originalUrl;
   const rawEnhanced = p.enhanced_url || p.enhancedUrl;
   const rawHls = p.hls_url || p.hlsUrl;
+  const rawThumb = p.thumbnail_url || p.thumbnailUrl;
   const muxPlaybackIdFromRow = p.mux_playback_id || p.muxPlaybackId;
   const muxPlaybackId =
     muxPlaybackIdFromRow ||
     extractMuxPlaybackIdFromUrl(rawHls) ||
     extractMuxPlaybackIdFromUrl(rawMedia) ||
     extractMuxPlaybackIdFromUrl(rawOriginal) ||
-    extractMuxPlaybackIdFromUrl(rawEnhanced);
+    extractMuxPlaybackIdFromUrl(rawEnhanced) ||
+    extractMuxPlaybackIdFromUrl(rawThumb);
   const processingReady =
     (p.processing_status || p.processingStatus) === "completed" ||
     (p.processing_status || p.processingStatus) === "ready";
 
-  // Best playable URL: MUX HLS > HLS > enhanced (if completed) > media > original
   const muxHlsUrl = muxPlaybackId
     ? `https://stream.mux.com/${muxPlaybackId}.m3u8`
     : "";
-  const mediaUrl =
-    rawHls ||
-    muxHlsUrl ||
-    (processingReady && rawEnhanced) ||
-    rawMedia ||
-    rawOriginal ||
-    "";
+  // When we have a Mux id, prefer stream.mux.com over stale signed Supabase hls_url (common failure mode).
+  const mediaUrl = muxPlaybackId
+    ? muxHlsUrl ||
+      rawHls ||
+      (processingReady && rawEnhanced) ||
+      rawMedia ||
+      rawOriginal ||
+      ""
+    : rawHls ||
+      muxHlsUrl ||
+      (processingReady && rawEnhanced) ||
+      rawMedia ||
+      rawOriginal ||
+      "";
 
   // Auto-detect type if not provided
   let type: "photo" | "video" = p.type;
