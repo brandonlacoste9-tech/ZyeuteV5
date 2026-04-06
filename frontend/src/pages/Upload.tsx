@@ -109,26 +109,21 @@ export const Upload: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Handle file selection
+  // Handle file selection (gallery picker or Mux fallback)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(selectedFile);
-    }
+    if (selectedFile) setFileWithPreview(selectedFile);
+  };
+
+  const setFileWithPreview = (selectedFile: File) => {
+    setFile(selectedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => setPreview(reader.result as string);
+    reader.readAsDataURL(selectedFile);
   };
 
   const handleCameraCapture = (capturedFile: File) => {
-    setFile(capturedFile);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(capturedFile);
+    setFileWithPreview(capturedFile);
     setShowCamera(false);
   };
 
@@ -225,7 +220,12 @@ export const Upload: React.FC = () => {
         toast.error("Veuillez sélectionner un média");
         return;
       }
-      const result = await surgicalUpload(file, caption);
+      const result = await surgicalUpload(file, caption, {
+        region,
+        city,
+        visualFilter,
+        isEphemeral,
+      });
       if (!result.success || !result.post) {
         throw new Error(result.error || "Upload failed");
       }
@@ -270,6 +270,15 @@ export const Upload: React.FC = () => {
                     setUploadMode(null);
                   }}
                   onCancel={() => setUploadMode(null)}
+                  onFallbackUpload={(fallbackFile) => {
+                    setFileWithPreview(fallbackFile);
+                    setUploadMode(null);
+                    toast.info("Mux non disponible — upload direct activé");
+                  }}
+                  onError={(err) => {
+                    uploadLogger.warn("Mux error:", err.message);
+                    toast.error("Erreur Mux: " + err.message);
+                  }}
                 />
               </div>
             ) : uploadMode === "pexels" ? (

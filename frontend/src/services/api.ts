@@ -791,12 +791,23 @@ function isVideoUrl(url?: string): boolean {
 export async function surgicalUpload(
   file: File,
   caption?: string,
+  meta?: {
+    region?: string;
+    city?: string;
+    visualFilter?: string;
+    isEphemeral?: boolean;
+  },
 ): Promise<{ success: boolean; post?: Post; error?: string }> {
   try {
     const formData = new FormData();
     formData.append("video", file);
     if (caption) formData.append("caption", caption);
     formData.append("hiveId", "quebec");
+    if (meta?.region) formData.append("region", meta.region);
+    if (meta?.city) formData.append("city", meta.city);
+    if (meta?.visualFilter && meta.visualFilter !== "none")
+      formData.append("visualFilter", meta.visualFilter);
+    if (meta?.isEphemeral) formData.append("isEphemeral", "true");
 
     // Get auth token for the upload
     const {

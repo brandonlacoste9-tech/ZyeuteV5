@@ -46,7 +46,19 @@ export function MuxUpload({
 
   const pollUploadStatus = useCallback(
     async (uploadId: string) => {
+      const MAX_ATTEMPTS = 30; // ~60s at 2s intervals
+      let attempts = 0;
+
       const checkStatus = async () => {
+        if (attempts >= MAX_ATTEMPTS) {
+          setUploadStatus("error");
+          setErrorMessage(
+            "Traitement trop long. Réessaie ou utilise l'upload direct.",
+          );
+          return;
+        }
+        attempts++;
+
         const { data, error } = await apiCall<{
           success: boolean;
           data: { status: string; assetId?: string; playbackId?: string };
@@ -88,16 +100,19 @@ export function MuxUpload({
       });
 
       if (createError || !createData?.data) {
-        // Mux not available, fall back to surgical upload
+        // Mux not available — trigger fallback to surgical upload automatically
         console.warn(
           "[MuxUpload] Mux unavailable, falling back to surgical upload",
         );
-        setUploadStatus("error");
-        setErrorMessage(
-          "Mux non disponible. Utilisation de l'upload direct...",
-        );
-        // Trigger fallback via parent
-        onError?.(new Error("Mux unavailable, use surgical upload"));
+        if (onFallbackUpload) {
+          onFallbackUpload(file);
+        } else {
+          setUploadStatus("error");
+          setErrorMessage(
+            "Mux non disponible. Utilise l'upload direct (Galerie).",
+          );
+          onError?.(new Error("Mux unavailable, use surgical upload"));
+        }
         return;
       }
 

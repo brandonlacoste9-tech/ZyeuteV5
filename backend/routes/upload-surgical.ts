@@ -94,6 +94,7 @@ surgicalUploadRouter.post(
 
       // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
       const caption = req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
+      const isEphemeral = req.body.isEphemeral === "true";
       const { data: postData, error: postError } = await supabase
         .from("publications")
         .insert({
@@ -110,6 +111,13 @@ surgicalUploadRouter.post(
           is_moderated: true,
           moderation_approved: true,
           region: req.body.region || "montreal",
+          city: req.body.city || null,
+          visual_filter: req.body.visualFilter || null,
+          is_ephemeral: isEphemeral,
+          max_views: isEphemeral ? 1 : null,
+          expires_at: isEphemeral
+            ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            : null,
           video_source: "upload",
         })
         .select()
