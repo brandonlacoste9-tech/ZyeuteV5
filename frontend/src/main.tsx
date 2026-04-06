@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./index.css";
+import { captureReferralFromUrl } from "./lib/referralCapture";
+
+captureReferralFromUrl();
 
 // Safety wrapper: prevent Object.values crash when called with null/undefined
 // (e.g. from dependencies calling Object.values on an unexpected nullish value)

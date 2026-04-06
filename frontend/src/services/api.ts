@@ -13,8 +13,8 @@ import { AIImageResponseSchema, type AIImageResponse } from "@/schemas/ai";
 
 // [CONFIG] API Base URL
 // Use relative URLs so requests route through the hosting platform's proxy:
-// - Local dev: Vite proxy (/api → localhost:5000)
-// - Vercel: vercel.json rewrite (/api → Railway backend)
+// - Local dev: Vite proxy (/api → localhost:3000, see vite.config.ts)
+// - Vercel: vercel.json rewrite (/api → Render backend URL)
 const API_BASE_URL = "";
 
 // [DEDUPLICATION] Prevent duplicate in-flight requests
@@ -568,6 +568,26 @@ export async function followUser(userId: string): Promise<boolean> {
 export async function unfollowUser(userId: string): Promise<boolean> {
   const { error } = await apiCall(`/users/${userId}/follow`, {
     method: "DELETE",
+  });
+  return !error;
+}
+
+export async function reportPostContent(
+  postId: string,
+  reason: string,
+  category?: string,
+): Promise<boolean> {
+  const { error } = await apiCall("/moderation/report-content", {
+    method: "POST",
+    body: JSON.stringify({ postId, reason, category }),
+  });
+  return !error;
+}
+
+export async function requestBlockUser(blockedUserId: string): Promise<boolean> {
+  const { error } = await apiCall("/moderation/block-user", {
+    method: "POST",
+    body: JSON.stringify({ blockedUserId }),
   });
   return !error;
 }

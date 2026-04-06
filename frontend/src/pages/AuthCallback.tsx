@@ -11,6 +11,7 @@ import React, { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { consumeReturnTo } from "@/lib/redirectAfterAuth";
 import { logger } from "../lib/logger";
 
 const authCallbackLogger = logger.withContext("AuthCallback");
@@ -19,6 +20,13 @@ const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const processedRef = React.useRef(false); // Ref to prevention double-fire in Strict Mode
+  const redirectedRef = React.useRef(false);
+
+  const goAfterAuth = React.useCallback(() => {
+    if (redirectedRef.current) return;
+    redirectedRef.current = true;
+    navigate(consumeReturnTo("/feed"), { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     // Prevent double invocation
@@ -55,7 +63,7 @@ const AuthCallback: React.FC = () => {
         if (data?.session) {
           authCallbackLogger.debug("Session established via Code Exchange.");
           // Wait a tick to ensure storage sync
-          setTimeout(() => navigate("/", { replace: true }), 100);
+          setTimeout(() => goAfterAuth(), 100);
           return;
         }
       }
@@ -69,7 +77,7 @@ const AuthCallback: React.FC = () => {
 
       if (session) {
         authCallbackLogger.debug("Session detected automatically.");
-        navigate("/", { replace: true });
+        goAfterAuth();
         return;
       }
 
@@ -80,7 +88,7 @@ const AuthCallback: React.FC = () => {
           if (event === "SIGNED_IN" && session) {
             authCallbackLogger.debug("Signed In event captured.");
             authData.subscription.unsubscribe();
-            navigate("/", { replace: true });
+            goAfterAuth();
           }
         },
       );
@@ -90,7 +98,7 @@ const AuthCallback: React.FC = () => {
         // Final check
         supabase.auth.getSession().then(({ data: sessionData }: any) => {
           if (sessionData.session) {
-            navigate("/", { replace: true });
+            goAfterAuth();
           } else {
             authCallbackLogger.warn("Auth timeout - redirecting to login");
             navigate("/login?error=timeout", { replace: true });
@@ -100,7 +108,7 @@ const AuthCallback: React.FC = () => {
     };
 
     handleAuth();
-  }, [navigate, searchParams]);
+  }, [goAfterAuth, navigate, searchParams]);
 
   // State to show manual entry if it takes too long
   const [showManual, setShowManual] = React.useState(false);
@@ -120,7 +128,7 @@ const AuthCallback: React.FC = () => {
 
       {showManual && (
         <button
-          onClick={() => navigate("/", { replace: true })}
+          onClick={() => goAfterAuth()}
           className="text-amber-500 hover:text-amber-400 text-sm underline decoration-amber-500/30 underline-offset-4 transition-colors p-2"
         >
           Ça prend trop de temps? Continuer

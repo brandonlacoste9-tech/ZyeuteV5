@@ -7,7 +7,7 @@
 
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { logger } from "../lib/logger";
 import copy from "../lib/copy";
 import {
@@ -19,11 +19,16 @@ import { getCurrentUser, signIn, signInWithGoogle } from "../lib/supabase";
 import { AppConfig } from "@/config/factory";
 import { useTranslation } from "@/i18n";
 import { OVHCloudFooter } from "@/components/features/OVHCloudBadge";
+import {
+  rememberReturnTo,
+  consumeReturnTo,
+} from "@/lib/redirectAfterAuth";
 
 const loginLogger = logger.withContext("Login");
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { enterGuestMode } = useAuth();
   const { t } = useTranslation();
   const { identity } = AppConfig;
@@ -35,6 +40,12 @@ export const Login: React.FC = () => {
   const [error, setError] = React.useState("");
   const [debugMode] = React.useState(true); // Enable debugging
 
+  // Persist ?from RequireAuth (and keep across Google OAuth via sessionStorage)
+  React.useEffect(() => {
+    const from = (location.state as { from?: string } | null)?.from;
+    if (from) rememberReturnTo(from);
+  }, [location.state]);
+
   // Check if already logged in
   React.useEffect(() => {
     const checkUser = async () => {
@@ -42,7 +53,7 @@ export const Login: React.FC = () => {
         const user = await getCurrentUser();
         if (user) {
           loginLogger.info("✅ User already logged in, redirecting...");
-          window.location.href = "/";
+          window.location.href = consumeReturnTo("/feed");
         }
       } catch (err) {
         // Not logged in, stay on login page
@@ -73,8 +84,8 @@ export const Login: React.FC = () => {
 
         // Simulate a short delay for UX, then navigate
         setTimeout(() => {
-          if (debugMode) console.log("🎭 Redirecting to home...");
-          navigate("/");
+          if (debugMode) console.log("🎭 Redirecting after guest...");
+          navigate(consumeReturnTo("/feed"), { replace: true });
         }, 800);
       } catch (err: any) {
         if (debugMode) console.error("❌ [GUEST LOGIN ERROR]", err);
@@ -158,9 +169,9 @@ export const Login: React.FC = () => {
         localStorage.removeItem(GUEST_TIMESTAMP_KEY);
         localStorage.removeItem(GUEST_VIEWS_KEY);
 
-        // Redirect to home
-        if (debugMode) console.log("➡️ [LOGIN] Redirecting to home...");
-        window.location.href = "/";
+        // Redirect (preserves deep link from RequireAuth)
+        if (debugMode) console.log("➡️ [LOGIN] Redirecting after sign-in...");
+        window.location.href = consumeReturnTo("/feed");
       } catch (err: any) {
         if (debugMode) console.error("❌ [LOGIN CATCH ERROR]", err);
         const errorMsg = err.message || "Erreur de connexion";
@@ -177,6 +188,9 @@ export const Login: React.FC = () => {
     setIsLoading(true);
     setError("");
     try {
+      const from = (location.state as { from?: string } | null)?.from;
+      if (from) rememberReturnTo(from);
+
       const { data, error } = await signInWithGoogle();
 
       if (debugMode) console.log("🔵 [GOOGLE] Response:", { data, error });
@@ -194,7 +208,7 @@ export const Login: React.FC = () => {
       setError(errorMsg);
       setIsLoading(false);
     }
-  }, [debugMode]);
+  }, [debugMode, location.state]);
 
   // Debug: Log render
   React.useEffect(() => {

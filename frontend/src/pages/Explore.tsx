@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { getExplorePosts } from "@/services/api";
 import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from "@/lib/quebecFeatures";
@@ -21,6 +21,7 @@ import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
 const exploreLogger = logger.withContext("Explore");
 
 export const Explore: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const { getFeedState, saveFeedState } = useNavigationState();
   const savedState = getFeedState("explore");
 
@@ -49,6 +50,14 @@ export const Explore: React.FC = () => {
   React.useEffect(() => {
     stateRef.current = { posts, searchQuery, selectedRegion, selectedHashtag };
   }, [posts, searchQuery, selectedRegion, selectedHashtag]);
+
+  /** Deep link from captions: /explore?tag=Montreal */
+  React.useEffect(() => {
+    const raw = searchParams.get("tag");
+    if (!raw?.trim()) return;
+    const normalized = raw.trim().replace(/^#/, "");
+    if (normalized) setSelectedHashtag(normalized);
+  }, [searchParams]);
 
   // Save state on unmount
   React.useEffect(() => {

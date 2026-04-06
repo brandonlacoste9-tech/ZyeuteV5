@@ -18,7 +18,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    to: "/",
+    to: "/feed",
     labelKey: "nav.home",
     icon: (
       <svg

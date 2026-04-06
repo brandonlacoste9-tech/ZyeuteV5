@@ -12,6 +12,66 @@ const modLogger = {
 };
 
 /**
+ * Report a post (logged content for moderator review).
+ */
+router.post("/report-content", async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Non authentifié" });
+    }
+
+    const { postId, reason, category } = req.body || {};
+    if (!postId || typeof postId !== "string") {
+      return res.status(400).json({ error: "postId requis" });
+    }
+
+    await storage.createModerationLog({
+      userId,
+      action: "report",
+      reason: typeof reason === "string" ? reason : "user_report",
+      details: `post:${postId} category:${category || "unspecified"}`,
+      score: 0,
+    });
+
+    res.json({ success: true, message: "Signalement reçu. Merci." });
+  } catch (error: any) {
+    modLogger.error("Report error:", error);
+    res.status(500).json({ error: "Impossible d'enregistrer le signalement." });
+  }
+});
+
+/**
+ * Request to block another user (stored as moderation log until block table exists).
+ */
+router.post("/block-user", async (req: any, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Non authentifié" });
+    }
+
+    const { blockedUserId } = req.body || {};
+    if (!blockedUserId || typeof blockedUserId !== "string") {
+      return res.status(400).json({ error: "blockedUserId requis" });
+    }
+
+    await storage.createModerationLog({
+      userId,
+      action: "block_request",
+      reason: "user_block",
+      details: `blocked_user_id:${blockedUserId}`,
+      score: 0,
+    });
+
+    res.json({ success: true, message: "Blocage enregistré." });
+  } catch (error: any) {
+    modLogger.error("Block user error:", error);
+    res.status(500).json({ error: "Impossible d'enregistrer le blocage." });
+  }
+});
+
+/**
  * Moderation Appeal Route
  * Users can appeal for blocked content.
  */

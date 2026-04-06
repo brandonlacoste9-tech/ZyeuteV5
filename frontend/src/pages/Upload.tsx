@@ -17,6 +17,7 @@ import {
 } from "../services/api";
 import { supabase } from "../lib/supabase";
 import { extractHashtags, generateId } from "../lib/utils";
+import { addDraft } from "../lib/draftPosts";
 import { QUEBEC_REGIONS } from "../lib/quebecFeatures";
 import { toast } from "../components/Toast";
 import { logger } from "../lib/logger";
@@ -179,7 +180,7 @@ export const Upload: React.FC = () => {
         });
         if (!post) throw new Error("Erreur création post MUX");
         toast.success("Post publié! 🔥");
-        navigate("/");
+        navigate("/feed");
         return;
       }
 
@@ -191,7 +192,7 @@ export const Upload: React.FC = () => {
         });
         if (!post) throw new Error("Erreur création post Pexels");
         toast.success("Post publié! 🔥");
-        navigate("/");
+        navigate("/feed");
         return;
       }
 
@@ -213,7 +214,7 @@ export const Upload: React.FC = () => {
         if (post) {
           setIsUploading(false);
           toast.success("Publication réussie !");
-          navigate("/");
+          navigate("/feed");
           return;
         } else {
           throw new Error("Erreur lors de la création du post");
@@ -230,7 +231,7 @@ export const Upload: React.FC = () => {
         throw new Error(result.error || "Upload failed");
       }
       toast.success("Post publié! 🔥");
-      navigate("/");
+      navigate("/feed");
     } catch (error: any) {
       uploadLogger.error("Upload error:", error);
       toast.error(error.message || "Erreur lors de l'upload");
@@ -441,6 +442,20 @@ export const Upload: React.FC = () => {
                   placeholder="Quoi de neuf au Québec? #Mtl #Hiver ⚜️"
                   className="input-premium h-32 resize-none"
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!caption.trim()) {
+                      toast.warning("Écris une légende pour le brouillon.");
+                      return;
+                    }
+                    addDraft(caption.trim(), "upload");
+                    toast.success("Brouillon enregistré — retrouve-le dans Créateur.");
+                  }}
+                  className="mt-2 w-full py-2 rounded-xl border border-gold-500/40 text-gold-300 text-sm font-bold hover:bg-gold-500/10"
+                >
+                  Sauvegarder brouillon
+                </button>
               </div>
 
               {/* Ti-Guy AI Suggestions */}

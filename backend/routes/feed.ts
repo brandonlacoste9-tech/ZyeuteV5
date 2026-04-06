@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
-import { cacheMiddleware } from "../utils/cache.js";
 import { createClient } from "@supabase/supabase-js";
+import { verifyAuthToken } from "../supabase-auth.js";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
@@ -9,6 +9,22 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_S
 const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
+
+/** Sets req.userId when a valid Bearer token is present (does not 401). */
+async function attachOptionalUser(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
+  (req as any).userId = undefined;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const userId = await verifyAuthToken(token);
+    if (userId) (req as any).userId = userId;
+  }
+  next();
+}
 
 /** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
 async function getPostsViaSupabase(limit: number, page: number, hiveId = "quebec") {
@@ -91,7 +107,7 @@ router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
 
 // [NEW] Infinite Scroll Feed - Cursor-based Pagination using Supabase HTTP API
 // This bypasses DATABASE_URL issues by using Supabase HTTP API directly
-router.get("/infinite", async (req: Request, res: Response) => {
+router.get("/infinite", attachOptionalUser, async (req: Request, res: Response) => {
   try {
     const supabaseUrl =
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -123,7 +139,25 @@ router.get("/infinite", async (req: Request, res: Response) => {
       cursor,
       feedType,
       hiveId,
+      userId: (req as any).userId || null,
     });
+
+    const viewerId = (req as any).userId as string | undefined;
+    let authorIds: string[] | null = null;
+    if (feedType === "feed" && viewerId) {
+      const { data: subs, error: subErr } = await supabase
+        .from("abonnements")
+        .select("followee_id")
+        .eq("follower_id", viewerId);
+      if (!subErr && subs?.length) {
+        const followed = subs
+          .map((s: { followee_id: string }) => s.followee_id)
+          .filter(Boolean);
+        authorIds = [...new Set([...followed, viewerId])];
+      } else {
+        authorIds = [viewerId];
+      }
+    }
 
     let query = supabase
       .from("publications")
@@ -144,6 +178,10 @@ router.get("/infinite", async (req: Request, res: Response) => {
       .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
       .order("created_at", { ascending: false })
       .limit(limit + 1);
+
+    if (authorIds && authorIds.length > 0) {
+      query = query.in("user_id", authorIds);
+    }
 
     if (cursor) {
       query = query.lt("created_at", cursor);
@@ -179,6 +217,8 @@ router.get("/infinite", async (req: Request, res: Response) => {
       hasMore,
       nextCursor,
       source: "supabase-http-v2",
+      feedType,
+      followingFiltered: !!(feedType === "feed" && authorIds?.length),
     });
   } catch (error) {
     res.status(500).json({

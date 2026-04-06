@@ -12,9 +12,14 @@ import React, {
   useMemo,
 } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { getCurrentUser, togglePostFire } from "@/services/api";
+import {
+  getCurrentUser,
+  togglePostFire,
+  toggleFollow,
+} from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useInfiniteFeed } from "@/hooks/useInfiniteFeed";
+import { useInfiniteFeed, type FeedType } from "@/hooks/useInfiniteFeed";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
@@ -22,6 +27,12 @@ import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { GoldEditionSplash } from "@/components/features/GoldEditionSplash";
 import { HamburgerMenu } from "@/components/layout/HamburgerMenu";
+import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
+import { ShareSheet } from "@/components/feed/ShareSheet";
+import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
+import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
+import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
+import { toast } from "@/components/Toast";
 import type { Post, User } from "@/types";
 
 // ========================
@@ -243,6 +254,10 @@ export const LaZyeute: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { edgeLighting } = useTheme();
+  const { user: authUser, isGuest } = useAuth();
+
+  /** Pour toi = explore; Abonnements = people you follow (requires auth for filtering). */
+  const [feedSource, setFeedSource] = useState<FeedType>("explore");
 
   // Infinite scroll hook
   const {
@@ -251,7 +266,8 @@ export const LaZyeute: React.FC = () => {
     isLoading,
     isFetchingNextPage,
     hasNextPage,
-  } = useInfiniteFeed("explore");
+    refetch,
+  } = useInfiniteFeed(feedSource);
 
   // Fallback: Use demo videos when API returns empty
   const posts = useMemo(() => {
@@ -274,6 +290,18 @@ export const LaZyeute: React.FC = () => {
     return true;
   });
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [sharePostId, setSharePostId] = useState<string | null>(null);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportCtx, setReportCtx] = useState<{
+    postId: string;
+    authorUserId?: string;
+  } | null>(null);
+  const [followedMap, setFollowedMap] = useState<Record<string, boolean>>({});
 
   const touchStartY = useRef<number>(0);
   const touchEndY = useRef<number>(0);
@@ -315,7 +343,21 @@ export const LaZyeute: React.FC = () => {
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
       setCurrentIndex(newIndex);
     }
-  }, [currentIndex, posts.length]);
+    if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+    scrollSaveTimer.current = setTimeout(() => {
+      const idx = Math.round(scrollTop / viewportHeight);
+      if (idx >= 0 && idx < posts.length) {
+        try {
+          sessionStorage.setItem(
+            `zyeute_la_scroll_${feedSource}`,
+            String(idx),
+          );
+        } catch {
+          /* */
+        }
+      }
+    }, 400);
+  }, [currentIndex, posts.length, feedSource]);
 
   // Touch gesture handlers for swipe
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -357,24 +399,89 @@ export const LaZyeute: React.FC = () => {
     [currentIndex, posts.length],
   );
 
+  const uid = authUser?.id ?? currentUser?.id;
+
   const handleFireToggle = async (postId: string) => {
-    if (!currentUser) return;
+    if (!uid) return;
     try {
-      await togglePostFire(postId, currentUser.id);
+      await togglePostFire(postId, uid);
       // The infinite feed hook will automatically refetch and update
     } catch (error) {
       console.error("Error toggling fire:", error);
     }
   };
 
-  const handleShare = async (postId: string) => {
-    const url = `${window.location.origin}/p/${postId}`;
-    if (navigator.share) {
-      await navigator.share({ title: "Regarde ça sur Zyeuté!", url });
+  const openShare = (postId: string) => {
+    setSharePostId(postId);
+    setShareOpen(true);
+  };
+
+  const openComments = (postId: string) => {
+    setCommentsPostId(postId);
+    setCommentsOpen(true);
+  };
+
+  const tryPictureInPicture = useCallback(() => {
+    const root = containerRef.current;
+    const v = root?.querySelector("video") as HTMLVideoElement | null;
+    if (!v) {
+      toast.error("Aucune vidéo active.");
+      return;
+    }
+    if (!document.pictureInPictureEnabled) {
+      toast.error("PiP non supporté sur ce navigateur.");
+      return;
+    }
+    if (document.pictureInPictureElement) {
+      document.exitPictureInPicture().catch(() => {});
+      return;
+    }
+    v.requestPictureInPicture().catch(() => {
+      toast.error("Impossible d’activer le PiP.");
+    });
+  }, []);
+
+  const handleFollowToggle = async (author: User | undefined) => {
+    if (!author?.id) return;
+    if (!authUser?.id) {
+      toast.error("Connecte-toi pour suivre.");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    if (author.id === authUser.id) return;
+    const isF =
+      followedMap[author.id] ?? (author as { is_following?: boolean }).is_following ?? false;
+    const ok = await toggleFollow(authUser.id, author.id, isF);
+    if (ok) {
+      setFollowedMap((m) => ({ ...m, [author.id]: !isF }));
+      toast.success(isF ? "Désabonné" : "Abonné!");
     } else {
-      await navigator.clipboard.writeText(url);
+      toast.error("Action impossible pour l’instant.");
     }
   };
+
+  const feedRestoreOnce = useRef(false);
+  useEffect(() => {
+    feedRestoreOnce.current = false;
+  }, [feedSource]);
+
+  useEffect(() => {
+    if (posts.length === 0 || feedRestoreOnce.current) return;
+    const raw = sessionStorage.getItem(`zyeute_la_scroll_${feedSource}`);
+    const el = containerRef.current;
+    if (!el) return;
+    const idx = raw
+      ? Math.min(
+          Math.max(0, parseInt(raw, 10) || 0),
+          Math.max(0, posts.length - 1),
+        )
+      : 0;
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: idx * window.innerHeight, behavior: "auto" });
+      setCurrentIndex(idx);
+      feedRestoreOnce.current = true;
+    });
+  }, [posts.length, feedSource]);
 
   const togglePlayPause = useCallback(() => {
     setIsPlaying((prev) => !prev);
@@ -469,6 +576,7 @@ export const LaZyeute: React.FC = () => {
   );
 
   return (
+    <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
     <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden">
       {/* Dynamic Edge Lighting (React-optimized) */}
       <div
@@ -569,6 +677,47 @@ export const LaZyeute: React.FC = () => {
             )}
           </button>
         </div>
+      </div>
+
+      <div className="flex-shrink-0 z-40 flex justify-center items-center gap-2 px-3 py-2 border-b border-gold-500/10 bg-black/50">
+        <button
+          type="button"
+          onClick={() => {
+            setFeedSource("explore");
+            feedRestoreOnce.current = false;
+            void refetch();
+          }}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+            feedSource === "explore"
+              ? "bg-gold-500 text-black"
+              : "bg-white/10 text-gold-200"
+          }`}
+        >
+          Pour toi
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setFeedSource("feed");
+            feedRestoreOnce.current = false;
+            void refetch();
+          }}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+            feedSource === "feed"
+              ? "bg-gold-500 text-black"
+              : "bg-white/10 text-gold-200"
+          }`}
+        >
+          Abonnements
+        </button>
+        <button
+          type="button"
+          onClick={tryPictureInPicture}
+          className="px-2 py-1.5 rounded-full text-[10px] font-bold bg-white/10 text-gold-200 border border-gold-500/30"
+          title="Picture-in-picture (vidéo native)"
+        >
+          PiP
+        </button>
       </div>
 
       {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
@@ -701,12 +850,41 @@ export const LaZyeute: React.FC = () => {
                 )}
               </Link>
 
-              {/* Caption */}
-              {post.caption && (
-                <p className="text-white text-sm mb-2 line-clamp-3">
-                  {post.caption}
-                </p>
-              )}
+              {/* Caption + signalement */}
+              <div className="flex items-start justify-between gap-2 mb-1">
+                {post.caption ? (
+                  <CaptionWithHashtags
+                    text={post.caption}
+                    className="text-white text-sm mb-2 line-clamp-3 flex-1"
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReportCtx({
+                      postId: post.id,
+                      authorUserId: post.user?.id,
+                    });
+                    setReportOpen(true);
+                  }}
+                  className="text-white/50 text-lg px-1 shrink-0"
+                  aria-label="Signaler"
+                >
+                  ⋯
+                </button>
+              </div>
+              {post.user?.id && post.user.id !== authUser?.id ? (
+                <button
+                  type="button"
+                  onClick={() => handleFollowToggle(post.user as User)}
+                  className="mb-2 px-3 py-1 rounded-full text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40"
+                >
+                  {followedMap[post.user.id] ||
+                  (post.user as { is_following?: boolean }).is_following
+                    ? "Abonné"
+                    : "Suivre"}
+                </button>
+              ) : null}
 
               {/* Hashtags */}
               {post.hashtags && post.hashtags.length > 0 && (
@@ -878,8 +1056,9 @@ export const LaZyeute: React.FC = () => {
           </button>
 
           {/* Comments */}
-          <Link
-            to={`/p/${currentPost.id}`}
+          <button
+            type="button"
+            onClick={() => openComments(currentPost.id)}
             className="flex flex-col items-center gap-1 press-scale"
             data-testid={`link-comments-${currentPost.id}`}
           >
@@ -908,11 +1087,11 @@ export const LaZyeute: React.FC = () => {
                 (currentPost as PostWithEngagement).comment_count ??
                 0}
             </span>
-          </Link>
+          </button>
 
           {/* Share */}
           <button
-            onClick={() => handleShare(currentPost.id)}
+            onClick={() => openShare(currentPost.id)}
             className="flex flex-col items-center gap-1 press-scale"
             data-testid={`button-share-${currentPost.id}`}
           >
@@ -1122,7 +1301,35 @@ export const LaZyeute: React.FC = () => {
         open={showTiGuyChat}
         onClose={() => setShowTiGuyChat(false)}
       />
+
+      <ShareSheet
+        open={shareOpen && !!sharePostId}
+        postId={sharePostId || ""}
+        onClose={() => {
+          setShareOpen(false);
+          setSharePostId(null);
+        }}
+      />
+      <FeedCommentsSheet
+        open={commentsOpen && !!commentsPostId}
+        postId={commentsPostId || ""}
+        onClose={() => {
+          setCommentsOpen(false);
+          setCommentsPostId(null);
+        }}
+        canComment={!!authUser?.id && !isGuest}
+      />
+      <ReportPostSheet
+        open={reportOpen && !!reportCtx}
+        postId={reportCtx?.postId || ""}
+        authorUserId={reportCtx?.authorUserId}
+        onClose={() => {
+          setReportOpen(false);
+          setReportCtx(null);
+        }}
+      />
     </div>
+    </FeedErrorBoundary>
   );
 };
 

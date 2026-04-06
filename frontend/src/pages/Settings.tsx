@@ -523,6 +523,21 @@ export const Settings: React.FC = () => {
       "/settings/notifications",
       "/parental",
       "/premium",
+      "/messages",
+      "/moderation",
+      "/feed/grid",
+      "/legal/terms",
+      "/legal/privacy",
+      "/legal/community",
+      "/admin/dashboard",
+      "/admin/hive",
+      "/admin/email",
+      "/admin/observability",
+      "/admin/video-doctor",
+      "/admin/tiktok-curation",
+      "/ai-studio",
+      "/upload",
+      "/creator",
     ];
 
     if (item.path && existingRoutes.includes(item.path)) {
