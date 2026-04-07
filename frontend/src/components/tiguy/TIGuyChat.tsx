@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Settings, X, ChevronDown } from "lucide-react";
+import { tiguyService } from "@/services/tiguyService";
 
 interface Message {
   id: string;
@@ -63,38 +64,23 @@ export const TIGuyChat: React.FC<TIGuyChatProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/tiguy/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          message: userMessage.text,
-          context: { userId },
-        }),
+      const data = await tiguyService.sendMessage(userMessage.text, undefined, {
+        history: messages.slice(-6).map((message) => ({
+          sender: message.sender,
+          text: message.text,
+        })),
+        context: { userId },
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        const tiguyMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: data.response,
-          sender: "tiguy",
-          timestamp: new Date(),
-          intent: data.intent,
-          action: data.action,
-        };
-        setMessages((prev) => [...prev, tiguyMessage]);
-      } else {
-        const fallbackMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: "Osti, j'ai un petit problème technique! Réessaie dans un peu. 🦫",
-          sender: "tiguy",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, fallbackMessage]);
-      }
+      const tiguyMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: (data as { response?: string }).response ||
+          "Osti, j'ai un petit problème technique! Réessaie dans un peu. 🦫",
+        sender: "tiguy",
+        timestamp: new Date(),
+        intent: (data as { intent?: string }).intent,
+        action: (data as { action?: any }).action,
+      };
+      setMessages((prev) => [...prev, tiguyMessage]);
     } catch (error) {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),

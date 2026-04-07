@@ -16,6 +16,7 @@ import {
   Sparkles,
   History,
 } from "lucide-react";
+import { getSessionWithTimeout } from "@/lib/supabase";
 
 interface Message {
   id: string;
@@ -57,6 +58,28 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   userId,
   username,
 }) => {
+  const getAuthHeaders = useCallback(async () => {
+    const {
+      data: { session },
+    } = await getSessionWithTimeout(3000);
+    const token = session?.access_token;
+
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }, []);
+
+  const buildRecentHistory = useCallback(
+    () =>
+      messages
+        .slice(-8)
+        .map((message) => ({
+          sender: message.sender,
+          text: message.text,
+        })),
+    [messages],
+  );
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -116,12 +139,9 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
       "Salut mon chum! C'est TI-GUY, ton guide québécois préféré! Pose-moi des questions sur le Québec!";
 
     try {
-      const response = await fetch("/api/tiguy/voice/test", {
+      const response = await fetch("/api/tiguy/actions/voice/test", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ text, voice: "ti-guy" }),
       });
 
@@ -156,7 +176,7 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   const loadChatHistory = async () => {
     try {
       const response = await fetch("/api/tiguy/history", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: await getAuthHeaders(),
       });
       if (response.ok) {
         const data = await response.json();
@@ -193,14 +213,12 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
     try {
       const response = await fetch("/api/tiguy/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           message: text.trim(),
           audio: audioBase64,
-          context: { userId },
+          history: buildRecentHistory(),
+          context: { userId, username },
         }),
       });
 
@@ -318,14 +336,12 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
       try {
         const response = await fetch("/api/tiguy/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+          headers: await getAuthHeaders(),
           body: JSON.stringify({
             message: `Analyse ce fichier: ${file.name}`,
             image: file.type.startsWith("image/") ? base64File : undefined,
-            context: { userId },
+            history: buildRecentHistory(),
+            context: { userId, username, fileName: file.name },
           }),
         });
 

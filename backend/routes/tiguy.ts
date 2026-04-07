@@ -2,6 +2,7 @@ import express from "express";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator";
+import { getGeminiModel } from "../ai/google.js";
 
 const router = express.Router();
 
@@ -15,9 +16,75 @@ const deepseek = createOpenAI({
 // Create model instance (DeepSeek V3 "chat" model)
 const model = deepseek("deepseek-chat");
 
+function buildLocalTiGuyReply(prompt: string) {
+  const lower = prompt.toLowerCase();
+
+  if (lower.includes("caption") || lower.includes("légende")) {
+    return "Ayoye, essaie ça mon chum: ‘Montréal brille fort à soir ⚜️✨ #MTL #Zyeute #Qc’";
+  }
+  if (lower.includes("image") || lower.includes("photo")) {
+    return "J'vois le vibe que tu cherches! Donne-moi le mood, les couleurs, pis le style, pis j'te guide comme du monde. 🎨";
+  }
+  if (lower.includes("vidéo") || lower.includes("video")) {
+    return "Pour ton vidéo, garde ça court, punché, pis vertical. Hook dans les 2 premières secondes, sinon le monde swipe! 🎬";
+  }
+  if (lower.includes("habs") || lower.includes("hockey")) {
+    return "Les Habs, c'est une religion icitte mon loup! Donne-moi ton angle pis j'te monte une réponse de partisan solide. 🏒";
+  }
+  if (lower.includes("météo") || lower.includes("meteo") || lower.includes("temps")) {
+    return "J'ai pas le radar live en ce moment, mais au Québec faut toujours prévoir une petite surprise du ciel, hein! 🌤️";
+  }
+  if (lower.includes("poutine") || lower.includes("resto") || lower.includes("bouffe")) {
+    return "Si on parle bouffe, vise quelque chose de décadent, local, pis sans fla-fla. Une bonne poutine, ça règle bien des affaires. 🍟";
+  }
+
+  return "Salut mon chum! Chu là, pis j'suis prêt à t'aider avec Zyeuté, tes captions, tes idées de vidéos, ou juste jaser un brin. 🦫";
+}
+
+async function generateTiGuyReply(prompt: string) {
+  if (process.env.DEEPSEEK_API_KEY) {
+    try {
+      const { text } = await generateText({
+        model,
+        system: TIGUY_SYSTEM_PROMPT,
+        prompt,
+      });
+      return { text, provider: "deepseek-v3" };
+    } catch (error) {
+      console.warn("[TI-GUY] DeepSeek failed, trying Gemini fallback:", error);
+    }
+  }
+
+  try {
+    const geminiModel = getGeminiModel("gemini-1.5-flash", TIGUY_SYSTEM_PROMPT);
+    const result = await geminiModel.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    if (text) {
+      return { text, provider: "gemini-1.5-flash" };
+    }
+  } catch (error) {
+    console.warn("[TI-GUY] Gemini fallback failed:", error);
+  }
+
+  return {
+    text: buildLocalTiGuyReply(prompt),
+    provider: "fallback-local",
+  };
+}
+
 router.post("/chat", async (req, res) => {
   try {
-    const { message, history, image } = req.body;
+    const { message, history, image, context } = req.body as {
+      message?: string;
+      history?: Array<{ sender?: "user" | "tiguy"; text?: string }>;
+      image?: string;
+      context?: {
+        userId?: string;
+        username?: string;
+        fileName?: string;
+      };
+    };
 
     if (!message && !image) {
       return res.status(400).json({
@@ -25,24 +92,46 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    // Convert history to Vercel AI SDK format if needed, or just append to prompt
-    // For simple chat, we'll just pass the system prompt + user message
-    // Ideally, we'd pass the conversation history properly
+    const safeHistory = Array.isArray(history)
+      ? history
+          .filter((entry) => entry && typeof entry.text === "string")
+          .slice(-8)
+      : [];
 
-    // Simple implementation: System Prompt + Context + User Message
-    const { text } = await generateText({
-      model: model,
-      system: TIGUY_SYSTEM_PROMPT,
-      prompt: message, // TODO: Add history context if provided
-      // maxTokens: 4096, // Optional constraint
-    });
+    const conversationContext = safeHistory.length
+      ? safeHistory
+          .map(
+            (entry) =>
+              `${entry.sender === "tiguy" ? "Ti-Guy" : "Utilisateur"}: ${entry.text}`,
+          )
+          .join("\n")
+      : "";
+
+    const promptParts = [
+      context?.username ? `Nom de l'utilisateur: ${context.username}` : "",
+      context?.userId ? `User ID: ${context.userId}` : "",
+      context?.fileName ? `Fichier partagé: ${context.fileName}` : "",
+      conversationContext ? `Historique récent:\n${conversationContext}` : "",
+      image
+        ? "L'utilisateur a joint une image. Réponds en tenant compte de ce contexte visuel même si l'image n'est pas directement analysée côté modèle."
+        : "",
+      `Message actuel: ${message || "[image seulement]"}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const aiResult = await generateTiGuyReply(promptParts);
 
     res.json({
-      response: text,
-      type: "text",
+      response: aiResult.text,
+      type: image ? "image" : "text",
       timestamp: new Date().toISOString(),
       isAi: true,
-      metadata: { model: "deepseek-v3" },
+      metadata: {
+        model: aiResult.provider,
+        historyCount: safeHistory.length,
+        hasImage: !!image,
+      },
     });
   } catch (error: any) {
     console.error("TI-GUY AI error:", error);
