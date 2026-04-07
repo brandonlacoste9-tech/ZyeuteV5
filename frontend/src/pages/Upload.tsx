@@ -270,6 +270,20 @@ export const Upload: React.FC = () => {
                     setMuxData(d);
                     setUploadMode(null);
                   }}
+                  onFallbackUpload={(fallbackFile) => {
+                    if (fallbackFile.size > 50 * 1024 * 1024) {
+                      setUploadMode(null);
+                      toast.error(
+                        "Mux indisponible et l'upload direct est limité à 50MB.",
+                      );
+                      return;
+                    }
+                    setFile(fallbackFile);
+                    setPreview(URL.createObjectURL(fallbackFile));
+                    setMuxData(null);
+                    setUploadMode(null);
+                    toast.info("Mux indisponible — passage à l'upload direct.");
+                  }}
                   onCancel={() => setUploadMode(null)}
                 />
               </div>

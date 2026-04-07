@@ -92,11 +92,14 @@ export function MuxUpload({
         console.warn(
           "[MuxUpload] Mux unavailable, falling back to surgical upload",
         );
+        if (onFallbackUpload) {
+          onFallbackUpload(file);
+          return;
+        }
         setUploadStatus("error");
         setErrorMessage(
           "Mux non disponible. Utilisation de l'upload direct...",
         );
-        // Trigger fallback via parent
         onError?.(new Error("Mux unavailable, use surgical upload"));
         return;
       }
