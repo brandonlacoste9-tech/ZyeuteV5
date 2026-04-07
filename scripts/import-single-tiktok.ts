@@ -6,9 +6,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Fix for TLS issues if needed
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+const supabaseUrl =
+  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TIKTOK_SCRAPER_API_KEY = process.env.TIKTOK_SCRAPER_API_KEY;
 
@@ -19,27 +20,71 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const OMKAR_DETAILS_API = "https://tiktok-scraper.omkar.cloud/tiktok/videos/details";
+const OMKAR_DETAILS_API =
+  "https://tiktok-scraper.omkar.cloud/tiktok/videos/details";
+const TIKWM_DETAILS_API = "https://www.tikwm.com/api/";
 
 async function fetchVideoDetails(videoUrl: string) {
-  if (!TIKTOK_SCRAPER_API_KEY) {
-    console.error("❌ TIKTOK_SCRAPER_API_KEY missing.");
-    return null;
+  if (TIKTOK_SCRAPER_API_KEY) {
+    try {
+      console.log(`[TikTok] Fetching details via Omkar for: ${videoUrl}...`);
+      const response = await axios.get(OMKAR_DETAILS_API, {
+        params: { video_url: videoUrl },
+        headers: { "API-Key": TIKTOK_SCRAPER_API_KEY },
+      });
+
+      return { ...response.data, provider: "omkar" };
+    } catch (error: any) {
+      console.warn(
+        `[TikTok] Omkar details failed, trying TikWM:`,
+        error.message,
+      );
+      if (error.response) {
+        console.warn(`[TikTok] Omkar API Error Details:`, error.response.data);
+      }
+    }
   }
 
   try {
-    console.log(`[TikTok] Fetching details for: ${videoUrl}...`);
-    const response = await axios.get(OMKAR_DETAILS_API, {
-      params: { video_url: videoUrl },
-      headers: { "API-Key": TIKTOK_SCRAPER_API_KEY },
+    console.log(`[TikTok] Fetching details via TikWM for: ${videoUrl}...`);
+    const body = new URLSearchParams({ url: videoUrl, hd: "1" });
+    const response = await axios.post(TIKWM_DETAILS_API, body, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      },
     });
 
-    return response.data;
-  } catch (error: any) {
-    console.error(`[TikTok] Error fetching details:`, error.message);
-    if (error.response) {
-      console.error(`[TikTok] API Error Details:`, error.response.data);
+    const data = response.data?.data;
+    if (response.data?.code !== 0 || !data?.id) {
+      console.error("[TikTok] TikWM error:", response.data);
+      return null;
     }
+
+    return {
+      video_id: data.id,
+      caption: data.title || "",
+      author: {
+        handle: data.author?.unique_id || data.author?.nickname || "unknown",
+        nickname: data.author?.nickname || data.author?.unique_id || "unknown",
+        avatar: data.author?.avatar || "",
+      },
+      media: {
+        video_url: data.play || data.hdplay,
+        hd_video_url: data.hdplay || undefined,
+      },
+      thumbnails: {
+        cover_url: data.cover || data.origin_cover || "",
+      },
+      stats: {
+        likes: data.digg_count || 0,
+        views: data.play_count || 0,
+        shares: data.share_count || 0,
+        comments: data.comment_count || 0,
+      },
+      provider: "tikwm",
+    };
+  } catch (error: any) {
+    console.error(`[TikTok] TikWM error fetching details:`, error.message);
     return null;
   }
 }
@@ -59,12 +104,13 @@ async function getAuthorUserId() {
     .select("id")
     .limit(1)
     .single();
-  
+
   return fallback?.id || null;
 }
 
 async function run() {
-  const videoUrl = "https://www.tiktok.com/@remmitheshihtzu/video/7404161461565623582";
+  const videoUrl =
+    "https://www.tiktok.com/@remmitheshihtzu/video/7404161461565623582";
   console.log("🎬 Single Video Import Test");
   console.log("===============================");
 
@@ -97,10 +143,10 @@ async function run() {
       media_metadata: {
         tiktok_id: v.video_id,
         author: v.author?.handle,
-        source: "tiktok-scraper",
+        source: v.provider || "tiktok-url-import",
         stats: v.stats,
-        original_url: videoUrl
-      }
+        original_url: videoUrl,
+      },
     })
     .select();
 

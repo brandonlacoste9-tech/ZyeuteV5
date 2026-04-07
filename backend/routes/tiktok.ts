@@ -1,12 +1,18 @@
 /**
  * TikTok curation: Omkar Cloud search/trending/details + import (staff-only).
  */
-import { Router, type Request, type Response, type NextFunction } from "express";
+import {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import { storage } from "../storage.js";
 import {
   hasImportableVideoPayload,
   importTikTokVideoToFeed,
   resolveTikTokVideoForImport,
+  type TikTokFeedImportResult,
 } from "../services/tiktok-feed-import.js";
 import {
   TikTokScraperService,
@@ -15,11 +21,7 @@ import {
 
 const router = Router();
 
-async function requireStaff(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
+async function requireStaff(req: Request, res: Response, next: NextFunction) {
   if (!req.userId) {
     return res.status(401).json({ error: "Non authentifié" });
   }
@@ -53,11 +55,14 @@ router.get("/diag", async (_req, res) => {
   };
   try {
     const axios = (await import("axios")).default;
-    const r = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
-      params: { search_query: "quebec", market: "ca", max_results: 1 },
-      headers: { "API-Key": key || "" },
-      timeout: 10000,
-    });
+    const r = await axios.get(
+      "https://tiktok-scraper.omkar.cloud/tiktok/videos/search",
+      {
+        params: { search_query: "quebec", market: "ca", max_results: 1 },
+        headers: { "API-Key": key || "" },
+        timeout: 10000,
+      },
+    );
     diag.omkarStatus = r.status;
     diag.omkarVideoCount = r.data?.videos?.length ?? 0;
     diag.omkarSample = r.data?.videos?.[0]?.video_id ?? null;
@@ -122,7 +127,7 @@ router.get("/trending", requireStaff, async (req, res) => {
 // POST /api/tiktok/import — { video }, { videoUrl }, or { video_url, metadata? }
 router.post("/import", requireStaff, async (req, res) => {
   const body = req.body as Record<string, unknown>;
-  let raw: unknown = pickVideoPayload(body);
+  const raw: unknown = pickVideoPayload(body);
   const videoUrlParam =
     typeof body.videoUrl === "string"
       ? body.videoUrl.trim()
@@ -130,12 +135,17 @@ router.post("/import", requireStaff, async (req, res) => {
         ? (body.video_url as string).trim()
         : "";
 
-  const resolved = await resolveTikTokVideoForImport(raw, videoUrlParam || undefined);
+  const resolved = await resolveTikTokVideoForImport(
+    raw,
+    videoUrlParam || undefined,
+  );
   if ("error" in resolved) {
-    const e = resolved.error;
+    const e = resolved.error as Exclude<TikTokFeedImportResult, { ok: true }>;
     switch (e.reason) {
       case "details_fetch_failed":
-        return res.status(503).json({ error: e.detail || "Détails TikTok indisponibles." });
+        return res
+          .status(503)
+          .json({ error: e.detail || "Détails TikTok indisponibles." });
       case "invalid_payload":
         return res.status(400).json({
           error:
@@ -148,7 +158,7 @@ router.post("/import", requireStaff, async (req, res) => {
 
   const result = await importTikTokVideoToFeed(resolved.video, {
     videoUrlHint: videoUrlParam || undefined,
-    metadataSource: "tiktok-scraper",
+    metadataSource: resolved.provider,
   });
 
   if (result.ok) {

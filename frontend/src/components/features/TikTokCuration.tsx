@@ -96,8 +96,7 @@ export function TikTokCuration() {
       if (!data?.videos?.length) {
         toast({
           title: "Tendances vides",
-          description:
-            "Réessaie plus tard ou lance une recherche par mot-clé.",
+          description: "Réessaie plus tard ou lance une recherche par mot-clé.",
         });
       }
     } catch {
@@ -118,7 +117,8 @@ export function TikTokCuration() {
     if (!url.includes("tiktok.com")) {
       toast({
         title: "URL invalide",
-        description: "Colle un lien de vidéo TikTok (tiktok.com/.../video/...).",
+        description:
+          "Colle un lien de vidéo TikTok (tiktok.com/.../video/...).",
         variant: "destructive",
       });
       return;
@@ -145,7 +145,7 @@ export function TikTokCuration() {
       toast({
         title: "Import par lien impossible",
         description:
-          "Vérifie TIKTOK_SCRAPER_API_KEY (Omkar) pour les imports par URL, ou importe depuis la grille.",
+          "Vérifie le fournisseur TikTok côté serveur (Omkar ou fallback URL), ou importe depuis la grille.",
         variant: "destructive",
       });
     } finally {
@@ -256,7 +256,7 @@ export function TikTokCuration() {
             <div className="flex flex-1 items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800 px-3">
               <Link2 className="h-4 w-4 shrink-0 text-zinc-500" />
               <Input
-                placeholder="Coller un lien vidéo TikTok (import direct — Omkar requis)"
+                placeholder="Coller un lien vidéo TikTok (import direct)"
                 value={pasteUrl}
                 onChange={(e) => setPasteUrl(e.target.value)}
                 className="h-11 border-0 bg-transparent px-0 text-white placeholder:text-zinc-500 focus-visible:ring-0"
@@ -309,7 +309,9 @@ export function TikTokCuration() {
                   </p>
                   <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-white/60">
                     <span>{video.stats.views.toLocaleString()} vues</span>
-                    <span>{video.stats.likes.toLocaleString()} j&apos;aime</span>
+                    <span>
+                      {video.stats.likes.toLocaleString()} j&apos;aime
+                    </span>
                   </div>
                 </div>
 

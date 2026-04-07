@@ -5,7 +5,10 @@ import { db, storage } from "../storage.js";
 import { posts, users } from "../../shared/schema.js";
 import { sql } from "drizzle-orm";
 import { v3Mod } from "../v3-swarm.js";
-import { TikTokScraperService, type TikTokVideo } from "./tiktok-scraper-service.js";
+import {
+  TikTokScraperService,
+  type TikTokVideo,
+} from "./tiktok-scraper-service.js";
 
 export type TikTokFeedImportResult =
   | { ok: true; postId: string }
@@ -43,9 +46,9 @@ export function hasImportableVideoPayload(v: unknown): v is TikTokVideo {
   const o = v as TikTokVideo;
   return Boolean(
     o.video_id &&
-      o.media &&
-      typeof o.media.video_url === "string" &&
-      o.media.video_url.length > 0,
+    o.media &&
+    typeof o.media.video_url === "string" &&
+    o.media.video_url.length > 0,
   );
 }
 
@@ -62,7 +65,9 @@ export type ImportTikTokOptions = {
 export async function resolveTikTokVideoForImport(
   raw: unknown,
   videoUrl: string | undefined,
-): Promise<{ video: TikTokVideo } | { error: TikTokResolveImportError }> {
+): Promise<
+  { video: TikTokVideo; provider: string } | { error: TikTokResolveImportError }
+> {
   let v = raw;
   if (!hasImportableVideoPayload(v)) {
     const url = videoUrl?.trim();
@@ -72,15 +77,6 @@ export async function resolveTikTokVideoForImport(
           ok: false,
           reason: "invalid_payload",
           detail: "Missing video object or URL.",
-        },
-      };
-    }
-    if (!process.env.TIKTOK_SCRAPER_API_KEY) {
-      return {
-        error: {
-          ok: false,
-          reason: "details_fetch_failed",
-          detail: "TIKTOK_SCRAPER_API_KEY required for URL import.",
         },
       };
     }
@@ -97,7 +93,10 @@ export async function resolveTikTokVideoForImport(
     v = fetched;
   }
 
-  return { video: v as TikTokVideo };
+  return {
+    video: v as TikTokVideo,
+    provider: (v as TikTokVideo).provider ?? "tiktok-url-import",
+  };
 }
 
 /**
@@ -196,8 +195,7 @@ export async function importTikTokVideoToFeed(
       visibility: "public",
       hiveId,
       processingStatus: "completed",
-      fireCount:
-        typeof video.stats?.likes === "number" ? video.stats.likes : 0,
+      fireCount: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
       mediaMetadata: {
         tiktok_id: videoId,
         author: authorHandle,
