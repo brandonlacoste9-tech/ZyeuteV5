@@ -126,6 +126,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // HLS.js for .m3u8 sources (adaptive bitrate)
   const hlsRef = useRef<Hls | null>(null);
+  /** Bumps HLS.js teardown/rebuild when user taps Réessayer (video must stay mounted). */
+  const [hlsReloadNonce, setHlsReloadNonce] = useState(0);
   const isHlsSrc =
     src &&
     typeof src === "string" &&
@@ -269,7 +271,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         el.src = "";
       };
     }
-  }, [src, isHlsSrc, autoPlay]);
+  }, [src, isHlsSrc, autoPlay, hlsReloadNonce]);
 
   // Pause HLS when not autoPlay
   useEffect(() => {
@@ -581,6 +583,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }, 8000);
   }, []);
 
+  const handleManualRetry = useCallback(() => {
+    retryCountRef.current = 0;
+    progress70FiredRef.current = false;
+    setBufferProgress(0);
+    setReadiness("loading");
+
+    if (isHlsSrc && Hls.isSupported()) {
+      setHlsReloadNonce((n) => n + 1);
+      return;
+    }
+
+    const v = videoRef.current;
+    if (!v) return;
+    if (src) {
+      const freshUrl = src.includes("?")
+        ? `${src}&_retry=${Date.now()}`
+        : `${src}?_retry=${Date.now()}`;
+      v.src = freshUrl;
+    }
+    v.load();
+    if (autoPlay) {
+      v.play().catch(() => {});
+    }
+  }, [isHlsSrc, src, autoPlay]);
+
   const handleCanPlay = useCallback(() => {
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
@@ -676,9 +703,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
       }, t1);
     } else {
-      // Progressive MP4 / blob / other
-      const t1 = 24_000;
-      const t2 = 20_000;
+      // Progressive MP4 / blob / other (slightly longer for slow mobile / CDN)
+      const t1 = 32_000;
+      const t2 = 24_000;
       loadingTimeoutRef.current = setTimeout(() => {
         videoPlayerLogger.warn(
           `Video loading timeout (${t1}ms) for ${src.substring(0, 50)}...`,
@@ -963,54 +990,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  if (readiness === "error") {
-    return (
-      <div
-        className={cn(
-          "relative flex items-center justify-center bg-zinc-900",
-          className,
-        )}
-        style={style}
-      >
-        <div className="text-center p-4 max-w-xs">
-          <div className="text-4xl mb-2">⚠️</div>
-          <p className="text-white/60 text-sm mb-1">Vidéo non disponible</p>
-          <p className="text-white/40 text-xs mb-4">
-            Vérifie ta connexion ou réessaie
-          </p>
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={() => {
-                retryCountRef.current = 0;
-                setReadiness("loading");
-                setBufferProgress(0);
-                if (videoRef.current) {
-                  // Fresh reload with cache-bust
-                  if (src) {
-                    const freshUrl = src.includes("?")
-                      ? `${src}&_fresh=${Date.now()}`
-                      : `${src}?_fresh=${Date.now()}`;
-                    videoRef.current.src = freshUrl;
-                  }
-                  videoRef.current.load();
-                }
-              }}
-              className="px-5 py-2.5 bg-linear-to-r from-[#D4AF37] to-[#FFD700] text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all active:scale-95 text-sm"
-            >
-              Réessayer
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-white/10 text-white/70 rounded-full hover:bg-white/15 transition-colors text-sm"
-            >
-              Rafraîchir
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={cn(
@@ -1118,8 +1097,41 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         />
       )}
       {/* Loading / Buffering State — smooth fade overlay */}
+      {readiness === "error" && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 video-transitioning">
+          <div className="text-center p-4 max-w-xs">
+            <div className="text-4xl mb-2">⚠️</div>
+            <p className="text-white/60 text-sm mb-1">Vidéo non disponible</p>
+            <p className="text-white/40 text-xs mb-4">
+              Vérifie ta connexion ou réessaie
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManualRetry();
+                }}
+                className="px-5 py-2.5 bg-linear-to-r from-[#D4AF37] to-[#FFD700] text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(212,175,55,0.5)] transition-all active:scale-95 text-sm"
+              >
+                Réessayer
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-white/10 text-white/70 rounded-full hover:bg-white/15 transition-colors text-sm"
+              >
+                Rafraîchir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {readiness === "loading" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 video-transitioning">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 video-transitioning z-20">
           <div className="text-center">
             {/* Circular progress indicator */}
             <div className="relative w-14 h-14 mx-auto mb-3">
@@ -1170,7 +1182,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
       {/* Play/Pause Overlay */}
-      {!isPlaying && readiness !== "loading" && (
+      {!isPlaying &&
+        readiness !== "loading" &&
+        readiness !== "error" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <button
             onClick={(e) => {
@@ -1193,7 +1207,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div
         className={cn(
           "absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 via-black/40 to-transparent p-4 transition-opacity duration-300",
-          showControls || !isPlaying ? "opacity-100" : "opacity-0",
+          readiness === "error" && "pointer-events-none opacity-0",
+          readiness !== "error" &&
+            (showControls || !isPlaying ? "opacity-100" : "opacity-0"),
         )}
         onClick={(e) => e.stopPropagation()}
       >
