@@ -30,6 +30,9 @@ function manualChunks(id: string): string | undefined {
   if (id.includes("framer-motion")) {
     return "ui-motion";
   }
+  if (id.includes("hls.js")) {
+    return "vendor-hls";
+  }
   if (id.includes("recharts")) {
     return "ui-charts";
   }
