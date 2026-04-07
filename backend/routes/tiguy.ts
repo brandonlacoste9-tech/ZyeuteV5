@@ -1,20 +1,11 @@
 import express from "express";
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateText } from "ai";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator";
 import { getGeminiModel } from "../ai/google.js";
 
 const router = express.Router();
 
-// Initialize DeepSeek Model
-// We use the OpenAI compatible interface with DeepSeek's base URL
-const deepseek = createOpenAI({
-  apiKey: process.env.DEEPSEEK_API_KEY,
-  baseURL: "https://api.deepseek.com", // DeepSeek V3 API Endpoint
-});
-
-// Create model instance (DeepSeek V3 "chat" model)
-const model = deepseek("deepseek-chat");
+const DEEPSEEK_CHAT_COMPLETIONS_URL =
+  "https://api.deepseek.com/chat/completions";
 
 function buildLocalTiGuyReply(prompt: string) {
   const lower = prompt.toLowerCase();
@@ -44,12 +35,34 @@ function buildLocalTiGuyReply(prompt: string) {
 async function generateTiGuyReply(prompt: string) {
   if (process.env.DEEPSEEK_API_KEY) {
     try {
-      const { text } = await generateText({
-        model,
-        system: TIGUY_SYSTEM_PROMPT,
-        prompt,
+      const response = await fetch(DEEPSEEK_CHAT_COMPLETIONS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "deepseek-chat",
+          messages: [
+            { role: "system", content: TIGUY_SYSTEM_PROMPT },
+            { role: "user", content: prompt },
+          ],
+          temperature: 0.7,
+        }),
       });
-      return { text, provider: "deepseek-v3" };
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`DeepSeek ${response.status}: ${text || "request failed"}`);
+      }
+
+      const data = (await response.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const text = data.choices?.[0]?.message?.content?.trim();
+      if (text) {
+        return { text, provider: "deepseek-v3" };
+      }
     } catch (error) {
       console.warn("[TI-GUY] DeepSeek failed, trying Gemini fallback:", error);
     }
