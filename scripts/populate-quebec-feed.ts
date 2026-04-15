@@ -6,8 +6,15 @@
  */
 
 import { config } from "dotenv";
-import { join } from "path";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 config({ path: join(__dirname, "../.env") });
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 import { feedAutoGenerator } from "../backend/services/feed-auto-generator.js";
 import { storage, pool } from "../backend/storage.js";

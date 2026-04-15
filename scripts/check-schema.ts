@@ -1,5 +1,7 @@
 #!/usr/bin/env tsx
-// Check what columns actually exist in the publications table
+// Check what columns actually exist in the publications and user_profiles tables
+import "dotenv/config";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 import { Pool } from "pg";
 
 async function checkSchema() {
@@ -20,42 +22,58 @@ async function checkSchema() {
     const client = await pool.connect();
 
     const result = await client.query(`
-      SELECT column_name, data_type, is_nullable
+      SELECT table_name, column_name, data_type, is_nullable
       FROM information_schema.columns
-      WHERE table_name = 'publications'
-      ORDER BY ordinal_position;
+      WHERE table_name IN ('publications', 'user_profiles')
+      ORDER BY table_name, ordinal_position;
     `);
 
-    console.log("\n📊 Publications table columns:");
+    console.log("\n📊 Table columns:");
     console.log("================================\n");
 
-    const existingColumns = new Set();
+    const tableColumns = new Map<string, Set<string>>();
+
     result.rows.forEach((row) => {
       console.log(
-        `${row.column_name.padEnd(30)} ${row.data_type.padEnd(20)} ${row.is_nullable === "YES" ? "NULL" : "NOT NULL"}`,
+        `${row.table_name.padEnd(20)} | ${row.column_name.padEnd(30)} | ${row.data_type.padEnd(20)} | ${row.is_nullable === "YES" ? "NULL" : "NOT NULL"}`,
       );
-      existingColumns.add(row.column_name);
+      if (!tableColumns.has(row.table_name)) {
+        tableColumns.set(row.table_name, new Set());
+      }
+      tableColumns.get(row.table_name)!.add(row.column_name);
     });
 
-    console.log("\n🔍 Checking for missing columns...\n");
+    console.log("\n🔍 Checking for missing columns in user_profiles...\n");
 
-    const requiredColumns = [
-      "remix_type",
-      "original_post_id",
-      "remix_count",
-      "sound_id",
-      "sound_start_time",
+    const requiredUserColumns = [
+      "parent_id",
+      "ti_guy_comments_enabled",
+      "hive_id",
+      "karma_credits",
+      "cash_credits",
+      "total_gifts_sent",
+      "total_gifts_received",
+      "legendary_badges",
+      "tax_id",
+      "bee_alias",
+      "nectar_points",
+      "current_streak",
+      "max_streak",
+      "last_daily_bonus",
+      "unlocked_hives",
+      "raison_bannissement",
     ];
 
-    const missingColumns = requiredColumns.filter(
-      (col) => !existingColumns.has(col),
+    const userCols = tableColumns.get("user_profiles") || new Set();
+    const missingUserCols = requiredUserColumns.filter(
+      (col) => !userCols.has(col),
     );
 
-    if (missingColumns.length > 0) {
-      console.log("❌ Missing columns:");
-      missingColumns.forEach((col) => console.log(`   - ${col}`));
+    if (missingUserCols.length > 0) {
+      console.log("❌ Missing columns in user_profiles:");
+      missingUserCols.forEach((col) => console.log(`   - ${col}`));
     } else {
-      console.log("✅ All required columns exist!");
+      console.log("✅ All required columns exist in user_profiles!");
     }
 
     client.release();

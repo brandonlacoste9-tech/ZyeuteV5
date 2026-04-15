@@ -11,6 +11,8 @@ import fetch from "node-fetch";
 
 dotenv.config();
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const supabaseUrl =
   process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
