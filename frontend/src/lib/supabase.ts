@@ -35,10 +35,14 @@ const noOpLock = async <R>(
   fn: () => Promise<R>,
 ): Promise<R> => fn();
 
-// Create real Supabase client
-if (!isValidUrl(supabaseUrl) || !supabaseAnonKey) {
+// Check Supabase credentials
+const credentialsMissing = !isValidUrl(supabaseUrl) || !supabaseAnonKey;
+
+if (credentialsMissing) {
   if (process.env.NODE_ENV === "production") {
-    throw new Error("CRITICAL: Supabase credentials missing in production!");
+    console.error(
+      "❌ CRITICAL: Supabase credentials missing in production! The app will likely fail to load.",
+    );
   } else {
     console.warn("⚠️ [SECURITY] Supabase credentials missing or invalid.");
   }

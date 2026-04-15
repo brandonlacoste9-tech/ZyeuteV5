@@ -17,8 +17,18 @@ export const GoldEditionSplash: React.FC<GoldEditionSplashProps> = ({
   useEffect(() => {
     // Show skip button after 2.5 seconds
     const timer = setTimeout(() => setCanSkip(true), 2500);
-    return () => clearTimeout(timer);
-  }, []);
+
+    // Failsafe: auto-complete after 10 seconds even if video is stuck
+    const failsafe = setTimeout(() => {
+      console.warn("Splash failsafe triggered after 10s");
+      onComplete();
+    }, 10000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(failsafe);
+    };
+  }, [onComplete]);
 
   const handleEnded = () => {
     setIsExiting(true);

@@ -29,12 +29,23 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
     }));
   }, []);
 
+  const [showFailsafe, setShowFailsafe] = useState(false);
+
   useEffect(() => {
     // Show spinner after 1 second (logo-only intro)
     const timer = setTimeout(() => {
       setShowSpinner(true);
     }, 1000);
-    return () => clearTimeout(timer);
+
+    // Emergency failsafe: if stuck for 15s, show override
+    const failsafe = setTimeout(() => {
+      setShowFailsafe(true);
+    }, 15000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(failsafe);
+    };
   }, []);
 
   return (
@@ -85,6 +96,16 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
           <div className="absolute inset-0 border-4 border-gold-400/20 rounded-full" />
           <div className="absolute inset-0 border-4 border-transparent border-t-gold-400 rounded-full animate-spin" />
         </div>
+
+        {/* Failsafe Button */}
+        {showFailsafe && (
+          <button
+            onClick={() => (window.location.href = "/feed?force=1")}
+            className="mt-4 px-6 py-2 rounded-full border border-gold-500/30 text-gold-500/80 text-xs uppercase tracking-widest hover:bg-gold-500/10 transition-all animate-fade-in"
+          >
+            Entrée Manuelle
+          </button>
+        )}
       </div>
 
       {/* Bottom tagline */}
