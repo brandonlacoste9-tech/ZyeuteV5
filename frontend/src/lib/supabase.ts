@@ -11,6 +11,23 @@ const isValidUrl = (url: string | undefined) => {
   }
 };
 
+// No-op lock: bypass Navigator LockManager to prevent 10s timeout (auth-js#1594)
+const noOpLock = async <R>(
+  _name: string,
+  _acquireTimeout: number,
+  fn: () => Promise<R>,
+): Promise<R> => fn();
+
+// Create real Supabase client
+export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    lock: noOpLock,
+  },
+});
+
 /** getSession with timeout - prevents feed/API from hanging if auth is slow. */
 export async function getSessionWithTimeout(ms = 3000): Promise<{
   data: { session: { access_token: string } | null };
@@ -28,13 +45,6 @@ export async function getSessionWithTimeout(ms = 3000): Promise<{
   }
 }
 
-// No-op lock: bypass Navigator LockManager to prevent 10s timeout (auth-js#1594)
-const noOpLock = async <R>(
-  _name: string,
-  _acquireTimeout: number,
-  fn: () => Promise<R>,
-): Promise<R> => fn();
-
 // Check Supabase credentials
 const credentialsMissing = !isValidUrl(supabaseUrl) || !supabaseAnonKey;
 
@@ -47,15 +57,6 @@ if (credentialsMissing) {
     console.warn("⚠️ [SECURITY] Supabase credentials missing or invalid.");
   }
 }
-
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    lock: noOpLock,
-  },
-});
 
 // Helper function to get dynamic redirect URL based on current domain
 function getRedirectUrl(): string {
