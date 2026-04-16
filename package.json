@@ -136,7 +136,7 @@
     "cors": "^2.8.6",
     "date-fns": "^4.1.0",
     "dompurify": "^3.3.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "express": "^5.2.1",
     "express-async-errors": "^3.1.1",
