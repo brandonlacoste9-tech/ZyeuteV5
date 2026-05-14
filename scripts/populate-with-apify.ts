@@ -120,7 +120,7 @@ async function populate() {
         .insert([{
           id: randomUUID(),
           user_id: userId,
-          media_url: `/api/media-proxy?url=${encodeURIComponent(rawMp4Url)}`,
+          media_url: rawMp4Url,
           original_url: webVideoUrl,
           tiktok_url: webVideoUrl,
           thumbnail_url: cover,
