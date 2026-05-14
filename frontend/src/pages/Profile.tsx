@@ -132,7 +132,7 @@ export const Profile: React.FC = () => {
         }
       } catch (error) {
         profileLogger.error("[Profile] Error fetching user:", error);
-        setError("Failed to load profile. Please try again.");
+        setError("Impossible de charger le profil. Réessaye!");
         if (username !== "me") {
           navigate("/");
         }
@@ -215,13 +215,13 @@ export const Profile: React.FC = () => {
         <div className="text-center px-4">
           <div className="text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-bold text-gold-500 mb-2">
-            Profile Not Found
+            Profil introuvable
           </h2>
           <p className="text-gray-400 mb-6">
-            {error || "Unable to load profile"}
+            {error || "Impossible de charger le profil"}
           </p>
           <GoldButton onClick={() => navigate("/")} size="md">
-            Go Home
+            Retour à l'accueil
           </GoldButton>
         </div>
       </div>
@@ -314,12 +314,12 @@ export const Profile: React.FC = () => {
           <div className="flex justify-between items-center bg-black/50 p-3 mt-4 rounded-lg border border-gold-500/20 shadow-md">
             <ProfileStat
               value={formatNumber(user.posts_count || 0)}
-              label="Posts"
+              label="Publications"
             />
             <div className="h-10 w-px bg-gold-500/20" />
             <ProfileStat
               value={formatNumber(user.followers_count || 0)}
-              label="Followers"
+              label="Abonnés"
             />
             <div className="h-10 w-px bg-gold-500/20" />
             <ProfileStat
@@ -328,7 +328,7 @@ export const Profile: React.FC = () => {
                   ? `${(totalLikes / 1000).toFixed(1)}K`
                   : formatNumber(totalLikes)
               }
-              label="Likes"
+              label="J'aime"
             />
           </div>
 
@@ -337,7 +337,7 @@ export const Profile: React.FC = () => {
             {isOwnProfile ? (
               <Link to="/settings" onClick={tap}>
                 <GoldButton className="w-full" size="md">
-                  Edit Profile
+                  Modifier le profil
                 </GoldButton>
               </Link>
             ) : (
@@ -347,7 +347,7 @@ export const Profile: React.FC = () => {
                 className="w-full"
                 size="md"
               >
-                {isFollowing ? "Following" : "Follow"}
+                {isFollowing ? "Abonné" : "S'abonner"}
               </GoldButton>
             )}
           </div>
@@ -412,7 +412,7 @@ export const Profile: React.FC = () => {
                   : "text-leather-300 hover:text-gold-200"
                   }`}
               >
-                <span className="relative z-10">Posts</span>
+                <span className="relative z-10">Publications</span>
                 {activeTab === "posts" && (
                   <div className="absolute bottom-0 left-0 right-0 h-1 bg-gold-gradient" />
                 )}
