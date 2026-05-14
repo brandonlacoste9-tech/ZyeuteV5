@@ -56,7 +56,7 @@ export async function diagnoseVideo(
         p.id, p.type, p.media_url, p.thumbnail_url,
         p.processing_status, p.duration, p.mux_playback_id,
         p.hls_url, p.enhanced_url, p.original_url,
-        p.created_at, p.updated_at
+        p.created_at
       FROM publications p
       WHERE p.id = $1 AND p.type = 'video'
     `,
@@ -311,7 +311,7 @@ async function fix403Error(postId: string): Promise<VideoDoctorFix> {
   const proxiedUrl = `/api/media-proxy?url=${encodeURIComponent(originalUrl)}`;
 
   await pool.query(
-    `UPDATE publications SET media_url = $1, updated_at = NOW() WHERE id = $2`,
+    `UPDATE publications SET media_url = $1 WHERE id = $2`,
     [proxiedUrl, postId],
   );
 
@@ -376,14 +376,15 @@ async function fixMuxPlayback(postId: string): Promise<VideoDoctorFix> {
     const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
     const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
 
+    // Note: publications table does NOT have an updated_at column in the db schema yet,
+    // so we omit it to prevent column does not exist errors.
     await pool.query(
       `UPDATE publications
        SET mux_playback_id = $1,
            media_url = $2,
            hls_url = $2,
            thumbnail_url = $3,
-           processing_status = 'completed',
-           updated_at = NOW()
+           processing_status = 'completed'
        WHERE id = $4`,
       [playbackId, hlsUrl, posterUrl, postId],
     );
@@ -408,10 +409,9 @@ async function restartProcessing(postId: string): Promise<VideoDoctorFix> {
 
   // Reset processing status to pending
   await pool.query(
-    `UPDATE publications
-     SET processing_status = 'pending',
-         processing_error = NULL,
-         updated_at = NOW()
+    `UPDATE publications 
+     SET processing_status = 'pending', 
+         processing_error = NULL
      WHERE id = $1`,
     [postId],
   );
@@ -456,7 +456,7 @@ async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
   const fallbackThumbnail = media_url.replace(/\.[^.]+$/, ".jpg");
 
   await pool.query(
-    `UPDATE publications SET thumbnail_url = $1, updated_at = NOW() WHERE id = $2`,
+    `UPDATE publications SET thumbnail_url = $1 WHERE id = $2`,
     [fallbackThumbnail, postId],
   );
 

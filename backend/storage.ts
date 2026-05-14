@@ -440,13 +440,15 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
-    return result
-      .filter((r) => r.user)
-      .map((r) => ({
-        ...r.post,
-        user: r.user!,
-        isFired: !!r.reaction,
-      }));
+    return result.map((r) => ({
+      ...r.post,
+      user: r.user || {
+        id: r.post.userId,
+        username: "unknown",
+        displayName: "Unknown User",
+      },
+      isFired: !!r.reaction,
+    }));
   }
 
   // getExplorePosts implementation moved to line 548 (uses traceDatabase)
@@ -658,8 +660,8 @@ export class DatabaseStorage implements IStorage {
 
         const now = Date.now();
         const ranked = result.rows
-          .map((row) => ({
-            post: {
+          .map((row) => {
+            const post = {
               id: row.id,
               userId: row.user_id,
               mediaUrl: row.media_url,
@@ -683,7 +685,6 @@ export class DatabaseStorage implements IStorage {
               regionId: row.region_id,
               createdAt: new Date(row.created_at),
               deletedAt: row.deleted_at ? new Date(row.deleted_at) : null,
-              // Fields required by Post type with safe defaults
               originalUrl: null,
               enhancedUrl: null,
               mediaMetadata: {},
@@ -725,8 +726,9 @@ export class DatabaseStorage implements IStorage {
               remixCount: 0,
               soundId: null,
               soundStartTime: 0,
-            } as unknown as Post,
-            user: row.u_id
+            } as unknown as Post;
+
+            const user = row.u_id
               ? ({
                   id: row.u_id,
                   username: row.username,
@@ -747,12 +749,9 @@ export class DatabaseStorage implements IStorage {
                   city: row.u_city,
                   regionId: row.u_region_id,
                   createdAt: new Date(row.u_created_at),
-                  updatedAt: row.u_updated_at
-                    ? new Date(row.u_updated_at)
-                    : null,
+                  updatedAt: row.u_updated_at ? new Date(row.u_updated_at) : null,
                   nectarPoints: Number(row.nectar_points) || 0,
                   currentStreak: Number(row.current_streak) || 0,
-                  // Safe defaults for all other User fields
                   bio: null,
                   role: "citoyen",
                   customPermissions: {},
@@ -773,21 +772,27 @@ export class DatabaseStorage implements IStorage {
                   stripeCustomerId: null,
                   tier: null,
                 } as unknown as User)
-              : null,
-          }))
-          .filter((r) => r.user !== null)
-          .map((r) => ({
-            ...r,
-            momentum: calculateCulturalMomentum(
-              {
-                ...r.post,
-                fireCount: r.post.fireCount || 0,
-                sharesCount: (r.post as any).sharesCount || 0,
-                piasseCount: (r.post as any).piasseCount || 0,
-              },
-              (now - r.post.createdAt.getTime()) / 36e5,
-            ),
-          }))
+              : {
+                  id: row.user_id,
+                  username: "unknown",
+                  displayName: "Unknown User",
+                  avatarUrl: null,
+                };
+
+            return {
+              post,
+              user,
+              momentum: calculateCulturalMomentum(
+                {
+                  ...post,
+                  fireCount: post.fireCount || 0,
+                  sharesCount: (post as any).sharesCount || 0,
+                  piasseCount: (post as any).piasseCount || 0,
+                },
+                (now - post.createdAt.getTime()) / 36e5,
+              ),
+            };
+          })
           .sort((a, b) => b.momentum - a.momentum);
 
         const duration = Date.now() - startTime;

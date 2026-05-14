@@ -4,8 +4,11 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // Try direct connection instead of pooler
-const databaseUrl =
-  "postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@db.vuanulvyqkfefmjcikfk.supabase.co:5432/postgres";
+const databaseUrl = process.env.DATABASE_URL || process.env.DB_URL;
+if (!databaseUrl) {
+  console.error("❌ DATABASE_URL is not defined in .env");
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: databaseUrl,

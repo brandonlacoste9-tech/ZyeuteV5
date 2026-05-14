@@ -125,6 +125,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^2.0.0",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/otel": "^2.1.0",
     "ai": "^6.0.77",
     "apify-client": "^2.22.3",

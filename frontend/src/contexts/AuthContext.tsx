@@ -67,15 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const enhanceUser = async (sessionUser: any) => {
     if (!sessionUser) return null;
     try {
-      // Use /auth/me for current user - it auto-provisions if profile missing
-      // Add timeout to prevent hanging if backend is down
       const timeoutPromise = new Promise<null>((_, reject) =>
         setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
       );
       const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
       if (fullProfile) return fullProfile;
 
-      // Fallback if profile doesn't exist yet (rare race condition)
       return {
         id: sessionUser.id,
         username:
@@ -90,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "⚠️ [Auth Resilience] Profile fetch failed - Using fallback to prevent redirect loop:",
         e,
       );
-      // Ensure we return a valid user object to prevent redirect loops even if the table query fails
       return {
         id: sessionUser.id,
         username:
@@ -104,6 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    // GUARD: Prevent duplicate initialization (fix for StrictMode remount hang)
+    if (hasInitialized.current) {
+      console.log("🕯️ [Auth] Already initialized, skipping");
+      setIsLoading(false);
+      return;
+    }
+    hasInitialized.current = true;
+
     const startTime = Date.now();
     console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;
@@ -130,7 +134,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const profile = await enhanceUser((initialSession as any).user);
             if (mounted && profile) {
               setUser(profile);
-              // Check admin based on ROLE now, falling back to helper
               setIsAdmin(
                 profile.role === "founder" ||
                 profile.role === "moderator" ||
@@ -138,14 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               );
             }
           } else {
-            // Fallback to Guest Mode check
             const validGuest = checkGuestMode();
             if (mounted) setIsGuest(validGuest);
           }
         }
       } catch (error) {
         console.error("Auth initialization error:", error);
-        // Fallback to Guest Mode on error
         if (mounted) {
           const validGuest = checkGuestMode();
           setIsGuest(validGuest);
@@ -161,7 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
-    // 3. Listen for Auth Changes - CRITICAL: do NOT await Supabase/API inside callback (deadlock auth-js#762)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
@@ -226,7 +226,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(true);
   };
 
-  // Log auth state changes to help debug redirect loops
   useEffect(() => {
     if (!isLoading) {
       console.log("[Auth] State stabilized:", {

@@ -72,6 +72,17 @@ app.use(
 
 // Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
 app.options(/.*/, cors());
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  next();
+});
+
 app.use(express.json());
 
 const httpServer = createServer(app);

@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
 import { createClient } from "@supabase/supabase-js";
-import { verifyAuthToken } from "../supabase-auth.js";
+import { cacheMiddleware } from "../utils/cache.js";
+import { optionalAuth, verifyAuthToken } from "../supabase-auth.js";
 
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -9,10 +10,6 @@ const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   "";
-
-const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
-  next();
-};
 
 /** Sets req.userId when a valid Bearer token is present (does not 401). */
 async function attachOptionalUser(
@@ -72,12 +69,12 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
     // Try Supabase HTTP first (always works)
     if (SUPABASE_URL && SUPABASE_KEY) {
       const posts = await getPostsViaSupabase(limit, page, hive);
-      return res.json({ posts, isGuestMode: !req.userId, source: "supabase" });
+      return res.json({ posts, isGuestMode: !(req as any).userId, source: "supabase" });
     }
 
     // Fallback to pool if Supabase not configured
-    if (req.userId) {
-      const posts = await storage.getFeedPosts(req.userId, page, limit);
+    if ((req as any).userId) {
+      const posts = await storage.getFeedPosts((req as any).userId, page, limit);
       return res.json({ posts });
     }
     const posts = await storage.getExplorePosts(page, limit);

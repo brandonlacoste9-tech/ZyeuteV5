@@ -4,8 +4,11 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // Try us-east-1 host from docs
-const databaseUrl =
-  "postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require";
+const databaseUrl = process.env.DATABASE_URL || process.env.DB_URL;
+if (!databaseUrl) {
+  console.error("❌ DATABASE_URL is not defined in .env");
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: databaseUrl,

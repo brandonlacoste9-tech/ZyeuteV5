@@ -15,6 +15,7 @@ import { ColonyProvider } from "@/components/providers/colony-provider";
 import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
 import { AgeGateModal } from "@/components/system/AgeGateModal";
+import { Analytics } from "@vercel/analytics/react";
 
 function LoadingScreen({ message }: { message?: string }) {
   return <LoadingScreenComponent message={message || "Chargement..."} />;
@@ -57,6 +58,7 @@ export default function App() {
             <NotificationProvider>
               <ColonyProvider>
                 <AppContent />
+                <Analytics />
               </ColonyProvider>
             </NotificationProvider>
           </NavigationStateProvider>

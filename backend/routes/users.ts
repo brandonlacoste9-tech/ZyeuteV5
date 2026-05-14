@@ -2,18 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
-import { supabaseAdmin } from "../supabase-auth.js";
-
-// Import existing auth middlewares based on how they're handled in routes.ts
-const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.userId) return res.status(401).json({ error: "Unauthorized" });
-  next();
-};
-
-const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
-  // Pass through, token extracted asynchronously if needed
-  next();
-};
+import { supabaseAdmin, requireAuth, optionalAuth } from "../supabase-auth.js";
 
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

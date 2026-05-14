@@ -1,69 +1,104 @@
-# 🐝 Zyeuté - Le TikTok du Québec
+# 🐝 Zyeuté - L'app sociale du Québec ⚜️
 
-## 🚀 Trinity System Architecture
+[![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-success?logo=vercel)](https://zyeute.com)
+[![Railway Backend](https://img.shields.io/badge/Railway-Backend-blueviolet?logo=railway)](https://railway.app)
+[![Supabase DB](https://img.shields.io/badge/Supabase-Database-3ECF8E?logo=supabase)](https://supabase.com)
 
-Zyeuté uses the "Trinity" AI system for Quebec-first development:
+**Zyeuté** is the premier social video platform dedicated to Quebec culture. Built with high-performance tech and deep AI integration, it brings the "TikTok" experience to the Fleur-de-lis province.
 
-- 🧠 **The Brain (Ti‑Guy)**: AI orchestrator enforcing Quebec culture
-- 🤲 **The Hands**: Browser automation for trend discovery
-- 🎨 **The Soul**: Design system enforcing Joual + Quebec Blue
+---
 
-### Quick Start
+## 🏗 System Architecture (The Trinity)
+
+Zyeuté is powered by the **Trinity System**, a triple-layered AI architecture designed for cultural relevance and technical excellence.
+
+```mermaid
+graph TD
+    User([User ⚜️]) <--> Frontend[Vite React SPA]
+    Frontend <--> Backend[Express API / Socket.io]
+    Backend <--> DB[(Supabase / PostgreSQL)]
+    Backend <--> Cache[(Redis / BullMQ)]
+    
+    subgraph "Trinity AI Engine"
+        TiGuy[Ti-Guy: The Brain]
+        Hands[Browser Use: The Hands]
+        Soul[Design System: The Soul]
+    end
+    
+    Backend <--> TiGuy
+    TiGuy <--> Hands
+    Hands <--> TikTok[TikTok / Social Trends]
+```
+
+### 🧠 The Brain (Ti-Guy)
+The AI orchestrator that ensures all content and interactions adhere to Quebec cultural standards. It handles sentiment analysis, trend identification, and automated moderation.
+
+### 🤲 The Hands (Browser Use)
+An automated trend-discovery engine that uses browser automation to scan global platforms for Quebec-specific trends, populating the feed with relevant content.
+
+### 🎨 The Soul (Design System)
+A premium design system inspired by Quebec's heritage, utilizing "Antique Gold" and "Rich Leather" aesthetics to create a high-ticket, luxury feel.
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend**: React 19 + Vite + Tailwind CSS 4
+- **Backend**: Node.js Express + Socket.io (Real-time)
+- **Database**: Supabase (PostgreSQL) + Drizzle ORM
+- **Queue/Cache**: Redis + BullMQ (Video Processing)
+- **AI**: Google Vertex AI (Gemini 2.0) + OpenAI + DeepSeek
+- **Hosting**: Vercel (Frontend) + Railway (Backend/Workers)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- PNPM or NPM
+- Python 3.12+ (for automation)
+
+### Installation
 
 ```bash
-# 1. Install dependencies
+# 1. Clone & Install
+git clone https://github.com/brandonlacoste9-tech/ZyeuteV5.git
+cd ZyeuteV5
 npm install
-cd zyeute-browser-automation
-pip install -r requirements.txt
-playwright install chromium
 
-# 2. Configure environment
+# 2. Environment Setup
 cp .env.example .env
-# Add DEEPSEEK_API_KEY or GOOGLE_API_KEY
+# Fill in Supabase, Redis, and AI API keys
+```
 
-# 3. Start browser service
-cd zyeute-browser-automation
-uvicorn zyeute_automation_api:app --reload
+### Development
 
-# 4. Start main app (in another terminal)
+```bash
+# Start backend and frontend (Vite)
 npm run dev
-
-# 5. Test integration
-npx ts-node scripts/test-trinity.ts
 ```
 
-### AI Models (Cost‑Effective Options)
+---
 
-**Recommended: DeepSeek V3**
+## 🛡 Security & Quality
 
-- Cost: $0.14 per 1M input tokens, $0.28 per 1M output
-- Speed: Fast
-- Quality: Excellent for Quebec content
+We maintain high standards for security and code quality:
+- **RLS**: Row Level Security enabled on all core tables.
+- **Audit**: Custom security scanner (`npm run audit:security`).
+- **Linting**: Strict ESLint and Prettier rules.
+- **Testing**: Playwright E2E and Vitest unit tests.
 
-**Alternative: Gemini 2.0 Flash**
+---
 
-- Cost: Free tier available
-- Speed: Very fast
-- Quality: Good for most tasks
+## 🗺 Roadmap
 
-### Trinity Tools
+- [x] Phase 1: Core Video Pipeline
+- [x] Phase 2: Social Interactions (Follows, Comments)
+- [x] Phase 3: Real-time Chat & Notifications
+- [ ] Phase 4: Monetization (Stripe Integration)
+- [ ] Phase 5: Advanced AI Evolution Engine
 
-```typescript
-import {
-  searchTrendsTool,
-  validateDesignTool,
-} from "@/backend/ai/orchestrator";
+---
 
-// Discover Quebec trends
-const trends = await searchTrendsTool.execute({
-  platform: "tiktok",
-  region: "montreal",
-});
-
-// Validate UI design
-const validation = await validateDesignTool.execute({
-  component_code: "<Button>Submit</Button>",
-});
-```
-
-See `scripts/test-trinity.ts` for full examples.
+Built with ❤️ in Québec. ⚜️

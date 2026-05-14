@@ -61,6 +61,6 @@ export const enhancePostHandler = async (req: Request, res: Response) => {
   }
 };
 
-router.post("/posts/:id/enhance", enhancePostHandler);
+router.post("/:id/enhance", enhancePostHandler);
 
 export default router;

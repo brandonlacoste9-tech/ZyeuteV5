@@ -1,12 +1,8 @@
-/**
- * Media Proxy - Stream external video/image URLs through backend
- * Fixes 403 (Mixkit) and ORB (Unsplash) blocking when loading in <video>/<img>
- * Also rewrites HLS manifest relative URIs so HLS.js can load all segments.
- */
 
 import { Router, Request, Response } from "express";
 import { Readable } from "stream";
 import rateLimit from "express-rate-limit";
+import { fetch } from "undici";
 
 const router = Router();
 
@@ -21,51 +17,36 @@ const ALLOWED_HOSTS = [
   "player.vimeo.com",
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
-  // Cloudflare Stream - HLS streaming and direct video files
   "cloudflarestream.com",
   "*.cloudflarestream.com",
+  "sample-videos.com",
+  "w3schools.com",
+  "www.w3schools.com",
   // AI Generation - FAL AI
   "fal.media",
   "*.fal.media",
-  // Note: supabase.co is excluded - direct Supabase storage URLs work without
-  // proxy in production and proxying them breaks byte-range seeking.
-  // Note: stream.mux.com and chunk.mux.com are EXCLUDED - MuxVideoPlayer handles
-  // its own HLS streaming natively and must never go through this proxy.
 ];
 
 function isAllowedUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
+    const hostname = parsed.hostname;
     return ALLOWED_HOSTS.some(
-      (h) => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`),
+      (h) => hostname === h || hostname.endsWith(`.${h}`),
     );
   } catch {
     return false;
   }
 }
 
-/**
- * Rewrite URI lines in an HLS manifest (master or variant) so that all
- * relative references become absolute proxied URLs.
- *
- * HLS.js resolves segment/playlist URIs relative to the URL it fetched the
- * manifest from.  When the manifest is served via `/api/media-proxy?url=…`,
- * the "base URL" for HLS.js is the proxy path — so relative paths like
- * `360p/360p.m3u8` would resolve to `/api/media-proxy360p/360p.m3u8`
- * instead of the correct GCS location.  We fix this by rewriting every URI
- * line to a fully-qualified proxy URL before sending the manifest to the
- * client.
- */
 function rewriteHLSManifest(content: string, manifestUrl: string): string {
   let baseDirUrl: string;
   try {
     const urlObj = new URL(manifestUrl);
-    // Keep everything up to (and including) the last slash before the filename
     const pathname = urlObj.pathname;
     const dirPath = pathname.substring(0, pathname.lastIndexOf("/") + 1);
     baseDirUrl = `${urlObj.protocol}//${urlObj.host}${dirPath}`;
   } catch {
-    // If URL parsing fails, return content unchanged
     return content;
   }
 
@@ -73,10 +54,8 @@ function rewriteHLSManifest(content: string, manifestUrl: string): string {
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
-      // Pass through empty lines and HLS tag / comment lines unchanged
       if (!trimmed || trimmed.startsWith("#")) return line;
 
-      // Resolve to an absolute GCS URL
       let absoluteUrl: string;
       if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
         absoluteUrl = trimmed;
@@ -91,7 +70,6 @@ function rewriteHLSManifest(content: string, manifestUrl: string): string {
         absoluteUrl = `${baseDirUrl}${trimmed}`;
       }
 
-      // Route the absolute GCS URL back through the proxy
       return `/api/media-proxy?url=${encodeURIComponent(absoluteUrl)}`;
     })
     .join("\n");
@@ -123,45 +101,29 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
   try {
     const rangeHeader = req.headers.range;
-
+    
     const fetchHeaders: Record<string, string> = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      Accept: "video/mp4,video/webm,video/*,*/*;q=0.9",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "*/*",
+      "Referer": url.includes('mixkit.co') ? "https://mixkit.co/" : "https://www.google.com/",
     };
+    
+    if (rangeHeader) fetchHeaders["Range"] = rangeHeader;
 
-    // Only add referer for domains that require it
-    if (url.includes("mixkit.co")) {
-      fetchHeaders.Referer = "https://mixkit.co/";
-    }
-
-    if (rangeHeader) fetchHeaders.Range = rangeHeader;
-
-    console.log(`[MediaProxy] Fetching: ${url.substring(0, 80)}...`);
+    console.log(`[MediaProxy] Fetching: ${url.substring(0, 100)}`);
 
     const resp = await fetch(url, {
       headers: fetchHeaders,
-      redirect: "follow",
+      method: "GET",
     });
 
     if (!resp.ok) {
-      console.error(
-        `[MediaProxy] Upstream error ${resp.status}: ${url.substring(0, 80)}`,
-      );
-      return res
-        .status(resp.status)
-        .json({ error: `Upstream fetch failed: ${resp.status}` });
+      console.error(`[MediaProxy] Upstream error ${resp.status} for ${url}`);
+      return res.status(resp.status).json({ error: `Upstream error ${resp.status}` });
     }
 
-    const contentType =
-      resp.headers.get("content-type") || "application/octet-stream";
-
-    // HLS manifests (master or variant .m3u8): rewrite relative URI lines to
-    // absolute proxied URLs so HLS.js can fetch all segments through the proxy.
-    const isHLS =
-      contentType.includes("mpegurl") ||
-      url.endsWith(".m3u8") ||
-      url.includes(".m3u8?");
+    const contentType = resp.headers.get("content-type") || "application/octet-stream";
+    const isHLS = url.includes(".m3u8") || contentType.includes("mpegurl");
 
     if (isHLS) {
       const text = await resp.text();
@@ -174,45 +136,35 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("Cache-Control", "public, max-age=86400");
-    // Always advertise byte-range support so browsers can seek in videos
     res.setHeader("Accept-Ranges", "bytes");
-    // CORS headers so <video crossOrigin> doesn't block the response
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Range");
-    res.setHeader(
-      "Access-Control-Expose-Headers",
-      "Content-Length, Content-Range, Accept-Ranges",
-    );
+    res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
+
     const contentRange = resp.headers.get("content-range");
     const contentLength = resp.headers.get("content-length");
-    if (resp.status === 206 && contentRange) {
-      res.status(206);
-      res.setHeader("Content-Range", contentRange);
-      if (contentLength) res.setHeader("Content-Length", contentLength);
-    }
 
-    const body = resp.body;
-    if (body) {
-      const nodeStream = Readable.fromWeb(body as any);
+    if (contentRange) res.setHeader("Content-Range", contentRange);
+    if (contentLength) res.setHeader("Content-Length", contentLength);
+
+    res.status(resp.status);
+    
+    if (resp.body) {
+      const nodeStream = Readable.fromWeb(resp.body as any);
       nodeStream.pipe(res);
       nodeStream.on("error", (err) => {
         console.error("[MediaProxy] Stream error:", err);
-        if (!res.headersSent)
-          res.status(502).json({ error: "Proxy stream failed" });
-        else res.end();
+        if (!res.headersSent) res.status(502).end();
       });
     } else {
-      res.status(502).json({ error: "No response body" });
+      res.end();
     }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `[MediaProxy] Error fetching ${url.substring(0, 80)}:`,
-      errorMsg,
-    );
+
+  } catch (err: any) {
+    console.error(`[MediaProxy] Critical error proxying ${url}:`, err.message);
     if (!res.headersSent) {
-      res.status(502).json({ error: "Proxy fetch failed", details: errorMsg });
+      res.status(502).json({ error: "Proxy fetch failed", details: err.message });
     }
   }
 });

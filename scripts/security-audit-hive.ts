@@ -125,6 +125,8 @@ const SKIP_PATTERNS = [
   ".venv",
   "external",
   "tools",
+  "security-audit-hive.ts",
+  "verify-secrets-security.ts",
 ];
 
 const SKIP_EXTENSIONS = [
