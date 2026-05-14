@@ -442,11 +442,11 @@ export class DatabaseStorage implements IStorage {
 
     return result.map((r) => ({
       ...r.post,
-      user: r.user || {
+      user: (r.user || {
         id: r.post.userId,
         username: "unknown",
         displayName: "Unknown User",
-      },
+      }) as unknown as User,
       isFired: !!r.reaction,
     }));
   }
@@ -772,12 +772,12 @@ export class DatabaseStorage implements IStorage {
                   stripeCustomerId: null,
                   tier: null,
                 } as unknown as User)
-              : {
+              : ({
                   id: row.user_id,
                   username: "unknown",
                   displayName: "Unknown User",
                   avatarUrl: null,
-                };
+                } as unknown as User);
 
             return {
               post,

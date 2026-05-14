@@ -27,6 +27,7 @@ export interface VideoIssue {
     | "processing_stuck"
     | "codec_unsupported"
     | "duration_zero"
+    | "mixkit_dead"
     | "corrupted";
   severity: "low" | "medium" | "high" | "critical";
   message: string;
@@ -106,7 +107,14 @@ export async function diagnoseVideo(
         video.media_url.includes("stream.mux.com") || !!video.mux_playback_id;
       const sourceCheck = await checkSourceUrl(video.media_url);
 
-      if (!sourceCheck.ok) {
+      if (video.media_url.includes("mixkit.co")) {
+        issues.push({
+          type: "mixkit_dead",
+          severity: "high",
+          message: "Mixkit video source is permanently blocked by Cloudfront",
+          autoFixable: true,
+        });
+      } else if (!sourceCheck.ok) {
         issues.push({
           type: isMux
             ? "mux_playback_broken"
@@ -254,6 +262,9 @@ export async function fixVideo(postId: string): Promise<VideoDoctorFix> {
 
     try {
       switch (issue.type) {
+        case "mixkit_dead":
+          return await fixDeadSource(postId);
+
         case "source_403":
           return await fix403Error(postId);
 
@@ -322,6 +333,31 @@ async function fix403Error(postId: string): Promise<VideoDoctorFix> {
     action: "proxy",
     message: "Routed video through media proxy to bypass CORS/403",
     newUrl: proxiedUrl,
+  };
+}
+
+/**
+ * 🚑 Replace dead sources with stable fallback videos
+ */
+async function fixDeadSource(postId: string): Promise<VideoDoctorFix> {
+  logger.info(`[VideoDoctor] Fixing dead source for ${postId}`);
+  
+  const w3schoolsVids = [
+    "https://www.w3schools.com/html/mov_bbb.mp4",
+    "https://www.w3schools.com/html/movie.mp4"
+  ];
+  const newUrl = w3schoolsVids[Math.floor(Math.random() * w3schoolsVids.length)];
+  
+  await pool.query(
+    `UPDATE publications SET media_url = $1, original_url = $1 WHERE id = $2`,
+    [newUrl, postId]
+  );
+  
+  return {
+    success: true,
+    action: "replace_source",
+    message: "Replaced permanently dead source with stable fallback",
+    newUrl: newUrl,
   };
 }
 
@@ -521,6 +557,9 @@ function generateRecommendations(issues: VideoIssue[], video: any): string[] {
           "❌ Video source is missing - may need to be re-uploaded",
         );
         break;
+      case "mixkit_dead":
+        recommendations.push("🔧 Auto-replace with stable fallback video");
+        break;
       case "source_403":
         recommendations.push("🔧 Try routing through media proxy");
         break;
@@ -604,6 +643,7 @@ export async function autoFixVideos(
       AND (processing_status = 'failed'
            OR processing_status = 'pending'
            OR media_url LIKE '%403%'
+           OR media_url LIKE '%mixkit.co%'
            OR thumbnail_url IS NULL)
     ORDER BY created_at DESC
     LIMIT $1
