@@ -13,21 +13,13 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function cleanup() {
-  console.log("Cleaning up broken Apify imports...");
-  // We'll delete all publications where media_url contains tiktok.com since those are html pages,
-  // or where media_metadata->>source is 'apify-scrape'
-  const { data, error } = await supabase
-    .from("publications")
-    .delete()
-    .eq("video_source", "tiktok")
-    .like("media_url", "%api.apify.com%");
-
+async function listBuckets() {
+  const { data, error } = await supabase.storage.listBuckets();
   if (error) {
-    console.error("Cleanup failed:", error);
+    console.error("Failed to list buckets:", error);
   } else {
-    console.log("Cleanup complete!");
+    console.log("Available buckets:", data.map(b => b.name));
   }
 }
 
-cleanup();
+listBuckets();

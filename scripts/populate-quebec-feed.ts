@@ -17,6 +17,7 @@ const __dirname = dirname(__filename);
 
 // Load .env FIRST
 config({ path: join(__dirname, "../.env") });
+config({ path: join(__dirname, "../.env.local"), override: true });
 
 const SUPABASE_URL = "https://vuanulvyqkfefmjcikfk.supabase.co";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -73,40 +74,25 @@ function randomCreatedAt(): string {
 }
 
 async function populateFeed() {
-  console.log("👤 Step 1: Ensuring creator profiles exist...");
-  const creatorIds: Record<string, string> = {};
-
-  for (const creator of CREATORS) {
-    const { data: existing } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .eq("username", creator.username)
-      .single();
-
-    if (existing) {
-      creatorIds[creator.username] = existing.id;
-    } else {
-      const id = randomUUID();
-      const { data } = await supabase
-        .from("user_profiles")
-        .insert([{
-          id,
-          username: creator.username,
-          display_name: creator.displayName,
-          bio: creator.bio,
-          region: creator.region,
-          hive_id: "quebec",
-          role: "citoyen",
-          avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${creator.username}`,
-        }])
-        .select("id")
-        .single();
-      if (data) creatorIds[creator.username] = data.id;
-    }
+  console.log("👤 Step 1: Finding a valid user to assign AI posts to...");
+  
+  const { data: userProfile } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("role", "admin")
+    .limit(1)
+    .single();
+    
+  let userId = userProfile?.id;
+  if (!userId) {
+    const { data: anyUser } = await supabase.from("user_profiles").select("id").limit(1).single();
+    userId = anyUser?.id;
   }
 
-  const validCreatorIds = Object.values(creatorIds).filter(Boolean);
-  if (validCreatorIds.length === 0) process.exit(1);
+  if (!userId) {
+    console.error("❌ No users found in database to assign posts to!");
+    process.exit(1);
+  }
 
   const { data: existingPosts } = await supabase
     .from("publications")
@@ -124,8 +110,7 @@ async function populateFeed() {
       await supabase.from("publications").delete().eq("caption", post.caption).eq("hive_id", "quebec");
     }
 
-    const creatorUsername = CREATORS[i % CREATORS.length].username;
-    const userId = creatorIds[creatorUsername] || validCreatorIds[0];
+    const postUserId = userId;
     let videoUrl = SAMPLE_VIDEOS[i % SAMPLE_VIDEOS.length];
     let thumbnailUrl = SAMPLE_THUMBNAILS[i % SAMPLE_THUMBNAILS.length];
     let aiGenerated = false;
@@ -141,8 +126,27 @@ async function populateFeed() {
         });
         const generatedUrl = (result.data as any)?.video?.url;
         if (generatedUrl) {
-          videoUrl = generatedUrl;
-          aiGenerated = true;
+          console.log(`   ⬇️ Downloading generated video from FAL...`);
+          const vidResp = await fetch(generatedUrl);
+          if (vidResp.ok) {
+            const arrayBuffer = await vidResp.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const fileName = `fal/${randomUUID()}.mp4`;
+            
+            console.log(`   ☁️ Uploading to Supabase Storage (${fileName})...`);
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from("zyeute-videos")
+              .upload(fileName, buffer, { contentType: "video/mp4", upsert: true });
+              
+            if (!uploadError && uploadData) {
+              const { data: { publicUrl } } = supabase.storage
+                .from("zyeute-videos")
+                .getPublicUrl(fileName);
+              videoUrl = publicUrl;
+              aiGenerated = true;
+              console.log(`   ✅ Saved permanently: ${videoUrl}`);
+            }
+          }
         }
       } catch (err: any) {
         console.warn(`  ⚠️ AI Generation failed: ${err.message}`);
@@ -151,7 +155,7 @@ async function populateFeed() {
 
     await supabase.from("publications").insert([{
       id: randomUUID(),
-      user_id: userId,
+      user_id: postUserId,
       media_url: videoUrl,
       original_url: videoUrl,
       thumbnail_url: thumbnailUrl,
