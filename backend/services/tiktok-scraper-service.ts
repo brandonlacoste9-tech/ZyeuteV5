@@ -1,11 +1,13 @@
 import axios from "axios";
 import { TikApiService, type TikVideo } from "./tikapi-service.js";
+import { TikHubService } from "./tikhub-service.js";
 
 const OMKAR_BASE_URL = "https://tiktok-scraper.omkar.cloud";
 const TIKWM_DETAILS_URL = "https://www.tikwm.com/api/";
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 const TIKTOK_SCRAPER_API_KEY = process.env.TIKTOK_SCRAPER_API_KEY;
 const APIFY_API_KEY = process.env.APIFY_API_KEY;
+const TIKHUB_API_KEY = process.env.TIKHUB_API_KEY;
 const APIFY_TIKTOK_ACTOR =
   process.env.APIFY_TIKTOK_ACTOR_ID || "clockworks/free-tiktok-scraper";
 
@@ -31,7 +33,7 @@ export interface TikTokVideo {
     comments?: number;
   };
   original_url?: string;
-  provider?: "omkar" | "tikapi" | "tikwm" | "apify";
+  provider?: "omkar" | "tikapi" | "tikwm" | "apify" | "tikhub";
 }
 
 function omkarHeaders() {
@@ -254,7 +256,7 @@ function mapTikApiServiceVideoToScraper(t: TikVideo): TikTokVideo {
 }
 
 export function missingTikTokProviderErrorMessage(): string {
-  return "Aucun fournisseur TikTok configuré: définir TIKTOK_SCRAPER_API_KEY (Omkar), APIFY_API_KEY, et/ou TIKAPI_KEY.";
+  return "Aucun fournisseur TikTok configuré: définir TIKTOK_SCRAPER_API_KEY (Omkar), APIFY_API_KEY, TIKAPI_KEY, ou TIKHUB_API_KEY.";
 }
 
 export class TikTokScraperService {
@@ -317,11 +319,28 @@ export class TikTokScraperService {
     }
 
     if (APIFY_API_KEY) {
-      const videos = await runApifyTikTokActor({
-        searchQueries: [query],
-        resultsPerPage: maxResults,
-      });
-      if (videos.length > 0) return videos;
+      try {
+        const videos = await runApifyTikTokActor({
+          searchQueries: [query],
+          resultsPerPage: maxResults,
+        });
+        if (videos.length > 0) return videos;
+      } catch (err: any) {
+        console.warn("[TikTok Service] Apify search failed:", err.message);
+      }
+    }
+
+    if (TIKHUB_API_KEY) {
+      try {
+        const items = await TikHubService.searchVideos(query, maxResults);
+        const mapped = items
+          .map((item: any) => mapTikApiRawItemToVideo(item))
+          .filter((x: any): x is TikTokVideo => x != null)
+          .map((v: any) => ({ ...v, provider: "tikhub" as const }));
+        if (mapped.length > 0) return mapped;
+      } catch (err: any) {
+        console.warn("[TikTok Service] TikHub search failed:", err.message);
+      }
     }
 
     throw new Error(missingTikTokProviderErrorMessage());

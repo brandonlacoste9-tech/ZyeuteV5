@@ -22,6 +22,7 @@ const ALLOWED_HOSTS = [
   "sample-videos.com",
   "w3schools.com",
   "www.w3schools.com",
+  "api.apify.com",
   // AI Generation - FAL AI
   "fal.media",
   "*.fal.media",
