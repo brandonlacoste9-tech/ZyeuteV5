@@ -3,6 +3,7 @@
 import { Pool } from "pg";
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
+import "dotenv/config";
 
 async function runMigrations() {
   const databaseUrl =
@@ -40,8 +41,8 @@ async function runMigrations() {
     );
     const appliedSet = new Set(applied.rows.map((r: any) => r.filename));
 
-    // Read all SQL files from backend/migrations directory
-    const migrationsDir = join(process.cwd(), "backend/migrations");
+    // Read all SQL files from migrations directory
+    const migrationsDir = join(process.cwd(), "migrations");
     const files = readdirSync(migrationsDir)
       .filter((f) => f.endsWith(".sql"))
       .sort(); // Alphabetical = chronological (YYYYMMDD_ prefix)
