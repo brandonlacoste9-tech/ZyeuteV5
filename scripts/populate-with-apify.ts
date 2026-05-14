@@ -109,18 +109,53 @@ async function populate() {
         continue;
       }
 
+      console.log(`📥 Processing: @${handle} - ${desc.substring(0, 50)}...`);
+
+      // 1. Download video from Apify (which expires)
+      let permanentUrl = rawMp4Url;
+      try {
+        console.log(`   ⬇️ Downloading MP4 from Apify...`);
+        const authorizedUrl = `${rawMp4Url}?token=${process.env.APIFY_API_KEY}`;
+        const vidResp = await fetch(authorizedUrl);
+        if (vidResp.ok) {
+          const arrayBuffer = await vidResp.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          
+          const fileName = `apify/${videoId}-${randomUUID()}.mp4`;
+          
+          // 2. Upload to Supabase Storage
+          console.log(`   ☁️ Uploading to Supabase Storage (${fileName})...`);
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("zyeute-videos")
+            .upload(fileName, buffer, {
+              contentType: "video/mp4",
+              upsert: true
+            });
+            
+          if (uploadError) {
+            console.error(`   ❌ Supabase upload error: ${uploadError.message}`);
+          } else if (uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from("zyeute-videos")
+              .getPublicUrl(fileName);
+            permanentUrl = publicUrl;
+            console.log(`   ✅ Saved permanently: ${permanentUrl}`);
+          }
+        }
+      } catch (err: any) {
+        console.error(`   ❌ Failed to download/upload video: ${err.message}`);
+      }
+
       const webVideoUrl = item.webVideoUrl || `https://www.tiktok.com/@${handle}/video/${videoId}`;
       const cover = videoMeta.coverUrl || "";
 
-      console.log(`📥 Processing: @${handle} - ${desc.substring(0, 50)}...`);
-
-      // 2. Insert publication
+      // 3. Insert publication
       const { error: insertError } = await supabase
         .from("publications")
         .insert([{
           id: randomUUID(),
           user_id: userId,
-          media_url: rawMp4Url,
+          media_url: permanentUrl,
           original_url: webVideoUrl,
           tiktok_url: webVideoUrl,
           thumbnail_url: cover,
