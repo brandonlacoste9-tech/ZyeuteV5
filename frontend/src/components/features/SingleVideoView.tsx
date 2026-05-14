@@ -35,6 +35,8 @@ import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { useToast } from "@/hooks/use-toast";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
+import { DoubleTapHeart } from "./DoubleTapHeart";
+import { CommentBottomSheet } from "./CommentBottomSheet";
 
 interface SingleVideoViewProps {
   post: Post & { user?: User };
@@ -63,6 +65,8 @@ export function SingleVideoView({
   const { impact, tap } = useHaptics();
   const { toast } = useToast();
   const [videoError, setVideoError] = useState<Error | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
@@ -89,16 +93,23 @@ export function SingleVideoView({
   }, [post.visualFilter]);
 
   const handleLike = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
+    (e?: React.MouseEvent) => {
+      e?.stopPropagation();
       impact("medium");
-      // Like logic would go here
+      setIsLiked(true);
+      // Like logic — fire toggle would go here
     },
     [impact],
   );
 
+  const handleDoubleTapLike = useCallback(() => {
+    impact("heavy");
+    setIsLiked(true);
+    // Like logic — fire toggle would go here
+  }, [impact]);
+
   return (
-    <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+    <DoubleTapHeart onDoubleTap={handleDoubleTapLike} className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
       {/* Background Blur for Portrait Videos */}
       <div
         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 pointer-events-none"
@@ -204,9 +215,8 @@ export function SingleVideoView({
               <Heart
                 size={28}
                 className={cn(
-                  post.fireCount &&
-                    post.fireCount > 0 &&
-                    "text-red-500 fill-red-500",
+                  isLiked &&
+                    "text-red-500 fill-red-500 animate-[fire-burst_0.3s_ease-out]",
                 )}
               />
             </Button>
@@ -220,7 +230,7 @@ export function SingleVideoView({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onCommentClick}
+              onClick={() => setShowComments(true)}
               className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
             >
               <MessageCircle size={28} />
@@ -280,6 +290,14 @@ export function SingleVideoView({
           {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
         </Button>
       </div>
-    </div>
+
+      {/* Comment Bottom Sheet */}
+      <CommentBottomSheet
+        postId={post.id}
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+        commentCount={post.commentCount || 0}
+      />
+    </DoubleTapHeart>
   );
 }
