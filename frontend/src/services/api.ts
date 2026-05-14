@@ -900,7 +900,12 @@ export async function surgicalUpload(
     // DO NOT set Content-Type — the browser must set it automatically
     // with the correct multipart/form-data boundary for FormData.
 
-    const response = await fetch(`${API_BASE_URL}/api/upload/simple`, {
+    // [SOVEREIGN] Bypass Vercel's 4.5MB Serverless Payload Limit by POSTing directly to Render in production
+    const uploadUrl = import.meta.env.PROD 
+      ? "https://zyeutev5-1.onrender.com/api/upload/simple"
+      : "/api/upload/simple";
+
+    const response = await fetch(uploadUrl, {
       method: "POST",
       body: formData,
       headers,
