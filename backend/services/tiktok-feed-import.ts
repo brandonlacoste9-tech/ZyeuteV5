@@ -184,17 +184,44 @@ export async function importTikTokVideoToFeed(
   const hiveId = hiveUser?.hiveId || "quebec";
 
   try {
+    // ── Mux upload for permanent hosting (TikTok URLs expire) ──
+    let muxPlaybackId: string | undefined;
+    let muxAssetId: string | undefined;
+    
+    try {
+      const Mux = (await import("@mux/mux-node")).default;
+      const muxClient = new Mux({
+        tokenId: process.env.MUX_TOKEN_ID || "",
+        tokenSecret: process.env.MUX_TOKEN_SECRET || "",
+      });
+      
+      if (process.env.MUX_TOKEN_ID && process.env.MUX_TOKEN_SECRET) {
+        const asset = await muxClient.video.assets.create({
+          input: [{ url: mediaUrl }],
+          playback_policy: ["public"],
+          mp4_support: "standard",
+        });
+        muxAssetId = asset.id;
+        muxPlaybackId = asset.playback_ids?.[0]?.id;
+        console.log(`[TikTok import] Mux upload started for ${videoId} → asset ${muxAssetId}`);
+      }
+    } catch (muxErr: any) {
+      console.warn(`[TikTok import] Mux upload skipped: ${muxErr.message}`);
+    }
+
     const post = await storage.createPost({
       userId,
       type: "video",
-      mediaUrl,
+      mediaUrl: muxPlaybackId 
+        ? `https://stream.mux.com/${muxPlaybackId}.m3u8` 
+        : mediaUrl,
       hlsUrl: hlsOrHd || undefined,
       thumbnailUrl: thumbnailUrl || undefined,
       content,
       caption,
       visibility: "public",
       hiveId,
-      processingStatus: "completed",
+      processingStatus: muxAssetId ? "processing" : "completed",
       fireCount: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
       mediaMetadata: {
         tiktok_id: videoId,
@@ -202,6 +229,9 @@ export async function importTikTokVideoToFeed(
         source: metadataSource,
         stats: video.stats ?? {},
         original_url: pageUrl || undefined,
+        tiktok_cdn_url: mediaUrl,
+        mux_asset_id: muxAssetId,
+        mux_playback_id: muxPlaybackId,
       },
       isModerated: true,
       moderationApproved: true,
