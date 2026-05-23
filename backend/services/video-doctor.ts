@@ -6,7 +6,6 @@
 
 import { pool } from "../storage.js";
 import { logger } from "../utils/logger.js";
-import { fetch } from "undici";
 import Mux from "@mux/mux-node";
 
 export interface VideoHealthReport {
