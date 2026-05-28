@@ -38,6 +38,17 @@ import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnos
 import { DoubleTapHeart } from "./DoubleTapHeart";
 import { CommentBottomSheet } from "./CommentBottomSheet";
 
+function extractTikTokVideoId(url?: string | null): string | null {
+  if (!url) return null;
+  const match = String(url).match(/\/video\/(\d+)/i);
+  return match?.[1] ?? null;
+}
+
+function getTikTokEmbedUrl(url?: string | null): string | null {
+  const id = extractTikTokVideoId(url);
+  return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
+}
+
 interface SingleVideoViewProps {
   post: Post & { user?: User };
   isActive: boolean;
@@ -79,6 +90,12 @@ export function SingleVideoView({
       post.mediaUrl ||
       "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
+  }, [post]);
+
+  const tiktokEmbedUrl = useMemo(() => {
+    return getTikTokEmbedUrl(
+      post.media_url || post.mediaUrl || post.original_url || post.originalUrl,
+    );
   }, [post]);
 
   // Video Activation & Prefetching
@@ -142,6 +159,14 @@ export function SingleVideoView({
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
+          />
+        ) : tiktokEmbedUrl ? (
+          <iframe
+            src={tiktokEmbedUrl}
+            title={`TikTok ${post.id}`}
+            className="w-full h-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
           />
         ) : post.mux_playback_id || post.muxPlaybackId ? (
           <MuxVideoPlayer

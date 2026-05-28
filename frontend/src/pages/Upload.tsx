@@ -36,7 +36,21 @@ import { PexelsFeed } from "@/components/video/PexelsFeed";
 
 const uploadLogger = logger.withContext("Upload");
 
-type UploadMode = "camera" | "gallery" | "mux" | "pexels";
+type UploadMode = "camera" | "gallery" | "mux" | "pexels" | "tiktok";
+
+function isTikTokUrl(url: string): boolean {
+  return /tiktok\.com/i.test(url);
+}
+
+function extractTikTokVideoId(url: string): string | null {
+  const match = url.match(/\/video\/(\d+)/i);
+  return match?.[1] ?? null;
+}
+
+function getTikTokEmbedUrl(url: string): string | null {
+  const id = extractTikTokVideoId(url);
+  return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
+}
 
 const VISUAL_FILTERS = [
   { id: "none", name: "Original", emoji: "✨" },
@@ -91,6 +105,7 @@ export const Upload: React.FC = () => {
   const [externalMediaUrl, setExternalMediaUrl] = React.useState<string | null>(
     null,
   );
+  const [tiktokUrl, setTiktokUrl] = React.useState("");
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -150,8 +165,9 @@ export const Upload: React.FC = () => {
     const hasMux = !!muxData;
     const hasPexels = !!pexelsData;
     const hasFile = !!file;
+    const hasExternal = !!externalMediaUrl;
 
-    if (!hasFile && !hasMux && !hasPexels) {
+    if (!hasFile && !hasMux && !hasPexels && !hasExternal) {
       toast.warning("Ajoute une image ou vidéo!");
       return;
     }
@@ -198,13 +214,15 @@ export const Upload: React.FC = () => {
 
       // [SOVEREIGN] Use AI-generated URL if provided
       if (externalMediaUrl && !file) {
+        const externalIsVideo =
+          externalMediaUrl.includes(".mp4") ||
+          externalMediaUrl.includes(".webm") ||
+          externalMediaUrl.includes(".mov") ||
+          isTikTokUrl(externalMediaUrl);
+
         setIsUploading(true);
         const post = await createPost({
-          type:
-            externalMediaUrl.includes(".mp4") ||
-            externalMediaUrl.includes(".webm")
-              ? "video"
-              : "image",
+          type: externalIsVideo ? "video" : "image",
           mediaUrl: externalMediaUrl,
           caption: caption || "Généré avec l'IA Studio Comète ☄️",
           soundId: selectedSound?.id,
@@ -287,6 +305,45 @@ export const Upload: React.FC = () => {
                   onCancel={() => setUploadMode(null)}
                 />
               </div>
+            ) : uploadMode === "tiktok" ? (
+              <div className="space-y-4">
+                <button
+                  onClick={() => setUploadMode(null)}
+                  className="text-leather-400 hover:text-white text-sm"
+                >
+                  ← Retour
+                </button>
+                <div className="leather-card rounded-2xl p-5 stitched space-y-4">
+                  <h3 className="text-gold-400 font-bold">Importer un lien TikTok</h3>
+                  <input
+                    type="url"
+                    value={tiktokUrl}
+                    onChange={(e) => setTiktokUrl(e.target.value)}
+                    placeholder="https://www.tiktok.com/@username/video/123..."
+                    className="input-premium text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = tiktokUrl.trim();
+                      if (!isTikTokUrl(trimmed)) {
+                        toast.warning("Entre un lien TikTok valide.");
+                        return;
+                      }
+                      setExternalMediaUrl(trimmed);
+                      setPreview(trimmed);
+                      setFile(null);
+                      setMuxData(null);
+                      setPexelsData(null);
+                      setUploadMode(null);
+                    }}
+                    className="btn-gold w-full py-3 rounded-xl font-bold disabled:opacity-60"
+                    disabled={!tiktokUrl.trim()}
+                  >
+                    Utiliser ce lien TikTok
+                  </button>
+                </div>
+              </div>
             ) : uploadMode === "pexels" ? (
               <div className="space-y-4">
                 <button
@@ -353,6 +410,20 @@ export const Upload: React.FC = () => {
                     PEXELS
                   </span>
                 </button>
+
+                <button
+                  onClick={() => setUploadMode("tiktok")}
+                  className="aspect-square flex flex-col items-center justify-center gap-4 leather-card rounded-2xl border-2 border-dashed border-leather-700 hover:border-gold-500 hover:bg-gold-500/5 transition-all group overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 bg-gold-gradient opacity-0 group-hover:opacity-10 transition-opacity" />
+                  <div className="w-16 h-16 rounded-full bg-leather-800 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg border border-leather-600">
+                    <span className="text-gold-500 font-black text-xl">TT</span>
+                  </div>
+                  <span className="text-white font-bold tracking-wide">
+                    TIKTOK
+                  </span>
+                  <span className="text-leather-400 text-xs">(Lien)</span>
+                </button>
               </div>
             )}
           </>
@@ -372,6 +443,20 @@ export const Upload: React.FC = () => {
                   alt="Pexels Preview"
                   className="w-full h-full object-cover"
                 />
+              ) : externalMediaUrl && isTikTokUrl(externalMediaUrl) ? (
+                getTikTokEmbedUrl(externalMediaUrl) ? (
+                  <iframe
+                    src={getTikTokEmbedUrl(externalMediaUrl) || undefined}
+                    title="TikTok Preview"
+                    className="w-full h-full"
+                    allow="autoplay; encrypted-media"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-leather-300 p-6 text-center">
+                    Lien TikTok détecté, mais impossible de lire l'ID vidéo. Vérifie le format du lien.
+                  </div>
+                )
               ) : file?.type.startsWith("video") ? (
                 <video
                   src={preview!}
@@ -392,6 +477,8 @@ export const Upload: React.FC = () => {
                   setPreview(null);
                   setMuxData(null);
                   setPexelsData(null);
+                  setExternalMediaUrl(null);
+                  setTiktokUrl("");
                 }}
                 className="absolute top-4 right-4 p-2 bg-black/60 text-white rounded-full hover:bg-red-600 transition-colors"
               >
@@ -404,6 +491,8 @@ export const Upload: React.FC = () => {
                     ? "🎥 MUX"
                     : pexelsData
                       ? "🎥 PEXELS"
+                      : externalMediaUrl && isTikTokUrl(externalMediaUrl)
+                        ? "🎵 TIKTOK"
                       : file?.type.startsWith("video")
                         ? "🎥 VIDÉO"
                         : "📸 PHOTO"}
@@ -592,6 +681,8 @@ export const Upload: React.FC = () => {
                 onClick={() => {
                   setFile(null);
                   setPreview(null);
+                  setExternalMediaUrl(null);
+                  setTiktokUrl("");
                 }}
                 className="flex-1 py-4 text-leather-400 font-bold hover:text-white transition-colors"
               >
