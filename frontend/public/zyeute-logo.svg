@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <!-- Antique Gold Gradient -->
+    <linearGradient id="goldAntique" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4AF37"/>
+      <stop offset="25%" stop-color="#C9A227"/>
+      <stop offset="50%" stop-color="#B8941F"/>
+      <stop offset="75%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </linearGradient>
+    
+    <!-- Deep Shadow -->
+    <filter id="deepShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="2" dy="4" stdDeviation="3" flood-color="#000" flood-opacity="0.5"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#C9A227" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Emboss Effect -->
+    <filter id="emboss">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.75" specularExponent="20" lighting-color="#F4E4C1" result="specOut">
+        <fePointLight x="-5000" y="-10000" z="20000"/>
+      </feSpecularLighting>
+      <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specOut"/>
+      <feComposite in="SourceGraphic" in2="specOut" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litPaint"/>
+      <feMerge>
+        <feMergeNode in="litPaint"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background Circle - Dark Leather -->
+  <circle cx="100" cy="100" r="90" fill="#1a1510" stroke="url(#goldAntique)" stroke-width="3"/>
+  
+  <!-- Inner Ring with Stitching Pattern -->
+  <circle cx="100" cy="100" r="82" fill="none" stroke="url(#goldAntique)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+  
+  <!-- Central Fleur-de-lis - Interlocking Style -->
+  <g filter="url(#deepShadow)" transform="translate(100, 100)">
+    <!-- Main Fleur-de-lis -->
+    <g fill="url(#goldAntique)" filter="url(#emboss)">
+      <!-- Center Petal -->
+      <path d="M0,-45 C-8,-35 -12,-20 -8,-5 C-5,5 -3,15 -3,25 L-8,40 L-3,40 L0,55 L3,40 L8,40 L3,25 C3,15 5,5 8,-5 C12,-20 8,-35 0,-45 Z"/>
+      
+      <!-- Left Petal -->
+      <path d="M-15,-25 C-35,-20 -45,-5 -40,15 C-38,25 -30,32 -20,35 L-12,38 L-15,30 C-20,28 -25,22 -22,12 C-20,5 -18,0 -15,-5 C-12,-12 -10,-18 -15,-25 Z"/>
+      
+      <!-- Right Petal -->
+      <path d="M15,-25 C35,-20 45,-5 40,15 C38,25 30,32 20,35 L12,38 L15,30 C20,28 25,22 22,12 C20,5 18,0 15,-5 C12,-12 10,-18 15,-25 Z"/>
+      
+      <!-- Base/Band -->
+      <ellipse cx="0" cy="42" rx="12" ry="4" fill="#8B6914"/>
+    </g>
+    
+    <!-- Decorative Band with Z Pattern (like LV style) -->
+    <g stroke="url(#goldAntique)" stroke-width="2" fill="none" opacity="0.8">
+      <path d="M-35,10 L-20,25 L-35,40"/>
+      <path d="M35,10 L20,25 L35,40"/>
+    </g>
+  </g>
+  
+  <!-- Outer Decorative Corners - Diamond Pattern like LV -->
+  <g stroke="url(#goldAntique)" stroke-width="1.5" fill="none" opacity="0.4">
+    <path d="M20,20 L35,20 L35,35"/>
+    <path d="M180,20 L165,20 L165,35"/>
+    <path d="M20,180 L35,180 L35,165"/>
+    <path d="M180,180 L165,180 L165,165"/>
+  </g>
+  
+  <!-- "Z" Monogram Integration - Subtle -->
+  <g transform="translate(100, 100)" opacity="0.15">
+    <path d="M-60,-60 L60,-60 L-60,60 L60,60" stroke="url(#goldAntique)" stroke-width="20" fill="none"/>
+  </g>
+</svg>

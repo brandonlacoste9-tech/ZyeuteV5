@@ -1,0 +1,13 @@
+node_modules
+dist
+build
+.archive
+temp_hive
+.replit
+.openhands
+.gemini
+infrastructure
+migrations
+packages
+playwright-report
+test-results

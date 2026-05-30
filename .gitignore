@@ -1,0 +1,89 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+.env
+.env.*
+!.env.example
+!.env.production.template
+!.env.vercel.example
+
+# Duplicate/backup project directories
+ZyeuteV5-*/
+
+# MCP (local agent tooling config; may contain secrets)
+.mcp.json
+
+.vercel
+
+# Colony OS
+infrastructure/colony/.env.colony
+infrastructure/colony/venv/
+infrastructure/colony/logs/*.log
+
+# Generated email templates (compiled from .tsx)
+server/email-templates.js
+.clinerules/byterover-rules.md
+.kilocode/rules/byterover-rules.md
+.roo/rules/byterover-rules.md
+.windsurf/rules/byterover-rules.md
+.cursor/rules/byterover-rules.mdc
+.kiro/steering/byterover-rules.md
+.qoder/rules/byterover-rules.md
+.augment/rules/byterover-rules.md
+
+# Test artifacts
+test-results/
+playwright-report/
+
+# Documentation archive
+.archive/
+Windows-Use/
+ZyeuteV5-1/
+colony-os-magnum-opus/
+
+zyeute-ai-key.json
+*.log
+push_error.txt
+pin-hero.js
+tsc_*.txt
+.agent/
+my-project/
+antigravity-kit/
+google-credentials.json
+ZyeuteV5/
+
+# 🔒 Security: Block ALL credential/key files
+*-key.json
+*-credentials.json
+*-service-account.json
+*.pem
+*.p12
+service-account*.json
+credentials*.json
+
+
+# Local tooling / external repos (cloned via scripts, not committed)
+external/
+tools/
+video-diag-output.txt
+.claude/
+.env*.local
+
+# Phase 4 Sweep Additions
+/*.sql
+/*.png
+*.tgz
+*.vsix
+*.mp4
+/test-*.js
+/test_*.js
+/verify-*.js
+/repair_db_schema*.js
+/check_db_schema*.js
+/1
+/Home.tsx
+/QUICK_START_CLAUDE_CODE.txt
+/.empty-commit-placeholder

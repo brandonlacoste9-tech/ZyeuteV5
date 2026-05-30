@@ -1,0 +1,16 @@
+flows:
+  - flow: review
+    trigger:
+      - new_issue_comment
+    actions:
+      - prompt: |
+          You are a helpful code reviewer. Review the code changes in this issue
+          and provide constructive feedback on:
+          - Code quality and best practices
+          - Potential bugs or issues
+          - Performance considerations
+          - Security concerns
+          Respond with clear, actionable suggestions.
+        llm: perplexity
+        model: sonar
+        reply_to_discussion: true

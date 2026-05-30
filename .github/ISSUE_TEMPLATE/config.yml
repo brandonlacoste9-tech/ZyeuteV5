@@ -1,0 +1,20 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/$GITHUB_REPOSITORY_OWNER/zyeute-v3/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📖 Documentation
+    url: ../../blob/main/README.md
+    about: Read the project documentation
+  - name: 🚀 Deployment Guide
+    url: ../../blob/main/DEPLOYMENT_FIX.md
+    about: Check deployment and environment setup guides
+  - name: 📋 Triage Workflow
+    url: ../../blob/main/.github/TRIAGE_WORKFLOW.md
+    about: Learn about the issue triage process for audit findings
+  - name: 🏷️ Labels Guide
+    url: ../../blob/main/.github/LABELS.md
+    about: Understand label definitions and usage
+  - name: 🔗 Dependency Mapping
+    url: ../../blob/main/.github/DEPENDENCY_MAP_TEMPLATE.md
+    about: How to map and document issue dependencies

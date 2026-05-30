@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zyeute Studio - Creator Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">
+        <span class="logo-icon">⚜️</span>
+        <span class="logo-text">Zyeute Studio</span>
+      </div>
+      
+      <nav class="nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <i class="ph-fill ph-squares-four nav-icon"></i>
+          <span class="nav-text">Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="content">
+          <i class="ph-fill ph-film-strip nav-icon"></i>
+          <span class="nav-text">Content</span>
+        </a>
+        <a href="#" class="nav-item" data-section="upload">
+          <i class="ph-fill ph-upload-simple nav-icon"></i>
+          <span class="nav-text">Upload</span>
+        </a>
+        <a href="#" class="nav-item" data-section="analytics">
+          <i class="ph-fill ph-chart-line-up nav-icon"></i>
+          <span class="nav-text">Analytics</span>
+        </a>
+        <a href="#" class="nav-item" data-section="live">
+          <i class="ph-fill ph-video-camera nav-icon"></i>
+          <span class="nav-text">Go Live</span>
+        </a>
+        <a href="#" class="nav-item" data-section="comments">
+          <i class="ph-fill ph-chat-circle-text nav-icon"></i>
+          <span class="nav-text">Comments</span>
+        </a>
+        <a href="#" class="nav-item" data-section="settings">
+          <i class="ph-fill ph-gear nav-icon"></i>
+          <span class="nav-text">Settings</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-info" onclick="document.querySelector('[data-section=settings]').click()" style="cursor: pointer;">
+          <div class="user-avatar">Y</div>
+          <div class="user-details">
+            <span class="user-name">Your Channel</span>
+            <span class="user-handle">@yourusername</span>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="if(confirm('Log out?')) window.location.href='login.html'" title="Log Out">
+          🚪
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="header-actions">
+          <button class="btn btn-secondary">Help</button>
+          <button class="btn btn-primary" id="uploadBtn">
+            <span>⬆️</span> Upload Video
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Section -->
+      <section id="dashboard-section" class="section active">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">👁️</div>
+            <div class="stat-info">
+              <span class="stat-value">1.2M</span>
+              <span class="stat-label">Total Views</span>
+              <span class="stat-change positive">+12.5%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-info">
+              <span class="stat-value">45.2K</span>
+              <span class="stat-label">Total Likes</span>
+              <span class="stat-change positive">+8.3%</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-value">12.5K</span>
+              <span class="stat-label">Followers</span>
+              <span class="stat-change positive">+234</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-info">
+              <span class="stat-value">3.8K</span>
+              <span class="stat-label">Comments</span>
+              <span class="stat-change positive">+5.1%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Videos -->
+        <div class="content-section">
+          <div class="section-header">
+            <h2>Recent Videos</h2>
+            <a href="#" class="view-all">View All →</a>
+          </div>
+          <div class="video-grid">
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">0:45</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Quebec winters hit different ❄️</h3>
+                <div class="video-stats">
+                  <span>👁️ 45.2K</span>
+                  <span>🔥 2.1K</span>
+                </div>
+                <span class="video-date">Posted 2 hours ago</span>
+              </div>
+            </div>
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">1:23</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Poutine time! 🧀</h3>
+                <div class="video-stats">
+                  <span>👁️ 89.1K</span>
+                  <span>🔥 5.6K</span>
+                </div>
+                <span class="video-date">Posted 1 day ago</span>
+              </div>
+            </div>
+            <div class="video-card">
+              <div class="video-thumbnail">
+                <span class="video-placeholder">🎬</span>
+                <span class="video-duration">0:32</span>
+              </div>
+              <div class="video-info">
+                <h3 class="video-title">Fleur-de-lys forever ⚜️</h3>
+                <div class="video-stats">
+                  <span>👁️ 156K</span>
+                  <span>🔥 12.3K</span>
+                </div>
+                <span class="video-date">Posted 3 days ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="content-section">
+          <div class="section-header">
+            <h2>Performance (Last 7 Days)</h2>
+          </div>
+          <div class="chart-container">
+            <div class="chart-placeholder">
+              <div class="chart-bars">
+                <div class="chart-bar" style="height: 40%"><span>Mon</span></div>
+                <div class="chart-bar" style="height: 65%"><span>Tue</span></div>
+                <div class="chart-bar" style="height: 45%"><span>Wed</span></div>
+                <div class="chart-bar" style="height: 80%"><span>Thu</span></div>
+                <div class="chart-bar" style="height: 55%"><span>Fri</span></div>
+                <div class="chart-bar" style="height: 90%"><span>Sat</span></div>
+                <div class="chart-bar" style="height: 70%"><span>Sun</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Upload Section -->
+      <section id="upload-section" class="section">
+        <div class="upload-area">
+          <div class="upload-zone" id="dropZone">
+            <span class="upload-icon">📁</span>
+            <h2>Drag & drop your videos here</h2>
+            <p>or <button class="btn-link" id="selectFilesBtn">browse files</button></p>
+            <p class="upload-hint">Supports MP4, MOV, AVI (up to 500MB)</p>
+          </div>
+          
+          <div class="upload-options">
+            <h3>Upload Settings</h3>
+            <div class="form-group">
+              <label>Caption</label>
+              <textarea class="form-textarea" placeholder="Describe your video... #Quebec #Joual"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Visibility</label>
+              <select class="form-select">
+                <option>Public</option>
+                <option>Followers only</option>
+                <option>Private</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" checked> Allow comments
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox"> Allow duets
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Analytics Section -->
+      <section id="analytics-section" class="section">
+        <div class="analytics-grid">
+          <div class="analytics-card large">
+            <h3>Audience Demographics</h3>
+            <div class="demographics">
+              <div class="demo-item">
+                <span class="demo-label">Quebec</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 65%"></div></div>
+                <span class="demo-value">65%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">Ontario</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 20%"></div></div>
+                <span class="demo-value">20%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">Other Canada</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 10%"></div></div>
+                <span class="demo-value">10%</span>
+              </div>
+              <div class="demo-item">
+                <span class="demo-label">International</span>
+                <div class="demo-bar"><div class="demo-fill" style="width: 5%"></div></div>
+                <span class="demo-value">5%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="analytics-card">
+            <h3>Top Traffic Sources</h3>
+            <div class="traffic-sources">
+              <div class="source-item">
+                <span>For You Page</span>
+                <strong>68%</strong>
+              </div>
+              <div class="source-item">
+                <span>Following</span>
+                <strong>22%</strong>
+              </div>
+              <div class="source-item">
+                <span>Search</span>
+                <strong>7%</strong>
+              </div>
+              <div class="source-item">
+                <span>Shares</span>
+                <strong>3%</strong>
+              </div>
+            </div>
+          </div>
+          
+          <div class="analytics-card">
+            <h3>Best Performing Times</h3>
+            <div class="best-times">
+              <div class="time-item">
+                <span>🌅 6-9 PM</span>
+                <span class="time-label">Peak</span>
+              </div>
+              <div class="time-item">
+                <span>🌙 9-11 PM</span>
+                <span class="time-label">High</span>
+              </div>
+              <div class="time-item">
+                <span>☀️ 12-2 PM</span>
+                <span class="time-label">Medium</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Section -->
+      <section id="settings-section" class="section">
+        <div class="settings-container">
+          <div class="settings-sidebar">
+            <button class="settings-tab active" data-tab="account">
+              <span>👤</span> Account
+            </button>
+            <button class="settings-tab" data-tab="privacy">
+              <span>🔒</span> Privacy
+            </button>
+            <button class="settings-tab" data-tab="notifications">
+              <span>🔔</span> Notifications
+            </button>
+            <button class="settings-tab" data-tab="appearance">
+              <span>🎨</span> Appearance
+            </button>
+            <button class="settings-tab" data-tab="language">
+              <span>🌐</span> Language
+            </button>
+            <button class="settings-tab" data-tab="help">
+              <span>❓</span> Help & Support
+            </button>
+            <button class="settings-tab" data-tab="about">
+              <span>ℹ️</span> About
+            </button>
+            <div class="settings-divider"></div>
+            <button class="settings-tab logout" data-tab="logout">
+              <span>🚪</span> Log Out
+            </button>
+          </div>
+          
+          <div class="settings-content">
+            <!-- Account Settings -->
+            <div class="settings-panel active" id="account-panel">
+              <h2>Account Settings</h2>
+              <div class="settings-profile">
+                <div class="settings-avatar">Y</div>
+                <button class="btn btn-secondary">Change Photo</button>
+              </div>
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" class="form-input" value="yourusername">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" value="user@example.com">
+              </div>
+              <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" class="form-input" placeholder="Add phone number">
+              </div>
+              <div class="form-group">
+                <label>Bio</label>
+                <textarea class="form-textarea" rows="3">Quebec Creator ⚜️</textarea>
+              </div>
+              <button class="btn btn-primary">Save Changes</button>
+            </div>
+            
+            <!-- Privacy Settings -->
+            <div class="settings-panel" id="privacy-panel">
+              <h2>Privacy Settings</h2>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Private Account</h3>
+                  <p>Only approved followers can see your content</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Allow Comments</h3>
+                  <p>Let others comment on your videos</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Allow Duets</h3>
+                  <p>Others can duet with your videos</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Allow Downloads</h3>
+                  <p>Others can download your videos</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-actions">
+                <button class="btn btn-danger">Blocked Users</button>
+                <button class="btn btn-danger">Restricted Accounts</button>
+              </div>
+            </div>
+            
+            <!-- Notifications Settings -->
+            <div class="settings-panel" id="notifications-panel">
+              <h2>Notification Settings</h2>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Push Notifications</h3>
+                  <p>Receive push notifications</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Email Notifications</h3>
+                  <p>Receive email updates</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <h3 class="settings-subtitle">Activity Notifications</h3>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Likes</h3>
+                  <p>When someone likes your video</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Comments</h3>
+                  <p>When someone comments on your video</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>New Followers</h3>
+                  <p>When someone follows you</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Live Streams</h3>
+                  <p>When accounts you follow go live</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            
+            <!-- Appearance Settings -->
+            <div class="settings-panel" id="appearance-panel">
+              <h2>Appearance</h2>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Dark Mode</h3>
+                  <p>Use dark theme throughout the app</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked>
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>High Contrast</h3>
+                  <p>Increase contrast for better visibility</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="settings-toggle">
+                <div class="toggle-info">
+                  <h3>Reduced Motion</h3>
+                  <p>Minimize animations throughout the app</p>
+                </div>
+                <label class="toggle-switch">
+                  <input type="checkbox">
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              
+              <div class="color-picker-section">
+                <h3 class="color-picker-title">Edge Lighting Color</h3>
+                <div class="color-grid">
+                  <button class="color-option active" data-color="#C9A227" title="Gold - Classic Luxury">
+                    <div class="color-circle" style="background: #C9A227;"></div>
+                    <span>Gold</span>
+                  </button>
+                  <button class="color-option" data-color="#0066CC" title="Royal Blue - Calm & Professional">
+                    <div class="color-circle" style="background: #0066CC;"></div>
+                    <span>Blue</span>
+                  </button>
+                  <button class="color-option" data-color="#00AA44" title="Emerald - Fresh & Vibrant">
+                    <div class="color-circle" style="background: #00AA44;"></div>
+                    <span>Green</span>
+                  </button>
+                  <button class="color-option" data-color="#CC0000" title="Ruby - Bold & Energetic">
+                    <div class="color-circle" style="background: #CC0000;"></div>
+                    <span>Red</span>
+                  </button>
+                  <button class="color-option" data-color="#8833CC" title="Amethyst - Creative & Rich">
+                    <div class="color-circle" style="background: #8833CC;"></div>
+                    <span>Purple</span>
+                  </button>
+                  <button class="color-option" data-color="#CC3377" title="Rose - Warm & Inviting">
+                    <div class="color-circle" style="background: #CC3377;"></div>
+                    <span>Pink</span>
+                  </button>
+                  <button class="color-option" data-color="#FF6600" title="Amber - Bright & Dynamic">
+                    <div class="color-circle" style="background: #FF6600;"></div>
+                    <span>Orange</span>
+                  </button>
+                  <button class="color-option" data-color="#00AAAA" title="Teal - Cool & Balanced">
+                    <div class="color-circle" style="background: #00AAAA;"></div>
+                    <span>Teal</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Language Settings -->
+            <div class="settings-panel" id="language-panel">
+              <h2>Language</h2>
+              
+              <div class="form-group">
+                <label>App Language</label>
+                <select class="form-select">
+                  <option>English</option>
+                  <option>Français (French)</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label>Content Language</label>
+                <select class="form-select">
+                  <option>All Languages</option>
+                  <option>English</option>
+                  <option>Français</option>
+                  <option>Español</option>
+                </select>
+              </div>
+              
+              <div class="pride-box">
+                <p>🇨🇦 <strong>Quebec Pride!</strong> Zyeute celebrates French-Canadian culture and the Joual language.</p>
+              </div>
+            </div>
+            
+            <!-- Help Settings -->
+            <div class="settings-panel" id="help-panel">
+              <h2>Help & Support</h2>
+              
+              <div class="help-list">
+                <button class="help-item">
+                  <span class="help-icon">📖</span>
+                  <div class="help-info">
+                    <h3>Help Center</h3>
+                    <p>Find answers to common questions</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">💬</span>
+                  <div class="help-info">
+                    <h3>Contact Us</h3>
+                    <p>Get in touch with our support team</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">🐛</span>
+                  <div class="help-info">
+                    <h3>Report a Problem</h3>
+                    <p>Let us know if something's not working</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">💡</span>
+                  <div class="help-info">
+                    <h3>Feature Request</h3>
+                    <p>Suggest new features for Zyeute</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">📋</span>
+                  <div class="help-info">
+                    <h3>Community Guidelines</h3>
+                    <p>Rules for keeping Zyeute safe</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">⚖️</span>
+                  <div class="help-info">
+                    <h3>Terms of Service</h3>
+                    <p>Legal terms and conditions</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+                
+                <button class="help-item">
+                  <span class="help-icon">🔒</span>
+                  <div class="help-info">
+                    <h3>Privacy Policy</h3>
+                    <p>How we handle your data</p>
+                  </div>
+                  <span class="help-arrow">→</span>
+                </button>
+              </div>
+            </div>
+            
+            <!-- About Settings -->
+            <div class="settings-panel" id="about-panel">
+              <div class="about-content">
+                <div class="about-logo">⚜️</div>
+                <h2 class="about-title">Zyeute Studio</h2>
+                <p class="about-subtitle">Quebec's Creator Platform 🦫⚜️</p>
+                
+                <div class="about-info">
+                  <div class="info-row">
+                    <span>Version</span>
+                    <span>1.0.0</span>
+                  </div>
+                  <div class="info-row">
+                    <span>Build</span>
+                    <span>2024.02.24</span>
+                  </div>
+                  <div class="info-row">
+                    <span>Platform</span>
+                    <span>Electron</span>
+                  </div>
+                </div>
+                
+                <p class="about-footer">Made with ❤️ in Quebec</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Section -->
+      <section id="live-section" class="section">
+        <div class="live-studio">
+          <div class="live-preview">
+            <div class="live-preview-area">
+              <span class="live-placeholder">🎥</span>
+              <p>Camera preview will appear here</p>
+            </div>
+            <div class="live-controls">
+              <button class="btn btn-live" id="startLiveBtn">
+                <span class="live-dot"></span> Go Live
+              </button>
+              <button class="btn btn-secondary">Stream Settings</button>
+            </div>
+          </div>
+          
+          <div class="live-sidebar">
+            <div class="live-chat-preview">
+              <h3>Live Chat</h3>
+              <div class="chat-messages">
+                <div class="chat-message">
+                  <strong>@marie_qc:</strong> Can't wait! 🔥
+                </div>
+                <div class="chat-message">
+                  <strong>@ti_guy:</strong> Let's goooo
+                </div>
+                <div class="chat-message">
+                  <strong>@sarah_mtl:</strong> ⚜️⚜️⚜️
+                </div>
+              </div>
+            </div>
+            
+            <div class="live-stats">
+              <div class="live-stat">
+                <span class="live-stat-value">0</span>
+                <span class="live-stat-label">Viewers</span>
+              </div>
+              <div class="live-stat">
+                <span class="live-stat-value">0</span>
+                <span class="live-stat-label">Likes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

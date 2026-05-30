@@ -1,0 +1,18 @@
+
+> dev
+> cross-env NODE_ENV=development tsx backend/index.ts
+
+Γä╣∩╕Å  OpenTelemetry tracing disabled (not on Vercel, set ENABLE_OTEL=true to enable)
+ΓÜá∩╕Å GEMINI_API_KEY non trouv├⌐e dans .env. Les fonctionnalit├⌐s de scouting AI seront d├⌐sactiv├⌐es.
+[dotenv@17.2.3] injecting env (0) from .env -- tip: ≡ƒôí add observability to secrets: https://dotenvx.com/ops
+ΓÜá∩╕Å [Synapse] Warning: DATABASE_URL missing. The Hive Mind will be unable to remember.
+ΓÜá∩╕Å RESEND_API_KEY not found - email functionality will be disabled
+ΓÜá∩╕Å Supabase environment variables missing. JWT Auth will fail.
+   Set VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or VITE_SUPABASE_ANON_KEY.
+ΓÜá∩╕Å STRIPE_SECRET_KEY not found - payment features will be disabled
+≡ƒÜÇ Starting ZyeuteV5 backend...
+≡ƒôì Environment: development
+≡ƒöî Port: 5000
+[INFO] [VertexGemini] Initialized Vertex AI for project: zyeute-production, location: us-central1
+[Colony Bridge] Started metrics reporting (5 min interval)
+Γ£à Colony OS metrics bridge initialized

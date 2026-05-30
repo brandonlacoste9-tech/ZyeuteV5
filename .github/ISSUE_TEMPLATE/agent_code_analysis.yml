@@ -1,0 +1,427 @@
+name: 🔐 AGENT 2 - Code Security & Quality Scan
+description: Security vulnerability and code quality audit for GitHub Copilot Code Analysis Agent
+title: "[AGENT-CODE]: Security & Quality Scan - Login & Auth System"
+labels: ["agent-task", "security", "code-quality", "critical"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 🤖 GitHub Copilot Code Analysis Agent - Assignment Brief
+        
+        **Agent Type:** Code Analysis Agent  
+        **Priority:** 🚨 CRITICAL  
+        **Timeline:** 4-6 hours  
+        **Expected Deliverables:** Security report, code quality audit, remediation checklist
+        
+        ---
+        
+        ## 🎯 YOUR MISSION
+        
+        Conduct a **comprehensive security and code quality audit** of the Zyeuté authentication system.
+        
+        **Focus Areas:**
+        1. Security vulnerabilities (XSS, injection, exposed secrets)
+        2. Input validation and sanitization
+        3. Authentication/authorization flaws
+        4. Code quality issues (unused code, duplication, anti-patterns)
+        5. Best practices compliance (React, TypeScript, Supabase)
+        
+        ---
+        
+        ## 🏗️ CRITICAL: Architecture Context
+        
+        **Current Architecture Shift:**
+        - ❌ **OLD:** Server-side proxy auth (`/api/auth/login`) - being deprecated
+        - ✅ **NEW:** Direct client-side Supabase auth - being implemented
+        
+        **Your Job:** Validate that the NEW approach is secure and follows best practices.
+        
+        ---
+
+  - type: textarea
+    id: security_critical
+    attributes:
+      label: "🔴 CRITICAL Security Issues (Fix Immediately)"
+      description: |
+        High-severity security vulnerabilities that MUST be fixed
+      placeholder: |
+        ### 🔴 CRITICAL FINDINGS:
+        
+        #### Issue #1: [Title]
+        - **Type:** Hardcoded Secret / XSS / Injection / Auth Bypass
+        - **Location:** `[file:line]`
+        - **Code:**
+          ```typescript
+          [Paste vulnerable code here]
+          ```
+        - **Risk:** [Describe the security risk]
+        - **Impact:** [What could an attacker do?]
+        - **Fix:**
+          ```typescript
+          [Paste fixed code here]
+          ```
+        - **Priority:** Fix in next 24 hours
+        
+        #### Issue #2: [Title]
+        [Same format as above...]
+        
+        **Total Critical Issues Found:** [number]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Scan for:
+           - Hardcoded API keys, tokens, secrets
+           - XSS vulnerabilities (dangerouslySetInnerHTML, unescaped user input)
+           - SQL/NoSQL injection risks
+           - Authentication/authorization bypasses
+           - Insecure direct object references
+        
+        2. For each finding:
+           - Document the exact location
+           - Explain the security risk
+           - Provide a concrete fix
+        
+        **Report your critical findings above.**
+
+  - type: textarea
+    id: security_high
+    attributes:
+      label: "🟠 HIGH Priority Security Issues (Fix This Week)"
+      description: |
+        Important security issues that should be addressed soon
+      placeholder: |
+        ### 🟠 HIGH PRIORITY FINDINGS:
+        
+        #### Issue #1: [Title]
+        - **Type:** Missing Validation / Weak Auth / CORS Issue
+        - **Location:** `[file:line]`
+        - **Risk:** [Describe the risk]
+        - **Fix:** [Solution]
+        
+        [Continue for all HIGH issues...]
+        
+        **Total High-Priority Issues Found:** [number]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Scan for:
+           - Missing input validation
+           - Weak authentication patterns
+           - CORS misconfigurations
+           - Insecure session management
+           - Missing rate limiting
+           - Exposed sensitive data in logs
+        
+        **Report your high-priority findings above.**
+
+  - type: textarea
+    id: security_medium
+    attributes:
+      label: "🟡 MEDIUM Priority Security Issues (Fix Next Sprint)"
+      description: |
+        Moderate security concerns for future sprints
+      placeholder: |
+        ### 🟡 MEDIUM PRIORITY FINDINGS:
+        
+        #### Issue #1: [Title]
+        - **Location:** `[file:line]`
+        - **Risk:** [Describe]
+        - **Fix:** [Solution]
+        
+        [Continue...]
+        
+        **Total Medium-Priority Issues Found:** [number]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Scan for:
+           - Weak password requirements
+           - Missing security headers
+           - Outdated dependencies with known CVEs
+           - Insecure third-party integrations
+        
+        **Report your medium-priority findings above.**
+
+  - type: textarea
+    id: code_quality
+    attributes:
+      label: "📊 Code Quality Issues"
+      description: |
+        Non-security code quality problems
+      placeholder: |
+        ### CODE QUALITY FINDINGS:
+        
+        #### 1. Unused Imports/Variables
+        - **File:** `client/src/pages/Login.tsx`
+        - **Lines:** [list line numbers]
+        - **Fix:** Remove unused code
+        
+        #### 2. Code Duplication
+        - **Files:** [list files]
+        - **Description:** [What's duplicated]
+        - **Fix:** Extract to shared utility/component
+        
+        #### 3. Anti-Patterns
+        - **Pattern:** [e.g., "Using any type instead of proper types"]
+        - **Location:** [file:line]
+        - **Fix:** [Better approach]
+        
+        #### 4. Missing Error Handling
+        - **Location:** [file:line]
+        - **Risk:** App could crash
+        - **Fix:** Add try-catch blocks
+        
+        #### 5. Performance Issues
+        - **Issue:** [e.g., "Re-rendering on every keystroke"]
+        - **Location:** [file:line]
+        - **Fix:** [Use useMemo/useCallback/debounce]
+        
+        **Total Code Quality Issues:** [number]
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Check for:
+           - Unused imports, variables, functions
+           - Duplicate code blocks
+           - Anti-patterns (any types, console.logs in prod, etc.)
+           - Missing error handling
+           - Performance issues (unnecessary re-renders, etc.)
+        
+        **Report your code quality findings above.**
+
+  - type: textarea
+    id: best_practices
+    attributes:
+      label: "✅ Best Practices Compliance"
+      description: |
+        Check compliance with React, TypeScript, and Supabase best practices
+      placeholder: |
+        ### BEST PRACTICES AUDIT:
+        
+        #### React Best Practices:
+        - [x] Components use functional style (not class-based)
+        - [ ] Proper use of hooks (useState, useEffect, etc.)
+        - [x] No prop drilling (using Context where appropriate)
+        - [ ] Proper key props in lists
+        - [x] Accessibility (ARIA labels, semantic HTML)
+        
+        #### TypeScript Best Practices:
+        - [ ] No `any` types (or justified with comments)
+        - [x] Proper interface/type definitions
+        - [ ] Strict mode enabled
+        - [x] Type imports vs value imports
+        
+        #### Supabase Best Practices:
+        - [x] Using Supabase client correctly
+        - [ ] Proper error handling for auth operations
+        - [x] Secure storage of credentials (env vars)
+        - [ ] RLS (Row Level Security) policies in place
+        
+        #### Security Best Practices:
+        - [x] CSP headers configured
+        - [ ] Input sanitization in place
+        - [x] HTTPS enforced
+        - [ ] Secrets not committed to repo
+        
+        **Overall Compliance Score:** [X]%
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        - Review files against industry best practices
+        - Check each box if compliant
+        - Document violations with file/line references
+        
+        **Report your compliance audit above.**
+
+  - type: textarea
+    id: csp_analysis
+    attributes:
+      label: "🛡️ CSP (Content Security Policy) Analysis"
+      description: |
+        Analyze the CSP headers in client/index.html
+      placeholder: |
+        ### CSP ANALYSIS:
+        
+        **Current CSP Headers:**
+        ```html
+        <meta http-equiv="Content-Security-Policy" content="[paste current CSP]" />
+        ```
+        
+        **Analysis:**
+        - ✅ Allows Supabase domains (*.supabase.co)
+        - ✅ Allows Stripe domains (*.stripe.com)
+        - ⚠️ Uses 'unsafe-inline' for scripts (RISK: XSS)
+        - ⚠️ Uses 'unsafe-eval' for scripts (RISK: Code injection)
+        
+        **Recommendations:**
+        1. [Recommendation 1]
+        2. [Recommendation 2]
+        
+        **Security Rating:** 🟡 MEDIUM (has some risks but necessary for current stack)
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Current CSP Location:** `client/index.html:15`
+        
+        **Instructions:**
+        1. Review the Content-Security-Policy meta tag
+        2. Verify it allows necessary domains (Supabase, Stripe)
+        3. Identify any overly permissive directives
+        4. Recommend improvements while keeping functionality
+        
+        **Report your CSP analysis above.**
+
+  - type: textarea
+    id: env_variables
+    attributes:
+      label: "🔑 Environment Variables Audit"
+      description: |
+        Check that sensitive data is stored in env vars, not hardcoded
+      placeholder: |
+        ### ENVIRONMENT VARIABLES AUDIT:
+        
+        **Required Variables (from .env.vercel.example):**
+        - [x] VITE_SUPABASE_URL (client-side, safe to expose)
+        - [x] VITE_SUPABASE_ANON_KEY (client-side, safe to expose)
+        - [ ] DATABASE_URL (server-side only - check not exposed)
+        - [ ] SESSION_SECRET (server-side only - check not exposed)
+        - [ ] STRIPE_SECRET_KEY (server-side only - check not exposed)
+        
+        **Findings:**
+        ✅ No secrets hardcoded in source code
+        ⚠️ Found potential secret in [file:line]
+        
+        **Missing Variables:**
+        - [ ] Need `.env.example` at project root (currently only `.env.vercel.example` exists)
+        
+        **Recommendations:**
+        1. Create `.env.example` at project root
+        2. Document all required variables
+        3. Add `.env` to `.gitignore` (verify)
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        1. Check `.env.vercel.example` for list of required variables
+        2. Scan codebase for hardcoded secrets (grep for "sk_", "pk_", "secret", "key", etc.)
+        3. Verify sensitive vars are server-side only (no VITE_ prefix)
+        4. Check if `.env.example` exists at project root (if not, recommend creation)
+        
+        **Report your findings above.**
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: "🔧 Remediation Checklist"
+      description: |
+        Prioritized list of fixes needed
+      placeholder: |
+        ### REMEDIATION CHECKLIST (Prioritized):
+        
+        #### Immediate (Next 24 Hours):
+        1. [ ] Fix Issue #1: [Critical security issue]
+        2. [ ] Fix Issue #2: [Critical security issue]
+        
+        #### This Week:
+        3. [ ] Fix Issue #3: [High-priority issue]
+        4. [ ] Fix Issue #4: [High-priority issue]
+        5. [ ] Add input validation to login form
+        6. [ ] Update CSP headers to be more restrictive
+        
+        #### Next Sprint:
+        7. [ ] Fix Issue #5: [Medium-priority issue]
+        8. [ ] Refactor duplicated code
+        9. [ ] Add missing error handling
+        10. [ ] Create `.env.example` at project root
+        
+        #### Future Enhancements:
+        - Implement rate limiting on auth endpoints
+        - Add session timeout warnings
+        - Implement 2FA (two-factor authentication)
+        - Add security monitoring/logging
+      value: |
+        **Status:** ⏳ Pending
+        
+        **Instructions:**
+        - Compile all findings from above sections
+        - Sort by priority (Critical → High → Medium → Low)
+        - Create actionable checklist items
+        - Estimate effort for each item
+        
+        **Fill out your remediation checklist above.**
+
+  - type: checkboxes
+    id: success_criteria
+    attributes:
+      label: "🎯 Success Criteria"
+      description: Check off as you complete each requirement
+      options:
+        - label: "Security scan completed (Critical, High, Medium categories)"
+          required: false
+        - label: "Code quality audit completed"
+          required: false
+        - label: "Best practices compliance checked"
+          required: false
+        - label: "CSP headers analyzed"
+          required: false
+        - label: "Environment variables audited"
+          required: false
+        - label: "Remediation checklist created and prioritized"
+          required: false
+        - label: "All findings documented with file/line references"
+          required: false
+        - label: "Concrete fixes provided for each issue"
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 📚 FILES TO AUDIT (Priority Order)
+        
+        ### 🔴 Critical Priority:
+        1. **`client/src/pages/Login.tsx`** - Main auth entry point
+        2. **`client/src/lib/supabase.ts`** - Supabase client config
+        3. **`client/index.html`** - CSP headers
+        4. **`.env.vercel.example`** - Environment variable template
+        
+        ### 🟠 High Priority:
+        5. **`client/src/hooks/useGuestMode.ts`** - Session management
+        6. **`client/src/hooks/useAuth.ts`** - Auth state management
+        7. **`server/supabase-auth.ts`** - Server-side auth (if exists)
+        8. **`.gitignore`** - Verify secrets not committed
+        
+        ### 🟡 Medium Priority:
+        9. **`client/src/components/GuestBanner.tsx`** - Guest mode UI
+        10. **`client/src/pages/AuthCallback.tsx`** - OAuth callback handler
+        11. **Any API routes in `api/` directory** - Server-side endpoints
+        
+        ---
+        
+        ## 🔗 RELATED ISSUES
+        
+        - **Issue #1:** SWE Agent (will fix bugs you identify)
+        - **Issue #3:** CI/CD Agent (will create tests for security fixes)
+        - **Issue #4:** Issues Agent (will organize your findings)
+        
+        **Cross-Reference:** See `AUDIT_MASTER_TRACKER.md` for context.
+        
+        ---
+        
+        ## 📞 NEED HELP?
+        
+        - **Blocked?** Comment with `@brandonlacoste9-tech`
+        - **Questions?** Reference `AUDIT_MASTER_TRACKER.md`
+        - **Security resources:** OWASP Top 10, Supabase Security Best Practices
+        
+        ---
+        
+        **🚀 YOU MAY BEGIN YOUR SECURITY AUDIT NOW. GOOD LUCK!**

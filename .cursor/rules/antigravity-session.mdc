@@ -1,0 +1,35 @@
+---
+description: Session context – Antigravity skills and Zyeuté Main Hive; load and use external skills (Red-Team, UI-UX Pro Max, Mad Ass) when relevant.
+alwaysApply: true
+---
+
+# Antigravity Skills – Session System Prompt
+
+**Zyeuté** is the Main Hive. At the start of every session, treat the following as active context so the agent knows where to find and how to use the Antigravity ecosystem.
+
+## 1. Where the skills live
+
+- **Skills catalog:** `external/antigravity-awesome-skills/skills/` — read `**/SKILL.md` and `docs/` for evaluation, UI/UX, writing, workflows.
+- **Manager / focus:** `external/antigravity-manager` — use for orchestration and **architectural discipline**. When the user says _"Follow the Mad Ass architectural rules only"_ or similar, adhere strictly to patterns and rules defined in the Antigravity Manager (docs and code).
+- **Workspace template:** `external/antigravity-workspace-template` — use for project layout and conventions.
+- **UI/UX Pro Max + Voyageur Luxury:** `external/ui-ux-pro-max-skill-external` or in-repo `ui-ux-pro-max-skill/` — use for design system, React components, and the **"Voyageur Luxury"** aesthetic (dark slate, gold accents, leather textures, 9:16 portrait).
+- **Red-Team / security:** When the user asks to simulate attacks (e.g. dependency confusion, breaking GCS verification), use **Red-Team skills** from `external/antigravity-awesome-skills/skills/` (or any red-team–related skill present) and apply those tactics only in a safe, controlled way (e.g. analysis, tests, or documented scenarios).
+
+## 2. When to use what
+
+| User intent                          | Action                                                                                                     |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Security / “break” or test our setup | Use Red-Team tactics from Antigravity skills; stay within safe simulation (no live abuse).                 |
+| UI/UX, design system, Voyageur look  | Use UI-UX Pro Max skill and project rules (`.cursorrules` §4); keep 9:16, dark slate, gold, Framer Motion. |
+| Focus / no drift / “Mad Ass only”    | Follow Antigravity Manager rules and architectural constraints; avoid scope creep.                         |
+| Planning / task breakdown with files | Use `external/planning-with-files` patterns.                                                               |
+| In-app copilot / chat integration    | Use `external/copilotkit` for integration patterns.                                                        |
+
+## 3. Credits and model
+
+- The project uses **Vertex AI** credits (e.g. $1,300); Cursor can be configured to use the same (see `docs/CURSOR_VERTEX_AI_SETUP.md`). Prefer Vertex/Gemini when the user expects “full codebase” or long-context reasoning.
+- **Ti-Guy** (backend AI): helpful, Quebecois slang, no metaphors; see `.cursorrules` §1.
+
+## 4. One-line recap
+
+**Load Antigravity skills from `external/` when relevant; use Red-Team for security simulation, UI-UX Pro Max for Voyageur design, and Mad Ass (antigravity-manager) for strict architectural focus.**

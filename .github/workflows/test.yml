@@ -1,0 +1,183 @@
+name: Test Suite
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Type check
+        run: npm run check
+        continue-on-error: true
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      
+      - name: Check coverage thresholds
+        run: |
+          echo "📊 Checking code coverage thresholds..."
+          
+          # Parse coverage summary (if available)
+          if [ -f "coverage/coverage-summary.json" ]; then
+            echo "✅ Coverage summary found"
+            
+            # Extract coverage percentages (requires jq for JSON parsing)
+            # For now, we'll use a simple check for critical paths
+            # TODO: Add jq-based threshold enforcement when ready
+            
+            echo "Coverage report generated. Review at: coverage/lcov-report/index.html"
+          else
+            echo "⚠️ Coverage summary not found"
+          fi
+          
+          # For now, we'll make this a soft check. Uncomment below to enforce:
+          # COVERAGE_THRESHOLD=75
+          # if coverage is below threshold, exit 1
+        continue-on-error: true
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      
+      - name: Comment coverage on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            let coverageComment = '## 📊 Code Coverage Report\n\n';
+            
+            try {
+              if (fs.existsSync('coverage/coverage-summary.json')) {
+                const summary = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+                const total = summary.total;
+                
+                coverageComment += '| Metric | Coverage | Status |\n';
+                coverageComment += '|--------|----------|--------|\n';
+                coverageComment += `| Statements | ${total.statements.pct}% | ${total.statements.pct >= 75 ? '✅' : '⚠️'} |\n`;
+                coverageComment += `| Branches | ${total.branches.pct}% | ${total.branches.pct >= 75 ? '✅' : '⚠️'} |\n`;
+                coverageComment += `| Functions | ${total.functions.pct}% | ${total.functions.pct >= 75 ? '✅' : '⚠️'} |\n`;
+                coverageComment += `| Lines | ${total.lines.pct}% | ${total.lines.pct >= 75 ? '✅' : '⚠️'} |\n\n`;
+                coverageComment += '**Target**: 75% coverage for critical paths\n';
+                coverageComment += '**Status**: ' + (total.lines.pct >= 75 ? '✅ Passing' : '⚠️ Below threshold');
+              } else {
+                coverageComment += '⚠️ Coverage data not available';
+              }
+            } catch (error) {
+              coverageComment += '❌ Error reading coverage data: ' + error.message;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: coverageComment
+            });
+      
+      - name: Build project
+        run: npm run build
+        env:
+          NODE_ENV: production
+      
+      - name: Check build artifacts
+        run: |
+          if [ -d "dist" ]; then
+            echo "✅ Build successful - dist directory created"
+            ls -lh dist/
+          else
+            echo "❌ Build failed - dist directory not found"
+            exit 1
+          fi
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check for lint script
+        id: check-lint
+        run: |
+          if npm run | grep -q "lint"; then
+            echo "has_lint=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_lint=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run lint
+        if: steps.check-lint.outputs.has_lint == 'true'
+        run: npm run lint
+        continue-on-error: true
+
+# 📝 Local Re-run Instructions:
+#
+# To run the same checks locally before pushing:
+#
+# 1. Install dependencies:
+#    npm ci
+#
+# 2. Run TypeScript type check:
+#    npm run check
+#
+# 3. Run tests:
+#    npm test
+#
+# 4. Run tests with coverage:
+#    npm run test:coverage
+#    # Open coverage report: open coverage/lcov-report/index.html
+#
+# 5. Build the project:
+#    NODE_ENV=production npm run build
+#
+# 6. Run linter (if available):
+#    npm run lint
+#
+# 7. Check coverage thresholds locally:
+#    cat coverage/coverage-summary.json | grep '"pct"'
+#    # Look for percentages >= 75% for critical paths
+#
+# Tip: Run all checks in one command:
+# npm run check && npm test && npm run test:coverage && npm run build

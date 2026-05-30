@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leather Wallet Chat UI - Zyeuté</title>
+    <style>
+        :root {
+            --leather-brown: #4a2c1f;
+            --leather-dark: #2e1a12;
+            --leather-medium: #3d2316;
+            --gold-thread: #b8860b;
+            --gold-metal: #d4af37;
+            --gold-bright: #f4d03f;
+            --purple-leather: #5e2c73;
+            --stitch-dash: 6px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .phone-screen {
+            width: 375px;
+            height: 812px;
+            background: linear-gradient(180deg, var(--leather-medium) 0%, var(--leather-dark) 100%);
+            border-radius: 30px;
+            box-shadow: 
+                0 20px 40px rgba(0,0,0,0.6),
+                inset 0 2px 4px rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 4px solid var(--leather-dark);
+            position: relative;
+        }
+
+        /* Gold Stitching Effect */
+        .stitched {
+            position: relative;
+        }
+
+        .stitched::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            border: 2px dashed var(--gold-thread);
+            border-radius: inherit;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* Header - Wallet Fold */
+        .header {
+            height: 80px;
+            background: linear-gradient(to bottom, var(--leather-brown), var(--leather-dark));
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            color: var(--gold-metal);
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            border-bottom: 4px solid var(--leather-dark);
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.5), transparent);
+        }
+
+        .header-icon {
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .header-icon:hover {
+            transform: scale(1.1);
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, var(--leather-dark) 0%, #1a1510 100%);
+        }
+
+        /* Scrollbar Styling */
+        .chat-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: var(--leather-dark);
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: var(--gold-thread);
+            border-radius: 3px;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 75%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.4;
+            position: relative;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.received {
+            align-self: flex-start;
+            background: linear-gradient(145deg, #8c5e35, #6b4226);
+            color: var(--gold-bright);
+            border-bottom-left-radius: 5px;
+            border: 2px solid var(--leather-brown);
+        }
+
+        .message.sent {
+            align-self: flex-end;
+            background: linear-gradient(145deg, #5c3a21, #3d2314);
+            color: var(--gold-metal);
+            border-bottom-right-radius: 5px;
+            border: 2px solid var(--gold-thread);
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: linear-gradient(145deg, var(--purple-leather), #3a1848);
+            color: #e9d5ff;
+            border-bottom-left-radius: 5px;
+            border: 2px solid #7c3aed;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        /* Footer - Belt Buckle Area */
+        .footer {
+            height: 100px;
+            background: linear-gradient(to top, var(--leather-brown), var(--leather-dark));
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            border-top: 4px solid var(--leather-dark);
+            position: relative;
+            gap: 10px;
+        }
+
+        /* Belt Strap Effect */
+        .footer::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 10px;
+            right: 10px;
+            height: 70px;
+            background: linear-gradient(180deg, 
+                var(--leather-medium) 0%, 
+                var(--leather-dark) 50%,
+                var(--leather-medium) 100%);
+            border-radius: 35px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 0;
+        }
+
+        /* Belt Holes */
+        .belt-holes {
+            position: absolute;
+            left: 100px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 1;
+        }
+
+        .belt-hole {
+            width: 8px;
+            height: 8px;
+            background: var(--leather-dark);
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* Belt Buckle */
+        .belt-buckle {
+            width: 70px;
+            height: 60px;
+            background: linear-gradient(145deg, var(--gold-metal), #a8860b);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 
+                2px 2px 8px rgba(0,0,0,0.5),
+                inset 0 1px 2px rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 2;
+            border: 2px solid var(--gold-bright);
+        }
+
+        .belt-buckle::after {
+            content: '⚜️';
+            font-size: 28px;
+            z-index: 3;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+        }
+
+        /* Input Field */
+        .input-field {
+            flex: 1;
+            height: 50px;
+            background: var(--leather-dark);
+            border: 2px dashed var(--gold-thread);
+            border-radius: 25px;
+            padding: 0 20px;
+            color: var(--gold-bright);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .input-field:focus-within {
+            border-color: var(--gold-metal);
+            box-shadow: 
+                inset 0 2px 4px rgba(0,0,0,0.5),
+                0 0 15px rgba(212,175,55,0.3);
+        }
+
+        .input-field input {
+            background: transparent;
+            border: none;
+            color: var(--gold-bright);
+            font-size: 16px;
+            width: 100%;
+            outline: none;
+        }
+
+        .input-field input::placeholder {
+            color: var(--gold-thread);
+            opacity: 0.6;
+        }
+
+        /* Send Button */
+        .send-btn {
+            width: 55px;
+            height: 50px;
+            background: linear-gradient(145deg, var(--gold-metal), #a8860b);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: var(--leather-dark);
+            box-shadow: 
+                2px 2px 8px rgba(0,0,0,0.4),
+                inset 0 1px 2px rgba(255,255,255,0.3);
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+            border: 2px solid var(--gold-bright);
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 20px rgba(212,175,55,0.5),
+                inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .phone-screen {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-screen stitched">
+        <!-- Header -->
+        <div class="header stitched">
+            <div class="header-icon">⚜️</div>
+            <div>Conversation</div>
+            <div class="header-icon">⚙️</div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="message received stitched">
+                <div class="message-header">Alex</div>
+                Salut! Bienvenue sur Zyeuté!
+                <div class="message-time">14:30</div>
+            </div>
+
+            <div class="message sent stitched">
+                Merci! L'interface est magnifique.
+                <div class="message-time">14:31 ✓✓</div>
+            </div>
+
+            <div class="message bot stitched">
+                <div class="message-header">🦫 TI-GUY</div>
+                Je suis là pour t'aider! Pose-moi tes questions.
+                <div class="message-time">14:32</div>
+            </div>
+
+            <div class="message received stitched">
+                <div class="message-header">Alex</div>
+                Comment fonctionne le système de likes?
+                <div class="message-time">14:33</div>
+            </div>
+        </div>
+
+        <!-- Footer with Belt Buckle -->
+        <div class="footer stitched">
+            <!-- Belt Holes -->
+            <div class="belt-holes">
+                <div class="belt-hole"></div>
+                <div class="belt-hole"></div>
+                <div class="belt-hole"></div>
+            </div>
+
+            <!-- Buckle -->
+            <div class="belt-buckle"></div>
+
+            <!-- Input -->
+            <div class="input-field">
+                <input type="text" placeholder="Écris ton message..." />
+            </div>
+
+            <!-- Send -->
+            <div class="send-btn">➤</div>
+        </div>
+    </div>
+
+    <script>
+        // Simple interaction
+        document.querySelector('.send-btn').addEventListener('click', function() {
+            const input = document.querySelector('.input-field input');
+            if (input.value.trim()) {
+                const chatArea = document.querySelector('.chat-area');
+                const newMessage = document.createElement('div');
+                newMessage.className = 'message sent stitched';
+                newMessage.innerHTML = `
+                    ${input.value}
+                    <div class="message-time">${new Date().toLocaleTimeString('fr-CA', {hour: '2-digit', minute:'2-digit'})} ✓</div>
+                `;
+                chatArea.appendChild(newMessage);
+                chatArea.scrollTop = chatArea.scrollHeight;
+                input.value = '';
+            }
+        });
+
+        // Enter key to send
+        document.querySelector('.input-field input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.querySelector('.send-btn').click();
+            }
+        });
+    </script>
+
+</body>
+</html>
