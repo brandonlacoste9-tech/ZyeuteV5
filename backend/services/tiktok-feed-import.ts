@@ -197,7 +197,7 @@ export async function importTikTokVideoToFeed(
       
       if (process.env.MUX_TOKEN_ID && process.env.MUX_TOKEN_SECRET) {
         const asset = await muxClient.video.assets.create({
-          input: [{ url: mediaUrl }],
+          inputs: [{ url: mediaUrl }],
           playback_policy: ["public"],
           mp4_support: "standard",
         });
