@@ -1,0 +1,76 @@
+{
+  "quebec_context": {
+    "mission": "Discover and analyze content that is culturally relevant to Quebecers",
+
+    "priority_languages": [
+      {
+        "language": "French (Quebec)",
+        "weight": 1.0,
+        "dialects": ["Joual", "Quebec French"],
+        "keywords": [
+          "toé",
+          "moé",
+          "icitte",
+          "là-bas",
+          "tsé",
+          "pantoute",
+          "tantôt"
+        ]
+      },
+      {
+        "language": "English",
+        "weight": 0.3,
+        "note": "Accept only if Quebec-relevant"
+      }
+    ],
+
+    "geographic_focus": [
+      {
+        "city": "Montreal",
+        "keywords": ["MTL", "514", "Montréal"],
+        "weight": 1.0
+      },
+      { "city": "Quebec City", "keywords": ["Québec", "418"], "weight": 0.9 },
+      { "city": "Gatineau", "keywords": ["Gatineau", "819"], "weight": 0.7 },
+      { "city": "Sherbrooke", "keywords": ["Sherbrooke"], "weight": 0.6 }
+    ],
+
+    "cultural_markers": {
+      "food": [
+        "poutine",
+        "tourtière",
+        "tire d'érable",
+        "smoked meat",
+        "bagel montréalais"
+      ],
+      "sports": ["Canadiens de Montréal", "Habs", "CH", "hockey"],
+      "music": ["Les Cowboys Fringants", "Beau Dommage", "Kaytranada"],
+      "quebec_slang": [
+        "tabarnak",
+        "calisse",
+        "ostie",
+        "crisse",
+        "tsé",
+        "genre",
+        "ben",
+        "là",
+        "toé",
+        "moé",
+        "dep"
+      ]
+    },
+
+    "cultural_authenticity_scoring": {
+      "language_bonus": { "joual_detected": 0.3, "quebec_french": 0.2 },
+      "location_bonus": {
+        "montreal_mentioned": 0.2,
+        "quebec_city_mentioned": 0.15
+      },
+      "cultural_references": {
+        "per_food_reference": 0.05,
+        "per_sport_reference": 0.05
+      },
+      "penalties": { "anglophone_only": -0.5, "non_quebec_location": -0.3 }
+    }
+  }
+}

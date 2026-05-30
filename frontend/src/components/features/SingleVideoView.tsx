@@ -38,17 +38,6 @@ import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnos
 import { DoubleTapHeart } from "./DoubleTapHeart";
 import { CommentBottomSheet } from "./CommentBottomSheet";
 
-function extractTikTokVideoId(url?: string | null): string | null {
-  if (!url) return null;
-  const match = String(url).match(/\/video\/(\d+)/i);
-  return match?.[1] ?? null;
-}
-
-function getTikTokEmbedUrl(url?: string | null): string | null {
-  const id = extractTikTokVideoId(url);
-  return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
-}
-
 interface SingleVideoViewProps {
   post: Post & { user?: User };
   isActive: boolean;
@@ -90,12 +79,6 @@ export function SingleVideoView({
       post.mediaUrl ||
       "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
-  }, [post]);
-
-  const tiktokEmbedUrl = useMemo(() => {
-    return getTikTokEmbedUrl(
-      post.media_url || post.mediaUrl || post.original_url || post.originalUrl,
-    );
   }, [post]);
 
   // Video Activation & Prefetching
@@ -176,7 +159,7 @@ export function SingleVideoView({
             loop
             onError={setVideoError}
           />
-        ) : videoSrc ? (
+        ) : (
           <VideoPlayer
             src={videoSrc}
             poster={getProxiedMediaUrl(
@@ -197,19 +180,6 @@ export function SingleVideoView({
             onProgress={isActive ? onVideoProgress : undefined}
             onEnded={onVideoEnd}
           />
-        ) : tiktokEmbedUrl ? (
-          <iframe
-            src={tiktokEmbedUrl}
-            title={`TikTok ${post.id}`}
-            className="w-full h-full"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-white gap-2">
-            <AlertCircle size={32} className="text-zinc-500" />
-            <p className="text-sm text-zinc-400">Vidéo non disponible</p>
-          </div>
         )}
 
         {/* Right Action Bar (TikTok Style) */}

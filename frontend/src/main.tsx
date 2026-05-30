@@ -1,16 +1,26 @@
 import React from "react";
-import { createRoot } from "react-dom/client";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./index.css";
+import { captureReferralFromUrl } from "./lib/referralCapture";
 
-const rootEl = document.getElementById("root");
+captureReferralFromUrl();
 
-if (!rootEl) {
-  throw new Error("Missing root element");
-}
+// Safety wrapper: prevent Object.values crash when called with null/undefined
+// (e.g. from dependencies calling Object.values on an unexpected nullish value)
+const _origObjectValues = Object.values;
+Object.values = function safeObjectValues(obj: any) {
+  if (obj == null) return [];
+  return _origObjectValues.call(Object, obj);
+} as typeof Object.values;
 
-createRoot(rootEl).render(
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
   </React.StrictMode>,
 );

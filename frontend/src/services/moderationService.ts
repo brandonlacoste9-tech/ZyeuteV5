@@ -1,0 +1,492 @@
+/**
+ * AI Content Moderation Service
+ * Uses OpenAI GPT-4o for Quebec-aware content moderation
+ */
+
+import { logger } from "@/lib/logger";
+const moderationServiceLogger = logger.withContext("ModerationService");
+import { supabase } from "../lib/supabase";
+
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+export type ModerationSeverity =
+  | "safe"
+  | "low"
+  | "medium"
+  | "high"
+  | "critical";
+export type ModerationAction = "allow" | "flag" | "hide" | "remove" | "ban";
+export type ModerationCategory =
+  | "bullying"
+  | "hate_speech"
+  | "harassment"
+  | "violence"
+  | "spam"
+  | "nsfw"
+  | "illegal"
+  | "self_harm";
+
+export interface ModerationResult {
+  is_safe: boolean;
+  severity: ModerationSeverity;
+  categories: ModerationCategory[];
+  confidence: number;
+  reason: string;
+  action: ModerationAction;
+  context_note?: string;
+}
+
+const MODERATION_PROMPT = `Tu es un modérateur IA pour Zyeuté, plateforme sociale québécoise.
+
+CONTEXTE CULTUREL QUÉBÉCOIS:
+✅ ACCEPTER:
+- Joual et expressions colorées ("crisse", "tabarnak", "câlisse", "ostie")
+- Humour grinçant et sarcasme québécois
+- Débats politiques passionnés (souveraineté, langue française)
+- Critique sociale constructive
+- Références culturelles locales (Ti-Guy, poutine, etc.)
+- Blagues entre amis et taquineries amicales
+- Expressions comme "malade", "sick", "en feu" (positif)
+
+❌ BLOQUER:
+1. INTIMIDATION:
+   - Attaques personnelles répétées et ciblées
+   - Moqueries sur apparence physique/poids/orientation
+   - Harcèlement persistant
+   - Menaces directes ou voilées
+
+2. DISCOURS HAINEUX:
+   - Racisme, sexisme, homophobie, transphobie
+   - Xénophobie, discrimination religieuse
+   - Suprémacisme blanc ou autre
+   - Négation de génocides
+   - Appels à la violence contre groupes
+
+3. HARCÈLEMENT SEXUEL:
+   - Messages sexuels non sollicités
+   - Commentaires déplacés sur le corps
+   - Demandes inappropriées
+   - Partage d'images intimes sans consentement
+
+4. VIOLENCE:
+   - Menaces de violence physique
+   - Incitation à l'automutilation ou suicide
+   - Glorification de violence ou terrorisme
+   - Instructions pour armes/explosifs
+
+5. CONTENU ILLÉGAL:
+   - Exploitation de mineurs (TOLÉRANCE ZÉRO)
+   - Vente de drogues illégales
+   - Activités criminelles
+   - Contenu piraté ou volé
+
+6. SPAM:
+   - Liens malveillants répétés
+   - Publicité excessive non sollicitée
+   - Chaînes de lettres
+   - Comportement de bot
+
+NIVEAUX DE SÉVÉRITÉ:
+- safe: Contenu OK, aucune action requise
+- low: Borderline, flag pour révision humaine mais publier
+- medium: Problématique, cacher du trending, révision nécessaire
+- high: Violation claire, supprimer + avertissement utilisateur
+- critical: Violation grave, supprimer + ban temporaire/permanent
+
+RÉPONSE (JSON STRICT, AUCUN TEXTE AVANT OU APRÈS):
+{
+  "is_safe": boolean,
+  "severity": "safe" | "low" | "medium" | "high" | "critical",
+  "categories": ["bullying", "hate_speech", "harassment", "violence", "spam", "nsfw", "illegal", "self_harm"],
+  "confidence": 0-100,
+  "reason": "Explication claire en français du Québec",
+  "action": "allow" | "flag" | "hide" | "remove" | "ban",
+  "context_note": "Note sur le contexte culturel québécois si pertinent"
+}
+
+Analyse ce contenu:`;
+
+/**
+ * Analyze text content for violations
+ */
+export async function analyzeText(text: string): Promise<ModerationResult> {
+  try {
+    if (!text || text.trim().length === 0) {
+      return {
+        is_safe: true,
+        severity: "safe",
+        categories: [],
+        confidence: 100,
+        reason: "Contenu vide",
+        action: "allow",
+      };
+    }
+
+    const response = await fetch(`${BACKEND_URL}/api/ai/proxy/deepseek`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: MODERATION_PROMPT },
+          { role: "user", content: `TEXTE: "${text}"` },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok)
+      throw new Error(`Backend Proxy error: ${response.status}`);
+
+    const data = await response.json();
+    const resultText = data.choices[0].message.content;
+    if (!resultText) throw new Error("No response from Proxy");
+
+    const moderationResult: ModerationResult = JSON.parse(resultText);
+    return moderationResult;
+  } catch (error) {
+    moderationServiceLogger.error("Error in analyzeText:", error);
+    // Fail open - allow content if moderation fails
+    return {
+      is_safe: true,
+      severity: "safe",
+      categories: [],
+      confidence: 0,
+      reason: "Erreur du système de modération",
+      action: "allow",
+      context_note: "Service de modération temporairement indisponible",
+    };
+  }
+}
+
+/**
+ * Analyze image content using backend AI proxy
+ */
+export async function analyzeImage(
+  imageUrl: string,
+): Promise<ModerationResult> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/ai/analyze-media`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        imageUrl,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Media API error: ${response.status}`);
+
+    const data = await response.json();
+
+    // GenAI App Builder returns { safe: boolean, moderationScores: any, labels: [] }
+    // Convert to standard moderation format
+    const isSafe = data.safe !== false;
+
+    return {
+      is_safe: isSafe,
+      severity: isSafe ? "safe" : "medium",
+      categories: data.labels || [],
+      confidence: 80,
+      reason: data.story || "Analyse d'image complétée",
+      action: isSafe ? "allow" : "flag",
+    };
+  } catch (error) {
+    moderationServiceLogger.error("Error in analyzeImage:", error);
+    return {
+      is_safe: true,
+      severity: "safe",
+      categories: [],
+      confidence: 0,
+      reason: "Erreur d'analyse d'image",
+      action: "allow",
+    };
+  }
+}
+
+/**
+ * Analyze video content using backend moderation API
+ */
+export async function analyzeVideo(
+  videoUrl: string,
+): Promise<ModerationResult> {
+  try {
+    // Call backend moderation API for video analysis
+    const response = await fetch("/api/hive/moderate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content: `Video URL: ${videoUrl}`,
+        type: "video",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Moderation API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    // Map backend result to frontend ModerationResult format
+    return {
+      is_safe: result.status === "approved",
+      severity:
+        result.severity === "high"
+          ? "high"
+          : result.severity === "medium"
+            ? "medium"
+            : result.severity === "low"
+              ? "low"
+              : "safe",
+      categories: result.categories || [],
+      confidence: 85, // Backend provides confidence
+      reason: result.reason || "Analyse vidéo complétée",
+      action:
+        result.status === "approved"
+          ? "allow"
+          : result.severity === "high"
+            ? "remove"
+            : result.severity === "medium"
+              ? "hide"
+              : "flag",
+    };
+  } catch (error) {
+    moderationServiceLogger.error("Error in analyzeVideo:", error);
+    // Fail-safe: allow but flag for review
+    return {
+      is_safe: true,
+      severity: "low",
+      categories: [],
+      confidence: 0,
+      reason: "Erreur d'analyse vidéo, marqué pour révision",
+      action: "flag",
+    };
+  }
+}
+
+/**
+ * Universal content moderation function
+ */
+export async function moderateContent(
+  content: { text?: string; imageUrl?: string; videoUrl?: string },
+  contentType: "post" | "comment" | "bio" | "message",
+  userId: string,
+  contentId?: string,
+): Promise<ModerationResult> {
+  try {
+    let result: ModerationResult;
+
+    // Analyze based on content type
+    if (content.text) {
+      result = await analyzeText(content.text);
+    } else if (content.imageUrl) {
+      result = await analyzeImage(content.imageUrl);
+    } else if (content.videoUrl) {
+      result = await analyzeVideo(content.videoUrl);
+    } else {
+      return {
+        is_safe: true,
+        severity: "safe",
+        categories: [],
+        confidence: 100,
+        reason: "Aucun contenu à analyser",
+        action: "allow",
+      };
+    }
+
+    // Log moderation result
+    if (contentId) {
+      await logModeration(contentType, contentId, userId, result);
+    }
+
+    // Take automatic action based on severity
+    if (result.severity === "high" || result.severity === "critical") {
+      await handleViolation(userId, result);
+    }
+
+    return result;
+  } catch (error) {
+    moderationServiceLogger.error("Error in moderateContent:", error);
+    return {
+      is_safe: true,
+      severity: "safe",
+      categories: [],
+      confidence: 0,
+      reason: "Erreur de modération",
+      action: "allow",
+    };
+  }
+}
+
+/**
+ * Log moderation result to database
+ */
+async function logModeration(
+  contentType: string,
+  contentId: string,
+  userId: string,
+  result: ModerationResult,
+): Promise<void> {
+  try {
+    await supabase.from("moderation_logs").insert({
+      content_type: contentType,
+      content_id: contentId,
+      user_id: userId,
+      ai_severity: result.severity,
+      ai_categories: result.categories,
+      ai_confidence: result.confidence,
+      ai_reason: result.reason,
+      ai_action: result.action,
+      status: result.action === "allow" ? "approved" : "pending",
+    });
+  } catch (error) {
+    moderationServiceLogger.error("Error logging moderation:", error);
+  }
+}
+
+/**
+ * Handle content violation (add strike, ban if needed)
+ */
+async function handleViolation(
+  userId: string,
+  result: ModerationResult,
+): Promise<void> {
+  try {
+    // Get current user strikes
+    const { data: strikeData } = await supabase
+      .from("user_strikes")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    const currentStrikes = strikeData?.strike_count || 0;
+    const newStrikeCount = currentStrikes + 1;
+
+    const newStrike = {
+      date: new Date().toISOString(),
+      reason: result.reason,
+      severity: result.severity,
+      categories: result.categories,
+    };
+
+    // Determine ban duration
+    let banUntil = null;
+    let isPermanentBan = false;
+
+    if (newStrikeCount === 2) {
+      // 24 hour ban
+      banUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    } else if (newStrikeCount === 3) {
+      // 7 day ban
+      banUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (newStrikeCount === 4) {
+      // 30 day ban
+      banUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (newStrikeCount >= 5) {
+      // Permanent ban
+      isPermanentBan = true;
+    }
+
+    // Update or create strike record
+    if (strikeData) {
+      const strikes = [...(strikeData.strikes || []), newStrike];
+
+      await supabase
+        .from("user_strikes")
+        .update({
+          strike_count: newStrikeCount,
+          strikes,
+          ban_until: banUntil,
+          is_permanent_ban: isPermanentBan,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+    } else {
+      await supabase.from("user_strikes").insert({
+        user_id: userId,
+        strike_count: newStrikeCount,
+        strikes: [newStrike],
+        ban_until: banUntil,
+        is_permanent_ban: isPermanentBan,
+      });
+    }
+
+    // Create notification for user
+    let notificationMessage = `⚠️ Avertissement ${newStrikeCount}/5: ${result.reason}`;
+
+    if (newStrikeCount === 2) {
+      notificationMessage += " | Suspension 24h";
+    } else if (newStrikeCount === 3) {
+      notificationMessage += " | Suspension 7 jours";
+    } else if (newStrikeCount === 4) {
+      notificationMessage += " | Suspension 30 jours";
+    } else if (newStrikeCount >= 5) {
+      notificationMessage += " | Bannissement permanent";
+    }
+
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "system",
+      message: notificationMessage,
+    });
+  } catch (error) {
+    moderationServiceLogger.error("Error handling violation:", error);
+  }
+}
+
+/**
+ * Check if user is currently banned
+ */
+export async function isUserBanned(userId: string): Promise<{
+  isBanned: boolean;
+  reason?: string;
+  until?: string;
+}> {
+  try {
+    const { data } = await supabase
+      .from("user_strikes")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (!data) {
+      return { isBanned: false };
+    }
+
+    if (data.is_permanent_ban) {
+      return {
+        isBanned: true,
+        reason: "Bannissement permanent pour violations répétées",
+      };
+    }
+
+    if (data.ban_until) {
+      const banUntil = new Date(data.ban_until);
+      if (banUntil > new Date()) {
+        return {
+          isBanned: true,
+          reason: "Suspension temporaire",
+          until: data.ban_until,
+        };
+      }
+    }
+
+    return { isBanned: false };
+  } catch (error) {
+    moderationServiceLogger.error("Error checking ban status:", error);
+    return { isBanned: false };
+  }
+}
+
+export default {
+  analyzeText,
+  analyzeImage,
+  analyzeVideo,
+  moderateContent,
+  isUserBanned,
+};
