@@ -270,6 +270,7 @@ export async function getExplorePosts(
 ): Promise<Post[]> {
   const query = new URLSearchParams({
     limit: limit.toString(),
+    page: page.toString(),
   });
   if (hiveId) query.append("hive", hiveId);
 

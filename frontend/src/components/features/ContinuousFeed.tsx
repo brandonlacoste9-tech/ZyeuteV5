@@ -721,7 +721,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         return;
       } else {
         setPosts(validPosts);
-        setHasMore(validPosts.length === 10);
+        setHasMore(data.length === 10);
       }
 
       setPage(0);
@@ -945,7 +945,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   }, []);
 
   const prevIndexRef = useRef(currentIndex);
-  const lastSwitchTimeRef = useRef(Date.now());
+  const lastSwitchTimeRef = useRef(0);
 
   // Structured Logging for Critical State Changes
   useEffect(() => {
@@ -957,9 +957,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       // Circuit Breaker: Drop prefetching if frame rate is tanking during fast scroll
       if (isFast && latency > 200) {
-        if (!isSystemOverloaded) setIsSystemOverloaded(true);
+        if (!isSystemOverloaded) setTimeout(() => setIsSystemOverloaded(true), 0);
       } else if (latency < 100) {
-        if (isSystemOverloaded) setIsSystemOverloaded(false);
+        if (isSystemOverloaded) setTimeout(() => setIsSystemOverloaded(false), 0);
       }
 
       if (
