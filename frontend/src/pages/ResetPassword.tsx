@@ -18,39 +18,66 @@ export const ResetPassword: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
   const [success, setSuccess] = React.useState(false);
+  const [sessionReady, setSessionReady] = React.useState(false);
 
-  // Check if token is valid by verifying session
+  // Supabase sends recovery tokens as a URL hash fragment (#access_token=...&type=recovery)
+  // or as PKCE code query params (?code=...). We handle both here.
   React.useEffect(() => {
-    const checkToken = async () => {
-      const token = searchParams.get("token");
-      const type = searchParams.get("type");
-
-      if (!token || type !== "recovery") {
-        setError(
-          "Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.",
-        );
-        return;
-      }
-
-      // Verify the session is valid for password recovery
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error || !session) {
-          setError(
-            "Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.",
-          );
+    const establishSession = async () => {
+      // --- 1. PKCE flow: ?code= query param ---
+      const code = searchParams.get("code");
+      if (code) {
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+          setSessionReady(true);
+          return;
+        } catch (err: any) {
+          setError("Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.");
+          return;
         }
-      } catch (err) {
-        setError(
-          "Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.",
-        );
       }
+
+      // --- 2. Implicit flow: hash fragment #access_token=...&type=recovery ---
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.replace(/^#/, ""));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+        const type = params.get("type");
+
+        if (type === "recovery" && accessToken && refreshToken) {
+          try {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) throw error;
+            // Clear hash so it doesn't linger in the URL
+            window.history.replaceState(null, "", window.location.pathname + window.location.search);
+            setSessionReady(true);
+            return;
+          } catch (err: any) {
+            setError("Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.");
+            return;
+          }
+        }
+      }
+
+      // --- 3. Supabase may have already set the session via detectSessionInUrl ---
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session && !error) {
+          setSessionReady(true);
+          return;
+        }
+      } catch (_) {}
+
+      // No valid recovery token found
+      setError("Lien de réinitialisation invalide ou expiré. Veuillez en demander un nouveau.");
     };
 
-    checkToken();
+    establishSession();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +96,11 @@ export const ResetPassword: React.FC = () => {
 
     if (password.length < 6) {
       setError("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    if (!sessionReady) {
+      setError("Session non valide. Veuillez redemander un lien de réinitialisation.");
       return;
     }
 

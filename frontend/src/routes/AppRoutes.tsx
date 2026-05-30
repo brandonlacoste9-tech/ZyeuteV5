@@ -32,6 +32,8 @@ const ProfilePage = lazy(() => import("@/pages/Profile"));
 const PremiumPage = lazy(() => import("@/pages/Premium"));
 const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
 const SignupPage = lazy(() => import("@/pages/Signup"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
 const ModerationPage = lazy(() => import("@/pages/moderation/Moderation"));
 const AIStudio = lazy(() => import("@/pages/AIStudio"));
 const VideoDoctorDashboard = lazy(
@@ -193,6 +195,8 @@ export function AppRoutes() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/logout" element={<LogoutRoute />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Public — TikTok-style: anyone can open FYP, discover, and post links */}
         <Route path="/feed" element={<LaZyeute />} />

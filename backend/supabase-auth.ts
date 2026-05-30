@@ -3,10 +3,11 @@ import { traceSupabase } from "./tracer.js";
 import { Request, Response, NextFunction } from "express";
 import { storage } from "./storage.js";
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-// FALLBACK: Prioritize Anon Key for verification as Service Role Key is reporting invalid
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+// Service Role Key is required on the backend to verify JWTs via auth.getUser().
+// The Anon Key does NOT have permission to verify arbitrary user tokens server-side.
 const SUPABASE_KEY =
-  process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 // Track if Supabase is properly configured
 const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_KEY);
