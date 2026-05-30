@@ -128,6 +128,7 @@ const FeedRow = memo(
       : "";
 
     // Smart Activation
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const { ref, shouldPlay, preloadTier } = useVideoActivation(
       isFastScrolling,
       isMediumScrolling,
@@ -142,6 +143,7 @@ const FeedRow = memo(
     // Smart Prefetching (Tier 2 only fetches full blob)
     // For Tier 0/1 we just pass the original URL and let SingleVideoView handle preload attr
     // But usePrefetchVideo handles cache lookup too
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const { source, isCached, debug } = usePrefetchVideo(
       videoUrl,
       effectivePreloadTier,
@@ -367,7 +369,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         id: "demo-user-1",
         username: "zyeute",
         display_name: "Zyeuté Officiel",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        avatar_url: null,
         is_verified: true,
         created_at: new Date().toISOString(),
         coins: 0,
@@ -407,7 +409,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         id: "demo-user-2",
         username: "montreal",
         display_name: "Montréal",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        avatar_url: null,
         is_verified: true,
         created_at: new Date().toISOString(),
         coins: 0,
@@ -447,7 +449,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         id: "demo-user-3",
         username: "quebec_nature",
         display_name: "Nature Québec",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        avatar_url: null,
         is_verified: false,
         created_at: new Date().toISOString(),
         coins: 0,
@@ -487,7 +489,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         id: "demo-user-4",
         username: "quebec_winter",
         display_name: "Hiver Québécois",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        avatar_url: null,
         is_verified: false,
         created_at: new Date().toISOString(),
         coins: 0,
@@ -527,7 +529,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         id: "demo-user-5",
         username: "vieux_quebec",
         display_name: "Vieux Québec",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
+        avatar_url: null,
         is_verified: true,
         created_at: new Date().toISOString(),
         coins: 0,
@@ -553,56 +555,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       max_views: 1,
     },
   ];
-
-  // Transform Pexels videos to Post format for fallback
-  const transformPexelsToPosts = useCallback((pexelsVideos: any[]) => {
-    // Pick best video quality: HD first, then SD, then anything
-    const getBestVideoUrl = (videoFiles: any[]): string => {
-      if (!videoFiles?.length) return "";
-      const hd = videoFiles.find((f) => f.quality === "hd");
-      const sd = videoFiles.find((f) => f.quality === "sd");
-      return hd?.link || sd?.link || videoFiles[0]?.link || "";
-    };
-
-    return pexelsVideos.map((video, index) => ({
-      id: `pexels-${video.id}`,
-      user_id: "pexels-user",
-      type: "video" as const,
-      caption:
-        video.url?.split("/").pop()?.replace(/-/g, " ") || "Video from Pexels",
-      media_url: getBestVideoUrl(video.video_files) || video.url,
-      original_url: getBestVideoUrl(video.video_files) || video.url,
-      thumbnail_url: video.image,
-      user: {
-        id: "pexels-user",
-        username: "pexels",
-        display_name: "Pexels",
-        avatar_url: "https://images.pexels.com/lib/api/pexels.png",
-        is_verified: false,
-        created_at: new Date().toISOString(),
-        coins: 0,
-        piasse_balance: 0,
-        total_karma: 0,
-        fire_score: 0,
-        followers_count: 0,
-        following_count: 0,
-        posts_count: 0,
-        is_following: false,
-        role: "citoyen",
-      } as User,
-      fire_count: Math.floor(Math.random() * 1000),
-      comment_count: Math.floor(Math.random() * 100),
-      created_at: new Date(Date.now() - index * 3600000).toISOString(),
-      visibility: "public",
-      hive_id: "quebec",
-      is_moderated: false,
-      moderation_approved: true,
-      is_hidden: false,
-      is_ephemeral: false,
-      view_count: 0,
-      max_views: 1,
-    }));
-  }, []);
 
   // Fetch video feed (Latest Public Videos)
   const fetchVideoFeed = useCallback(async () => {
@@ -658,12 +610,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         }) as Array<Post & { user: User }>;
       }
 
-      // If API has no posts, try to auto-seed DB first, then Pexels fallback
+      // If API has no posts, try to auto-seed DB first
       if (validPosts.length === 0) {
-        feedLogger.info(
-          "No API posts — attempting auto-seed then Pexels fallback...",
-        );
-        // Try to auto-seed the DB with sample videos
+        feedLogger.info("No API posts — attempting auto-seed...");
         try {
           const seedRes = await fetch("/api/seed/feed", { method: "POST" });
           if (seedRes.ok) {
@@ -690,22 +639,6 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         } catch (seedErr) {
           feedLogger.warn("Auto-seed failed:", seedErr);
         }
-        feedLogger.info("No API posts, fetching Pexels fallback...");
-        try {
-          const pexelsRes = await fetch("/api/pexels/curated?per_page=10");
-          if (pexelsRes.ok) {
-            const pexelsData = await pexelsRes.json();
-            if (pexelsData.videos?.length > 0) {
-              const pexelsPosts = transformPexelsToPosts(pexelsData.videos);
-              setPosts(pexelsPosts as unknown as Array<Post & { user: User }>);
-              setHasMore(false); // Pexels is one-time fetch
-              setFetchError(false);
-              return;
-            }
-          }
-        } catch (pexelsErr) {
-          feedLogger.error("Pexels fallback failed:", pexelsErr);
-        }
 
         if (allowDemoVideos()) {
           feedLogger.info("Using demo videos (?demo=1)");
@@ -728,9 +661,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
       setPosts(
-        allowDemoVideos()
-          ? (DEMO_VIDEOS as Array<Post & { user: User }>)
-          : [],
+        allowDemoVideos() ? (DEMO_VIDEOS as Array<Post & { user: User }>) : [],
       );
       setHasMore(false);
       setFetchError(!allowDemoVideos());
@@ -738,7 +669,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [savedState, transformPexelsToPosts]);
+  }, [savedState]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
@@ -957,9 +888,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       // Circuit Breaker: Drop prefetching if frame rate is tanking during fast scroll
       if (isFast && latency > 200) {
-        if (!isSystemOverloaded) setTimeout(() => setIsSystemOverloaded(true), 0);
+        if (!isSystemOverloaded)
+          setTimeout(() => setIsSystemOverloaded(true), 0);
       } else if (latency < 100) {
-        if (isSystemOverloaded) setTimeout(() => setIsSystemOverloaded(false), 0);
+        if (isSystemOverloaded)
+          setTimeout(() => setIsSystemOverloaded(false), 0);
       }
 
       if (
