@@ -70,16 +70,6 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
     };
   }, []);
 
-  const buildRecentHistory = useCallback(
-    () =>
-      messages
-        .slice(-8)
-        .map((message) => ({
-          sender: message.sender,
-          text: message.text,
-        })),
-    [messages],
-  );
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -101,6 +91,17 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const buildRecentHistory = useCallback(
+    () =>
+      messages
+        .slice(-8)
+        .map((message) => ({
+          sender: message.sender,
+          text: message.text,
+        })),
+    [messages],
+  );
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -121,17 +122,6 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
       });
     }
   }, [messages]);
-
-  // Load chat history and greet with voice on mount
-  useEffect(() => {
-    if (isOpen) {
-      loadChatHistory();
-      // Greet user with voice after a short delay
-      setTimeout(() => {
-        speakGreeting();
-      }, 500);
-    }
-  }, [isOpen]);
 
   // Speak a greeting with TI-GUY's funny beaver voice
   const speakGreeting = async () => {
@@ -186,6 +176,18 @@ export const TIGuyFullScreen: React.FC<TIGuyFullScreenProps> = ({
       console.error("Failed to load history:", error);
     }
   };
+
+  // Load chat history and greet with voice on mount
+  useEffect(() => {
+    if (isOpen) {
+      loadChatHistory();
+      // Greet user with voice after a short delay
+      setTimeout(() => {
+        speakGreeting();
+      }, 500);
+    }
+  }, [isOpen]);
+
 
   const sendMessage = async (
     text: string = inputText,
