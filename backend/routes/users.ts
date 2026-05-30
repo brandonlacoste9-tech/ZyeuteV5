@@ -1,8 +1,47 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
+import { db } from "../storage.js";
+import { follows, posts, users } from "../../shared/schema.js";
+import { eq, count, sql } from "drizzle-orm";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import { supabaseAdmin, requireAuth, optionalAuth } from "../supabase-auth.js";
+
+/**
+ * Enrich a user object with real follower/following/post counts from DB.
+ * These are not stored on the user_profiles row itself.
+ */
+async function enrichUserCounts(user: any): Promise<any> {
+  try {
+    const [followersResult, followingResult, postsResult] = await Promise.all([
+      // Followers: rows in abonnements where followee_id = user.id
+      db
+        .select({ cnt: count() })
+        .from(follows)
+        .where(eq(follows.followingId, user.id)),
+      // Following: rows in abonnements where follower_id = user.id
+      db
+        .select({ cnt: count() })
+        .from(follows)
+        .where(eq(follows.followerId, user.id)),
+      // Posts: publications by this user
+      db.select({ cnt: count() }).from(posts).where(eq(posts.userId, user.id)),
+    ]);
+
+    return {
+      ...user,
+      followers_count: followersResult[0]?.cnt ?? 0,
+      followersCount: followersResult[0]?.cnt ?? 0,
+      following_count: followingResult[0]?.cnt ?? 0,
+      followingCount: followingResult[0]?.cnt ?? 0,
+      posts_count: postsResult[0]?.cnt ?? 0,
+      postsCount: postsResult[0]?.cnt ?? 0,
+    };
+  } catch (err) {
+    console.warn("[enrichUserCounts] Failed:", err);
+    return user; // Return unenriched rather than crash
+  }
+}
 
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -107,7 +146,8 @@ router.get("/auth/me", optionalAuth, async (req: Request, res: Response) => {
 
     // Exclude sensitive fields from response (taxId, internal permissions)
     const { taxId, customPermissions, ...safeUser } = user;
-    res.json({ user: safeUser });
+    const enriched = await enrichUserCounts(safeUser);
+    res.json({ user: enriched });
   } catch (error) {
     console.error("Get me error:", error);
     res.status(500).json({ error: "Failed to get user profile" });
@@ -195,7 +235,8 @@ router.get(
         isFollowing = await storage.isFollowing(req.userId, user.id);
       }
 
-      res.json({ user: { ...safeUser, isFollowing } });
+      const enriched = await enrichUserCounts({ ...safeUser, isFollowing });
+      res.json({ user: enriched });
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ error: "Failed to get user" });
@@ -222,9 +263,19 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
   try {
     // Validate input with Zod schema
     const updateUserSchema = z.object({
+      // Accept both camelCase (API standard) and snake_case (from ProfileEditSettings direct Supabase writes)
       displayName: z.string().min(1).max(100).optional(),
-      bio: z.string().max(500).optional(),
+      display_name: z.string().min(1).max(100).optional(),
+      username: z
+        .string()
+        .min(3)
+        .max(30)
+        .regex(/^[a-z0-9_]+$/, "Lettres minuscules, chiffres et _ seulement")
+        .optional(),
+      bio: z.string().max(2200).optional(),
       avatarUrl: z.string().url().max(2048).optional(),
+      avatar_url: z.string().url().max(2048).optional(),
+      city: z.string().max(100).optional(),
       region: z
         .enum([
           "montreal",
@@ -237,6 +288,12 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
           "terrebonne",
           "laval",
           "gaspesie",
+          "longueuil",
+          "charlevoix",
+          "estrie",
+          "laurentides",
+          "mauricie",
+          "abitibi",
           "other",
         ])
         .optional(),
@@ -251,7 +308,35 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
       });
     }
 
-    const updated = await storage.updateUser(req.userId!, parsed.data);
+    // Normalize snake_case aliases to camelCase for Drizzle ORM
+    const rawData = parsed.data as Record<string, any>;
+    const normalized: Record<string, any> = {};
+
+    if (rawData.displayName !== undefined)
+      normalized.displayName = rawData.displayName;
+    if (rawData.display_name !== undefined)
+      normalized.displayName = rawData.display_name;
+    if (rawData.username !== undefined) {
+      // Check for username uniqueness before updating
+      const existing = await storage.getUserByUsername(rawData.username);
+      if (existing && existing.id !== req.userId) {
+        return res
+          .status(409)
+          .json({ error: "Ce nom d'utilisateur est déjà pris." });
+      }
+      normalized.username = rawData.username;
+    }
+    if (rawData.bio !== undefined) normalized.bio = rawData.bio;
+    if (rawData.avatarUrl !== undefined)
+      normalized.avatarUrl = rawData.avatarUrl;
+    if (rawData.avatar_url !== undefined)
+      normalized.avatarUrl = rawData.avatar_url;
+    if (rawData.city !== undefined) normalized.city = rawData.city;
+    if (rawData.region !== undefined) normalized.region = rawData.region;
+    if (rawData.tiGuyCommentsEnabled !== undefined)
+      normalized.tiGuyCommentsEnabled = rawData.tiGuyCommentsEnabled;
+
+    const updated = await storage.updateUser(req.userId!, normalized);
 
     if (!updated) {
       return res.status(404).json({ error: "User not found" });

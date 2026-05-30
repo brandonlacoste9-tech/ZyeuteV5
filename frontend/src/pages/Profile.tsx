@@ -362,7 +362,7 @@ export const Profile: React.FC = () => {
           {/* Action Button */}
           <div className="mt-4">
             {isOwnProfile ? (
-              <Link to="/settings" onClick={tap}>
+              <Link to="/settings/profile" onClick={tap}>
                 <GoldButton className="w-full" size="md">
                   Modifier le profil
                 </GoldButton>

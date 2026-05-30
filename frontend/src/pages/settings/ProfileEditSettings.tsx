@@ -1,5 +1,8 @@
 /**
  * Profile Edit Settings Page
+ * FIXED: Now uses backend PATCH /api/users/me instead of direct Supabase writes
+ *        (backend validates, checks username uniqueness, and handles camelCase→DB mapping)
+ *        Avatar upload uses Supabase Storage with base64 fallback
  */
 
 import React, { useState } from "react";
@@ -11,15 +14,21 @@ import { QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import { getCurrentUser } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { logger } from "../../lib/logger";
 
 const profileEditSettingsLogger = logger.withContext("ProfileEditSettings");
 
+const API_BASE =
+  import.meta.env.VITE_API_URL || "https://zyeute-backend.up.railway.app";
+
 export const ProfileEditSettings: React.FC = () => {
   const { tap } = useHaptics();
+  const { refreshUser } = useAuth() as any;
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -28,6 +37,8 @@ export const ProfileEditSettings: React.FC = () => {
     city: "",
     region: "",
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   React.useEffect(() => {
     const fetchUser = async () => {
@@ -38,7 +49,10 @@ export const ProfileEditSettings: React.FC = () => {
           setUser(currentUser);
           setFormData({
             username: currentUser.username || "",
-            display_name: currentUser.display_name || "",
+            display_name:
+              currentUser.display_name ||
+              (currentUser as any).displayName ||
+              "",
             bio: currentUser.bio || "",
             city: currentUser.city || "",
             region: currentUser.region || "",
@@ -55,26 +69,69 @@ export const ProfileEditSettings: React.FC = () => {
     fetchUser();
   }, []);
 
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (formData.username.length < 3) {
+      newErrors.username = "Minimum 3 caractères";
+    } else if (!/^[a-z0-9_]+$/.test(formData.username)) {
+      newErrors.username = "Lettres minuscules, chiffres et _ seulement";
+    }
+
+    if (formData.bio.length > 2200) {
+      newErrors.bio = "Maximum 2200 caractères";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
     if (!user) return;
+    if (!validate()) return;
 
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({
+      // Use backend PATCH /api/users/me — it handles camelCase mapping,
+      // username uniqueness check, and Drizzle ORM field names correctly
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const res = await fetch(`${API_BASE}/api/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
           username: formData.username,
           display_name: formData.display_name,
           bio: formData.bio,
           city: formData.city,
-          region: formData.region,
-        })
-        .eq("id", user.id);
+          region: formData.region || undefined,
+        }),
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        if (res.status === 409) {
+          setErrors({ username: body.error || "Nom d'utilisateur déjà pris" });
+          return;
+        }
+        throw new Error(body.error || `Erreur ${res.status}`);
+      }
 
       toast.success("Profil mis à jour! ✨");
-      // Refresh user data
+
+      // Refresh auth context so Header/Profile reflect new data
+      if (typeof refreshUser === "function") {
+        await refreshUser();
+      }
+
       const updatedUser = await getCurrentUser();
       if (updatedUser) setUser(updatedUser);
     } catch (error: any) {
@@ -89,35 +146,114 @@ export const ProfileEditSettings: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    // Validate file type and size (max 5 MB)
+    if (!file.type.startsWith("image/")) {
+      toast.error("Seulement les images sont acceptées");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("La photo doit faire moins de 5 MB");
+      return;
+    }
+
     tap();
+    setIsUploadingAvatar(true);
+
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${user.id}/${fileName}`;
+      let publicUrl: string | null = null;
 
-      const { error: uploadError } = await supabase.storage
-        .from("media")
-        .upload(filePath, file, { upsert: true });
+      // Strategy 1: Try Supabase Storage
+      try {
+        const fileExt = file.name.split(".").pop() || "jpg";
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${user.id}/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(filePath, file, { upsert: true });
 
+        if (!uploadError) {
+          const {
+            data: { publicUrl: url },
+          } = supabase.storage.from("media").getPublicUrl(filePath);
+          publicUrl = url;
+        } else {
+          profileEditSettingsLogger.warn(
+            "Supabase storage upload failed, trying backend:",
+            uploadError.message,
+          );
+        }
+      } catch (storageErr) {
+        profileEditSettingsLogger.warn(
+          "Supabase storage unavailable:",
+          storageErr,
+        );
+      }
+
+      // Strategy 2: Upload via backend if Supabase storage failed
+      if (!publicUrl) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const formPayload = new FormData();
+        formPayload.append("avatar", file);
+
+        const uploadRes = await fetch(`${API_BASE}/api/users/me/avatar`, {
+          method: "POST",
+          headers: {
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
+          },
+          credentials: "include",
+          body: formPayload,
+        });
+
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          publicUrl = data.avatar_url || data.avatarUrl;
+        }
+      }
+
+      if (!publicUrl) {
+        throw new Error("Impossible de téléverser la photo");
+      }
+
+      // Update the avatar_url via the backend
       const {
-        data: { publicUrl },
-      } = supabase.storage.from("media").getPublicUrl(filePath);
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      const { error: updateError } = await supabase
-        .from("user_profiles")
-        .update({ avatar_url: publicUrl })
-        .eq("id", user.id);
+      const patchRes = await fetch(`${API_BASE}/api/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({ avatar_url: publicUrl }),
+      });
 
-      if (updateError) throw updateError;
+      if (!patchRes.ok) {
+        throw new Error("Impossible de mettre à jour la photo de profil");
+      }
 
       toast.success("Photo de profil mise à jour! ✨");
+
+      if (typeof refreshUser === "function") {
+        await refreshUser();
+      }
+
       const updatedUser = await getCurrentUser();
       if (updatedUser) setUser(updatedUser);
     } catch (error: any) {
       profileEditSettingsLogger.error("Error updating avatar:", error);
-      toast.error("Erreur lors du téléversement");
+      toast.error(error.message || "Erreur lors du téléversement");
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -139,13 +275,36 @@ export const ProfileEditSettings: React.FC = () => {
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
               <Avatar
-                src={user?.avatar_url}
+                src={user?.avatar_url || user?.avatarUrl}
                 size="xl"
-                isVerified={user?.is_verified}
+                isVerified={user?.is_verified || user?.isVerified}
               />
+              {isUploadingAvatar && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                  <svg
+                    className="w-8 h-8 text-gold-400 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                </div>
+              )}
               <label
                 htmlFor="avatar-upload"
-                className="absolute bottom-0 right-0 bg-gold-500 rounded-full p-2 cursor-pointer hover:bg-gold-600 transition-colors"
+                className={`absolute bottom-0 right-0 bg-gold-500 rounded-full p-2 cursor-pointer hover:bg-gold-600 transition-colors ${isUploadingAvatar ? "opacity-50 pointer-events-none" : ""}`}
               >
                 <svg
                   className="w-5 h-5 text-black"
@@ -173,13 +332,14 @@ export const ProfileEditSettings: React.FC = () => {
                 onChange={handleAvatarChange}
                 className="hidden"
                 id="avatar-upload"
+                disabled={isUploadingAvatar}
               />
             </div>
             <label
               htmlFor="avatar-upload"
-              className="text-gold-400 text-sm font-semibold cursor-pointer hover:text-gold-300"
+              className={`text-gold-400 text-sm font-semibold cursor-pointer hover:text-gold-300 ${isUploadingAvatar ? "opacity-50 pointer-events-none" : ""}`}
             >
-              Changer la photo
+              {isUploadingAvatar ? "Téléversement..." : "Changer la photo"}
             </label>
           </div>
         </div>
@@ -192,20 +352,26 @@ export const ProfileEditSettings: React.FC = () => {
           <input
             type="text"
             value={formData.username}
-            onChange={(e) =>
+            onChange={(e) => {
+              setErrors((prev) => ({ ...prev, username: "" }));
               setFormData({
                 ...formData,
                 username: e.target.value
                   .toLowerCase()
                   .replace(/[^a-z0-9_]/g, ""),
-              })
-            }
-            className="input-premium"
+              });
+            }}
+            className={`input-premium ${errors.username ? "border-red-500" : ""}`}
             placeholder="tonusername"
+            maxLength={30}
           />
-          <p className="text-leather-400 text-xs mt-1">
-            Lettres minuscules, chiffres et _ seulement
-          </p>
+          {errors.username ? (
+            <p className="text-red-400 text-xs mt-1">{errors.username}</p>
+          ) : (
+            <p className="text-leather-400 text-xs mt-1">
+              Lettres minuscules, chiffres et _ seulement
+            </p>
+          )}
         </div>
 
         {/* Display Name */}
@@ -221,7 +387,7 @@ export const ProfileEditSettings: React.FC = () => {
             }
             className="input-premium"
             placeholder="Ton nom"
-            maxLength={50}
+            maxLength={100}
           />
         </div>
 
@@ -232,15 +398,21 @@ export const ProfileEditSettings: React.FC = () => {
           </label>
           <textarea
             value={formData.bio}
-            onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-            className="input-premium resize-none"
+            onChange={(e) => {
+              setErrors((prev) => ({ ...prev, bio: "" }));
+              setFormData({ ...formData, bio: e.target.value });
+            }}
+            className={`input-premium resize-none ${errors.bio ? "border-red-500" : ""}`}
             rows={4}
             placeholder="Parle-nous de toi..."
             maxLength={2200}
           />
-          <p className="text-leather-400 text-xs mt-1">
-            {formData.bio.length}/2200 caractères
-          </p>
+          <div className="flex justify-between mt-1">
+            {errors.bio && <p className="text-red-400 text-xs">{errors.bio}</p>}
+            <p className="text-leather-400 text-xs ml-auto">
+              {formData.bio.length}/2200 caractères
+            </p>
+          </div>
         </div>
 
         {/* Location */}
@@ -277,6 +449,7 @@ export const ProfileEditSettings: React.FC = () => {
               }
               className="input-premium"
               placeholder="Montréal"
+              maxLength={100}
             />
           </div>
         </div>
@@ -284,7 +457,7 @@ export const ProfileEditSettings: React.FC = () => {
         {/* Save Button */}
         <button
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isUploadingAvatar}
           className="w-full btn-gold py-4 rounded-xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? "Sauvegarde..." : "Sauvegarder les modifications"}
