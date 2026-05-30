@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BottomNav } from "@/components/BottomNav";
 import { logger } from "@/lib/logger";
+import { getSessionWithTimeout } from "@/lib/supabase";
 
 const liveLogger = logger.withContext("GoLive");
 
@@ -54,9 +55,18 @@ const GoLive: React.FC = () => {
     setError(null);
 
     try {
+      // Get auth token so backend can record which user created the stream
+      const { session } = await getSessionWithTimeout(3000);
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch(`${API_BASE}/api/mux/create-livestream`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ title: title.trim(), category }),
       });

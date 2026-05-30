@@ -8,6 +8,7 @@ import Mux from "@mux/mux-node";
 import { eq } from "drizzle-orm";
 import { db } from "../storage.js";
 import { posts } from "../../shared/schema.js";
+import { supabaseAdmin, requireAuth } from "../supabase-auth.js";
 
 const router = Router();
 
@@ -225,52 +226,77 @@ router.post("/webhooks", async (req: Request, res: Response) => {
  * POST /api/mux/create-livestream
  * Create a Mux Live Stream and return RTMP URL + stream key to the broadcaster
  */
-router.post("/create-livestream", async (req: Request, res: Response) => {
-  if (!mux || !Video) {
-    return res.status(503).json({
-      success: false,
-      error: "MUX non configuré. Vérifiez MUX_TOKEN_ID et MUX_TOKEN_SECRET.",
-    });
-  }
+router.post(
+  "/create-livestream",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res.status(503).json({
+        success: false,
+        error: "MUX non configuré. Vérifiez MUX_TOKEN_ID et MUX_TOKEN_SECRET.",
+      });
+    }
 
-  try {
-    const { title = "Live Zyeuté", category = "général" } = req.body;
+    try {
+      const { title = "Live Zyeuté", category = "général" } = req.body;
+      const userId = (req as any).userId as string;
 
-    const liveStream = await mux.video.liveStreams.create({
-      playback_policy: ["public"],
-      new_asset_settings: {
+      const liveStream = await mux.video.liveStreams.create({
         playback_policy: ["public"],
-      },
-      latency_mode: "low",
-    });
+        new_asset_settings: {
+          playback_policy: ["public"],
+        },
+        latency_mode: "low",
+      });
 
-    const playbackId = liveStream.playback_ids?.[0]?.id ?? null;
-    const streamKey = liveStream.stream_key;
-    const rtmpUrl = "rtmps://global-live.mux.com:443/app";
+      const playbackId = liveStream.playback_ids?.[0]?.id ?? null;
+      const streamKey = liveStream.stream_key;
+      const rtmpUrl = "rtmps://global-live.mux.com:443/app";
 
-    console.log(
-      `[MUX LIVE] Created live stream: ${liveStream.id} title="${title}" category="${category}"`,
-    );
+      // Register stream in live_streams table so LiveDiscover can show it
+      if (supabaseAdmin && userId) {
+        const { error: insertError } = await supabaseAdmin
+          .from("live_streams")
+          .insert({
+            id: liveStream.id,
+            user_id: userId,
+            title,
+            category,
+            playback_id: playbackId,
+            status: "active",
+          });
+        if (insertError) {
+          console.warn(
+            "[MUX LIVE] Failed to insert into live_streams:",
+            insertError.message,
+          );
+        }
+      }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        streamId: liveStream.id,
-        streamKey,
-        rtmpUrl,
-        playbackId,
-        title,
-        category,
-      },
-    });
-  } catch (error) {
-    console.error("[MUX LIVE] Erreur création live stream:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Erreur lors de la création du live",
-    });
-  }
-});
+      console.log(
+        `[MUX LIVE] Created live stream: ${liveStream.id} title="${title}" category="${category}"`,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          streamId: liveStream.id,
+          streamKey,
+          rtmpUrl,
+          playbackId,
+          title,
+          category,
+        },
+      });
+    } catch (error) {
+      console.error("[MUX LIVE] Erreur création live stream:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la création du live",
+      });
+    }
+  },
+);
 
 /**
  * GET /api/mux/livestream-status/:streamId
@@ -335,6 +361,15 @@ router.delete(
     try {
       const { streamId } = req.params;
       await mux.video.liveStreams.complete(streamId as string);
+
+      // Remove from live_streams table so LiveDiscover stops showing it
+      if (supabaseAdmin) {
+        await supabaseAdmin
+          .from("live_streams")
+          .update({ status: "ended", ended_at: new Date().toISOString() })
+          .eq("id", streamId);
+      }
+
       console.log(`[MUX LIVE] Ended live stream: ${streamId}`);
       return res.status(200).json({ success: true });
     } catch (error) {

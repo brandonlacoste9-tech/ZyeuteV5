@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { logger } from "../lib/logger";
+import { supabase } from "../lib/supabase";
 
 const useSettingsPreferencesLogger = logger.withContext(
   "UseSettingsPreferences",
@@ -261,6 +262,34 @@ const getValueAtPath = (obj: SettingsPreferences, path: PreferencePath) => {
   return cursor;
 };
 
+/** Persist preferences to Supabase (debounced, non-blocking) */
+async function persistToSupabase(prefs: SettingsPreferences) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Read existing custom_permissions first to merge (don't overwrite other fields like private_account)
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("custom_permissions")
+      .eq("id", user.id)
+      .single();
+
+    const existing =
+      (profile?.custom_permissions as Record<string, unknown>) || {};
+    const merged = { ...existing, settings_preferences: prefs };
+
+    await supabase
+      .from("user_profiles")
+      .update({ custom_permissions: merged })
+      .eq("id", user.id);
+  } catch (err) {
+    useSettingsPreferencesLogger.warn("Failed to persist settings to DB:", err);
+  }
+}
+
 export function useSettingsPreferences() {
   const [preferences, setPreferences] = useState<SettingsPreferences>(() => {
     if (typeof window === "undefined") {
@@ -281,9 +310,56 @@ export function useSettingsPreferences() {
     }
   });
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load from Supabase on mount — DB is source of truth, overrides localStorage
+  useEffect(() => {
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("custom_permissions")
+          .eq("id", user.id)
+          .single();
+
+        const dbPrefs = (profile?.custom_permissions as any)
+          ?.settings_preferences as Partial<SettingsPreferences> | undefined;
+
+        if (dbPrefs) {
+          const merged = mergeWithDefaults(clonePreferences(), dbPrefs);
+          setPreferences(merged);
+          // Keep localStorage in sync too
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+          }
+        }
+      } catch (err) {
+        useSettingsPreferencesLogger.warn(
+          "Failed to load settings from DB:",
+          err,
+        );
+      }
+    })();
+  }, []);
+
+  // Persist to localStorage immediately; debounce DB write by 1.5s
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      persistToSupabase(preferences);
+    }, 1500);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [preferences]);
 
   const setPreference = useCallback((path: PreferencePath, value: unknown) => {

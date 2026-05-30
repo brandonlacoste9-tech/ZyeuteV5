@@ -47,6 +47,10 @@ export default function Studio() {
   const [errorMessage, setErrorMessage] = useState("");
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoSize, setVideoSize] = useState("");
+  const [captions, setCaptions] = useState<
+    { start: number; end: number; text: string }[]
+  >([]);
+  const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
 
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -325,17 +329,30 @@ export default function Studio() {
             {/* AI Tools */}
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => {
+                disabled={isGeneratingCaptions}
+                onClick={async () => {
+                  setIsGeneratingCaptions(true);
+                  setCaptions([]);
                   toast.info("Ti-Guy travaille... 📝");
-                  generateCaptions(previewUrl).then((captions) =>
-                    toast.success(`${captions.length} sous-titres générés!`),
-                  );
+                  try {
+                    const result = await generateCaptions(previewUrl);
+                    setCaptions(result);
+                    toast.success(`${result.length} sous-titres générés!`);
+                  } catch {
+                    toast.error("Impossible de générer les sous-titres.");
+                  } finally {
+                    setIsGeneratingCaptions(false);
+                  }
                 }}
-                className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left group"
+                className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all text-left group disabled:opacity-50"
               >
-                <div className="text-xl mb-1">📝</div>
+                <div className="text-xl mb-1">
+                  {isGeneratingCaptions ? "⏳" : "📝"}
+                </div>
                 <div className="text-sm font-bold text-white">Sous-titres</div>
-                <div className="text-xs text-white/40">Auto-Joual</div>
+                <div className="text-xs text-white/40">
+                  {isGeneratingCaptions ? "Génération..." : "Auto-Joual"}
+                </div>
               </button>
 
               <button
@@ -352,6 +369,34 @@ export default function Studio() {
                 <div className="text-xs text-white/40">Couper silences</div>
               </button>
             </div>
+
+            {/* Captions Preview Panel */}
+            {captions.length > 0 && (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-semibold text-sm">
+                    Sous-titres générés ({captions.length})
+                  </h3>
+                  <button
+                    onClick={() => setCaptions([])}
+                    className="text-white/40 hover:text-white text-xs transition-colors"
+                  >
+                    ✕ Effacer
+                  </button>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {captions.map((cue, i) => (
+                    <div key={i} className="flex gap-3 text-xs">
+                      <span className="text-gold-400/70 font-mono whitespace-nowrap shrink-0">
+                        {Math.floor(cue.start / 60)}:
+                        {String(Math.floor(cue.start % 60)).padStart(2, "0")}
+                      </span>
+                      <span className="text-white/80">{cue.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-3">

@@ -149,6 +149,65 @@ export const Analytics: React.FC = () => {
         // gifts received from user_profiles
         const giftsReceived = (currentUser as any).total_gifts_received || 0;
 
+        // ── Week-over-week growth ──────────────────────────────────────────
+        // Previous period: same length window shifted back by itself
+        const periodMs = Date.now() - startDate.getTime();
+        const prevStart = new Date(startDate.getTime() - periodMs);
+
+        const [{ count: prevPosts }, prevFollowers] = await Promise.all([
+          supabase
+            .from("publications")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", currentUser.id)
+            .gte("created_at", prevStart.toISOString())
+            .lt("created_at", startDate.toISOString()),
+          supabase
+            .from("abonnements")
+            .select("*", { count: "exact", head: true })
+            .eq("followee_id", currentUser.id)
+            .gte("created_at", prevStart.toISOString())
+            .lt("created_at", startDate.toISOString()),
+        ]);
+
+        const postsGrowth =
+          (prevPosts ?? 0) > 0
+            ? Math.round(
+                (((totalPosts ?? 0) - (prevPosts ?? 0)) / (prevPosts ?? 1)) *
+                  100,
+              )
+            : (totalPosts ?? 0 > 0)
+              ? 100
+              : 0;
+        const followersGrowth =
+          (prevFollowers.count ?? 0) > 0
+            ? Math.round(
+                (((totalFollowers ?? 0) - (prevFollowers.count ?? 0)) /
+                  (prevFollowers.count ?? 1)) *
+                  100,
+              )
+            : (totalFollowers ?? 0) > 0
+              ? 100
+              : 0;
+
+        // ── Region breakdown ──────────────────────────────────────────────
+        // Get followers by region (join abonnements → user_profiles on follower_id)
+        const { data: followersWithRegion } = await supabase
+          .from("abonnements")
+          .select("user_profiles!follower_id ( region )")
+          .eq("followee_id", currentUser.id);
+
+        const regionMap: Record<string, number> = {};
+        (followersWithRegion || []).forEach((row: any) => {
+          const region = row.user_profiles?.region;
+          if (region) {
+            regionMap[region] = (regionMap[region] || 0) + 1;
+          }
+        });
+        const regionBreakdown = Object.entries(regionMap)
+          .map(([region, count]) => ({ region, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 6);
+
         setAnalytics({
           totalPosts: totalPosts || 0,
           totalViews,
@@ -159,11 +218,11 @@ export const Analytics: React.FC = () => {
           avgFireRating: totalPosts ? totalFires / totalPosts : 0,
           topPost,
           recentGrowth: {
-            posts: 0,
-            followers: 0,
+            posts: postsGrowth,
+            followers: followersGrowth,
             engagement: 0,
           },
-          regionBreakdown: [],
+          regionBreakdown,
           engagementRate,
         });
       } catch (error) {
@@ -383,6 +442,77 @@ export const Analytics: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Growth metrics */}
+        {(analytics.recentGrowth.posts !== 0 ||
+          analytics.recentGrowth.followers !== 0) && (
+          <div className="card-edge p-6 mb-6">
+            <h2 className="text-white text-xl font-bold mb-4">
+              Croissance (période précédente)
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-white/60 text-sm mb-1">Publications</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    analytics.recentGrowth.posts >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {analytics.recentGrowth.posts >= 0 ? "+" : ""}
+                  {analytics.recentGrowth.posts}%
+                </p>
+              </div>
+              <div>
+                <p className="text-white/60 text-sm mb-1">Abonnés</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    analytics.recentGrowth.followers >= 0
+                      ? "text-green-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {analytics.recentGrowth.followers >= 0 ? "+" : ""}
+                  {analytics.recentGrowth.followers}%
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Region breakdown */}
+        {analytics.regionBreakdown.length > 0 && (
+          <div className="card-edge p-6 mb-6">
+            <h2 className="text-white text-xl font-bold mb-4">
+              Abonnés par région
+            </h2>
+            <div className="space-y-3">
+              {analytics.regionBreakdown.map(({ region, count }) => {
+                const pct =
+                  analytics.totalFollowers > 0
+                    ? Math.round((count / analytics.totalFollowers) * 100)
+                    : 0;
+                return (
+                  <div key={region}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-white capitalize">{region}</span>
+                      <span className="text-white/60">
+                        {count} ({pct}%)
+                      </span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gold-gradient rounded-full"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

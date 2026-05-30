@@ -10,9 +10,16 @@ import { GovernanceBee } from "../ai/bees/governance-bee.js";
 import { cacheMiddleware } from "../utils/cache.js";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
-const supabaseRest = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  "";
+const supabaseRest =
+  SUPABASE_URL && SUPABASE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
 
 // Import existing auth middlewares
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -239,14 +246,6 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
         body.caption || body.content || "Nouveau partage sur Zyeuté! 🍁";
     }
 
-    if (body.videoType === "pexels" && body.pexelsData) {
-      const { videoUrl, thumbnail, duration } = body.pexelsData;
-      body.mediaUrl = videoUrl;
-      body.thumbnailUrl = thumbnail;
-      body.duration = duration;
-      body.content = body.caption || body.content || "Vidéo Pexels";
-    }
-
     const parsed = insertPostSchema.safeParse({
       ...body,
       userId: req.userId,
@@ -290,7 +289,7 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
     }
 
     let videoModerationApproved = true;
-    if (parsed.data.mediaUrl && body.videoType !== "pexels") {
+    if (parsed.data.mediaUrl) {
       const validatedType = validatePostType(
         parsed.data.mediaUrl,
         (parsed.data as any).type || "photo",
@@ -352,7 +351,7 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
       : undefined;
 
     const validatedType =
-      body.videoType === "mux" || body.videoType === "pexels"
+      body.videoType === "mux"
         ? "video"
         : validatePostType(
             parsed.data.mediaUrl,
@@ -374,8 +373,10 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
           type: validatedType,
           processing_status: "completed",
           is_moderated: true,
-          moderation_approved: modResult.status === "approved" && videoModerationApproved,
-          est_masque: modResult.status !== "approved" || !videoModerationApproved,
+          moderation_approved:
+            modResult.status === "approved" && videoModerationApproved,
+          est_masque:
+            modResult.status !== "approved" || !videoModerationApproved,
           hive_id: parsed.data.hiveId || "quebec",
           region: (parsed.data as any).region || "montreal",
           visibility: (parsed.data as any).visibility || "public",
@@ -391,14 +392,21 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
         .select()
         .single();
       if (postErr) throw new Error("Failed to create post: " + postErr.message);
-      post = { ...postData, id: postData.id, mediaUrl: postData.media_url, hlsUrl: postData.hls_url, userId: postData.user_id };
+      post = {
+        ...postData,
+        id: postData.id,
+        mediaUrl: postData.media_url,
+        hlsUrl: postData.hls_url,
+        userId: postData.user_id,
+      };
     } else {
       post = await storage.createPost({
         ...parsed.data,
         type: validatedType,
         processingStatus: "completed",
         isModerated: true,
-        moderationApproved: modResult.status === "approved" && videoModerationApproved,
+        moderationApproved:
+          modResult.status === "approved" && videoModerationApproved,
         isHidden: modResult.status !== "approved" || !videoModerationApproved,
         isEphemeral,
         maxViews,
@@ -406,8 +414,7 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
       } as any);
     }
 
-    const isMuxOrPexels =
-      req.body.videoType === "mux" || req.body.videoType === "pexels";
+    const isMuxOrPexels = req.body.videoType === "mux";
     if (!isMuxOrPexels) {
       const videoQueue = getVideoQueue();
       await videoQueue.add("processVideo", {

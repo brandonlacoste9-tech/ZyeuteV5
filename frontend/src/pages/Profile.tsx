@@ -211,9 +211,32 @@ export const Profile: React.FC = () => {
     if (!user || !currentUser) return;
     impact();
 
-    const success = await toggleFollow(currentUser.id, user.id, isFollowing);
-    if (success) {
-      setIsFollowing(!isFollowing);
+    // Optimistic update — flip state and adjust count immediately
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setUser((prev) =>
+      prev
+        ? {
+            ...prev,
+            followers_count:
+              (prev.followers_count || 0) + (wasFollowing ? -1 : 1),
+          }
+        : prev,
+    );
+
+    const success = await toggleFollow(currentUser.id, user.id, wasFollowing);
+    if (!success) {
+      // Revert on failure
+      setIsFollowing(wasFollowing);
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              followers_count:
+                (prev.followers_count || 0) + (wasFollowing ? 1 : -1),
+            }
+          : prev,
+      );
     }
   };
 

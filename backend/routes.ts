@@ -29,7 +29,6 @@ import { presenceRouter } from "./routes/presence.js";
 import flaggingRoutes from "./routes/user-flagging.js";
 import remixRoutes from "./routes/remix.js";
 import soundRoutes from "./routes/sounds.js";
-import pexelsRoutes from "./routes/pexels.js";
 import studioRoutes from "./routes/studio.js";
 import muxRoutes from "./routes/mux.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
@@ -187,31 +186,44 @@ export async function registerRoutes(
     try {
       const axios = (await import("axios")).default;
       // Test with market=ca (original)
-      const r1 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
-        params: { search_query: "quebec", market: "ca", max_results: 2 },
-        headers: { "API-Key": key || "" },
-        timeout: 15000,
-      });
+      const r1 = await axios.get(
+        "https://tiktok-scraper.omkar.cloud/tiktok/videos/search",
+        {
+          params: { search_query: "quebec", market: "ca", max_results: 2 },
+          headers: { "API-Key": key || "" },
+          timeout: 15000,
+        },
+      );
       diag.withMarketCA = r1.data?.videos?.length ?? 0;
 
       // Test without market param
-      const r2 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
-        params: { search_query: "quebec", max_results: 2 },
-        headers: { "API-Key": key || "" },
-        timeout: 15000,
-      });
+      const r2 = await axios.get(
+        "https://tiktok-scraper.omkar.cloud/tiktok/videos/search",
+        {
+          params: { search_query: "quebec", max_results: 2 },
+          headers: { "API-Key": key || "" },
+          timeout: 15000,
+        },
+      );
       diag.withoutMarket = r2.data?.videos?.length ?? 0;
 
       // Test with market=us
-      const r3 = await axios.get("https://tiktok-scraper.omkar.cloud/tiktok/videos/search", {
-        params: { search_query: "quebec", market: "us", max_results: 2 },
-        headers: { "API-Key": key || "" },
-        timeout: 15000,
-      });
+      const r3 = await axios.get(
+        "https://tiktok-scraper.omkar.cloud/tiktok/videos/search",
+        {
+          params: { search_query: "quebec", market: "us", max_results: 2 },
+          headers: { "API-Key": key || "" },
+          timeout: 15000,
+        },
+      );
       diag.withMarketUS = r3.data?.videos?.length ?? 0;
-      diag.sampleVideoId = r2.data?.videos?.[0]?.video_id ?? r3.data?.videos?.[0]?.video_id ?? null;
+      diag.sampleVideoId =
+        r2.data?.videos?.[0]?.video_id ??
+        r3.data?.videos?.[0]?.video_id ??
+        null;
     } catch (e: any) {
-      diag.omkarError = e?.response?.status || e?.code || e?.message || String(e);
+      diag.omkarError =
+        e?.response?.status || e?.code || e?.message || String(e);
       diag.omkarErrorDetail = e?.response?.data || null;
     }
     res.json(diag);
@@ -219,16 +231,8 @@ export async function registerRoutes(
   app.use("/api/tiktok", requireAuth, tiktokRoutes);
 
   // Apply general rate limiting to all other API routes
-  // EXCEPT Pexels routes (they have their own lighter limit since they're just fetching external data)
-  app.use("/api", (req, res, next) => {
-    // Skip rate limiting for Pexels endpoints (they're read-only external data fetches)
-    if (req.path.startsWith("/pexels")) {
-      return next();
-    }
-    return generalRateLimiter(req, res, next);
-  });
+  app.use("/api", generalRateLimiter);
 
-  app.use("/api/pexels", pexelsRoutes);
   app.use("/api/mux", muxRoutes);
   app.use("/api/video-doctor", videoDoctorRoutes);
 

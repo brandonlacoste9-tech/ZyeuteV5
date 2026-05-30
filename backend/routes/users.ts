@@ -5,7 +5,14 @@ import { follows, posts, users } from "../../shared/schema.js";
 import { eq, count, sql } from "drizzle-orm";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
+import multer from "multer";
 import { supabaseAdmin, requireAuth, optionalAuth } from "../supabase-auth.js";
+
+// Multer: store uploads in memory for Supabase Storage forwarding
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 /**
  * Enrich a user object with real follower/following/post counts from DB.
@@ -408,5 +415,60 @@ router.get("/users/:id/following", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to get following" });
   }
 });
+
+// ============ AVATAR UPLOAD ROUTE ============
+// POST /api/users/me/avatar — upload avatar image to Supabase Storage via service key
+router.post(
+  "/users/me/avatar",
+  requireAuth,
+  upload.single("avatar"),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file provided" });
+      }
+
+      if (!supabaseAdmin) {
+        return res.status(503).json({ error: "Storage not configured" });
+      }
+
+      const userId = req.userId!;
+      const ext = req.file.mimetype.includes("png") ? "png" : "jpg";
+      const filePath = `avatars/${userId}.${ext}`;
+
+      // Upload to Supabase Storage avatars bucket using service role key (bypasses RLS)
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("avatars")
+        .upload(filePath, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error("[Avatar Upload] Supabase Storage error:", uploadError);
+        return res.status(500).json({ error: "Failed to upload avatar" });
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      const avatarUrl = urlData.publicUrl;
+
+      // Update user profile with new avatar URL
+      const updated = await storage.updateUser(userId, { avatarUrl });
+
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ avatarUrl, user: updated });
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      res.status(500).json({ error: "Failed to upload avatar" });
+    }
+  },
+);
 
 export default router;

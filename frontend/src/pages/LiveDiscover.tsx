@@ -3,11 +3,12 @@
  * Features: Grid/list view, search, filters, trending highlights
  */
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/Button";
+import { supabase } from "../lib/supabase";
 
 /**
  * Interface for a live stream
@@ -27,141 +28,6 @@ interface LiveStream {
   is_featured: boolean;
   started_at: string;
 }
-
-/**
- * Mock data for live streams
- */
-const MOCK_LIVE_STREAMS: LiveStream[] = [
-  {
-    id: "stream1",
-    creator_id: "user1",
-    creator_name: "Marie-Pier Dubois",
-    creator_username: "mariepier_mtl",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=mariepier",
-    title: "🎨 Live painting session - Vieux-Port Montreal",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=800&h=450&fit=crop",
-    viewer_count: 1247,
-    category: "Art",
-    tags: ["art", "painting", "montreal"],
-    is_trending: true,
-    is_featured: true,
-    started_at: "2024-01-15T10:30:00Z",
-  },
-  {
-    id: "stream2",
-    creator_id: "user2",
-    creator_name: "Jean-François Tremblay",
-    creator_username: "jf_quebec",
-    creator_avatar:
-      "https://api.dicebear.com/7.x/avataaars/svg?seed=jeanfrancois",
-    title: "Cuisine Québécoise - Poutine traditionnelle",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1558030006-450675393462?w=800&h=450&fit=crop",
-    viewer_count: 892,
-    category: "Cuisine",
-    tags: ["cooking", "food", "poutine"],
-    is_trending: true,
-    is_featured: false,
-    started_at: "2024-01-15T11:00:00Z",
-  },
-  {
-    id: "stream3",
-    creator_id: "user3",
-    creator_name: "Émilie Gagnon",
-    creator_username: "emilie_music",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=emilie",
-    title: "🎵 Live music - Chanson française covers",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&h=450&fit=crop",
-    viewer_count: 567,
-    category: "Musique",
-    tags: ["music", "live", "covers"],
-    is_trending: false,
-    is_featured: true,
-    started_at: "2024-01-15T11:15:00Z",
-  },
-  {
-    id: "stream4",
-    creator_id: "user4",
-    creator_name: "Alex Bouchard",
-    creator_username: "alex_gaming",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alex",
-    title: "Gaming Session - Let's play together!",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=800&h=450&fit=crop",
-    viewer_count: 2134,
-    category: "Gaming",
-    tags: ["gaming", "twitch", "streaming"],
-    is_trending: true,
-    is_featured: false,
-    started_at: "2024-01-15T09:45:00Z",
-  },
-  {
-    id: "stream5",
-    creator_id: "user5",
-    creator_name: "Sophie Leblanc",
-    creator_username: "sophie_fitness",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=sophie",
-    title: "Yoga matinal - Session relaxation 🧘‍♀️",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=450&fit=crop",
-    viewer_count: 345,
-    category: "Fitness",
-    tags: ["yoga", "fitness", "wellness"],
-    is_trending: false,
-    is_featured: false,
-    started_at: "2024-01-15T08:00:00Z",
-  },
-  {
-    id: "stream6",
-    creator_id: "user6",
-    creator_name: "Thomas Rivard",
-    creator_username: "thomas_tech",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=thomas",
-    title: "Live coding - Building a React app",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&h=450&fit=crop",
-    viewer_count: 678,
-    category: "Tech",
-    tags: ["coding", "react", "javascript"],
-    is_trending: false,
-    is_featured: true,
-    started_at: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: "stream7",
-    creator_id: "user7",
-    creator_name: "Isabelle Martin",
-    creator_username: "isa_makeup",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=isabelle",
-    title: "Makeup Tutorial - Soirée look ✨",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=800&h=450&fit=crop",
-    viewer_count: 1156,
-    category: "Beauté",
-    tags: ["makeup", "beauty", "tutorial"],
-    is_trending: true,
-    is_featured: false,
-    started_at: "2024-01-15T11:30:00Z",
-  },
-  {
-    id: "stream8",
-    creator_id: "user8",
-    creator_name: "Maxime Côté",
-    creator_username: "max_sports",
-    creator_avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=maxime",
-    title: "Hockey talk - Les Canadiens analysis",
-    thumbnail_url:
-      "https://images.unsplash.com/photo-1515703407324-5f753afd8be8?w=800&h=450&fit=crop",
-    viewer_count: 823,
-    category: "Sports",
-    tags: ["hockey", "sports", "canadiens"],
-    is_trending: false,
-    is_featured: false,
-    started_at: "2024-01-15T10:45:00Z",
-  },
-];
 
 /**
  * Available categories for filtering
@@ -195,13 +61,81 @@ const LiveDiscover: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
+
+  // Fetch real active streams from Supabase
+  useEffect(() => {
+    const fetchStreams = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("live_streams")
+          .select(
+            `
+            id,
+            user_id,
+            title,
+            category,
+            playback_id,
+            viewer_count,
+            started_at,
+            user_profiles!user_id (
+              username,
+              display_name,
+              avatar_url
+            )
+          `,
+          )
+          .eq("status", "active")
+          .order("started_at", { ascending: false });
+
+        if (error) throw error;
+
+        const mapped: LiveStream[] = (data || []).map((row: any) => ({
+          id: row.id,
+          creator_id: row.user_id,
+          creator_name:
+            row.user_profiles?.display_name ||
+            row.user_profiles?.username ||
+            "Créateur",
+          creator_username: row.user_profiles?.username || "unknown",
+          creator_avatar:
+            row.user_profiles?.avatar_url ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${row.user_id}`,
+          title: row.title,
+          thumbnail_url: row.playback_id
+            ? `https://image.mux.com/${row.playback_id}/thumbnail.jpg`
+            : "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&h=450&fit=crop",
+          viewer_count: row.viewer_count || 0,
+          category: row.category,
+          tags: [],
+          is_trending: row.viewer_count > 100,
+          is_featured: false,
+          started_at: row.started_at,
+        }));
+
+        setLiveStreams(mapped);
+      } catch (err) {
+        console.error("[LiveDiscover] Failed to fetch streams:", err);
+        setLiveStreams([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStreams();
+
+    // Poll every 30s to update viewer counts / new streams
+    const interval = setInterval(fetchStreams, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   /**
    * Filter streams based on search query and selected category
    */
   const filteredStreams = useMemo(() => {
-    let streams = [...MOCK_LIVE_STREAMS];
+    let streams = [...liveStreams];
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -223,7 +157,7 @@ const LiveDiscover: React.FC = () => {
     }
 
     return streams;
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, liveStreams]);
 
   /**
    * Handle navigation to watch a live stream
@@ -251,7 +185,8 @@ const LiveDiscover: React.FC = () => {
               🔴 Live Discover
             </h1>
             <p className="text-white/60 mt-1">
-              {MOCK_LIVE_STREAMS.length} streams en direct
+              {liveStreams.length} stream{liveStreams.length !== 1 ? "s" : ""}{" "}
+              en direct
             </p>
           </div>
           <Button
