@@ -292,18 +292,25 @@ async function checkAchievementCondition(
 
       case "fires_received":
         if (trigger.type === "fire_received") {
+          // reactions table: publication_id links to publications, query via join
+          // Count reactions on posts owned by userId
           const { count } = await supabase
-            .from("fires")
-            .select("id", { count: "exact", head: true })
-            .eq("post_user_id", userId);
+            .from("reactions")
+            .select("id, publications!publication_id(user_id)", {
+              count: "exact",
+              head: true,
+            })
+            .eq("publications.user_id", userId)
+            .is("deleted_at", null);
           return (count || 0) >= condition.count;
         }
         break;
 
       case "comments_made":
         if (trigger.type === "comment_created") {
+          // commentaires table (not comments)
           const { count } = await supabase
-            .from("comments")
+            .from("commentaires")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId);
           return (count || 0) >= condition.count;
@@ -312,10 +319,11 @@ async function checkAchievementCondition(
 
       case "followers":
         if (trigger.type === "follow_received") {
+          // abonnements table (not follows), followee_id (not following_id)
           const { count } = await supabase
-            .from("follows")
-            .select("id", { count: "exact", head: true })
-            .eq("following_id", userId);
+            .from("abonnements")
+            .select("follower_id", { count: "exact", head: true })
+            .eq("followee_id", userId);
           return (count || 0) >= condition.count;
         }
         break;

@@ -1,9 +1,10 @@
 /**
  * CommentThread - Nested comment replies component
+ * FIXED: Wrong table name (comments→commentaires), wrong columns (post_id→publication_id, text→content)
+ *        DB has no parent_id column — replies not supported at DB level, UI shows reply input only
  */
 
 import React, { useState } from "react";
-import DOMPurify from "dompurify";
 import { Avatar } from "../Avatar";
 import { Button } from "../Button";
 import { supabase } from "../../lib/supabase";
@@ -49,21 +50,10 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
     const fetchReplies = async () => {
       if (!showReplies) return;
 
-      const { data, error } = await supabase
-        .from("comments")
-        .select("*, user:user_profiles!user_id(*)")
-        .eq("parent_id", comment.id)
-        .order("created_at", { ascending: true });
-
-      if (error) {
-        commentThreadLogger.error("Error fetching replies:", error);
-        return;
-      }
-
-      if (data) {
-        setReplies(data);
-        setReplyCount(data.length);
-      }
+      // commentaires table has no parent_id column — replies not stored at DB level
+      // Return empty until a parent_id column is added to the schema
+      setReplies([]);
+      setReplyCount(0);
     };
 
     fetchReplies();
@@ -72,14 +62,8 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
   // Get reply count on mount
   React.useEffect(() => {
     const getReplyCount = async () => {
-      const { count, error } = await supabase
-        .from("comments")
-        .select("*", { count: "exact", head: true })
-        .eq("parent_id", comment.id);
-
-      if (!error && count !== null) {
-        setReplyCount(count);
-      }
+      // commentaires table has no parent_id column — reply count always 0 until schema supports it
+      setReplyCount(0);
     };
 
     getReplyCount();
@@ -130,13 +114,13 @@ const CommentThreadComponent: React.FC<CommentThreadProps> = ({
         toast.warning("⚠️ Ton commentaire sera révisé");
       }
 
+      // commentaires table: use publication_id, content columns (no parent_id)
       const { data, error } = (await supabase
-        .from("comments")
+        .from("commentaires")
         .insert({
-          post_id: postId,
+          publication_id: postId,
           user_id: currentUser.id,
-          text: sanitizedText,
-          parent_id: comment.id,
+          content: sanitizedText,
         } as any)
         .select("*, user:user_profiles!user_id(*)")
         .single()) as { data: CommentType | null; error: any };

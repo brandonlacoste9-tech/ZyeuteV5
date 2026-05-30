@@ -892,10 +892,9 @@ export async function surgicalUpload(
     // DO NOT set Content-Type — the browser must set it automatically
     // with the correct multipart/form-data boundary for FormData.
 
-    // [SOVEREIGN] Bypass Vercel's 4.5MB Serverless Payload Limit by POSTing directly to Render in production
-    const uploadUrl = import.meta.env.PROD
-      ? "https://zyeutev5-1.onrender.com/api/upload/simple"
-      : "/api/upload/simple";
+    // Use relative URL — Vercel rewrites /api/* to Railway backend in production
+    // Local dev: Vite proxy handles /api → localhost:3000
+    const uploadUrl = "/api/upload/simple";
 
     const response = await fetch(uploadUrl, {
       method: "POST",

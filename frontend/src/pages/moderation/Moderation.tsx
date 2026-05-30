@@ -235,7 +235,7 @@ export const Moderation: React.FC = () => {
       if (log.content_type === "post") {
         await supabase.from("posts").delete().eq("id", log.content_id);
       } else if (log.content_type === "comment") {
-        await supabase.from("comments").delete().eq("id", log.content_id);
+        await supabase.from("commentaires").delete().eq("id", log.content_id);
       }
 
       toast.success("Contenu supprimé");

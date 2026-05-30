@@ -1,5 +1,8 @@
 /**
  * PostDetail Page - Full post view with comments and fire rating
+ * FIXED: Wrong table names (fires→reactions, comments→commentaires)
+ *        Wrong column names (post_id→publication_id, text→content, fire_level→type)
+ *        Wrong relation join (user:users→user:user_profiles!user_id)
  */
 
 import React from "react";
@@ -67,26 +70,33 @@ export const PostDetail: React.FC = () => {
 
       setIsLoading(true);
       try {
-        // Use centralized API function instead of direct query
         const postData = await getPostById(id);
         if (postData) {
-          // Fetch fire data separately if needed
-          const { data: fireData } = await supabase
-            .from("fires")
-            .select("fire_level")
-            .eq("post_id", id)
-            .eq("user_id", (await supabase.auth.getUser()).data.user?.id)
-            .single();
+          const {
+            data: { user: authUser },
+          } = await supabase.auth.getUser();
+
+          // Check if current user already reacted to this post
+          // reactions table: publication_id (not post_id), type (not fire_level)
+          const { data: reactionData } = authUser
+            ? await supabase
+                .from("reactions")
+                .select("type")
+                .eq("publication_id", id)
+                .eq("user_id", authUser.id)
+                .is("deleted_at", null)
+                .maybeSingle()
+            : { data: null };
 
           setPost({
             ...postData,
-            user_fire: fireData
+            user_fire: reactionData
               ? {
-                fire_level: fireData.fire_level,
-                user_id: (await supabase.auth.getUser()).data.user?.id || "",
-                post_id: id,
-                created_at: new Date().toISOString(),
-              }
+                  fire_level: 1, // reactions table doesn't store fire_level, just presence
+                  user_id: authUser?.id || "",
+                  post_id: id,
+                  created_at: new Date().toISOString(),
+                }
               : undefined,
           });
         }
@@ -101,24 +111,25 @@ export const PostDetail: React.FC = () => {
     fetchPost();
   }, [id, navigate]);
 
-  // Fetch comments
+  // Fetch comments from commentaires table
   React.useEffect(() => {
     const fetchComments = async () => {
       if (!id) return;
 
+      // commentaires table: publication_id (not post_id), content (not text)
+      // no parent_id column — fetch all top-level comments
       const { data } = await supabase
-        .from("comments")
-        .select("*, user:users(*)")
-        .eq("post_id", id)
-        .is("parent_id", null) // Only fetch top-level comments
+        .from("commentaires")
+        .select("*, user:user_profiles!user_id(*)")
+        .eq("publication_id", id)
         .order("created_at", { ascending: true });
 
-      if (data) setComments(data);
+      if (data) setComments(data as unknown as CommentType[]);
     };
 
     fetchComments();
 
-    // Subscribe to new comments
+    // Subscribe to new comments on the commentaires table
     const channel = supabase
       .channel(`post_${id}_comments`)
       .on(
@@ -126,11 +137,14 @@ export const PostDetail: React.FC = () => {
         {
           event: "INSERT",
           schema: "public",
-          table: "comments",
-          filter: `post_id=eq.${id}`,
+          table: "commentaires",
+          filter: `publication_id=eq.${id}`,
         },
-        (payload: { new: CommentType }) => {
-          setComments((prev) => [...prev, payload.new]);
+        (payload: { new: Record<string, unknown> }) => {
+          setComments((prev) => [
+            ...prev,
+            payload.new as unknown as CommentType,
+          ]);
         },
       )
       .subscribe();
@@ -140,22 +154,34 @@ export const PostDetail: React.FC = () => {
     };
   }, [id]);
 
-  // Handle fire rating
-  const handleRate = async (level: number) => {
+  // Handle fire rating — upsert into reactions table
+  const handleRate = async (_level: number) => {
     if (!currentUser || !post) return;
 
-    const { error } = await supabase.from("fires").upsert({
-      user_id: currentUser.id,
-      post_id: post.id,
-      fire_level: level,
-    });
+    // reactions table uses: publication_id, user_id, type
+    const { error } = await supabase.from("reactions").upsert(
+      {
+        publication_id: post.id,
+        user_id: currentUser.id,
+        type: "fire",
+      },
+      { onConflict: "publication_id,user_id" },
+    );
 
     if (!error && post) {
-      setPost({ ...post, user_fire: { fire_level: level } as any });
+      setPost({
+        ...post,
+        user_fire: {
+          fire_level: 1,
+          user_id: currentUser.id,
+          post_id: post.id,
+          created_at: new Date().toISOString(),
+        },
+      });
     }
   };
 
-  // Handle comment submission
+  // Handle comment submission — insert into commentaires table
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -163,12 +189,13 @@ export const PostDetail: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      // commentaires columns: publication_id, user_id, content
       const { data, error } = await supabase
-        .from("comments")
+        .from("commentaires")
         .insert({
-          post_id: post.id,
+          publication_id: post.id,
           user_id: currentUser.id,
-          text: newComment.trim(),
+          content: newComment.trim(),
         })
         .select("*, user:user_profiles!user_id(*)")
         .single();
@@ -176,13 +203,12 @@ export const PostDetail: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        // Optimistically add comment to list (realtime might be delayed)
-        setComments((prev) => [...prev, data as CommentType]);
+        setComments((prev) => [...prev, data as unknown as CommentType]);
         setNewComment("");
         // Update post comment count
-        if (post) {
-          setPost({ ...post, comment_count: (post.comment_count || 0) + 1 });
-        }
+        setPost((p) =>
+          p ? { ...p, comment_count: (p.comment_count || 0) + 1 } : p,
+        );
         toast.success("Commentaire publié! 💬");
       }
     } catch (error) {
@@ -330,6 +356,16 @@ export const PostDetail: React.FC = () => {
 };
 
 const PostDetailMedia = ({ post }: { post: Post }) => {
+  // Hooks must be called unconditionally at the top of the component
+  // For Mux videos these will be empty strings and the hook will be a no-op
+  const proxiedVideo =
+    post.type === "video" && !post.mux_playback_id
+      ? getProxiedMediaUrl(post.media_url) || post.media_url
+      : "";
+  const proxiedPoster =
+    getProxiedMediaUrl(post.thumbnail_url || undefined) || post.thumbnail_url;
+  const { source } = usePrefetchVideo(proxiedVideo, 2);
+
   // --- Mux videos: use MuxVideoPlayer directly (handles its own HLS streaming)
   if (post.type === "video" && post.mux_playback_id) {
     return (
@@ -342,7 +378,6 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
           muted={false}
           loop={true}
         />
-        {/* Debug overlay */}
         <VideoDebugOverlay
           isVisible={false}
           videoId={post.id}
@@ -352,19 +387,6 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
       </div>
     );
   }
-
-  // --- Non-Mux videos (Pexels / Supabase direct): use proxied URL consistently
-  // IMPORTANT: pass the SAME proxied URL to both usePrefetchVideo and VideoPlayer
-  // so MSE pipeline chunks and the <video> src always match.
-  const proxiedVideo =
-    post.type === "video"
-      ? (getProxiedMediaUrl(post.media_url) || post.media_url)
-      : "";
-  const proxiedPoster =
-    getProxiedMediaUrl(post.thumbnail_url || undefined) || post.thumbnail_url;
-
-  // Prefetch using the proxied URL so chunks come from the same origin as <video src>
-  const { source } = usePrefetchVideo(proxiedVideo, 2);
 
   if (post.type === "video") {
     return (
@@ -380,7 +402,6 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
           preload="auto"
           videoSource={source}
         />
-        {/* Debug overlay */}
         <VideoDebugOverlay
           isVisible={false}
           videoId={post.id}
