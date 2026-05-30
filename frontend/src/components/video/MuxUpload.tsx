@@ -3,7 +3,7 @@
  * Zyeuté V5 - Quebec social media
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import * as UpChunk from "@mux/upchunk";
 import {
@@ -26,6 +26,8 @@ interface MuxUploadProps {
   onCancel?: () => void;
   onFallbackUpload?: (file: File) => void; // Fallback to surgical upload
   onError?: (err: Error) => void;
+  /** When provided, the upload starts automatically without showing the drop zone */
+  initialFile?: File;
 }
 
 export function MuxUpload({
@@ -33,6 +35,7 @@ export function MuxUpload({
   onCancel,
   onFallbackUpload,
   onError,
+  initialFile,
 }: MuxUploadProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<
@@ -138,6 +141,16 @@ export function MuxUpload({
     },
     [pollUploadStatus, onError],
   );
+
+  // Auto-start upload when initialFile is provided (gallery/camera flow)
+  useEffect(() => {
+    if (initialFile && uploadStatus === "idle") {
+      setFileName(initialFile.name);
+      startUpload(initialFile);
+    }
+    // startUpload is stable (useCallback with stable deps), safe to omit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {

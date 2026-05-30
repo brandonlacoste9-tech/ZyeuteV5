@@ -28,6 +28,7 @@ import { logger } from "@/lib/logger";
 import { QuebecEmptyState } from "@/components/ui/QuebecEmptyState";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const profileLogger = logger.withContext("Profile");
 
@@ -121,7 +122,10 @@ export const Profile: React.FC = () => {
           }
         } else {
           // Regular profile lookup by username
-          const profileUser = await getUserProfile(username || "", authUser?.id);
+          const profileUser = await getUserProfile(
+            username || "",
+            authUser?.id,
+          );
           if (profileUser) {
             setUser(profileUser);
             setError(null);
@@ -147,10 +151,11 @@ export const Profile: React.FC = () => {
     fetchUser();
   }, [username, navigate, authUser, authLoading, isGuest]);
 
-  // Fetch user posts
+  // Fetch user posts + subscribe to Realtime for processing status updates
   React.useEffect(() => {
+    if (!user) return;
+
     const fetchPosts = async () => {
-      if (!user) return;
       try {
         const userPosts = await getUserPosts(user.id);
         setPosts(userPosts || []);
@@ -161,6 +166,29 @@ export const Profile: React.FC = () => {
     };
 
     fetchPosts();
+
+    // Supabase Realtime: refresh grid when a post's processing_status changes
+    // (e.g. Mux webhook fires and sets status = 'completed')
+    const channel = supabase
+      .channel(`profile-posts-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "posts",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Re-fetch posts silently when any of this user's posts are updated
+          fetchPosts();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Check if following
@@ -244,7 +272,7 @@ export const Profile: React.FC = () => {
               <Image
                 src={
                   user.avatar_url ||
-                  `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23FFBF00'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='72' font-family='sans-serif' fill='%23000'%3E${encodeURIComponent((user.username?.[0] || 'U').toUpperCase())}%3C/text%3E%3C/svg%3E`
+                  `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23FFBF00'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='72' font-family='sans-serif' fill='%23000'%3E${encodeURIComponent((user.username?.[0] || "U").toUpperCase())}%3C/text%3E%3C/svg%3E`
                 }
                 alt={user.display_name || user.username}
                 objectFit="cover"
@@ -406,10 +434,11 @@ export const Profile: React.FC = () => {
                   setActiveTab("posts");
                   tap();
                 }}
-                className={`py-4 font-semibold transition-all relative ${activeTab === "posts"
-                  ? "text-gold-400"
-                  : "text-leather-300 hover:text-gold-200"
-                  }`}
+                className={`py-4 font-semibold transition-all relative ${
+                  activeTab === "posts"
+                    ? "text-gold-400"
+                    : "text-leather-300 hover:text-gold-200"
+                }`}
               >
                 <span className="relative z-10">Publications</span>
                 {activeTab === "posts" && (
@@ -421,10 +450,11 @@ export const Profile: React.FC = () => {
                   setActiveTab("fires");
                   tap();
                 }}
-                className={`py-4 font-semibold transition-all relative ${activeTab === "fires"
-                  ? "text-gold-400"
-                  : "text-leather-300 hover:text-gold-200"
-                  }`}
+                className={`py-4 font-semibold transition-all relative ${
+                  activeTab === "fires"
+                    ? "text-gold-400"
+                    : "text-leather-300 hover:text-gold-200"
+                }`}
               >
                 <span className="relative z-10">🔥 Fires</span>
                 {activeTab === "fires" && (
@@ -437,10 +467,11 @@ export const Profile: React.FC = () => {
                     setActiveTab("saved");
                     tap();
                   }}
-                  className={`py-4 font-semibold transition-all relative ${activeTab === "saved"
-                    ? "text-gold-400"
-                    : "text-leather-300 hover:text-gold-200"
-                    }`}
+                  className={`py-4 font-semibold transition-all relative ${
+                    activeTab === "saved"
+                      ? "text-gold-400"
+                      : "text-leather-300 hover:text-gold-200"
+                  }`}
                 >
                   <span className="relative z-10">Sauvegardés</span>
                   {activeTab === "saved" && (
@@ -466,53 +497,79 @@ export const Profile: React.FC = () => {
             />
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              {posts.map((post, index) => (
-                <Link
-                  key={post.id}
-                  to={`/p/${post.id}`}
-                  className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
-                >
-                  <Image
-                    src={post.media_url}
-                    alt={post.caption || "Post"}
-                    objectFit="cover"
-                    fetchPriority={index < 6 ? "high" : "auto"}
-                    loading={index < 6 ? "eager" : "lazy"}
-                  />
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                    <div className="flex items-center gap-1 text-white">
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                      </svg>
-                      <span className="font-bold">
-                        {formatNumber(post.fire_count)}
-                      </span>
+              {posts.map((post, index) => {
+                const isProcessing =
+                  post.processing_status === "pending" ||
+                  post.processing_status === "processing";
+
+                if (isProcessing) {
+                  return (
+                    <div
+                      key={post.id}
+                      className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle flex flex-col items-center justify-center gap-2"
+                    >
+                      {/* Animated shimmer background */}
+                      <div className="absolute inset-0 bg-leather-900 animate-pulse" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
+                      {/* Spinner + label */}
+                      <div className="relative z-10 flex flex-col items-center gap-2">
+                        <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-[9px] font-bold text-gold-400 uppercase tracking-widest text-center leading-tight px-1">
+                          En cours de traitement
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-white">
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <span className="font-bold">
-                        {formatNumber(post.comment_count)}
-                      </span>
+                  );
+                }
+
+                return (
+                  <Link
+                    key={post.id}
+                    to={`/p/${post.id}`}
+                    className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                  >
+                    <Image
+                      src={post.media_url}
+                      alt={post.caption || "Post"}
+                      objectFit="cover"
+                      fetchPriority={index < 6 ? "high" : "auto"}
+                      loading={index < 6 ? "eager" : "lazy"}
+                    />
+                    {/* Overlay on hover */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                      <div className="flex items-center gap-1 text-white">
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                        </svg>
+                        <span className="font-bold">
+                          {formatNumber(post.fire_count)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-white">
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <span className="font-bold">
+                          {formatNumber(post.comment_count)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  {/* Gold corner accent */}
-                  <div
-                    className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20"
-                    style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
-                  />
-                </Link>
-              ))}
+                    {/* Gold corner accent */}
+                    <div
+                      className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20"
+                      style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
+                    />
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

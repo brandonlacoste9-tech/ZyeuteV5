@@ -29,8 +29,8 @@ export function useVideoActivation(
   const engagementTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const visibilityRatio = entry?.intersectionRatio || 0;
-  // 70% viewability: trigger play when most of the video is visible (Strict)
-  const VIEWABILITY_PLAY_THRESHOLD = 0.7;
+  // 30% viewability: trigger play earlier for slow connections in rural Quebec
+  const VIEWABILITY_PLAY_THRESHOLD = 0.3;
   const isFocused = visibilityRatio >= VIEWABILITY_PLAY_THRESHOLD;
 
   // Derive playback logic (Don't use state if we can derive from props + visibility)

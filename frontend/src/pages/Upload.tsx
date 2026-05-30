@@ -110,27 +110,78 @@ export const Upload: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
+  // State for inline Mux upload when gallery/camera picks a video
+  const [galleryMuxUploadFile, setGalleryMuxUploadFile] =
+    React.useState<File | null>(null);
+  const [showGalleryMuxUpload, setShowGalleryMuxUpload] = React.useState(false);
+
+  // 3-minute duration guard — returns duration in seconds via a temporary <video> element
+  const getVideoDuration = (videoFile: File): Promise<number> =>
+    new Promise((resolve) => {
+      const url = URL.createObjectURL(videoFile);
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        resolve(video.duration);
       };
-      reader.readAsDataURL(selectedFile);
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(0); // Allow upload on metadata error — server will reject if truly bad
+      };
+      video.src = url;
+    });
+
+  // Handle file selection
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+
+    // Route video files through Mux for HLS transcoding + ABR + thumbnails
+    if (selectedFile.type.startsWith("video/")) {
+      // 3-minute (180s) duration guard
+      const duration = await getVideoDuration(selectedFile);
+      if (duration > 180) {
+        toast.warning("La vidéo ne doit pas dépasser 3 minutes.");
+        return;
+      }
+      // Route through Mux — show the MuxUpload component inline
+      setGalleryMuxUploadFile(selectedFile);
+      setShowGalleryMuxUpload(true);
+      return;
     }
+
+    // Images: direct surgical upload path (unchanged)
+    setFile(selectedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(selectedFile);
   };
 
-  const handleCameraCapture = (capturedFile: File) => {
+  const handleCameraCapture = async (capturedFile: File) => {
+    setShowCamera(false);
+
+    // Route camera-captured videos through Mux (same as gallery)
+    if (capturedFile.type.startsWith("video/")) {
+      const duration = await getVideoDuration(capturedFile);
+      if (duration > 180) {
+        toast.warning("La vidéo ne doit pas dépasser 3 minutes.");
+        return;
+      }
+      setGalleryMuxUploadFile(capturedFile);
+      setShowGalleryMuxUpload(true);
+      return;
+    }
+
+    // Images from camera: direct path
     setFile(capturedFile);
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
     };
     reader.readAsDataURL(capturedFile);
-    setShowCamera(false);
   };
 
   // Create a blob from a data URI
@@ -246,6 +297,47 @@ export const Upload: React.FC = () => {
         onCapture={handleCameraCapture}
         onClose={() => setShowCamera(false)}
       />
+    );
+  }
+
+  // Gallery/camera video — route through Mux before showing post form
+  if (showGalleryMuxUpload && galleryMuxUploadFile) {
+    return (
+      <div className="min-h-screen bg-black leather-overlay pb-20">
+        <Header title="Traitement vidéo" showBack={true} showSearch={false} />
+        <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+          <div className="leather-card rounded-2xl p-6 stitched space-y-4">
+            <p className="text-gold-400 font-bold uppercase tracking-widest text-sm text-center">
+              Préparation de ta vidéo
+            </p>
+            <p className="text-leather-300 text-xs text-center">
+              Ta vidéo est optimisée pour le streaming HLS. Ça prend 30–90
+              secondes.
+            </p>
+            <MuxUpload
+              initialFile={galleryMuxUploadFile}
+              onUploadComplete={(d) => {
+                setMuxData(d);
+                setGalleryMuxUploadFile(null);
+                setShowGalleryMuxUpload(false);
+              }}
+              onFallbackUpload={(fallbackFile) => {
+                // Mux unavailable — fall back to raw upload for this file
+                setGalleryMuxUploadFile(null);
+                setShowGalleryMuxUpload(false);
+                setFile(fallbackFile);
+                setPreview(URL.createObjectURL(fallbackFile));
+                toast.info("Mux indisponible — upload direct utilisé.");
+              }}
+              onCancel={() => {
+                setGalleryMuxUploadFile(null);
+                setShowGalleryMuxUpload(false);
+              }}
+            />
+          </div>
+        </main>
+        <BottomNav />
+      </div>
     );
   }
 
@@ -464,7 +556,9 @@ export const Upload: React.FC = () => {
                       return;
                     }
                     addDraft(caption.trim(), "upload");
-                    toast.success("Brouillon enregistré — retrouve-le dans Créateur.");
+                    toast.success(
+                      "Brouillon enregistré — retrouve-le dans Créateur.",
+                    );
                   }}
                   className="mt-2 w-full py-2 rounded-xl border border-gold-500/40 text-gold-300 text-sm font-bold hover:bg-gold-500/10"
                 >
