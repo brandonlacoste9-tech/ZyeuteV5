@@ -6,7 +6,9 @@
 import { BrowserRouter as Router } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { TIGuyFullScreen, TIGuyButton, useTIGuy } from "@/components/tiguy";
+import { TIGuyFullScreen } from "@/components/tiguy/TIGuyFullScreen";
+import { TIGuyButton } from "@/components/tiguy/TIGuyButton";
+import { useTIGuy } from "@/components/tiguy/useTIGuy";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
