@@ -1,5 +1,5 @@
 /**
- * La Zyeute - TikTok-style Vertical Swipe Feed
+ * Zyeute - TikTok-style Vertical Swipe Feed
  * Full-screen vertical scroll experience with snap scrolling
  * Edge lighting effects when content is playing
  */
@@ -12,7 +12,12 @@ import React, {
   useMemo,
 } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { getCurrentUser, togglePostFire, toggleFollow } from "@/services/api";
+import {
+  getCurrentUser,
+  togglePostFire,
+  toggleFollow,
+  toggleSavePost,
+} from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed, type FeedType } from "@/hooks/useInfiniteFeed";
@@ -246,7 +251,7 @@ type PostWithEngagement = Post & {
   commentCount?: number;
 };
 
-export const LaZyeute: React.FC = () => {
+export const Zyeute: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { edgeLighting } = useTheme();
@@ -302,6 +307,16 @@ export const LaZyeute: React.FC = () => {
     authorUserId?: string;
   } | null>(null);
   const [followedMap, setFollowedMap] = useState<Record<string, boolean>>({});
+  const [firedMap, setFiredMap] = useState<Record<string, boolean>>({});
+  const [fireCountMap, setFireCountMap] = useState<Record<string, number>>({});
+  const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+  // Double-tap detection
+  const lastTapRef = useRef<{ postId: string; time: number } | null>(null);
+  // Heart burst animation
+  const [heartBurst, setHeartBurst] = useState<{
+    postId: string;
+    key: number;
+  } | null>(null);
 
   const touchStartY = useRef<number>(0);
   const touchEndY = useRef<number>(0);
@@ -348,7 +363,7 @@ export const LaZyeute: React.FC = () => {
       const idx = Math.round(scrollTop / viewportHeight);
       if (idx >= 0 && idx < posts.length) {
         try {
-          sessionStorage.setItem(`zyeute_la_scroll_${feedSource}`, String(idx));
+          sessionStorage.setItem(`zyeute_scroll_${feedSource}`, String(idx));
         } catch {
           /* */
         }
@@ -398,15 +413,83 @@ export const LaZyeute: React.FC = () => {
 
   const uid = authUser?.id ?? currentUser?.id;
 
-  const handleFireToggle = async (postId: string) => {
-    if (!uid) return;
+  const handleFireToggle = async (postId: string, fromDoubleTap = false) => {
+    if (!uid) {
+      toast.error("Connecte-toi pour mettre du feu.");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    const post = posts.find((p) => p.id === postId);
+    const currentFired =
+      firedMap[postId] ??
+      (post as PostWithEngagement | undefined)?.is_fired ??
+      false;
+    const currentCount =
+      fireCountMap[postId] ??
+      (post as PostWithEngagement | undefined)?.fireCount ??
+      (post as PostWithEngagement | undefined)?.fire_count ??
+      0;
+    // Optimistic update
+    const newFired = !currentFired;
+    setFiredMap((m) => ({ ...m, [postId]: newFired }));
+    setFireCountMap((m) => ({
+      ...m,
+      [postId]: currentCount + (newFired ? 1 : -1),
+    }));
+    // Heart burst animation on double-tap fire
+    if (fromDoubleTap && newFired) {
+      setHeartBurst({ postId, key: Date.now() });
+      setTimeout(() => setHeartBurst(null), 900);
+    }
     try {
       await togglePostFire(postId, uid);
-      // The infinite feed hook will automatically refetch and update
     } catch (error) {
       console.error("Error toggling fire:", error);
+      // Revert on failure
+      setFiredMap((m) => ({ ...m, [postId]: currentFired }));
+      setFireCountMap((m) => ({ ...m, [postId]: currentCount }));
+      toast.error("Impossible pour l'instant.");
     }
   };
+
+  const handleSaveToggle = async (postId: string) => {
+    if (!uid) {
+      toast.error("Connecte-toi pour sauvegarder.");
+      navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+    const currentSaved = savedMap[postId] ?? false;
+    setSavedMap((m) => ({ ...m, [postId]: !currentSaved }));
+    toast.success(currentSaved ? "Retiré des sauvegardés" : "Sauvegardé! 🔖");
+    try {
+      await toggleSavePost(postId, currentSaved);
+    } catch (error) {
+      console.error("Error toggling save:", error);
+      setSavedMap((m) => ({ ...m, [postId]: currentSaved }));
+      toast.error("Impossible pour l'instant.");
+    }
+  };
+
+  // Double-tap on video → fire
+  const handleVideoTap = useCallback(
+    (postId: string) => {
+      const now = Date.now();
+      if (
+        lastTapRef.current &&
+        lastTapRef.current.postId === postId &&
+        now - lastTapRef.current.time < 300
+      ) {
+        lastTapRef.current = null;
+        handleFireToggle(postId, true);
+      } else {
+        lastTapRef.current = { postId, time: now };
+        // Single tap → toggle play/pause
+        togglePlayPause();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [uid, posts, firedMap, fireCountMap],
+  );
 
   const openShare = (postId: string) => {
     setSharePostId(postId);
@@ -466,7 +549,9 @@ export const LaZyeute: React.FC = () => {
 
   useEffect(() => {
     if (posts.length === 0 || feedRestoreOnce.current) return;
-    const raw = sessionStorage.getItem(`zyeute_la_scroll_${feedSource}`);
+    const raw =
+      sessionStorage.getItem(`zyeute_scroll_${feedSource}`) ??
+      sessionStorage.getItem(`zyeute_la_scroll_${feedSource}`); // legacy key
     const el = containerRef.current;
     if (!el) return;
     const idx = raw
@@ -613,7 +698,7 @@ export const LaZyeute: React.FC = () => {
             <HamburgerMenu />
           </div>
           <h1 className="text-gold-500 font-black text-xl flex items-baseline select-none amber-glow">
-            La Zyeute
+            Zyeute
             <span className="text-[0.6rem] uppercase tracking-[0.3em] ml-2 font-bold gold-text-shine whitespace-nowrap">
               AG GOLD EDITION
             </span>
@@ -844,6 +929,35 @@ export const LaZyeute: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Tap overlay: single tap = play/pause, double-tap = fire */}
+                <div
+                  className="absolute inset-0 z-20"
+                  style={{ background: "transparent" }}
+                  onClick={() => handleVideoTap(post.id)}
+                />
+
+                {/* Heart burst animation on double-tap fire */}
+                {heartBurst?.postId === post.id && (
+                  <div
+                    key={heartBurst.key}
+                    className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
+                    style={{ animation: "heartPop 0.9s ease-out forwards" }}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-32 h-32 drop-shadow-[0_0_30px_rgba(255,100,50,0.9)]"
+                      style={{ animation: "heartPop 0.9s ease-out forwards" }}
+                    >
+                      <path
+                        d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"
+                        fill="#FF3D3D"
+                        stroke="#FFD700"
+                        strokeWidth={0.5}
+                      />
+                    </svg>
+                  </div>
+                )}
+
                 {/* Gradient Overlays */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
 
@@ -1024,57 +1138,56 @@ export const LaZyeute: React.FC = () => {
               </span>
             </Link>
 
-            {/* Fire - Gold/Red gradient always visible, brighter when fired */}
-            <button
-              onClick={() => handleFireToggle(currentPost.id)}
-              className="flex flex-col items-center gap-1 press-scale"
-              data-testid={`button-fire-${currentPost.id}`}
-            >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
-                style={{
-                  background: (currentPost as PostWithEngagement).is_fired
-                    ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
-                    : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
-                  border: `2px solid ${(currentPost as PostWithEngagement).is_fired ? "#FF3D3D" : edgeLighting + "40"}`,
-                  boxShadow: (currentPost as PostWithEngagement).is_fired
-                    ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)"
-                    : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
-                }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  viewBox="0 0 24 24"
-                  fill={
-                    (currentPost as PostWithEngagement).is_fired
-                      ? "#FF3D3D"
-                      : "#FFD700"
-                  }
-                  stroke={
-                    (currentPost as PostWithEngagement).is_fired
-                      ? "#FFD700"
-                      : "#8B4513"
-                  }
-                  strokeWidth={1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            {/* Fire - optimistic state via firedMap */}
+            {(() => {
+              const isFired =
+                firedMap[currentPost.id] ??
+                (currentPost as PostWithEngagement).is_fired ??
+                false;
+              const fireCount =
+                fireCountMap[currentPost.id] ??
+                (currentPost as PostWithEngagement).fireCount ??
+                (currentPost as PostWithEngagement).fire_count ??
+                0;
+              return (
+                <button
+                  onClick={() => handleFireToggle(currentPost.id)}
+                  className="flex flex-col items-center gap-1 press-scale"
+                  data-testid={`button-fire-${currentPost.id}`}
                 >
-                  <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
-                </svg>
-              </div>
-              <span
-                className="text-[10px] font-bold"
-                style={{
-                  color: (currentPost as PostWithEngagement).is_fired
-                    ? "#FFD700"
-                    : "#D4AF37",
-                }}
-              >
-                {(currentPost as PostWithEngagement).fireCount ??
-                  (currentPost as PostWithEngagement).fire_count ??
-                  0}
-              </span>
-            </button>
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
+                    style={{
+                      background: isFired
+                        ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
+                        : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
+                      border: `2px solid ${isFired ? "#FF3D3D" : edgeLighting + "40"}`,
+                      boxShadow: isFired
+                        ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)"
+                        : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      viewBox="0 0 24 24"
+                      fill={isFired ? "#FF3D3D" : "#FFD700"}
+                      stroke={isFired ? "#FFD700" : "#8B4513"}
+                      strokeWidth={1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
+                    </svg>
+                  </div>
+                  <span
+                    className="text-[10px] font-bold"
+                    style={{ color: isFired ? "#FFD700" : "#D4AF37" }}
+                  >
+                    {fireCount}
+                  </span>
+                </button>
+              );
+            })()}
 
             {/* Comments */}
             <button
@@ -1140,6 +1253,49 @@ export const LaZyeute: React.FC = () => {
                 Partager
               </span>
             </button>
+
+            {/* Bookmark / Save */}
+            {(() => {
+              const isSaved = savedMap[currentPost.id] ?? false;
+              return (
+                <button
+                  onClick={() => handleSaveToggle(currentPost.id)}
+                  className="flex flex-col items-center gap-1 press-scale"
+                  data-testid={`button-save-${currentPost.id}`}
+                >
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                    style={{
+                      background: isSaved
+                        ? "linear-gradient(145deg, #FFD700 0%, #D4AF37 100%)"
+                        : "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                      border: `2px solid ${isSaved ? "#FFD700" : edgeLighting}`,
+                      boxShadow: isSaved
+                        ? "0 0 12px rgba(212,175,55,0.7)"
+                        : undefined,
+                    }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      viewBox="0 0 24 24"
+                      fill={isSaved ? "#1A0F0A" : "none"}
+                      stroke={isSaved ? "#1A0F0A" : edgeLighting}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <span
+                    className="text-[10px] font-bold"
+                    style={{ color: isSaved ? "#FFD700" : "#D4AF37" }}
+                  >
+                    {isSaved ? "Sauvé" : "Sauver"}
+                  </span>
+                </button>
+              );
+            })()}
           </div>
         )}
 
@@ -1354,4 +1510,6 @@ export const LaZyeute: React.FC = () => {
   );
 };
 
-export default LaZyeute;
+// Keep backward-compat alias for any lazy import that uses the old name
+export { Zyeute as LaZyeute };
+export default Zyeute;

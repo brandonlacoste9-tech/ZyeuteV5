@@ -21,7 +21,7 @@ function LoadingScreen({ message }: { message?: string }) {
 const LoginPage = lazy(() => import("@/pages/Login"));
 const OnboardingPage = lazy(() => import("@/pages/Onboarding"));
 const AuthCallbackPage = lazy(() => import("@/pages/AuthCallback"));
-const LaZyeute = lazy(() => import("@/pages/LaZyeute"));
+const Zyeute = lazy(() => import("@/pages/LaZyeute"));
 const ExplorePage = lazy(() => import("@/pages/Explore"));
 const FeedGrid = lazy(() => import("@/pages/Feed"));
 const UploadPage = lazy(() => import("@/pages/Upload"));
@@ -213,7 +213,7 @@ export function AppRoutes() {
         />
 
         {/* Public — TikTok-style: anyone can open FYP, discover, and post links */}
-        <Route path="/feed" element={<LaZyeute />} />
+        <Route path="/feed" element={<Zyeute />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/feed/grid" element={<FeedGrid />} />
         <Route path="/search" element={<ExplorePage />} />

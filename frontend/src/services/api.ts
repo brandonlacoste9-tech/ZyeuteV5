@@ -376,6 +376,23 @@ export async function togglePostFire(
   return !error;
 }
 
+export async function toggleSavePost(
+  postId: string,
+  currentlySaved: boolean,
+): Promise<boolean> {
+  if (currentlySaved) {
+    const { error } = await apiCall(`/users/me/saved/${postId}`, {
+      method: "DELETE",
+    });
+    return !error;
+  } else {
+    const { error } = await apiCall(`/users/me/saved/${postId}`, {
+      method: "POST",
+    });
+    return !error;
+  }
+}
+
 export async function toggleCommentFire(commentId: string): Promise<boolean> {
   const { error } = await apiCall(`/comments/${commentId}/fire`, {
     method: "POST",

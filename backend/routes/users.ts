@@ -471,4 +471,112 @@ router.post(
   },
 );
 
+/**
+ * GET /api/users/me/saved
+ * Get current user's saved/bookmarked posts
+ */
+router.get("/me/saved", requireAuth, async (req, res) => {
+  const userId = req.userId!;
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    "";
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // saved_posts table: user_id, publication_id, created_at
+  // If table doesn't exist, return empty gracefully
+  const { data, error } = await supabase
+    .from("saved_posts")
+    .select(
+      `
+      id,
+      created_at,
+      publication:publication_id (
+        id, caption, media_url, thumbnail_url, type, mux_playback_id,
+        reactions_count, comments_count,
+        user:user_id (id, username, display_name, avatar_url)
+      )
+    `,
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error && error.code === "42P01") {
+    // Table doesn't exist yet — return empty
+    return res.json({ saved: [] });
+  }
+  if (error) return res.status(500).json({ error: error.message });
+
+  const saved = (data || []).map((row: any) => ({
+    id: row.id,
+    savedAt: row.created_at,
+    post: row.publication,
+  }));
+
+  res.json({ saved });
+});
+
+/**
+ * POST /api/users/me/saved/:postId
+ * Bookmark a post
+ */
+router.post("/me/saved/:postId", requireAuth, async (req, res) => {
+  const userId = req.userId!;
+  const { postId } = req.params;
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    "";
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { error } = await supabase
+    .from("saved_posts")
+    .upsert(
+      { user_id: userId, publication_id: postId },
+      { onConflict: "user_id,publication_id" },
+    );
+
+  if (error && error.code === "42P01") {
+    return res.status(503).json({ error: "saved_posts table not yet created" });
+  }
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ saved: true });
+});
+
+/**
+ * DELETE /api/users/me/saved/:postId
+ * Remove a bookmark
+ */
+router.delete("/me/saved/:postId", requireAuth, async (req, res) => {
+  const userId = req.userId!;
+  const { postId } = req.params;
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    "";
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  const { error } = await supabase
+    .from("saved_posts")
+    .delete()
+    .eq("user_id", userId)
+    .eq("publication_id", postId);
+
+  if (error && error.code === "42P01") {
+    return res.json({ saved: false }); // Table doesn't exist, treat as success
+  }
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ saved: false });
+});
+
 export default router;

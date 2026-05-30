@@ -1,7 +1,7 @@
 /**
  * Infinite Scroll Feed Hook
  * Uses React Query for data fetching with cursor-based pagination
- * Compatible with both LaZyeute (TikTok) and Feed (grid) components
+ * Compatible with both Zyeute (TikTok feed) and Feed (grid) components
  *
  * CRITICAL: Uses Supabase session token (not localStorage "token")
  * to match backend JWT validation.

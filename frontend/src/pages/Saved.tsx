@@ -3,17 +3,18 @@
  * View and manage saved posts, videos, and content
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "../components/layout/Header";
 import { cn } from "../lib/utils";
 import { BottomNav } from "../components/BottomNav";
+import { apiCall } from "@/services/api";
 
 interface SavedItem {
   id: string;
   type: "video" | "image" | "post" | "audio";
   title: string;
-  thumbnailUrl?: string;
+  thumbnail?: string | null;
   creator: {
     username: string;
     displayName: string;
@@ -25,79 +26,81 @@ interface SavedItem {
   collection?: string;
 }
 
-interface Collection {
-  id: string;
-  name: string;
-  count: number;
-  coverUrl?: string;
-}
-
-// Mock data
-const mockCollections: Collection[] = [
-  { id: "all", name: "Tous les éléments", count: 24 },
-  { id: "watch-later", name: "À regarder plus tard", count: 8 },
-  { id: "favorites", name: "Favoris", count: 12 },
-  { id: "inspiration", name: "Inspiration", count: 4 },
-];
-
-const mockSavedItems: SavedItem[] = [
-  {
-    id: "1",
-    type: "video",
-    title: "Poutine challenge au Québec",
-    creator: { username: "marie_mtl", displayName: "Marie Lavoie" },
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    duration: "2:34",
-    likes: 1234,
-    collection: "watch-later",
-  },
-  {
-    id: "2",
-    type: "image",
-    title: "Sunset sur le Mont-Royal",
-    creator: { username: "photo_qc", displayName: "Photos Québec" },
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    likes: 5678,
-    collection: "favorites",
-  },
-  {
-    id: "3",
-    type: "video",
-    title: "Vlog: Une journée à Québec City",
-    creator: { username: "alex_514", displayName: "Alexandre" },
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-    duration: "12:45",
-    likes: 890,
-    collection: "watch-later",
-  },
-  {
-    id: "4",
-    type: "post",
-    title: "Les meilleures expressions québécoises",
-    creator: { username: "culture_qc", displayName: "Culture Québec" },
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
-    likes: 2345,
-    collection: "favorites",
-  },
-  {
-    id: "5",
-    type: "audio",
-    title: "Podcast: L'histoire de la poutine",
-    creator: { username: "food_talk", displayName: "Food Talk MTL" },
-    savedAt: new Date(Date.now() - 1000 * 60 * 60 * 96),
-    duration: "45:00",
-    likes: 567,
-  },
-];
-
 export const Saved: React.FC = () => {
-  const [selectedCollection, setSelectedCollection] = useState("all");
+  const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [unsavingIds, setUnsavingIds] = useState<Set<string>>(new Set());
 
-  const filteredItems =
-    selectedCollection === "all"
-      ? mockSavedItems
-      : mockSavedItems.filter((item) => item.collection === selectedCollection);
+  useEffect(() => {
+    const fetchSaved = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await apiCall<{ saved: any[] }>(
+          "/users/me/saved",
+        );
+        if (error || !data) {
+          setSavedItems([]);
+          setSavedIds(new Set());
+          return;
+        }
+        const mapped: SavedItem[] = (data.saved || []).map((s: any) => ({
+          id: s.post?.id || s.id,
+          type: (s.post?.type || "video") as SavedItem["type"],
+          title: s.post?.caption || "Sans titre",
+          creator: {
+            username: s.post?.user?.username || "unknown",
+            displayName:
+              s.post?.user?.display_name ||
+              s.post?.user?.username ||
+              "Utilisateur",
+          },
+          thumbnail:
+            s.post?.thumbnail_url ||
+            (s.post?.mux_playback_id
+              ? `https://image.mux.com/${s.post.mux_playback_id}/thumbnail.jpg?width=200&height=356&fit_mode=smartcrop`
+              : null),
+          savedAt: new Date(s.savedAt),
+          likes: s.post?.reactions_count || 0,
+          collection: "all",
+        }));
+        setSavedItems(mapped);
+        setSavedIds(new Set(mapped.map((m) => m.id)));
+      } catch (err) {
+        console.error("[Saved] Failed to fetch saved posts:", err);
+        setSavedItems([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSaved();
+  }, []);
+
+  const handleUnsave = async (postId: string) => {
+    // Optimistic update
+    setSavedItems((prev) => prev.filter((item) => item.id !== postId));
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(postId);
+      return next;
+    });
+    setUnsavingIds((prev) => new Set(prev).add(postId));
+
+    try {
+      await apiCall(`/users/me/saved/${postId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("[Saved] Failed to unsave post:", err);
+      // Could restore item here, but optimistic removal is fine for UX
+    } finally {
+      setUnsavingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  };
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -191,113 +194,19 @@ export const Saved: React.FC = () => {
       <Header title="Sauvegardés" showBack />
 
       <main className="max-w-6xl mx-auto p-4">
-        {/* Collections */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-900 dark:text-white">
-              Collections
-            </h2>
-            <button className="text-sm text-gold-600 hover:underline">
-              + Nouvelle collection
-            </button>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-gold-400 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Chargement...
+            </p>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {mockCollections.map((collection) => (
-              <button
-                key={collection.id}
-                onClick={() => setSelectedCollection(collection.id)}
-                className={cn(
-                  "flex-shrink-0 px-4 py-3 rounded-xl transition-all",
-                  selectedCollection === collection.id
-                    ? "bg-gradient-to-r from-gold-400 to-gold-600 text-black"
-                    : "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700",
-                )}
-              >
-                <p
-                  className={cn(
-                    "font-medium",
-                    selectedCollection === collection.id
-                      ? "text-black"
-                      : "text-gray-900 dark:text-white",
-                  )}
-                >
-                  {collection.name}
-                </p>
-                <p
-                  className={cn(
-                    "text-sm",
-                    selectedCollection === collection.id
-                      ? "text-black/70"
-                      : "text-gray-500",
-                  )}
-                >
-                  {collection.count} éléments
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* View Toggle */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-gray-500">
-            {filteredItems.length} élément{filteredItems.length > 1 ? "s" : ""}
-          </p>
-          <div className="flex gap-1 p-1 bg-white dark:bg-gray-800 rounded-lg">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "p-2 rounded",
-                viewMode === "grid"
-                  ? "bg-gold-400 text-black"
-                  : "text-gray-500",
-              )}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "p-2 rounded",
-                viewMode === "list"
-                  ? "bg-gold-400 text-black"
-                  : "text-gray-500",
-              )}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Saved Items */}
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-12">
+        ) : savedItems.length === 0 ? (
+          /* Empty State */
+          <div className="text-center py-16">
             <svg
-              className="w-16 h-16 mx-auto mb-4 text-gray-300"
+              className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -310,10 +219,10 @@ export const Saved: React.FC = () => {
               />
             </svg>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Aucun élément sauvegardé
+              Aucun post sauvegardé
             </h3>
-            <p className="text-gray-500 mb-4">
-              Sauvegarde du contenu pour le retrouver facilement!
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-xs mx-auto">
+              Appuie sur 🔖 dans les vidéos pour les retrouver ici!
             </p>
             <Link
               to="/explore"
@@ -322,94 +231,25 @@ export const Saved: React.FC = () => {
               Explorer
             </Link>
           </div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="relative aspect-video bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      {getTypeIcon(item.type)}
-                    </div>
-                  )}
-                  {item.duration && (
-                    <span className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
-                      {item.duration}
-                    </span>
-                  )}
-                  <div className="absolute top-2 left-2 p-1.5 bg-black/50 rounded-full text-white">
-                    {getTypeIcon(item.type)}
-                  </div>
-                </div>
-                <div className="p-3">
-                  <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 mb-1">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    @{item.creator.username}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatDate(item.savedAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="space-y-3">
-            {filteredItems.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="relative w-24 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex-shrink-0">
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      {getTypeIcon(item.type)}
-                    </div>
+          <>
+            {/* View Toggle + Count */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {savedItems.length} élément{savedItems.length > 1 ? "s" : ""}
+              </p>
+              <div className="flex gap-1 p-1 bg-white dark:bg-gray-800 rounded-lg">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "p-2 rounded",
+                    viewMode === "grid"
+                      ? "bg-gold-400 text-black"
+                      : "text-gray-500",
                   )}
-                  {item.duration && (
-                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded">
-                      {item.duration}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    @{item.creator.username}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-gray-400">
-                      {formatDate(item.savedAt)}
-                    </span>
-                    {item.likes && (
-                      <span className="text-xs text-gray-400">
-                        • {item.likes.toLocaleString()} 🔥
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                >
                   <svg
-                    className="w-5 h-5 text-gray-400"
+                    className="w-5 h-5"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -418,13 +258,160 @@ export const Saved: React.FC = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "p-2 rounded",
+                    viewMode === "list"
+                      ? "bg-gold-400 text-black"
+                      : "text-gray-500",
+                  )}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 10h16M4 14h16M4 18h16"
                     />
                   </svg>
                 </button>
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* Saved Items — Grid */}
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {savedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative aspect-video bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600">
+                      {item.thumbnail ? (
+                        <img
+                          src={item.thumbnail}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                          {getTypeIcon(item.type)}
+                        </div>
+                      )}
+                      {item.duration && (
+                        <span className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                          {item.duration}
+                        </span>
+                      )}
+                      <div className="absolute top-2 left-2 p-1.5 bg-black/50 rounded-full text-white">
+                        {getTypeIcon(item.type)}
+                      </div>
+                      {/* Unsave button */}
+                      <button
+                        onClick={() => handleUnsave(item.id)}
+                        disabled={unsavingIds.has(item.id)}
+                        className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-gold-400 transition-colors"
+                        title="Retirer des sauvegardés"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-medium text-sm text-gray-900 dark:text-white line-clamp-2 mb-1">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        @{item.creator.username}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {formatDate(item.savedAt)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Saved Items — List */
+              <div className="space-y-3">
+                {savedItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div className="relative w-24 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex-shrink-0">
+                      {item.thumbnail ? (
+                        <img
+                          src={item.thumbnail}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                          {getTypeIcon(item.type)}
+                        </div>
+                      )}
+                      {item.duration && (
+                        <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/70 text-white text-xs rounded">
+                          {item.duration}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        @{item.creator.username}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-400">
+                          {formatDate(item.savedAt)}
+                        </span>
+                        {item.likes ? (
+                          <span className="text-xs text-gray-400">
+                            • {item.likes.toLocaleString()} 🔥
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    {/* Unsave button */}
+                    <button
+                      onClick={() => handleUnsave(item.id)}
+                      disabled={unsavingIds.has(item.id)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gold-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                      title="Retirer des sauvegardés"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 
