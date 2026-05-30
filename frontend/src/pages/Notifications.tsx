@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Avatar } from "../components/Avatar";
 import { useNotifications } from "../contexts/NotificationContext";
+import { BottomNav } from "../components/BottomNav";
 import { getTimeAgo } from "../lib/utils";
 import {
   IoFlame,
@@ -59,7 +60,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black leather-overlay pb-20">
+    <div className="min-h-screen bg-black leather-overlay pb-24">
       <Header title="Notifications" showSearch={false} />
 
       <div className="max-w-2xl mx-auto px-4 py-6">
@@ -158,6 +159,8 @@ export const Notifications: React.FC = () => {
       <p className="text-center text-leather-600 text-[10px] mt-8 uppercase tracking-[0.3em] font-medium">
         Zyeuté v3.1 — Quebec Premium Social
       </p>
+
+      <BottomNav />
     </div>
   );
 };

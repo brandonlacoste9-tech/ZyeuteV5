@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useState,
   useRef,
+  useCallback,
   ReactNode,
 } from "react";
 import { Session, AuthChangeEvent } from "@supabase/supabase-js";
@@ -202,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setIsLoading(true);
     try {
       await supabase.auth.signOut();
@@ -218,13 +219,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const enterGuestMode = () => {
+  const enterGuestMode = useCallback(() => {
     localStorage.setItem(GUEST_MODE_KEY, "true");
     localStorage.setItem(GUEST_TIMESTAMP_KEY, Date.now().toString());
     setIsGuest(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {

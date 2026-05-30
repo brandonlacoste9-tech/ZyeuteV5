@@ -233,7 +233,7 @@ export const Profile: React.FC = () => {
       <Header title={user.username} showBack={true} showSearch={false} />
 
       {/* Profile Top Section with Gold Gradient Background */}
-      <main className="flex-grow overflow-y-auto relative">
+      <div className="relative">
         {/* Gold Gradient Background for Top Section */}
         <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-gold-900/50 to-black" />
 
@@ -517,7 +517,7 @@ export const Profile: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       {/* Quebec Pride Footer */}
       <div className="text-center py-8 text-leather-400 text-sm">
@@ -527,6 +527,8 @@ export const Profile: React.FC = () => {
           <span className="text-gold-500">⚜️</span>
         </p>
       </div>
+
+      <BottomNav />
     </div>
   );
 };

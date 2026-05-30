@@ -30,6 +30,13 @@
     width: 100%;
     margin: 0;
     padding: 0;
+    /* Do NOT set overflow: hidden here — it kills scrolling on all pages.
+       Full-screen pages (feed, etc.) manage their own overflow individually. */
+    overflow: auto;
+  }
+
+  /* Full-screen snap pages override this via their own container styles */
+  .page-fullscreen {
     overflow: hidden;
   }
 }
