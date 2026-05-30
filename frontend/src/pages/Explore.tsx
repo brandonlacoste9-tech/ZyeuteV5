@@ -4,9 +4,10 @@
  */
 
 import React, { useMemo } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { getExplorePosts } from "@/services/api";
+import { getExplorePosts, apiCall } from "@/services/api";
+import { Avatar } from "@/components/Avatar";
 import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { formatNumber } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -32,6 +33,9 @@ export const Explore: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState(
     savedState?.filters?.searchQuery || "",
   );
+  const [userResults, setUserResults] = React.useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = React.useState(false);
+  const navigate = useNavigate();
   const [selectedRegion, setSelectedRegion] = React.useState(
     savedState?.filters?.selectedRegion || "",
   );
@@ -39,6 +43,28 @@ export const Explore: React.FC = () => {
     savedState?.filters?.selectedHashtag || "",
   );
   const { tap } = useHaptics();
+
+  // Debounced user search
+  React.useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setUserResults([]);
+      return;
+    }
+    setIsSearchingUsers(true);
+    const timer = setTimeout(async () => {
+      try {
+        const data = await apiCall(
+          `/api/search?q=${encodeURIComponent(searchQuery)}`,
+        );
+        setUserResults(data?.users || []);
+      } catch {
+        setUserResults([]);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Refs for persistence
   const stateRef = React.useRef({
@@ -312,6 +338,55 @@ export const Explore: React.FC = () => {
             >
               Effacer tout
             </button>
+          </div>
+        )}
+
+        {/* User Search Results */}
+        {searchQuery.length >= 2 && (
+          <div className="mb-6">
+            <h2 className="text-gold-400 font-bold mb-3 embossed flex items-center gap-2">
+              <span>👥</span>
+              <span>Utilisateurs</span>
+            </h2>
+            {isSearchingUsers ? (
+              <div className="overflow-x-auto flex gap-3 pb-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 border border-white/10 min-w-[80px] animate-pulse"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-white/10" />
+                    <div className="w-14 h-3 rounded bg-white/10" />
+                    <div className="w-10 h-2 rounded bg-white/10" />
+                  </div>
+                ))}
+              </div>
+            ) : userResults.length === 0 ? (
+              <p className="text-leather-300 text-sm py-2">
+                Aucun utilisateur trouvé
+              </p>
+            ) : (
+              <div className="overflow-x-auto flex gap-3 pb-2 gold-scrollbar">
+                {userResults.map((user) => (
+                  <div
+                    key={user.id}
+                    onClick={() => {
+                      tap();
+                      navigate(`/profile/${user.username}`);
+                    }}
+                    className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 border border-white/10 min-w-[80px] cursor-pointer hover:border-gold-400/50 transition-all"
+                  >
+                    <Avatar src={user.avatarUrl} size="md" userId={user.id} />
+                    <span className="text-white text-xs font-semibold text-center truncate max-w-[72px]">
+                      {user.displayName || user.username}
+                    </span>
+                    <span className="text-leather-300 text-xs truncate max-w-[72px]">
+                      @{user.username}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

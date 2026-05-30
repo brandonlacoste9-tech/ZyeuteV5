@@ -176,7 +176,7 @@ export const Profile: React.FC = () => {
         {
           event: "UPDATE",
           schema: "public",
-          table: "posts",
+          table: "publications",
           filter: `user_id=eq.${user.id}`,
         },
         () => {

@@ -1,39 +1,52 @@
 import { Router, Request, Response } from "express";
-import { storage } from "../storage.js";
-import { sql } from "drizzle-orm";
+import { createClient } from "@supabase/supabase-js";
 
 const router = Router();
 
-// Search users and posts
-router.get("/", async (req, res) => {
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY ||
+  "";
+
+router.get("/", async (req: Request, res: Response) => {
   try {
-    const query = req.query.q as string;
-    if (!query) return res.status(400).json({ error: "Query required" });
+    const query = ((req.query.q as string) || "").trim();
+    if (!query || query.length < 2)
+      return res.status(400).json({ error: "Query required (min 2 chars)" });
 
-    // Assuming we use drizzle directly to fetch matching results
-    // since searchUsers and searchPosts are not in DatabaseStorage interface
-    const searchPattern = `%${query}%`;
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      return res.status(503).json({ error: "Search unavailable" });
+    }
 
-    // Fallback simple search using available storage methods or direct execute
-    // This provides equivalent structure to missing methods
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const pattern = `%${query}%`;
+
     const [usersResult, postsResult] = await Promise.all([
-      storage.getRawDb().execute(sql`
-        SELECT id, username, display_name as "displayName", avatar_url as "avatarUrl" 
-        FROM user_profiles 
-        WHERE username ILIKE ${searchPattern} OR display_name ILIKE ${searchPattern} 
-        LIMIT 10
-      `),
-      storage.getRawDb().execute(sql`
-        SELECT id, media_url as "mediaUrl", thumbnail_url as "thumbnailUrl", caption, type 
-        FROM publications 
-        WHERE caption ILIKE ${searchPattern} OR content ILIKE ${searchPattern} 
-        LIMIT 10
-      `),
+      supabase
+        .from("user_profiles")
+        .select("id, username, display_name, avatar_url")
+        .or(`username.ilike.${pattern},display_name.ilike.${pattern}`)
+        .limit(10),
+      supabase
+        .from("publications")
+        .select("id, media_url, thumbnail_url, caption, type, mux_playback_id")
+        .or(`caption.ilike.${pattern},content.ilike.${pattern}`)
+        .eq("visibility", "public")
+        .eq("processing_status", "completed")
+        .limit(10),
     ]);
 
-    // Handle return row difference depending on the dialect result object
-    const users = usersResult.rows || usersResult;
-    const posts = postsResult.rows || postsResult;
+    const users = (usersResult.data || []).map((u) => ({
+      id: u.id,
+      username: u.username,
+      displayName: u.display_name,
+      avatarUrl: u.avatar_url,
+    }));
+
+    const posts = postsResult.data || [];
 
     res.json({ users, posts });
   } catch (error) {

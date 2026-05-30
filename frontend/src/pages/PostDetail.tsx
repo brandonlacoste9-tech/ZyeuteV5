@@ -28,6 +28,7 @@ import { Image } from "@/components/Image";
 import { InteractiveText } from "@/components/InteractiveText";
 import VideoDebugOverlay from "@/components/video/VideoDebugOverlay";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
+import { useOpenGraph } from "@/hooks/useOpenGraph";
 
 const postDetailLogger = logger.withContext("PostDetail");
 
@@ -42,6 +43,8 @@ export const PostDetail: React.FC = () => {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
+
+  useOpenGraph(post);
 
   // Fetch current user
   React.useEffect(() => {
@@ -227,7 +230,7 @@ export const PostDetail: React.FC = () => {
     <div className="min-h-screen bg-black">
       <Header showBack={true} />
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
         <div className="grid md:grid-cols-2 gap-6">
           {/* Media */}
           <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-900 edge-glow">
@@ -310,13 +313,13 @@ export const PostDetail: React.FC = () => {
               comments={comments}
               postId={id!}
               currentUser={currentUser}
-              className="py-4"
+              className="py-4 max-h-72 overflow-y-auto"
             />
 
             {/* Comment input */}
             <form
               onSubmit={handleSubmitComment}
-              className="pt-4 border-t border-white/10"
+              className="sticky bottom-0 bg-black/90 backdrop-blur-sm border-t border-white/10 pt-3 pb-3 z-10"
             >
               <div className="flex gap-2">
                 <input

@@ -75,7 +75,10 @@ app.options(/.*/, cors());
 
 // Security Headers Middleware
 app.use((req, res, next) => {
-  res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+  res.setHeader(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains; preload",
+  );
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -304,6 +307,23 @@ app.use((req, res, next) => {
       app.use("/api/evolution", createEvolutionRouter(db));
 
       console.log("✅ Momentum Engine, Shadow Route & Evolution Engine Ready");
+
+      // [VIRAL SCORE] Batch recompute viral_score every 10 minutes
+      // Uses the HN-style formula: (reactions*1 + shares*3 + piasse*5) / time_decay^1.8
+      const { batchUpdateViralScores } =
+        await import("./scoring/integration.js");
+      const runBatch = async () => {
+        try {
+          const updated = await batchUpdateViralScores(db);
+          if (updated > 0)
+            console.log(`[ViralScore] Batch updated ${updated} posts`);
+        } catch (e) {
+          console.warn("[ViralScore] Batch update failed:", e);
+        }
+      };
+      // Run once on startup, then every 10 minutes
+      runBatch();
+      setInterval(runBatch, 10 * 60 * 1000);
     } catch (err) {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
@@ -347,9 +367,8 @@ app.use((req, res, next) => {
     console.log(`   → Open app: http://127.0.0.1:${port}`);
 
     try {
-      const { startTikTokFeedPopulatorJob } = await import(
-        "./services/tiktok-feed-populator-job.js"
-      );
+      const { startTikTokFeedPopulatorJob } =
+        await import("./services/tiktok-feed-populator-job.js");
       startTikTokFeedPopulatorJob();
     } catch (jobErr: unknown) {
       const msg = jobErr instanceof Error ? jobErr.message : String(jobErr);

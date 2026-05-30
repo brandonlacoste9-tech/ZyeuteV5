@@ -10,6 +10,7 @@ import { supabase } from "../lib/supabase";
 import { formatNumber } from "../lib/utils";
 import type { User } from "../types";
 import { logger } from "../lib/logger";
+import { apiCall } from "../services/api";
 
 const analyticsLogger = logger.withContext("Analytics");
 
@@ -36,6 +37,8 @@ export const Analytics: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "all">("30d");
+  const [videoStats, setVideoStats] = React.useState<any[]>([]);
+  const [loadingVideoStats, setLoadingVideoStats] = React.useState(false);
 
   // Fetch current user
   useEffect(() => {
@@ -234,6 +237,23 @@ export const Analytics: React.FC = () => {
 
     fetchAnalytics();
   }, [currentUser, timeRange]);
+
+  React.useEffect(() => {
+    const fetchVideoStats = async () => {
+      setLoadingVideoStats(true);
+      try {
+        const { data } = await apiCall<{ success: boolean; data: any[] }>(
+          "/mux/video-stats",
+        );
+        if (data?.data) setVideoStats(data.data);
+      } catch (e) {
+        // Silently fail
+      } finally {
+        setLoadingVideoStats(false);
+      }
+    };
+    fetchVideoStats();
+  }, []);
 
   if (isLoading || !analytics) {
     return (
@@ -518,7 +538,7 @@ export const Analytics: React.FC = () => {
         )}
 
         {/* Tips for creators */}
-        <div className="card-edge p-6">
+        <div className="card-edge p-6 mb-6">
           <h2 className="text-white text-xl font-bold mb-4">
             Conseils pour créateurs 💡
           </h2>
@@ -552,6 +572,73 @@ export const Analytics: React.FC = () => {
               <span>Collabore avec d&apos;autres créateurs québécois</span>
             </li>
           </ul>
+        </div>
+
+        {/* Video Performance Section */}
+        <div className="mt-6">
+          <h2
+            className="text-lg font-black text-white uppercase tracking-widest mb-4"
+            style={{ color: "#DAA520" }}
+          >
+            🎬 Performances vidéo
+          </h2>
+          {loadingVideoStats ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-gold-500/20 border-t-gold-500 rounded-full animate-spin" />
+            </div>
+          ) : videoStats.length === 0 ? (
+            <div className="text-center py-8 text-white/40 text-sm">
+              Aucune vidéo publiée
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {videoStats.map((v) => (
+                <div
+                  key={v.postId}
+                  className="flex gap-3 p-3 rounded-xl bg-white/5 border border-white/10"
+                >
+                  {v.thumbnailUrl && (
+                    <img
+                      src={v.thumbnailUrl}
+                      alt={v.caption}
+                      className="w-12 h-20 rounded-lg object-cover flex-shrink-0 bg-black"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-semibold truncate">
+                      {v.caption}
+                    </p>
+                    {v.duration && (
+                      <p className="text-white/40 text-xs">
+                        {Math.floor(v.duration / 60)}:
+                        {String(v.duration % 60).padStart(2, "0")}
+                      </p>
+                    )}
+                    <div className="flex gap-4 mt-2">
+                      <div className="text-center">
+                        <p className="text-white font-bold text-sm">
+                          {v.viewCount}
+                        </p>
+                        <p className="text-white/40 text-xs">vues</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-white font-bold text-sm">
+                          {v.reactionsCount}
+                        </p>
+                        <p className="text-white/40 text-xs">🔥</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-white font-bold text-sm">
+                          {v.commentsCount}
+                        </p>
+                        <p className="text-white/40 text-xs">💬</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

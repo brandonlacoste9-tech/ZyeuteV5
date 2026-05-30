@@ -535,4 +535,91 @@ function vttTimeToSeconds(ts: string): number {
   return 0;
 }
 
+/**
+ * GET /api/mux/video-stats
+ * Returns per-video view count and engagement from Mux metrics API
+ * Requires auth — returns stats for videos owned by the requesting user
+ */
+router.get("/video-stats", requireAuth, async (req: Request, res: Response) => {
+  try {
+    if (!mux || !Video) {
+      return res
+        .status(503)
+        .json({ success: false, error: "Mux non configuré" });
+    }
+
+    const userId = (req as any).userId as string;
+    if (!userId) return res.status(401).json({ error: "Non autorisé" });
+
+    // Get this user's posts that have a mux_asset_id
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      "";
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: userPosts } = await supabase
+      .from("publications")
+      .select(
+        "id, caption, mux_asset_id, mux_playback_id, thumbnail_url, view_count, reactions_count, comments_count",
+      )
+      .eq("user_id", userId)
+      .not("mux_asset_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (!userPosts || userPosts.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Get Mux asset details for each post
+    const stats = await Promise.allSettled(
+      userPosts.map(async (post: any) => {
+        try {
+          const asset = await Video.assets.retrieve(post.mux_asset_id);
+          return {
+            postId: post.id,
+            caption: post.caption || "Sans titre",
+            thumbnailUrl: post.mux_playback_id
+              ? `https://image.mux.com/${post.mux_playback_id}/thumbnail.jpg?width=120&height=214&fit_mode=smartcrop`
+              : post.thumbnail_url,
+            duration: asset.duration ? Math.round(asset.duration) : null,
+            viewCount: post.view_count || 0,
+            reactionsCount: post.reactions_count || 0,
+            commentsCount: post.comments_count || 0,
+            muxStatus: asset.status,
+            resolution: asset.max_stored_resolution,
+          };
+        } catch {
+          return {
+            postId: post.id,
+            caption: post.caption || "Sans titre",
+            thumbnailUrl: post.thumbnail_url,
+            duration: null,
+            viewCount: post.view_count || 0,
+            reactionsCount: post.reactions_count || 0,
+            commentsCount: post.comments_count || 0,
+            muxStatus: "unknown",
+            resolution: null,
+          };
+        }
+      }),
+    );
+
+    const data = stats
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+      .map((r) => r.value);
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error("[MUX] video-stats error:", error);
+    return res
+      .status(500)
+      .json({ success: false, error: "Erreur stats vidéo" });
+  }
+});
+
 export default router;

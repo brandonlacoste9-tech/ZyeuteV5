@@ -77,12 +77,14 @@ export const Signup: React.FC = () => {
         "Compte créé! Vérifie ton courriel pour confirmer ton compte.",
       );
 
-      // Redirect to feed — user has an active session immediately after signUp
+      // Redirect to onboarding for first-time users, feed if already onboarded
       // (Supabase creates the session even before email confirmation unless
       //  "Confirm email" is enforced in the Supabase dashboard)
       navigationTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
-          window.location.href = "/feed";
+          const alreadyOnboarded =
+            localStorage.getItem("zyeute_onboarded") === "1";
+          window.location.href = alreadyOnboarded ? "/feed" : "/onboarding";
         }
       }, 150);
     } catch (err: any) {
@@ -230,7 +232,9 @@ export const Signup: React.FC = () => {
             className="w-full border-2 border-[rgba(244,196,48,0.3)] bg-transparent text-gold-400 hover:bg-[rgba(244,196,48,0.1)]"
             onClick={() => {
               enterGuestMode();
-              navigate("/feed");
+              const alreadyOnboarded =
+                localStorage.getItem("zyeute_onboarded") === "1";
+              navigate(alreadyOnboarded ? "/feed" : "/onboarding");
             }}
             aria-label="Continuer en tant qu'invité"
           >

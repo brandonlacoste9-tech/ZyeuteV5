@@ -504,9 +504,39 @@ router.post(
         req.params.id as string,
         req.userId!,
       );
-      // Broadcasting logic omitted here since io is attached to app usually.
-      // Ideally io logic belongs to a standalone notification service, but we will return the result.
       res.json(result);
+
+      // [VIRAL SCORE] Recompute viral_score for this post immediately after a reaction
+      // Fire-and-forget — does not block the response
+      setImmediate(async () => {
+        try {
+          const supabaseUrl =
+            process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+          const supabaseKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            process.env.VITE_SUPABASE_ANON_KEY ||
+            "";
+          if (!supabaseUrl || !supabaseKey) return;
+          const { createClient } = await import("@supabase/supabase-js");
+          const supabase = createClient(supabaseUrl, supabaseKey);
+          // Simple score: reactions * 10 + comments * 5, time-decayed
+          // Full batch recompute handles the HN-formula; this is a quick single-row refresh
+          await supabase
+            .rpc("recompute_viral_score", { post_id: req.params.id })
+            .catch(() => {
+              // RPC may not exist — fall back to simple update
+              return supabase
+                .from("publications")
+                .update({
+                  viral_score: result.newCount * 10, // rough proxy until batch runs
+                })
+                .eq("id", req.params.id);
+            });
+        } catch (err) {
+          // Non-critical — batch will catch it
+          console.warn("[ViralScore] Quick update failed:", err);
+        }
+      });
     } catch (error) {
       console.error("Toggle fire error:", error);
       res.status(500).json({ error: "Failed to toggle reaction" });

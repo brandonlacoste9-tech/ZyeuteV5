@@ -126,7 +126,9 @@ router.get(
       const supabaseUrl =
         process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
       const supabaseKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SUPABASE_ANON_KEY ||
+        process.env.VITE_SUPABASE_ANON_KEY;
 
       console.log("[FeedInfinite] Request received", {
         hasUrl: !!supabaseUrl,
@@ -159,6 +161,18 @@ router.get(
       });
 
       const viewerId = (req as any).userId as string | undefined;
+
+      // Fetch viewer's region for region-aware feed weighting (informational — ordering done via viral_score)
+      if (viewerId) {
+        const { data: viewerProfile } = await supabase
+          .from("user_profiles")
+          .select("region")
+          .eq("id", viewerId)
+          .single();
+        // viewerProfile.region is available for future region-boost logic
+        void viewerProfile;
+      }
+
       let authorIds: string[] | null = null;
       if (feedType === "feed" && viewerId) {
         const { data: subs, error: subErr } = await supabase
@@ -201,6 +215,8 @@ router.get(
         .not("content", "ilike", "%TEST VIDEO%")
         .not("media_url", "ilike", "%fal.media%")
         .not("media_url", "ilike", "%.fal.run%")
+        .order("viral_score", { ascending: false })
+        .order("reactions_count", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(limit + 1);
 

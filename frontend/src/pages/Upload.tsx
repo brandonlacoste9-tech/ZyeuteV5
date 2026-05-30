@@ -220,8 +220,9 @@ export const Upload: React.FC = () => {
           caption,
         });
         if (!post) throw new Error("Erreur création post MUX");
-        toast.success("Post publié! 🔥");
-        navigate("/feed");
+        toast.success("Vidéo publiée! En cours de traitement... 🔥");
+        // Redirect to profile so user can see processing state
+        navigate(user.username ? `/profile/${user.username}` : "/profile/me");
         return;
       }
 
@@ -260,7 +261,7 @@ export const Upload: React.FC = () => {
         throw new Error(result.error || "Upload failed");
       }
       toast.success("Post publié! 🔥");
-      navigate("/feed");
+      navigate(user.username ? `/profile/${user.username}` : "/profile/me");
     } catch (error: any) {
       uploadLogger.error("Upload error:", error);
       toast.error(error.message || "Erreur lors de l'upload");
