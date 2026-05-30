@@ -219,4 +219,285 @@ router.post("/webhooks", async (req: Request, res: Response) => {
   }
 });
 
+// ─── LIVE STREAM ROUTES ────────────────────────────────────────────────────
+
+/**
+ * POST /api/mux/create-livestream
+ * Create a Mux Live Stream and return RTMP URL + stream key to the broadcaster
+ */
+router.post("/create-livestream", async (req: Request, res: Response) => {
+  if (!mux || !Video) {
+    return res.status(503).json({
+      success: false,
+      error: "MUX non configuré. Vérifiez MUX_TOKEN_ID et MUX_TOKEN_SECRET.",
+    });
+  }
+
+  try {
+    const { title = "Live Zyeuté", category = "général" } = req.body;
+
+    const liveStream = await mux.video.liveStreams.create({
+      playback_policy: ["public"],
+      new_asset_settings: {
+        playback_policy: ["public"],
+      },
+      latency_mode: "low",
+    });
+
+    const playbackId = liveStream.playback_ids?.[0]?.id ?? null;
+    const streamKey = liveStream.stream_key;
+    const rtmpUrl = "rtmps://global-live.mux.com:443/app";
+
+    console.log(
+      `[MUX LIVE] Created live stream: ${liveStream.id} title="${title}" category="${category}"`,
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        streamId: liveStream.id,
+        streamKey,
+        rtmpUrl,
+        playbackId,
+        title,
+        category,
+      },
+    });
+  } catch (error) {
+    console.error("[MUX LIVE] Erreur création live stream:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Erreur lors de la création du live",
+    });
+  }
+});
+
+/**
+ * GET /api/mux/livestream-status/:streamId
+ * Get live stream status and playback ID (used by WatchLive to poll)
+ * :streamId can be either the Mux stream ID or a playback ID
+ */
+router.get(
+  "/livestream-status/:streamId",
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res
+        .status(503)
+        .json({ success: false, error: "MUX non configuré" });
+    }
+
+    try {
+      const { streamId } = req.params;
+
+      let liveStream;
+      try {
+        liveStream = await mux.video.liveStreams.retrieve(streamId as string);
+      } catch {
+        return res
+          .status(404)
+          .json({ success: false, error: "Live stream non trouvé" });
+      }
+
+      const playbackId = liveStream.playback_ids?.[0]?.id ?? null;
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          streamId: liveStream.id,
+          status: liveStream.status, // idle | active | disabled | reconnecting
+          playbackId,
+          recentAssetIds: liveStream.recent_asset_ids ?? [],
+        },
+      });
+    } catch (error) {
+      console.error("[MUX LIVE] Erreur statut live stream:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la vérification du statut",
+      });
+    }
+  },
+);
+
+/**
+ * DELETE /api/mux/end-livestream/:streamId
+ * Complete/disable a live stream
+ */
+router.delete(
+  "/end-livestream/:streamId",
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res
+        .status(503)
+        .json({ success: false, error: "MUX non configuré" });
+    }
+
+    try {
+      const { streamId } = req.params;
+      await mux.video.liveStreams.complete(streamId as string);
+      console.log(`[MUX LIVE] Ended live stream: ${streamId}`);
+      return res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("[MUX LIVE] Erreur fin live stream:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la fin du live",
+      });
+    }
+  },
+);
+
+/**
+ * GET /api/mux/asset-captions/:assetId
+ * Retrieve Mux auto-generated text tracks (transcription) for a VOD asset.
+ * Returns an array of CaptionLine { startTime, endTime, text }.
+ */
+router.get("/asset-captions/:assetId", async (req: Request, res: Response) => {
+  if (!mux || !Video) {
+    return res.status(503).json({ success: false, error: "MUX non configuré" });
+  }
+
+  try {
+    const { assetId } = req.params;
+    const asset = await Video.assets.retrieve(assetId as string);
+    const tracks = asset.tracks ?? [];
+
+    // Find the auto-generated transcription track
+    const textTrack = tracks.find(
+      (t: any) =>
+        t.type === "text" &&
+        (t.text_type === "subtitles" || t.text_source === "auto-generated"),
+    );
+
+    if (!textTrack) {
+      return res.status(200).json({
+        success: true,
+        data: [], // No captions yet — asset may still be processing
+      });
+    }
+
+    // Mux delivers tracks as a WebVTT URL — fetch and parse it
+    const vttUrl = `https://stream.mux.com/${asset.playback_ids?.[0]?.id}/text/${textTrack.id}.vtt`;
+
+    const vttRes = await fetch(vttUrl);
+    if (!vttRes.ok) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const vttText = await vttRes.text();
+    const captions = parseWebVTT(vttText);
+
+    return res.status(200).json({ success: true, data: captions });
+  } catch (error) {
+    console.error("[MUX] Erreur captions:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Erreur lors de la récupération des captions",
+    });
+  }
+});
+
+/**
+ * GET /api/mux/playback-captions/:playbackId
+ * Same as asset-captions but identified by playback ID (for client-side use).
+ */
+router.get(
+  "/playback-captions/:playbackId",
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res
+        .status(503)
+        .json({ success: false, error: "MUX non configuré" });
+    }
+
+    try {
+      const { playbackId } = req.params;
+
+      // Find asset by playback ID — list recent assets and match
+      const assets = await Video.assets.list({ limit: 100 });
+      const asset = assets.data?.find((a: any) =>
+        a.playback_ids?.some((p: any) => p.id === playbackId),
+      );
+
+      if (!asset) {
+        return res
+          .status(404)
+          .json({ success: false, error: "Asset non trouvé" });
+      }
+
+      const tracks = asset.tracks ?? [];
+      const textTrack = tracks.find(
+        (t: any) =>
+          t.type === "text" &&
+          (t.text_type === "subtitles" || t.text_source === "auto-generated"),
+      );
+
+      if (!textTrack) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+
+      const vttUrl = `https://stream.mux.com/${playbackId}/text/${textTrack.id}.vtt`;
+      const vttRes = await fetch(vttUrl);
+      if (!vttRes.ok) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+
+      const vttText = await vttRes.text();
+      const captions = parseWebVTT(vttText);
+
+      return res.status(200).json({ success: true, data: captions });
+    } catch (error) {
+      console.error("[MUX] Erreur playback captions:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la récupération des captions",
+      });
+    }
+  },
+);
+
+/**
+ * Parse a WebVTT string into an array of { startTime, endTime, text } objects.
+ */
+function parseWebVTT(
+  vtt: string,
+): { startTime: number; endTime: number; text: string }[] {
+  const captions: { startTime: number; endTime: number; text: string }[] = [];
+  const blocks = vtt.split(/\n\n+/);
+
+  for (const block of blocks) {
+    const lines = block.trim().split("\n");
+    const timeLine = lines.find((l) => l.includes("--> "));
+    if (!timeLine) continue;
+
+    const [startStr, endStr] = timeLine.split(" --> ");
+    const textLines = lines
+      .filter((l) => !l.includes("--> ") && !/^\d+$/.test(l.trim()))
+      .join(" ")
+      .trim();
+
+    if (!textLines) continue;
+
+    captions.push({
+      startTime: vttTimeToSeconds(startStr.trim()),
+      endTime: vttTimeToSeconds(endStr.trim()),
+      text: textLines,
+    });
+  }
+
+  return captions;
+}
+
+/** Convert VTT timestamp (HH:MM:SS.mmm or MM:SS.mmm) to seconds */
+function vttTimeToSeconds(ts: string): number {
+  const parts = ts.split(":").map(parseFloat);
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+  return 0;
+}
+
 export default router;

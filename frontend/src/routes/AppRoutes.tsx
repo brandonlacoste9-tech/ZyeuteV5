@@ -45,6 +45,11 @@ const TikTokCuration = lazy(() =>
   })),
 );
 const CreatorHubPage = lazy(() => import("@/pages/CreatorHub"));
+const GoLivePage = lazy(() => import("@/pages/GoLive"));
+const WatchLivePage = lazy(() => import("@/pages/WatchLive"));
+const LiveDiscoverPage = lazy(() => import("@/pages/LiveDiscover"));
+const EmailPreferencesPage = lazy(() => import("@/pages/EmailPreferences"));
+const AnalyticsPage = lazy(() => import("@/pages/Analytics"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -485,6 +490,42 @@ export function AppRoutes() {
           element={
             <RequireAuth>
               <TikTokCuration />
+            </RequireAuth>
+          }
+        />
+
+        {/* Live streaming */}
+        <Route path="/live" element={<LiveDiscoverPage />} />
+        <Route path="/live/watch/:id" element={<WatchLivePage />} />
+        <Route
+          path="/live/go"
+          element={
+            <RequireAuth>
+              <RequireRealAccount>
+                <GoLivePage />
+              </RequireRealAccount>
+            </RequireAuth>
+          }
+        />
+
+        {/* Analytics */}
+        <Route
+          path="/analytics"
+          element={
+            <RequireAuth>
+              <RequireRealAccount>
+                <AnalyticsPage />
+              </RequireRealAccount>
+            </RequireAuth>
+          }
+        />
+
+        {/* Email preferences */}
+        <Route
+          path="/settings/email-preferences"
+          element={
+            <RequireAuth>
+              <EmailPreferencesPage />
             </RequireAuth>
           }
         />

@@ -1,5 +1,6 @@
 /**
  * Analytics Page - Creator dashboard with statistics and insights
+ * FIXED: Correct table names (publications, abonnements, commentaires), correct column names
  */
 
 import React, { useState, useEffect } from "react";
@@ -70,69 +71,99 @@ export const Analytics: React.FC = () => {
           startDate.setDate(startDate.getDate() - 30);
         else startDate.setFullYear(startDate.getFullYear() - 10); // All time
 
-        // Get total posts
+        // Get total posts from `publications` table
         const { count: totalPosts } = await supabase
-          .from("posts")
+          .from("publications")
           .select("*", { count: "exact", head: true })
           .eq("user_id", currentUser.id)
           .gte("created_at", startDate.toISOString());
 
-        // Get total fires
+        // Get total reactions (fires) — column is `reactions_count` on publications
         const { data: firePosts } = await supabase
-          .from("posts")
-          .select("fire_count")
+          .from("publications")
+          .select("reactions_count")
           .eq("user_id", currentUser.id)
           .gte("created_at", startDate.toISOString());
 
         const totalFires =
           firePosts?.reduce(
-            (sum: number, post: any) => sum + (post.fire_count || 0),
+            (sum: number, post: any) => sum + (post.reactions_count || 0),
             0,
           ) || 0;
 
-        // Get total comments
-        const { count: totalComments } = await supabase
-          .from("comments")
-          .select("*", { count: "exact", head: true })
-          .eq("post_id", currentUser.id)
+        // Get total views
+        const { data: viewPosts } = await supabase
+          .from("publications")
+          .select("view_count")
+          .eq("user_id", currentUser.id)
           .gte("created_at", startDate.toISOString());
 
-        // Get total followers
-        const { count: totalFollowers } = await supabase
-          .from("follows")
-          .select("*", { count: "exact", head: true })
-          .eq("following_id", currentUser.id);
+        const totalViews =
+          viewPosts?.reduce(
+            (sum: number, post: any) => sum + (post.view_count || 0),
+            0,
+          ) || 0;
 
-        // Get top post
+        // Get total comments — join through publications: get publication IDs first,
+        // then count commentaires where publication_id is in that list.
+        const { data: userPubs } = await supabase
+          .from("publications")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .gte("created_at", startDate.toISOString());
+
+        const pubIds = userPubs?.map((p: any) => p.id) || [];
+
+        let totalComments = 0;
+        if (pubIds.length > 0) {
+          const { count: commentCount } = await supabase
+            .from("commentaires")
+            .select("*", { count: "exact", head: true })
+            .in("publication_id", pubIds)
+            .is("deleted_at", null);
+          totalComments = commentCount || 0;
+        }
+
+        // Get total followers from `abonnements` table — followee_id is the creator
+        const { count: totalFollowers } = await supabase
+          .from("abonnements")
+          .select("*", { count: "exact", head: true })
+          .eq("followee_id", currentUser.id);
+
+        // Get top post by reactions_count
         const { data: topPost } = await supabase
-          .from("posts")
+          .from("publications")
           .select("*")
           .eq("user_id", currentUser.id)
-          .order("fire_count", { ascending: false })
+          .order("reactions_count", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         // Calculate engagement rate
-        const totalEngagements = totalFires + (totalComments || 0);
-        const engagementRate = totalPosts
-          ? (totalEngagements / (totalPosts * (totalFollowers || 1))) * 100
-          : 0;
+        const totalEngagements = totalFires + totalComments;
+        const engagementRate =
+          totalPosts && (totalFollowers || 0) > 0
+            ? (totalEngagements / (totalPosts * (totalFollowers || 1))) * 100
+            : 0;
+
+        // gifts received from user_profiles
+        const giftsReceived = (currentUser as any).total_gifts_received || 0;
 
         setAnalytics({
           totalPosts: totalPosts || 0,
-          totalViews: 0, // TODO: Implement views tracking
+          totalViews,
           totalFires,
-          totalComments: totalComments || 0,
+          totalComments,
           totalFollowers: totalFollowers || 0,
-          totalGiftsReceived: 0, // TODO: Implement gifts tracking
+          totalGiftsReceived: giftsReceived,
           avgFireRating: totalPosts ? totalFires / totalPosts : 0,
           topPost,
           recentGrowth: {
-            posts: 0, // TODO: Calculate growth
+            posts: 0,
             followers: 0,
             engagement: 0,
           },
-          regionBreakdown: [], // TODO: Implement region breakdown
+          regionBreakdown: [],
           engagementRate,
         });
       } catch (error) {
@@ -206,6 +237,22 @@ export const Analytics: React.FC = () => {
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+              </svg>
+              <span className="text-white/60 text-sm">Vues</span>
+            </div>
+            <p className="text-white text-3xl font-bold">
+              {formatNumber(analytics.totalViews)}
+            </p>
+          </div>
+
+          <div className="card-edge p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg
+                className="w-5 h-5 text-gold-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path d="M17.66 8L12 2.35 6.34 8C4.78 9.56 4 11.64 4 13.64s.78 4.11 2.34 5.67 3.61 2.35 5.66 2.35 4.1-.79 5.66-2.35S20 15.64 20 13.64 19.22 9.56 17.66 8zM6 14c.01-2 .62-3.27 1.76-4.4L12 5.27l4.24 4.38C17.38 10.77 17.99 12 18 14H6z" />
               </svg>
               <span className="text-white/60 text-sm">Total Feux</span>
@@ -233,7 +280,10 @@ export const Analytics: React.FC = () => {
               {formatNumber(analytics.totalComments)}
             </p>
           </div>
+        </div>
 
+        {/* Second row: Followers, Gifts */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="card-edge p-4">
             <div className="flex items-center gap-2 mb-2">
               <svg
@@ -247,6 +297,22 @@ export const Analytics: React.FC = () => {
             </div>
             <p className="text-white text-3xl font-bold">
               {formatNumber(analytics.totalFollowers)}
+            </p>
+          </div>
+
+          <div className="card-edge p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <svg
+                className="w-5 h-5 text-gold-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.64 0 12.5 0 10.9 0 9.5.84 8.5 2.16 7.5.84 6.1 0 4.5 0 1.36 0-1 2.53-1 4.64c0 3.64 4 7.3 9 11.36 5-4.06 9-7.72 9-11.36V6zm-8 12.54l-1-.9C6.41 13.58 3 10.47 3 7.96c0-1.95 1.33-3.33 3-3.33 1.06 0 2.08.6 2.72 1.56.12.17.29.27.46.26.17.01.34-.09.46-.26C10.28 5.23 11.3 4.63 12.36 4.63c1.67 0 3 1.38 3 3.33 0 2.51-3.41 5.62-8.36 10.08z" />
+              </svg>
+              <span className="text-white/60 text-sm">Cadeaux reçus</span>
+            </div>
+            <p className="text-white text-3xl font-bold">
+              {formatNumber(analytics.totalGiftsReceived)}
             </p>
           </div>
         </div>
@@ -292,20 +358,28 @@ export const Analytics: React.FC = () => {
               Ta meilleure publication
             </h2>
             <div className="flex gap-4">
-              <img
-                src={analytics.topPost.media_url}
-                alt="Top post"
-                className="w-32 h-32 rounded-xl object-cover edge-glow"
-              />
+              {analytics.topPost.thumbnail_url && (
+                <img
+                  src={analytics.topPost.thumbnail_url}
+                  alt="Top post"
+                  className="w-32 h-32 rounded-xl object-cover edge-glow"
+                />
+              )}
               <div className="flex-1">
-                <p className="text-white mb-2">{analytics.topPost.caption}</p>
+                <p className="text-white mb-2">
+                  {analytics.topPost.caption || analytics.topPost.content}
+                </p>
                 <div className="flex gap-4 text-sm">
                   <span className="text-gold-400">
-                    🔥 {formatNumber(analytics.topPost.fire_count)} feux
+                    🔥 {formatNumber(analytics.topPost.reactions_count || 0)}{" "}
+                    feux
                   </span>
                   <span className="text-white/60">
-                    💬 {formatNumber(analytics.topPost.comment_count || 0)}{" "}
+                    💬 {formatNumber(analytics.topPost.comments_count || 0)}{" "}
                     commentaires
+                  </span>
+                  <span className="text-white/60">
+                    👁️ {formatNumber(analytics.topPost.view_count || 0)} vues
                   </span>
                 </div>
               </div>
