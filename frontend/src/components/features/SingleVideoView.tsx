@@ -160,14 +160,6 @@ export function SingleVideoView({
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        ) : tiktokEmbedUrl ? (
-          <iframe
-            src={tiktokEmbedUrl}
-            title={`TikTok ${post.id}`}
-            className="w-full h-full"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-          />
         ) : post.mux_playback_id || post.muxPlaybackId ? (
           <MuxVideoPlayer
             playbackId={(post.mux_playback_id || post.muxPlaybackId) ?? ""}
@@ -184,7 +176,7 @@ export function SingleVideoView({
             loop
             onError={setVideoError}
           />
-        ) : (
+        ) : videoSrc ? (
           <VideoPlayer
             src={videoSrc}
             poster={getProxiedMediaUrl(
@@ -205,6 +197,19 @@ export function SingleVideoView({
             onProgress={isActive ? onVideoProgress : undefined}
             onEnded={onVideoEnd}
           />
+        ) : tiktokEmbedUrl ? (
+          <iframe
+            src={tiktokEmbedUrl}
+            title={`TikTok ${post.id}`}
+            className="w-full h-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 text-white gap-2">
+            <AlertCircle size={32} className="text-zinc-500" />
+            <p className="text-sm text-zinc-400">Vidéo non disponible</p>
+          </div>
         )}
 
         {/* Right Action Bar (TikTok Style) */}
