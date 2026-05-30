@@ -18,12 +18,22 @@ const noOpLock = async <R>(
   fn: () => Promise<R>,
 ): Promise<R> => fn();
 
-// Create real Supabase client
-export const supabase = createClient(supabaseUrl || "", supabaseAnonKey || "", {
+const credentialsMissing = !isValidUrl(supabaseUrl) || !supabaseAnonKey;
+
+// When credentials are missing, use a placeholder URL so createClient doesn't
+// throw synchronously. newer supabase-js rejects empty strings, which crashes
+// the entire module at init time and causes a TDZ ReferenceError in all
+// modules that import from this file.
+const safeUrl = isValidUrl(supabaseUrl)
+  ? supabaseUrl!
+  : "https://placeholder.supabase.co";
+const safeKey = supabaseAnonKey || "placeholder-anon-key";
+
+export const supabase = createClient(safeUrl, safeKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+    persistSession: !credentialsMissing,
+    autoRefreshToken: !credentialsMissing,
+    detectSessionInUrl: !credentialsMissing,
     lock: noOpLock,
   },
 });
@@ -45,8 +55,6 @@ export async function getSessionWithTimeout(ms = 3000): Promise<{
   }
 }
 
-// Check Supabase credentials
-const credentialsMissing = !isValidUrl(supabaseUrl) || !supabaseAnonKey;
 
 if (credentialsMissing) {
   if (process.env.NODE_ENV === "production") {
@@ -57,6 +65,7 @@ if (credentialsMissing) {
     console.warn("⚠️ [SECURITY] Supabase credentials missing or invalid.");
   }
 }
+
 
 // Helper function to get dynamic redirect URL based on current domain
 function getRedirectUrl(): string {
