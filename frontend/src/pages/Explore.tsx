@@ -14,6 +14,7 @@ import { toast } from "@/components/Toast";
 import { useNavigationState } from "@/contexts/NavigationStateContext";
 import type { Post, User } from "@/types";
 import { logger } from "@/lib/logger";
+import { BottomNav } from "@/components/BottomNav";
 import { QuebecHashtags } from "@/components/trending/QuebecHashtags";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
@@ -440,6 +441,8 @@ export const Explore: React.FC = () => {
           <span className="text-gold-500">🇨🇦</span>
         </p>
       </div>
+
+      <BottomNav />
     </div>
   );
 };

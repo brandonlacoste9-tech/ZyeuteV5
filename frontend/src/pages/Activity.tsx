@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "../components/layout/Header";
 import { cn } from "../lib/utils";
+import { BottomNav } from "../components/BottomNav";
 
 type ActivityType =
   | "like"
@@ -419,6 +420,8 @@ export const Activity: React.FC = () => {
           </button>
         )}
       </main>
+
+      <BottomNav />
     </div>
   );
 };

@@ -244,8 +244,7 @@ export const Profile: React.FC = () => {
               <Image
                 src={
                   user.avatar_url ||
-                  "https://via.placeholder.com/150/FFBF00/000000?text=" +
-                  (user.username?.[0] || "U")
+                  `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23FFBF00'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='72' font-family='sans-serif' fill='%23000'%3E${encodeURIComponent((user.username?.[0] || 'U').toUpperCase())}%3C/text%3E%3C/svg%3E`
                 }
                 alt={user.display_name || user.username}
                 objectFit="cover"

@@ -5,6 +5,7 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
+import { BottomNav } from "../components/BottomNav";
 import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { FireRating } from "../components/features/FireRating";
@@ -322,6 +323,8 @@ export const PostDetail: React.FC = () => {
           onClose={() => setIsGiftModalOpen(false)}
         />
       )}
+
+      <BottomNav />
     </div>
   );
 };

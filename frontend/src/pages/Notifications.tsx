@@ -19,7 +19,7 @@ import {
 } from "react-icons/io5";
 
 export const Notifications: React.FC = () => {
-  const { notifications, loading: isLoading, markAsRead } = useNotifications();
+  const { notifications, loading: isLoading, markAsRead, markAllAsRead, unreadCount } = useNotifications();
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -64,6 +64,22 @@ export const Notifications: React.FC = () => {
       <Header title="Notifications" showSearch={false} />
 
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* Mark all as read */}
+        {unreadCount > 0 && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={markAllAsRead}
+              className="text-xs font-semibold uppercase tracking-widest px-4 py-2 rounded-xl transition-all"
+              style={{
+                color: "#DAA520",
+                border: "1px solid rgba(218,165,32,0.3)",
+                background: "rgba(218,165,32,0.08)",
+              }}
+            >
+              Tout marquer comme lu
+            </button>
+          </div>
+        )}
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-12 h-12 border-4 border-gold-500/20 border-t-gold-500 rounded-full animate-spin" />
@@ -157,7 +173,7 @@ export const Notifications: React.FC = () => {
       </div>
 
       <p className="text-center text-leather-600 text-[10px] mt-8 uppercase tracking-[0.3em] font-medium">
-        Zyeuté v3.1 — Quebec Premium Social
+        Zyeuté v5.0 — Quebec Premium Social
       </p>
 
       <BottomNav />

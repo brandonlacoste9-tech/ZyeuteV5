@@ -68,10 +68,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
 
     try {
-      // Simpler query without foreign key hints - let PostgREST infer relationships
+      // Fetch notifications with actor profile and post thumbnail joined
       const { data, error } = await supabase
         .from("notifications")
-        .select("*")
+        .select(`
+          *,
+          actor:actor_id (
+            id,
+            username,
+            display_name,
+            avatar_url,
+            is_verified
+          ),
+          post:post_id (
+            id,
+            media_url,
+            thumbnail_url,
+            caption
+          )
+        `)
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false })
         .limit(50);

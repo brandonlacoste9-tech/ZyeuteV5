@@ -52,8 +52,8 @@ export const Signup: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Le mot de passe doit avoir au moins 6 caractères");
+    if (password.length < 8) {
+      setError("Le mot de passe doit avoir au moins 8 caractères");
       return;
     }
 
@@ -77,13 +77,12 @@ export const Signup: React.FC = () => {
         "Compte créé! Vérifie ton courriel pour confirmer ton compte.",
       );
 
-      // Use window.location for immediate redirect to bypass animation system
-      // This prevents React DOM manipulation errors with AnimatePresence
+      // Redirect to feed — user has an active session immediately after signUp
+      // (Supabase creates the session even before email confirmation unless
+      //  "Confirm email" is enforced in the Supabase dashboard)
       navigationTimeoutRef.current = setTimeout(() => {
         if (isMountedRef.current) {
-          // Use window.location instead of navigate() to bypass PageTransition animations
-          // This prevents AnimatePresence from trying to animate during unmount
-          window.location.href = "/login";
+          window.location.href = "/feed";
         }
       }, 150);
     } catch (err: any) {
@@ -201,7 +200,7 @@ export const Signup: React.FC = () => {
                 </button>
               </div>
               <p className="text-leather-400 text-xs mt-1">
-                Minimum 6 caractères
+                Minimum 8 caractères
               </p>
             </div>
 

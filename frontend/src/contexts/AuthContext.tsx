@@ -114,13 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     const initStart = Date.now();
 
-    // EMERGENCY FAILSAFE: Force loading to complete after 1.5s
+    // EMERGENCY FAILSAFE: Force loading to complete after 4s
+    // 1.5s was too aggressive for slow mobile connections in rural Quebec
     const emergencyTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn("⚠️ EMERGENCY: Forcing UI render after 1.5s");
+        console.warn("⚠️ EMERGENCY: Forcing UI render after 4s");
         setIsLoading(false);
       }
-    }, 1500);
+    }, 4000);
 
     const initializeAuth = async () => {
       try {

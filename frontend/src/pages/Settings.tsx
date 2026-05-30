@@ -17,6 +17,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types";
 import { logger } from "../lib/logger";
+import { BottomNav } from "@/components/BottomNav";
 
 const settingsLogger = logger.withContext("Settings");
 
@@ -996,7 +997,7 @@ export const Settings: React.FC = () => {
         <div className="text-center text-leather-400 text-sm space-y-1">
           <p className="flex items-center justify-center gap-2">
             <span className="text-gold-500">⚜️</span>
-            <span>Zyeuté v1.0.0</span>
+            <span>Zyeuté v5.0</span>
           </p>
           <p>Fait avec fierté québécoise 🇨🇦</p>
           <p className="text-xs text-leather-500">
@@ -1004,6 +1005,8 @@ export const Settings: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 };
