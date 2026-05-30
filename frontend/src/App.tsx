@@ -1,12 +1,12 @@
 /**
  * ZYEUTÉ — root shell: providers, routing, Ti-Guy.
- * Feature pages live under `src/pages` and are wired in `src/routes/AppRoutes.tsx`.
+ * Feature pages live under `src/pages` and are wired in `src/routes/AppRoutes.tsx`.\
  */
 
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { TIGuyFullScreen } from "@/components/tiguy/TIGuyFullScreen";
 import { TIGuyButton } from "@/components/tiguy/TIGuyButton";
 import { useTIGuy } from "@/components/tiguy/useTIGuy";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,14 @@ import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
 import { AgeGateModal } from "@/components/system/AgeGateModal";
 import { Analytics } from "@vercel/analytics/react";
+
+// Lazy-load TIGuyFullScreen to keep it out of the main index chunk.
+// It imports from @/lib/supabase at module level; eagerly bundling it into
+// the index chunk caused a TDZ ReferenceError in the esbuild-minified output.
+const TIGuyFullScreen = lazy(
+  () => import("@/components/tiguy/TIGuyFullScreen").then((m) => ({ default: m.TIGuyFullScreen })),
+);
+
 
 function LoadingScreen({ message }: { message?: string }) {
   return <LoadingScreenComponent message={message || "Chargement..."} />;
@@ -39,12 +47,14 @@ function AppContent() {
       {user ? (
         <>
           {!isOpen && <TIGuyButton onClick={openChat} />}
-          <TIGuyFullScreen
-            isOpen={isOpen}
-            onClose={closeChat}
-            userId={user.id}
-            username={user.username}
-          />
+          <Suspense fallback={null}>
+            <TIGuyFullScreen
+              isOpen={isOpen}
+              onClose={closeChat}
+              userId={user.id}
+              username={user.username}
+            />
+          </Suspense>
         </>
       ) : null}
     </Router>
