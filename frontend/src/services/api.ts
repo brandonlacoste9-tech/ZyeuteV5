@@ -341,16 +341,8 @@ export async function createPost(postData: {
   soundId?: string;
   hive?: string;
   /** MUX direct upload - create post from MUX asset */
-  videoType?: "mux" | "pexels";
+  videoType?: "mux";
   muxData?: { assetId: string; playbackId: string; uploadId: string };
-  pexelsData?: {
-    pexelsId: string;
-    videoUrl: string;
-    thumbnail: string;
-    duration: number;
-    width: number;
-    height: number;
-  };
 }): Promise<Post | null> {
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
@@ -867,7 +859,6 @@ function isVideoUrl(url?: string): boolean {
     "youtube.com",
     "youtu.be",
     "tiktok.com",
-    "pexels.com/video",
     "media.giphy.com",
     "api/media-proxy", // Often used for videos
   ];
@@ -902,7 +893,7 @@ export async function surgicalUpload(
     // with the correct multipart/form-data boundary for FormData.
 
     // [SOVEREIGN] Bypass Vercel's 4.5MB Serverless Payload Limit by POSTing directly to Render in production
-    const uploadUrl = import.meta.env.PROD 
+    const uploadUrl = import.meta.env.PROD
       ? "https://zyeutev5-1.onrender.com/api/upload/simple"
       : "/api/upload/simple";
 

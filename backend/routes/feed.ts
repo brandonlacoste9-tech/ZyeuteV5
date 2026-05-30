@@ -44,9 +44,9 @@ async function getPostsViaSupabase(
     .is("deleted_at", null)
     .eq("processing_status", "completed")
     .not("media_url", "is", null)
-    // Only serve permanent video sources (Pexels, Mux, Supabase storage)
+    // Only serve permanent video sources (Mux HLS, Supabase storage)
     .or(
-      "media_url.ilike.%pexels.com%,media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%",
     )
     .eq("hive_id", hiveId)
     .order("viral_score", { ascending: false })
@@ -69,12 +69,20 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
     // Try Supabase HTTP first (always works)
     if (SUPABASE_URL && SUPABASE_KEY) {
       const posts = await getPostsViaSupabase(limit, page, hive);
-      return res.json({ posts, isGuestMode: !(req as any).userId, source: "supabase" });
+      return res.json({
+        posts,
+        isGuestMode: !(req as any).userId,
+        source: "supabase",
+      });
     }
 
     // Fallback to pool if Supabase not configured
     if ((req as any).userId) {
-      const posts = await storage.getFeedPosts((req as any).userId, page, limit);
+      const posts = await storage.getFeedPosts(
+        (req as any).userId,
+        page,
+        limit,
+      );
       return res.json({ posts });
     }
     const posts = await storage.getExplorePosts(page, limit);

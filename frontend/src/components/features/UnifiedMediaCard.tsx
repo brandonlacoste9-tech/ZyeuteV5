@@ -64,8 +64,6 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           !!rawPost.media_url?.includes(".mp4") ||
           !!rawPost.hlsUrl ||
           !!rawPost.hls_url ||
-          !!rawPost.mediaUrl?.includes("pexels.com/video") ||
-          !!rawPost.media_url?.includes("pexels.com/video") ||
           !!rawPost.muxPlaybackId ||
           !!rawPost.mux_playback_id));
     if (isVideo) {
