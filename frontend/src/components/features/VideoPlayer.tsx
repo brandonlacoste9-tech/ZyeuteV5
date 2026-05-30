@@ -319,36 +319,22 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => clearInterval(interval);
   }, [src, videoSource, duration]);
 
+  // Ref to hold the latest videoSource to avoid stale closures in the init effect
+  const latestVideoSourceRef = useRef(videoSource);
   useEffect(() => {
-    if (videoSource?.type !== "partial-chunks") {
+    latestVideoSourceRef.current = videoSource;
+  }, [videoSource]);
+
+  // MSE Initialization & Teardown Effect (runs only on src or retry change)
+  useEffect(() => {
+    const currentVideoSource = latestVideoSourceRef.current;
+    if (currentVideoSource?.type !== "partial-chunks") {
       if (mseUrl) {
         URL.revokeObjectURL(mseUrl);
         setMseUrl(null);
         mseRef.current = null;
         sourceBufferRef.current = null;
         pendingChunksRef.current = [];
-      }
-      return;
-    }
-
-    if (!videoRef.current || videoSource?.type !== "partial-chunks") return;
-
-    if (mseRef.current && sourceBufferRef.current) {
-      const sb = sourceBufferRef.current;
-      const currentChunks = videoSource.chunks;
-      const lastAppendedByte = lastByteMap.get(sb) ?? -1;
-
-      const newChunks = currentChunks.filter((c) => c.start > lastAppendedByte);
-      if (newChunks.length > 0) {
-        newChunks.forEach((c) => {
-          pendingChunksRef.current.push(c.data);
-          lastByteMap.set(sb, Math.max(lastByteMap.get(sb) || 0, c.end));
-        });
-
-        if (!sb.updating && pendingChunksRef.current.length > 0) {
-          const data = pendingChunksRef.current.shift();
-          if (data) sb.appendBuffer(data);
-        }
       }
       return;
     }
@@ -381,18 +367,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 try {
                   sb.remove(start, end);
                 } catch (removeErr: unknown) {
-                  videoPlayerLogger.warn(
-                    "MSE remove failed:",
-                    removeErr instanceof Error
-                      ? removeErr.message
-                      : String(removeErr),
-                  );
+                  videoPlayerLogger.warn("MSE remove failed:", removeErr);
                 }
               }
             }
             pendingChunksRef.current.unshift(data);
+          } else {
+            videoPlayerLogger.error("MSE Append Error:", e);
           }
-          videoPlayerLogger.error("MSE Append Error:", e);
         }
       }
     };
@@ -401,15 +383,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       try {
         if (mediaSource.readyState !== "open") return;
 
-        // Type guard for partial-chunks properties
-        if (videoSource.type !== "partial-chunks") return;
+        const vs = latestVideoSourceRef.current;
+        if (vs?.type !== "partial-chunks") return;
 
-        const mimeType =
-          videoSource.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+        const mimeType = vs.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
         if (!MediaSource.isTypeSupported(mimeType)) {
-          videoPlayerLogger.warn(
-            `MSE Type not supported: ${mimeType}. Falling back to URL.`,
-          );
+          videoPlayerLogger.warn(`MSE Type not supported: ${mimeType}. Falling back to URL.`);
           setMseUrl(null);
           return;
         }
@@ -425,10 +404,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         sb.addEventListener("updateend", () => {
           if (mediaSource.readyState !== "open") return;
           processQueue();
+          const currentVs = latestVideoSourceRef.current;
           if (
-            videoSource.type === "partial-chunks" &&
-            videoSource.totalSize &&
-            (lastByteMap.get(sb) ?? 0) >= videoSource.totalSize - 1
+            currentVs?.type === "partial-chunks" &&
+            currentVs.totalSize &&
+            (lastByteMap.get(sb) ?? 0) >= currentVs.totalSize - 1
           ) {
             if (!sb.updating) {
               mediaSource.endOfStream();
@@ -436,7 +416,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }
         });
 
-        videoSource.chunks.forEach((c) => {
+        // Append initial chunks
+        vs.chunks.forEach((c) => {
           pendingChunksRef.current.push(c.data);
           lastByteMap.set(sb, Math.max(lastByteMap.get(sb) || 0, c.end));
         });
@@ -461,7 +442,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       mseRef.current = null;
       setTimeout(() => URL.revokeObjectURL(url), 100);
     };
-  }, [videoSource, mseRetryCount, mseUrl, src, duration]);
+  }, [src, mseRetryCount]); // Removed videoSource, duration, mseUrl to prevent teardown on chunk arrival
+
+  // MSE Chunk Appending Effect (runs when videoSource changes)
+  useEffect(() => {
+    if (!videoRef.current || videoSource?.type !== "partial-chunks") return;
+    if (!mseRef.current || !sourceBufferRef.current) return;
+
+    const sb = sourceBufferRef.current;
+    const currentChunks = videoSource.chunks;
+    const lastAppendedByte = lastByteMap.get(sb) ?? -1;
+
+    const newChunks = currentChunks.filter((c) => c.start > lastAppendedByte);
+    if (newChunks.length > 0) {
+      newChunks.forEach((c) => {
+        pendingChunksRef.current.push(c.data);
+        lastByteMap.set(sb, Math.max(lastByteMap.get(sb) || 0, c.end));
+      });
+
+      if (!sb.updating && pendingChunksRef.current.length > 0) {
+        const data = pendingChunksRef.current.shift();
+        if (data) {
+          try {
+            sb.appendBuffer(data);
+          } catch (e) {
+            videoPlayerLogger.error("MSE Append Error in Append Effect:", e);
+          }
+        }
+      }
+    }
+  }, [videoSource]);
 
   // Handle video source errors with exponential backoff retry
   const handleError = useCallback(
@@ -915,13 +925,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         clearTimeout(stallTimerRef.current);
         stallTimerRef.current = null;
       }
-
-      // Hard cleanup to stop buffering/decoding immediately on unmount
-      // Moved outside conditional to ensure it always runs regardless of playback state
-      video.removeAttribute("src");
-      video.load();
     };
   }, [onEnded, onProgress, src, mseUrl, videoSource]);
+
+  // Hard cleanup to stop buffering/decoding immediately on unmount or src change
+  useEffect(() => {
+    const video = videoRef.current;
+    return () => {
+      if (video) {
+        video.removeAttribute("src");
+        video.load();
+      }
+    };
+  }, [src]);
 
   // Format time (seconds to MM:SS)
   const formatTime = (seconds: number) => {
