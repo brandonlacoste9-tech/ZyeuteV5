@@ -78,7 +78,7 @@
     "cleanup:publications": "tsx scripts/cleanup-junk-publications.ts"
   },
   "dependencies": {
-    "@ai-sdk/google-vertex": "^4.0.61",
+    "dotenv": "^17.3.1", "@ai-sdk/google-vertex": "^4.0.61",
     "@ai-sdk/openai": "^3.0.26",
     "@fal-ai/client": "^1.9.0",
     "@fal-ai/serverless-client": "^0.15.0",
