@@ -15,9 +15,12 @@ export function useOpenGraph(post: Post | null) {
     const description =
       post.caption ||
       "Découvrez ce contenu sur Zyeuté, la plateforme vidéo québécoise.";
+    const DEFAULT_OG_IMAGE = "https://zyeute.com/zyeute_og_image.png";
     const image =
       post.thumbnail_url ||
-      `https://image.mux.com/${post.mux_playback_id}/thumbnail.jpg?width=600&height=338&fit_mode=smartcrop`;
+      (post.mux_playback_id
+        ? `https://image.mux.com/${post.mux_playback_id}/thumbnail.jpg?width=600&height=338&fit_mode=smartcrop`
+        : DEFAULT_OG_IMAGE);
     const url = `https://zyeute.com/post/${post.id}`;
 
     // Helper to set or create meta tag

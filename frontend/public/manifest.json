@@ -1,33 +1,41 @@
 {
-  "name": "Zyeuté - L'app sociale du Québec",
-  "short_name": "Zyeuté",
-  "description": "L'app sociale du Québec, fait au Québec!",
+  "name": "Zyeute — La scène québécoise",
+  "short_name": "Zyeute",
+  "description": "La plateforme vidéo 100% québécoise. Partage, découvre, connecte.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#000000",
-  "theme_color": "#F5C842",
+  "background_color": "#0D0A06",
+  "theme_color": "#D4AF37",
   "icons": [
     {
-      "src": "/icon-512.png",
+      "src": "/zyeute_app_icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/zyeute_app_icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["social"],
+  "categories": ["social", "entertainment"],
   "screenshots": [
     {
-      "src": "/opengraph.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg"
+      "src": "/zyeute_og_image.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "label": "Zyeute — La scène québécoise"
+    },
+    {
+      "src": "/zyeute_splash.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "label": "Zyeute splash",
+      "form_factor": "narrow"
     }
   ]
 }
