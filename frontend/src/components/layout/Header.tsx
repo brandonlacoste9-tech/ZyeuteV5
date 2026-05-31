@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useNotifications } from "../../contexts/NotificationContext";
 import { Logo } from "../ui/Logo";
-import { QuebecOrSymbol } from "../ui/QuebecOrSymbol";
+
 import { HamburgerMenu } from "./HamburgerMenu";
 
 export interface HeaderProps {
@@ -67,7 +67,6 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <>
               <Logo size="sm" showText={true} linkTo="/" />
-              <QuebecOrSymbol size="sm" className="ml-1 hidden sm:block" />
             </>
           )}
 

@@ -26,7 +26,6 @@ import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
-import { GoldEditionSplash } from "@/components/features/GoldEditionSplash";
 import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
@@ -289,13 +288,7 @@ export const Zyeute: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const [forceEnter, setForceEnter] = useState(false);
-  const [showSplash, setShowSplash] = useState(() => {
-    // Check session storage to show splash only once per session
-    if (typeof window !== "undefined") {
-      return !sessionStorage.getItem("zyeute_splash_seen");
-    }
-    return true;
-  });
+
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -553,18 +546,6 @@ export const Zyeute: React.FC = () => {
       feedRestoreOnce.current = true;
     });
   }, [posts.length, feedSource]);
-
-  // Show splash immediately, don't wait for feed if it's the first time
-  if (showSplash) {
-    return (
-      <GoldEditionSplash
-        onComplete={() => {
-          setShowSplash(false);
-          sessionStorage.setItem("zyeute_splash_seen", "true");
-        }}
-      />
-    );
-  }
 
   if (isLoading && !forceEnter) {
     return (
