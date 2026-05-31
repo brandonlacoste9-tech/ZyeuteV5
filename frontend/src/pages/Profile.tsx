@@ -31,6 +31,7 @@ import { QuebecEmptyState } from "@/components/ui/QuebecEmptyState";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { usePremium } from "@/hooks/usePremium";
 
 const profileLogger = logger.withContext("Profile");
 
@@ -57,6 +58,7 @@ export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { tap, impact } = useHaptics();
   const { user: authUser, isLoading: authLoading, isGuest } = useAuth();
+  const { tier: subTier, isPremium } = usePremium();
 
   const [user, setUser] = React.useState<User | null>(null);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
@@ -566,6 +568,115 @@ export const Profile: React.FC = () => {
               >
                 Déconnexion
               </button>
+            </div>
+          )}
+
+          {/* Subscription Status Card — own profile only */}
+          {isOwnProfile && (
+            <div className="mt-4">
+              <div
+                className="w-full rounded-2xl border stitched p-4"
+                style={{
+                  background:
+                    subTier === "gold"
+                      ? "linear-gradient(135deg, #3D2800 0%, #1A0F00 100%)"
+                      : subTier === "silver"
+                        ? "linear-gradient(135deg, #1e2535 0%, #0f1420 100%)"
+                        : subTier === "bronze"
+                          ? "linear-gradient(135deg, #2a1a0a 0%, #140d04 100%)"
+                          : "linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%)",
+                  borderColor:
+                    subTier === "gold"
+                      ? "rgba(212,175,55,0.6)"
+                      : subTier === "silver"
+                        ? "rgba(148,163,184,0.5)"
+                        : subTier === "bronze"
+                          ? "rgba(205,127,50,0.5)"
+                          : "rgba(255,255,255,0.1)",
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">
+                      {subTier === "gold"
+                        ? "🥇"
+                        : subTier === "silver"
+                          ? "🥈"
+                          : subTier === "bronze"
+                            ? "🥉"
+                            : "🆓"}
+                    </span>
+                    <div>
+                      <p
+                        className="text-xs font-bold uppercase tracking-widest"
+                        style={{
+                          color:
+                            subTier === "gold"
+                              ? "#D4AF37"
+                              : subTier === "silver"
+                                ? "#94A3B8"
+                                : subTier === "bronze"
+                                  ? "#CD7F32"
+                                  : "#666",
+                        }}
+                      >
+                        Abonnement
+                      </p>
+                      <p className="text-white font-black text-lg leading-tight">
+                        {subTier === "gold"
+                          ? "Or VIP"
+                          : subTier === "silver"
+                            ? "Argent"
+                            : subTier === "bronze"
+                              ? "Bronze"
+                              : "Gratuit"}
+                      </p>
+                      {isPremium && (
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{
+                            color:
+                              subTier === "gold"
+                                ? "#D4AF37aa"
+                                : subTier === "silver"
+                                  ? "#94A3B8aa"
+                                  : "#CD7F32aa",
+                          }}
+                        >
+                          {subTier === "gold"
+                            ? "Ti-Guy VIP · Boost x5 · 500 cennes/mois"
+                            : subTier === "silver"
+                              ? "Ti-Guy · Analytics · Boost x3 · 100 cennes/mois"
+                              : "Ti-Guy · Pas de pub · Boost x2"}
+                        </p>
+                      )}
+                      {!isPremium && (
+                        <p className="text-xs text-white/40 mt-0.5">
+                          Ti-Guy verrouillé · Aucun boost
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      tap();
+                      navigate("/premium");
+                    }}
+                    className="text-xs font-bold px-3 py-2 rounded-xl transition-all"
+                    style={{
+                      background: isPremium
+                        ? "rgba(255,255,255,0.07)"
+                        : "linear-gradient(135deg, #D4AF37, #b8860b)",
+                      color: isPremium ? "#888" : "#000",
+                      border: isPremium
+                        ? "1px solid rgba(255,255,255,0.1)"
+                        : "none",
+                    }}
+                  >
+                    {isPremium ? "Gérer" : "Upgrade ⚜️"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
