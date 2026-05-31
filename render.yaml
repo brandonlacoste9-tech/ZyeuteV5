@@ -83,7 +83,8 @@ services:
     name: zyeute-worker
     env: node
     plan: free  # Upgrade to 'starter' for reliable always-on processing
-    buildCommand: npm install
+    rootDir: .
+    buildCommand: npm install --include=dev
     startCommand: npx tsx backend/startWorker.ts
     envVars:
       - key: NODE_ENV

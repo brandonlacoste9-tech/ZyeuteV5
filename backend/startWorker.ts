@@ -3,10 +3,13 @@ import {
   videoWorker,
   memoryWorker,
   privacyWorker,
+  moderationWorker,
   hlsVideoWorker,
 } from "./worker.js";
 
-console.log("🚀 Zyeute Video Worker Started (Video + HLS + Memory + Privacy)");
+console.log(
+  "🚀 Zyeute Worker Started (Video + HLS + Memory + Privacy + Moderation)",
+);
 console.log(`Environment: ${process.env.NODE_ENV}`);
 console.log(`Concurrency: ${process.env.WORKER_CONCURRENCY || 2}`);
 
@@ -17,6 +20,7 @@ const gracefulShutdown = async (signal: string) => {
   await hlsVideoWorker.close();
   await memoryWorker.close();
   await privacyWorker.close();
+  await moderationWorker.close();
   console.log("Worker closed");
   process.exit(0);
 };
