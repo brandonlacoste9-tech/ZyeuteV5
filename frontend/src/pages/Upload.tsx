@@ -21,6 +21,7 @@ import { addDraft } from "../lib/draftPosts";
 import { QUEBEC_REGIONS } from "../lib/quebecFeatures";
 import { toast } from "../components/Toast";
 import { logger } from "../lib/logger";
+import { triggerBadgeCheck } from "@/services/gamificationService";
 import { CameraView } from "@/components/features/CameraView";
 import { SoundPicker } from "@/components/sounds/SoundPicker";
 import {
@@ -261,6 +262,9 @@ export const Upload: React.FC = () => {
         throw new Error(result.error || "Upload failed");
       }
       toast.success("Post publié! 🔥");
+      // Fire-and-forget badge check for post_created
+      const tags = caption.match(/#\w+/g) ?? [];
+      triggerBadgeCheck("post_created", { hashtags: tags }).catch(() => {});
       navigate(user.username ? `/profile/${user.username}` : "/profile/me");
     } catch (error: any) {
       uploadLogger.error("Upload error:", error);

@@ -59,6 +59,7 @@ import trendingRoutes from "./routes/trending.js";
 import notificationRoutes from "./routes/notifications.js";
 import pushRoutes from "./routes/push.js";
 import supportRoutes from "./routes/support.js";
+import gamificationRoutes from "./routes/gamification.js";
 import aiVertexRoutes from "./routes/ai-vertex.js";
 import searchRoutes from "./routes/search.js";
 import videoDoctorRoutes from "./routes/video-doctor.routes.js";
@@ -330,6 +331,7 @@ export async function registerRoutes(
 
   // ============ SUPPORT ROUTES ============
   app.use("/api/support", supportRoutes);
+  app.use("/api/gamification", attachBearerUserId, gamificationRoutes);
 
   // ============ POUTINE ROYALE ARCADE ROUTES ============
   app.use("/api/royale", royaleRoutes);

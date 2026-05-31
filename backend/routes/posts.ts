@@ -587,6 +587,40 @@ router.post(
 // Get post comments
 router.get("/posts/:id/comments", async (req: Request, res: Response) => {
   try {
+    if (supabaseRest) {
+      // Use Supabase to include username_color + correct commentaires table
+      const { data, error } = await supabaseRest
+        .from("commentaires")
+        .select(
+          `
+          id,
+          publication_id,
+          user_id,
+          content,
+          created_at,
+          deleted_at,
+          user:user_profiles(id, username, display_name, avatar_url, username_color, is_verified)
+        `,
+        )
+        .eq("publication_id", req.params.id)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      const comments = (data || []).map((c: any) => ({
+        id: c.id,
+        postId: c.publication_id,
+        userId: c.user_id,
+        content: c.content,
+        created_at: c.created_at,
+        user: c.user,
+        isFired: false,
+      }));
+
+      return res.json({ comments });
+    }
+    // Fallback to Drizzle storage
     const comments = await storage.getPostComments(req.params.id as string);
     res.json({ comments });
   } catch (error) {

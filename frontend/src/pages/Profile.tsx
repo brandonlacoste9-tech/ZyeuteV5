@@ -33,6 +33,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { usePremium } from "@/hooks/usePremium";
 import { toast } from "@/components/Toast";
+import {
+  fetchGamificationProfile,
+  getTierMeta,
+  type GamificationProfile,
+} from "@/services/gamificationService";
 
 const profileLogger = logger.withContext("Profile");
 
@@ -117,6 +122,8 @@ export const Profile: React.FC = () => {
   };
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [gamification, setGamification] =
+    React.useState<GamificationProfile | null>(null);
   const [activeTab, setActiveTab] = React.useState<"posts" | "fires" | "saved">(
     "posts",
   );
@@ -277,6 +284,16 @@ export const Profile: React.FC = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [user]);
+
+  // Fetch gamification profile (streak, tier, badges)
+  React.useEffect(() => {
+    if (!user || user.id === "guest") return;
+    fetchGamificationProfile(user.id)
+      .then((data) => {
+        if (data) setGamification(data);
+      })
+      .catch(() => {});
   }, [user]);
 
   // Fetch fired posts when fires tab activated
@@ -558,6 +575,87 @@ export const Profile: React.FC = () => {
               label="Feux 🔥"
             />
           </div>
+
+          {/* Gamification — Streak + Tier + Badges */}
+          {gamification && (
+            <div
+              className="mt-4 p-3 rounded-xl"
+              style={{
+                background: "rgba(0,0,0,0.5)",
+                border: "1px solid rgba(212,175,55,0.2)",
+              }}
+            >
+              {/* Streak row */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔥</span>
+                  <div>
+                    <span
+                      className="text-base font-bold"
+                      style={{ color: "#FF6B35" }}
+                    >
+                      {gamification.streak} jour
+                      {gamification.streak !== 1 ? "s" : ""}
+                    </span>
+                    <span
+                      className="text-xs ml-1"
+                      style={{ color: "rgba(255,255,255,0.5)" }}
+                    >
+                      d'affilée
+                    </span>
+                  </div>
+                </div>
+                {/* Tier badge */}
+                {(() => {
+                  const tierMeta = getTierMeta(gamification.tier);
+                  return (
+                    <div
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold"
+                      style={{
+                        background: `${tierMeta.color}22`,
+                        border: `1px solid ${tierMeta.color}66`,
+                        color: tierMeta.color,
+                      }}
+                    >
+                      <span>{tierMeta.icon}</span>
+                      <span>{tierMeta.name}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+              {/* Points */}
+              <div
+                className="text-xs mb-3"
+                style={{ color: "rgba(212,175,55,0.7)" }}
+              >
+                {gamification.total_points} pts •{" "}
+                {gamification.achievement_count} badge
+                {gamification.achievement_count !== 1 ? "s" : ""} obtenus
+              </div>
+              {/* Recent badges */}
+              {gamification.achievements.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {gamification.achievements.slice(0, 8).map((ua) => (
+                    <div
+                      key={ua.id}
+                      className="flex items-center gap-1 px-2 py-1 rounded-full text-xs"
+                      style={{
+                        background: `${ua.achievement?.color ?? "#FFD700"}22`,
+                        border: `1px solid ${ua.achievement?.color ?? "#FFD700"}55`,
+                        color: ua.achievement?.color ?? "#FFD700",
+                      }}
+                      title={ua.achievement?.name_fr}
+                    >
+                      <span>{ua.achievement?.icon ?? "🏆"}</span>
+                      <span className="font-semibold">
+                        {ua.achievement?.name_fr ?? ua.achievement_id}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action Button */}
           <div className="mt-4">

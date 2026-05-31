@@ -21,6 +21,7 @@ import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
 import { useGuestMode } from "@/hooks/useGuestMode";
 import { DailyGratteuxModal } from "@/components/gamification/DailyGratteuxModal";
+import { trackDailyInteract } from "@/services/gamificationService";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
 
 const feedLogger = logger.withContext("Feed");
@@ -109,7 +110,11 @@ export const Feed: React.FC = () => {
 
     const fetchCurrentUser = async () => {
       const user = await getCurrentUser();
-      if (user) setCurrentUser(user);
+      if (user) {
+        setCurrentUser(user);
+        // Track daily interact for streak (fire-and-forget — don't block UI)
+        trackDailyInteract().catch(() => {});
+      }
     };
 
     fetchCurrentUser();

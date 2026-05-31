@@ -8,6 +8,7 @@ import { X, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/Avatar";
 import { getPostComments, addComment, getCurrentUser } from "@/services/api";
+import { triggerBadgeCheck } from "@/services/gamificationService";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import type { Comment, User } from "@/types";
@@ -76,6 +77,8 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       if (comment) {
         setComments((prev) => [...prev, comment]);
         setNewComment("");
+        // Fire-and-forget badge check
+        triggerBadgeCheck("comment_created").catch(() => {});
         // Scroll to bottom
         setTimeout(() => {
           scrollRef.current?.scrollTo({
@@ -97,10 +100,10 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     const touch = e.touches[0];
     const rect = sheetRef.current?.getBoundingClientRect();
     if (!rect) return;
-    
+
     const relativeY = touch.clientY - rect.top;
     if (relativeY > 50) return; // Only drag from handle
-    
+
     dragStartY.current = touch.clientY;
     setIsDragging(true);
   }, []);
@@ -218,7 +221,16 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-white font-semibold text-sm">
+                    <span
+                      className="font-semibold text-sm"
+                      style={{
+                        color:
+                          (comment as any).user?.username_color &&
+                          (comment as any).user?.username_color !== "#FFFFFF"
+                            ? (comment as any).user.username_color
+                            : "#ffffff",
+                      }}
+                    >
                       {(comment as any).user?.display_name ||
                         (comment as any).user?.username ||
                         "Anonyme"}

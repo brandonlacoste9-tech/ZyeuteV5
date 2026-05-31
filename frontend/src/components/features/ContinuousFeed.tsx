@@ -50,6 +50,7 @@ import {
   postHasPlayableMedia,
   postLooksLikeTestInject,
 } from "@/services/api";
+import { triggerBadgeCheck } from "@/services/gamificationService";
 
 function allowDemoVideos(): boolean {
   return (
@@ -981,6 +982,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         const user = await getCurrentUser();
         if (!user) return;
         await togglePostFire(postId, user.id);
+        // Fire-and-forget badge check
+        triggerBadgeCheck("fire_given").catch(() => {});
       } catch (err) {
         console.error(err);
       }
