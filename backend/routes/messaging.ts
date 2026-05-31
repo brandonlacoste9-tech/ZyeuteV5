@@ -285,7 +285,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Update conversation last_message + increment other user's unread
+    // Increment recipient's unread counter atomically, then update last_message pointer
     const isA = conv.participant_a === userId;
     const unreadField = isA ? "unread_count_b" : "unread_count_a";
 
