@@ -1,11 +1,14 @@
 /**
- * MessagesReal.tsx — Real DM Messaging for Zyeuté
+ * MessagesReal.tsx — Full Notification Hub for Zyeuté
  * ⚜️ Leather Wallet aesthetic — wired to live backend
  *
- * Architecture:
- *  - Left panel: conversation list + user search
- *  - Right panel (or full screen on mobile): message thread
- *  - Supabase Realtime on `messages` table, falls back to 5s polling
+ * 4 tabs:
+ *  - Messages   — DM conversations (real backend)
+ *  - Activité   — Likes, comments, reactions on your posts
+ *  - Abonnés    — New followers
+ *  - Système    — App / admin notifications
+ *
+ * Tab labels auto-adapt per hive locale.
  */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
@@ -15,8 +18,9 @@ import { Avatar } from "@/components/Avatar";
 import { toast } from "@/components/Toast";
 import { BottomNav } from "@/components/BottomNav";
 import { cn } from "@/lib/utils";
+import { useHive } from "../contexts/HiveContext";
 
-// ─── Design Tokens (mirrors ChatWalletUI) ───────────────────────────────────
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
   leather: {
     dark: "#1A1510",
@@ -37,66 +41,225 @@ const T = {
   },
 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── i18n tab labels ──────────────────────────────────────────────────────────
+const TAB_LABELS: Record<
+  string,
+  { messages: string; activity: string; followers: string; system: string }
+> = {
+  quebec: {
+    messages: "Messages",
+    activity: "Activité",
+    followers: "Abonnés",
+    system: "Système",
+  },
+  mexico: {
+    messages: "Mensajes",
+    activity: "Actividad",
+    followers: "Seguidores",
+    system: "Sistema",
+  },
+  brazil: {
+    messages: "Mensagens",
+    activity: "Atividade",
+    followers: "Seguidores",
+    system: "Sistema",
+  },
+  argentina: {
+    messages: "Mensajes",
+    activity: "Actividad",
+    followers: "Seguidores",
+    system: "Sistema",
+  },
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface OtherUser {
   id: string;
   username: string;
   displayName?: string;
   avatarUrl?: string;
 }
-
 interface LastMessage {
   content: string;
   createdAt: string;
 }
-
 interface Conversation {
   id: string;
   otherUser: OtherUser;
   lastMessage?: LastMessage;
   unreadCount: number;
 }
-
 interface Message {
   id: string;
   content: string;
   senderId: string;
   createdAt: string;
-  sender?: {
-    username: string;
-    avatarUrl?: string;
-  };
+  sender?: { username: string; avatarUrl?: string };
 }
-
 interface SearchUser {
   id: string;
   username: string;
   displayName?: string;
   avatarUrl?: string;
 }
+interface ActivityNotif {
+  id: string;
+  type: string; // 'fire' | 'comment' | 'mention' | 'gift'
+  fromUser?: { id: string; username: string; avatarUrl?: string };
+  message?: string;
+  postId?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+interface FollowerNotif {
+  id: string;
+  type: string; // 'follow'
+  fromUser?: { id: string; username: string; avatarUrl?: string };
+  isRead: boolean;
+  createdAt: string;
+}
+interface SystemNotif {
+  id: string;
+  title: string;
+  body: string;
+  icon: string;
+  createdAt: string;
+}
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+type TabId = "messages" | "activity" | "followers" | "system";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatTime(iso: string): string {
   try {
     const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    if (diffHours < 24) {
+    const diffHours = (Date.now() - d.getTime()) / 3_600_000;
+    if (diffHours < 24)
       return d.toLocaleTimeString("fr-CA", {
         hour: "2-digit",
         minute: "2-digit",
       });
-    }
     return d.toLocaleDateString("fr-CA", { month: "short", day: "numeric" });
   } catch {
     return "";
   }
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+function activityIcon(type: string): string {
+  switch (type) {
+    case "fire":
+      return "🔥";
+    case "comment":
+      return "💬";
+    case "mention":
+      return "@";
+    case "gift":
+      return "🎁";
+    default:
+      return "⚡";
+  }
+}
 
-/** Stitched leather panel wrapper */
+function activityLabel(type: string, hiveId: string): string {
+  const isFr = hiveId === "quebec";
+  const isPt = hiveId === "brazil";
+  switch (type) {
+    case "fire":
+      return isFr
+        ? "a aimé ta publication"
+        : isPt
+          ? "curtiu sua publicação"
+          : "le gustó tu publicación";
+    case "comment":
+      return isFr
+        ? "a commenté ta publication"
+        : isPt
+          ? "comentou sua publicação"
+          : "comentó tu publicación";
+    case "mention":
+      return isFr ? "t'a mentionné" : isPt ? "te mencionou" : "te mencionó";
+    case "gift":
+      return isFr
+        ? "t'a envoyé un cadeau"
+        : isPt
+          ? "te enviou um presente"
+          : "te envió un regalo";
+    default:
+      return isFr
+        ? "interagi avec toi"
+        : isPt
+          ? "interagiu com você"
+          : "interactuó contigo";
+  }
+}
+
+// ─── System notifications (static for now) ───────────────────────────────────
+function getSystemNotifs(hiveId: string): SystemNotif[] {
+  const isFr = hiveId === "quebec";
+  const isPt = hiveId === "brazil";
+  return [
+    {
+      id: "sys-1",
+      icon: currentHiveIcon(hiveId),
+      title: isFr
+        ? "Bienvenue sur Zyeuté !"
+        : isPt
+          ? "Bem-vindo ao Zyeuté!"
+          : "¡Bienvenido a Zyeuté!",
+      body: isFr
+        ? "Ton compte est actif. Partage ta première vidéo dès maintenant."
+        : isPt
+          ? "Sua conta está ativa. Compartilhe seu primeiro vídeo agora."
+          : "Tu cuenta está activa. Comparte tu primer video ahora.",
+      createdAt: new Date(Date.now() - 7 * 86_400_000).toISOString(),
+    },
+    {
+      id: "sys-2",
+      icon: "✨",
+      title: isFr
+        ? "Nouvelles fonctionnalités disponibles"
+        : isPt
+          ? "Novos recursos disponíveis"
+          : "Nuevas funciones disponibles",
+      body: isFr
+        ? "Découvrez les nouvelles régions et le système de hive multi-pays."
+        : isPt
+          ? "Descubra as novas regiões e o sistema de hive multi-país."
+          : "Descubre las nuevas regiones y el sistema hive multi-país.",
+      createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    },
+    {
+      id: "sys-3",
+      icon: "🔒",
+      title: isFr
+        ? "Ton compte est sécurisé"
+        : isPt
+          ? "Sua conta está segura"
+          : "Tu cuenta está segura",
+      body: isFr
+        ? "Authentification active. Tes données sont protégées."
+        : isPt
+          ? "Autenticação ativa. Seus dados estão protegidos."
+          : "Autenticación activa. Tus datos están protegidos.",
+      createdAt: new Date(Date.now() - 14 * 86_400_000).toISOString(),
+    },
+  ];
+}
+
+function currentHiveIcon(hiveId: string): string {
+  switch (hiveId) {
+    case "mexico":
+      return "🦅";
+    case "brazil":
+      return "🐆";
+    case "argentina":
+      return "🐆";
+    default:
+      return "⚜️";
+  }
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
 const LeatherPanel: React.FC<{
   children: React.ReactNode;
   className?: string;
@@ -110,7 +273,6 @@ const LeatherPanel: React.FC<{
       ...style,
     }}
   >
-    {/* Stitched dashed inner border */}
     <div
       className="absolute inset-2 rounded-xl pointer-events-none"
       style={{ border: `2px dashed ${T.gold.DEFAULT}`, opacity: 0.25 }}
@@ -119,7 +281,6 @@ const LeatherPanel: React.FC<{
   </div>
 );
 
-/** Gold buckle input — matches ChatWalletUI GoldBuckle */
 const GoldBuckle: React.FC<{
   value: string;
   onChange: (v: string) => void;
@@ -134,10 +295,8 @@ const GoldBuckle: React.FC<{
   disabled,
 }) => {
   const [focused, setFocused] = useState(false);
-
   return (
     <div className="relative w-full">
-      {/* Belt strap bg */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
@@ -145,14 +304,11 @@ const GoldBuckle: React.FC<{
           boxShadow: T.shadow.inner,
         }}
       />
-      {/* Stitching */}
       <div
         className="absolute inset-1 rounded-full pointer-events-none"
         style={{ border: `1px dashed ${T.gold.dim}`, opacity: 0.4 }}
       />
-
       <div className="relative flex items-center gap-2 p-2">
-        {/* Left buckle */}
         <div
           className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center"
           style={{
@@ -163,8 +319,6 @@ const GoldBuckle: React.FC<{
         >
           <span className="text-xl">⚜️</span>
         </div>
-
-        {/* Text input */}
         <div className="flex-1 relative">
           <input
             type="text"
@@ -176,9 +330,7 @@ const GoldBuckle: React.FC<{
             placeholder={placeholder}
             disabled={disabled}
             className={cn(
-              "w-full px-4 py-3 rounded-full",
-              "bg-[#1A1510] text-[#F4D03F] placeholder-[#8B7355]",
-              "border-2 transition-all duration-300 focus:outline-none",
+              "w-full px-4 py-3 rounded-full bg-[#1A1510] text-[#F4D03F] placeholder-[#8B7355] border-2 transition-all duration-300 focus:outline-none",
               disabled && "opacity-50 cursor-not-allowed",
             )}
             style={{
@@ -189,8 +341,6 @@ const GoldBuckle: React.FC<{
             }}
           />
         </div>
-
-        {/* Send button */}
         <button
           onClick={onSend}
           disabled={!value.trim() || disabled}
@@ -228,11 +378,10 @@ const GoldBuckle: React.FC<{
   );
 };
 
-/** Single message bubble — matches ChatWalletUI MessageBubble */
-const MessageBubble: React.FC<{
-  message: Message;
-  isMe: boolean;
-}> = ({ message, isMe }) => (
+const MessageBubble: React.FC<{ message: Message; isMe: boolean }> = ({
+  message,
+  isMe,
+}) => (
   <div
     className={cn(
       "relative max-w-[78%] rounded-2xl p-3 mb-3",
@@ -246,7 +395,6 @@ const MessageBubble: React.FC<{
       boxShadow: `${T.shadow.outer}${isMe ? `, ${T.shadow.gold}` : ""}`,
     }}
   >
-    {/* Inner stitching */}
     <div
       className="absolute inset-2 rounded-xl pointer-events-none"
       style={{
@@ -271,7 +419,6 @@ const MessageBubble: React.FC<{
   </div>
 );
 
-/** Conversation row in the list */
 const ConversationRow: React.FC<{
   conv: Conversation;
   isActive: boolean;
@@ -336,9 +483,14 @@ const ConversationRow: React.FC<{
   </button>
 );
 
-// ─── Main Component ──────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 export const MessagesReal: React.FC = () => {
-  // Auth — get current user id from Supabase session
+  const { currentHive } = useHive();
+  const hiveId = currentHive.id;
+  const labels = TAB_LABELS[hiveId] ?? TAB_LABELS.quebec;
+  const hiveIcon = currentHiveIcon(hiveId);
+
+  const [activeTab, setActiveTab] = useState<TabId>("messages");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -347,147 +499,160 @@ export const MessagesReal: React.FC = () => {
     });
   }, []);
 
-  // Conversation list state
+  // ── Messages tab state ────────────────────────────────────────────────────
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [convsLoading, setConvsLoading] = useState(true);
-
-  // Active conversation / thread state
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
-
-  // New message input
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
-
-  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searching, setSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-
-  // Mobile: show thread vs list
   const [mobileView, setMobileView] = useState<"list" | "thread">("list");
-
-  // Scroll ref
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const realtimeRef = useRef<any>(null);
+  const realtimeRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // ── Fetch conversations ────────────────────────────────────────────────────
+  // ── Activity tab state ────────────────────────────────────────────────────
+  const [activityNotifs, setActivityNotifs] = useState<ActivityNotif[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityUnread, setActivityUnread] = useState(0);
+
+  // ── Followers tab state ───────────────────────────────────────────────────
+  const [followerNotifs, setFollowerNotifs] = useState<FollowerNotif[]>([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followersUnread, setFollowersUnread] = useState(0);
+
+  // ── Messages unread count ─────────────────────────────────────────────────
+  const [messagesUnread, setMessagesUnread] = useState(0);
+
+  // ── Fetch conversations ───────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
     const { data, error } = await apiCall<{ conversations: Conversation[] }>(
       "/messaging/conversations",
     );
-    if (error) {
-      toast.error("Impossible de charger les conversations");
-      setConvsLoading(false);
-      return;
+    if (!error) {
+      const convs = data?.conversations ?? [];
+      setConversations(convs);
+      setMessagesUnread(convs.reduce((s, c) => s + (c.unreadCount || 0), 0));
     }
-    setConversations(data?.conversations ?? []);
     setConvsLoading(false);
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    apiCall<{ conversations: Conversation[] }>("/messaging/conversations").then(
-      ({ data, error }) => {
-        if (cancelled) return;
-        if (!error) setConversations(data?.conversations ?? []);
-        setConvsLoading(false);
-      },
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // ── Fetch notifications (activity + followers) ────────────────────────────
+  const fetchNotifications = useCallback(async () => {
+    const { data, error } = await apiCall<{ notifications: ActivityNotif[] }>(
+      "/notifications",
     );
+    if (!error && data?.notifications) {
+      const all = data.notifications;
+      const activity = all.filter((n) =>
+        ["fire", "comment", "mention", "gift"].includes(n.type),
+      );
+      const followers = all.filter((n) => n.type === "follow");
+      setActivityNotifs(activity);
+      setFollowerNotifs(followers as FollowerNotif[]);
+      setActivityUnread(activity.filter((n) => !n.isRead).length);
+      setFollowersUnread(followers.filter((n) => !n.isRead).length);
+      setActivityLoading(false);
+      setFollowersLoading(false);
+    } else {
+      setActivityLoading(false);
+      setFollowersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!cancelled) fetchNotifications();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Fetch messages for active conversation ─────────────────────────────────
+  // ── Mark notifications as read when tab opens ─────────────────────────────
+  const prevTabRef = useRef<TabId | null>(null);
+  useEffect(() => {
+    if (prevTabRef.current === activeTab) return;
+    prevTabRef.current = activeTab;
+    if (activeTab === "activity" || activeTab === "followers") {
+      apiCall("/notifications/read-all", { method: "POST" }).then(() => {
+        if (activeTab === "activity") setActivityUnread(0);
+        else setFollowersUnread(0);
+      });
+    }
+  }, [activeTab]);
+
+  // ── Fetch messages for active convo ──────────────────────────────────────
   const fetchMessages = useCallback(async (convId: string) => {
     setMessagesLoading(true);
     const { data, error } = await apiCall<{ messages: Message[] }>(
       `/messaging/conversations/${convId}/messages`,
     );
-    if (error) {
-      toast.error("Impossible de charger les messages");
-      setMessagesLoading(false);
-      return;
-    }
-    setMessages(data?.messages ?? []);
+    if (!error) setMessages(data?.messages ?? []);
     setMessagesLoading(false);
   }, []);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ── Realtime subscription (Supabase) with polling fallback ─────────────────
+  // ── Realtime + polling for active convo ───────────────────────────────────
   useEffect(() => {
     if (!activeConvId) return;
-
-    // Clear any previous polling
     if (pollRef.current) {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-    // Remove previous realtime channel
     if (realtimeRef.current) {
       supabase.removeChannel(realtimeRef.current);
       realtimeRef.current = null;
     }
 
-    // Load initial messages
     apiCall<{ messages: Message[] }>(
       `/messaging/conversations/${activeConvId}/messages`,
     ).then(({ data, error }) => {
-      if (error) {
-        toast.error("Impossible de charger les messages");
-      } else {
-        setMessages(data?.messages ?? []);
-      }
+      if (!error) setMessages(data?.messages ?? []);
       setMessagesLoading(false);
     });
 
-    // Try Supabase realtime first
-    let realtimeWorking = false;
     try {
       const channel = supabase
         .channel(`messages:conv:${activeConvId}`)
         .on(
-          "postgres_changes" as any,
+          "postgres_changes" as Parameters<
+            ReturnType<typeof supabase.channel>["on"]
+          >[0],
           {
             event: "INSERT",
             schema: "public",
             table: "messages",
             filter: `conversation_id=eq.${activeConvId}`,
           },
-          (payload: any) => {
-            realtimeWorking = true;
-            // Append incoming message directly if it's not already in list
-            const incoming = payload.new as Message;
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === incoming.id)) return prev;
-              return [...prev, incoming];
-            });
+          (payload: { new: Message }) => {
+            const incoming = payload.new;
+            setMessages((prev) =>
+              prev.some((m) => m.id === incoming.id)
+                ? prev
+                : [...prev, incoming],
+            );
           },
         )
-        .subscribe((status: string) => {
-          if (status === "SUBSCRIBED") {
-            realtimeWorking = true;
-          }
-        });
-
+        .subscribe();
       realtimeRef.current = channel;
     } catch {
-      // Realtime not available — fall through to polling
+      /* fall through to polling */
     }
 
-    // Fallback: poll every 5s (also handles cases where realtime filter doesn't match)
-    pollRef.current = setInterval(() => {
-      fetchMessages(activeConvId);
-    }, 5000);
-
+    pollRef.current = setInterval(() => fetchMessages(activeConvId), 5000);
     return () => {
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -500,61 +665,48 @@ export const MessagesReal: React.FC = () => {
     };
   }, [activeConvId, fetchMessages]);
 
-  // ── Select conversation ────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
   const selectConversation = (convId: string) => {
     setActiveConvId(convId);
     setInputValue("");
     setMobileView("thread");
   };
 
-  // ── Send message ───────────────────────────────────────────────────────────
   const sendMessage = async () => {
     if (!inputValue.trim() || !activeConvId || sending) return;
     const content = inputValue.trim();
     setInputValue("");
     setSending(true);
-
-    // Optimistic insert
     const optimisticId = `opt-${Date.now()}`;
-    const optimisticMsg: Message = {
-      id: optimisticId,
-      content,
-      senderId: currentUserId ?? "me",
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimisticMsg]);
-
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: optimisticId,
+        content,
+        senderId: currentUserId ?? "me",
+        createdAt: new Date().toISOString(),
+      },
+    ]);
     const { data, error } = await apiCall<{ message: Message }>(
       `/messaging/conversations/${activeConvId}/messages`,
-      {
-        method: "POST",
-        body: JSON.stringify({ content }),
-      },
+      { method: "POST", body: JSON.stringify({ content }) },
     );
-
     setSending(false);
-
     if (error) {
       toast.error("Message non envoyé. Réessaie.");
-      // Remove optimistic message on failure
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-      setInputValue(content); // restore input
+      setInputValue(content);
       return;
     }
-
-    // Replace optimistic with real message
     if (data?.message) {
       setMessages((prev) =>
         prev.map((m) => (m.id === optimisticId ? data.message : m)),
       );
-      // Refresh conversations to update last message preview
       fetchConversations();
     }
   };
 
-  // ── User search ────────────────────────────────────────────────────────────
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const handleSearchChange = (q: string) => {
     setSearchQuery(q);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
@@ -568,64 +720,49 @@ export const MessagesReal: React.FC = () => {
         `/messaging/users/search?q=${encodeURIComponent(q.trim())}`,
       );
       setSearching(false);
-      if (error) {
-        toast.error("Recherche impossible");
-        return;
-      }
-      setSearchResults(data?.users ?? []);
+      if (!error) setSearchResults(data?.users ?? []);
     }, 400);
   };
 
-  // ── Start DM with a user from search ──────────────────────────────────────
   const startDM = async (userId: string) => {
     setShowSearch(false);
     setSearchQuery("");
     setSearchResults([]);
-
     const { data, error } = await apiCall<{ conversation: { id: string } }>(
       "/messaging/conversations/direct",
-      {
-        method: "POST",
-        body: JSON.stringify({ userId }),
-      },
+      { method: "POST", body: JSON.stringify({ userId }) },
     );
-
     if (error) {
       toast.error("Impossible de démarrer la conversation");
       return;
     }
-
     const convId = data?.conversation?.id;
     if (!convId) return;
-
-    // Refresh conversations then open
     await fetchConversations();
     selectConversation(convId);
   };
 
-  // ── Active conversation metadata ───────────────────────────────────────────
   const activeConv = conversations.find((c) => c.id === activeConvId);
+  const systemNotifs = getSystemNotifs(hiveId);
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────
-
   return (
     <div
       className="min-h-screen pb-20 flex flex-col"
       style={{ background: "#0D0A06" }}
     >
-      {/* Header bar */}
+      {/* ── Header ── */}
       <div
         className="sticky top-0 z-30 px-4 py-3 flex items-center gap-3"
         style={{
           background: `linear-gradient(180deg, ${T.leather.light} 0%, ${T.leather.dark} 100%)`,
           borderBottom: `2px solid ${T.leather.tan}`,
-          boxShadow: `0 4px 20px rgba(0,0,0,0.5)`,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
         }}
       >
-        {/* Back button on mobile when in thread view */}
-        {mobileView === "thread" && (
+        {mobileView === "thread" && activeTab === "messages" && (
           <button
             onClick={() => setMobileView("list")}
             className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg transition-all"
@@ -650,9 +787,7 @@ export const MessagesReal: React.FC = () => {
             </svg>
           </button>
         )}
-
-        <span style={{ fontSize: 22 }}>⚜️</span>
-
+        <span style={{ fontSize: 22 }}>{hiveIcon}</span>
         <div className="flex-1">
           <h1
             className="font-bold text-base leading-tight"
@@ -661,20 +796,26 @@ export const MessagesReal: React.FC = () => {
               textShadow: "0 1px 3px rgba(0,0,0,0.5)",
             }}
           >
-            {mobileView === "thread" && activeConv
+            {activeTab === "messages" && mobileView === "thread" && activeConv
               ? activeConv.otherUser.displayName ||
                 activeConv.otherUser.username
-              : "Messages Directs"}
+              : activeTab === "messages"
+                ? labels.messages
+                : activeTab === "activity"
+                  ? labels.activity
+                  : activeTab === "followers"
+                    ? labels.followers
+                    : labels.system}
           </h1>
           <p className="text-xs" style={{ color: T.gold.dim }}>
-            {mobileView === "thread" && activeConv
+            {activeTab === "messages" && mobileView === "thread" && activeConv
               ? `@${activeConv.otherUser.username}`
-              : `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`}
+              : activeTab === "messages"
+                ? `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`
+                : "Zyeuté"}
           </p>
         </div>
-
-        {/* Nouveau message button */}
-        {(mobileView === "list" || window.innerWidth >= 768) && (
+        {activeTab === "messages" && mobileView === "list" && (
           <button
             onClick={() => {
               setShowSearch((v) => !v);
@@ -707,232 +848,180 @@ export const MessagesReal: React.FC = () => {
         )}
       </div>
 
-      {/* New DM search panel */}
-      {showSearch && (
-        <div
-          className="mx-4 mt-3 rounded-2xl overflow-hidden"
-          style={{
-            background: T.leather.dark,
-            border: `2px solid ${T.gold.DEFAULT}`,
-            boxShadow: T.shadow.gold,
-          }}
-        >
-          <div className="p-3">
-            <div className="relative">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                style={{ color: T.gold.dim }}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <input
-                autoFocus
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Rechercher un utilisateur..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+      {/* ── Tab Bar ── */}
+      <div
+        className="flex border-b"
+        style={{ borderColor: T.leather.tan, background: T.leather.dark }}
+      >
+        {(["messages", "activity", "followers", "system"] as TabId[]).map(
+          (tab) => {
+            const badge =
+              tab === "messages"
+                ? messagesUnread
+                : tab === "activity"
+                  ? activityUnread
+                  : tab === "followers"
+                    ? followersUnread
+                    : 0;
+            const label =
+              tab === "messages"
+                ? labels.messages
+                : tab === "activity"
+                  ? labels.activity
+                  : tab === "followers"
+                    ? labels.followers
+                    : labels.system;
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 flex flex-col items-center gap-0.5 py-3 text-[11px] font-bold relative transition-all"
                 style={{
-                  background: T.leather.medium,
-                  border: `1px solid ${T.leather.tan}`,
-                  color: T.gold.bright,
+                  color: isActive ? T.gold.bright : T.gold.dim,
+                  borderBottom: isActive
+                    ? `2px solid ${T.gold.bright}`
+                    : "2px solid transparent",
                 }}
-              />
-            </div>
-          </div>
-
-          {searching && (
-            <p className="px-4 pb-3 text-xs" style={{ color: T.gold.dim }}>
-              Recherche...
-            </p>
-          )}
-
-          {searchResults.length > 0 && (
-            <div className="pb-2">
-              {searchResults.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => startDM(u.id)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/5"
-                >
-                  <Avatar
-                    src={u.avatarUrl}
-                    alt={u.displayName || u.username}
-                    size="xs"
-                    userId={u.id}
-                  />
-                  <div className="text-left">
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: T.gold.DEFAULT }}
-                    >
-                      {u.displayName || u.username}
-                    </p>
-                    <p className="text-xs" style={{ color: T.gold.dim }}>
-                      @{u.username}
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!searching && searchQuery.trim() && searchResults.length === 0 && (
-            <p className="px-4 pb-3 text-xs" style={{ color: T.gold.dim }}>
-              Aucun utilisateur trouvé pour «{searchQuery}»
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Main content: split panel on md+, stacked on mobile */}
-      <div className="flex flex-1 gap-3 p-3 md:p-4" style={{ minHeight: 0 }}>
-        {/* ── Left: Conversation list ── */}
-        <div
-          className={cn(
-            "flex-shrink-0 flex flex-col",
-            // Mobile: full width when showing list, hidden when showing thread
-            mobileView === "list" ? "flex w-full" : "hidden",
-            // Desktop: always show, fixed width
-            "md:flex md:w-72 lg:w-80",
-          )}
-        >
-          <LeatherPanel
-            className="flex-1 flex flex-col overflow-hidden"
-            style={{ minHeight: 0 }}
-          >
-            <div
-              className="px-4 py-3 flex-shrink-0"
-              style={{ borderBottom: `1px solid ${T.leather.tan}` }}
-            >
-              <p
-                className="text-xs font-bold uppercase tracking-widest"
-                style={{ color: T.gold.dim }}
               >
-                Conversations
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto py-2">
-              {convsLoading ? (
-                <div className="flex items-center justify-center h-24">
-                  <div
-                    className="w-6 h-6 rounded-full border-2 animate-spin"
+                {label}
+                {badge > 0 && (
+                  <span
+                    className="absolute top-1.5 right-1/4 text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center"
                     style={{
-                      borderColor: `${T.gold.DEFAULT} transparent transparent transparent`,
+                      background: T.gold.DEFAULT,
+                      color: T.leather.dark,
+                    }}
+                  >
+                    {badge > 9 ? "9+" : badge}
+                  </span>
+                )}
+              </button>
+            );
+          },
+        )}
+      </div>
+
+      {/* ── Tab: MESSAGES ── */}
+      {activeTab === "messages" && (
+        <>
+          {/* Search panel */}
+          {showSearch && (
+            <div
+              className="mx-4 mt-3 rounded-2xl overflow-hidden"
+              style={{
+                background: T.leather.dark,
+                border: `2px solid ${T.gold.DEFAULT}`,
+                boxShadow: T.shadow.gold,
+              }}
+            >
+              <div className="p-3">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                    style={{ color: T.gold.dim }}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Rechercher un utilisateur..."
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm focus:outline-none"
+                    style={{
+                      background: T.leather.medium,
+                      border: `1px solid ${T.leather.tan}`,
+                      color: T.gold.bright,
                     }}
                   />
                 </div>
-              ) : conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-32 px-6 text-center">
-                  <span style={{ fontSize: 32 }}>💬</span>
-                  <p className="text-sm mt-2" style={{ color: T.gold.dim }}>
-                    Aucune conversation encore.
-                  </p>
+              </div>
+              {searching && (
+                <p className="px-4 pb-3 text-xs" style={{ color: T.gold.dim }}>
+                  Recherche...
+                </p>
+              )}
+              {searchResults.length > 0 && (
+                <div className="pb-2">
+                  {searchResults.map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => startDM(u.id)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/5"
+                    >
+                      <Avatar
+                        src={u.avatarUrl}
+                        alt={u.displayName || u.username}
+                        size="xs"
+                        userId={u.id}
+                      />
+                      <div className="text-left">
+                        <p
+                          className="text-sm font-semibold"
+                          style={{ color: T.gold.DEFAULT }}
+                        >
+                          {u.displayName || u.username}
+                        </p>
+                        <p className="text-xs" style={{ color: T.gold.dim }}>
+                          @{u.username}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!searching &&
+                searchQuery.trim() &&
+                searchResults.length === 0 && (
                   <p
-                    className="text-xs mt-1 opacity-60"
+                    className="px-4 pb-3 text-xs"
                     style={{ color: T.gold.dim }}
                   >
-                    Clique sur «Nouveau» pour démarrer un DM.
+                    Aucun utilisateur trouvé pour «{searchQuery}»
                   </p>
-                </div>
-              ) : (
-                conversations.map((conv) => (
-                  <ConversationRow
-                    key={conv.id}
-                    conv={conv}
-                    isActive={conv.id === activeConvId}
-                    onClick={() => selectConversation(conv.id)}
-                  />
-                ))
-              )}
+                )}
             </div>
-          </LeatherPanel>
-        </div>
-
-        {/* ── Right: Message thread ── */}
-        <div
-          className={cn(
-            "flex-1 flex flex-col",
-            // Mobile: full width when showing thread, hidden otherwise
-            mobileView === "thread" ? "flex w-full" : "hidden",
-            // Desktop: always show
-            "md:flex",
           )}
-          style={{ minHeight: 0 }}
-        >
-          <LeatherPanel
-            className="flex-1 flex flex-col overflow-hidden"
+
+          <div
+            className="flex flex-1 gap-3 p-3 md:p-4"
             style={{ minHeight: 0 }}
           >
-            {!activeConvId ? (
-              /* Empty state */
-              <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
-                <span style={{ fontSize: 48 }}>⚜️</span>
-                <p
-                  className="text-lg font-bold"
-                  style={{
-                    color: T.gold.DEFAULT,
-                    textShadow: "0 0 20px rgba(212,175,55,0.4)",
-                  }}
-                >
-                  Messages Directs
-                </p>
-                <p className="text-sm" style={{ color: T.gold.dim }}>
-                  Sélectionne une conversation ou démarre un nouveau DM.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Thread header */}
-                {activeConv && (
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
-                    style={{ borderBottom: `1px solid ${T.leather.tan}` }}
-                  >
-                    <Avatar
-                      src={activeConv.otherUser.avatarUrl}
-                      alt={
-                        activeConv.otherUser.displayName ||
-                        activeConv.otherUser.username
-                      }
-                      size="xs"
-                      userId={activeConv.otherUser.id}
-                    />
-                    <div>
-                      <p
-                        className="font-bold text-sm"
-                        style={{ color: T.gold.bright }}
-                      >
-                        {activeConv.otherUser.displayName ||
-                          activeConv.otherUser.username}
-                      </p>
-                      <p
-                        className="text-xs opacity-60"
-                        style={{ color: T.gold.dim }}
-                      >
-                        @{activeConv.otherUser.username}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Messages area */}
+            {/* Conversation list */}
+            <div
+              className={cn(
+                "flex-shrink-0 flex flex-col",
+                mobileView === "list" ? "flex w-full" : "hidden",
+                "md:flex md:w-72 lg:w-80",
+              )}
+            >
+              <LeatherPanel
+                className="flex-1 flex flex-col overflow-hidden"
+                style={{ minHeight: 0 }}
+              >
                 <div
-                  className="flex-1 overflow-y-auto px-4 py-4"
-                  style={{
-                    background: `linear-gradient(180deg, ${T.leather.dark} 0%, ${T.leather.medium}88 100%)`,
-                  }}
+                  className="px-4 py-3 flex-shrink-0"
+                  style={{ borderBottom: `1px solid ${T.leather.tan}` }}
                 >
-                  {messagesLoading ? (
+                  <p
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: T.gold.dim }}
+                  >
+                    Conversations
+                  </p>
+                </div>
+                <div className="flex-1 overflow-y-auto py-2">
+                  {convsLoading ? (
                     <div className="flex items-center justify-center h-24">
                       <div
                         className="w-6 h-6 rounded-full border-2 animate-spin"
@@ -941,46 +1030,391 @@ export const MessagesReal: React.FC = () => {
                         }}
                       />
                     </div>
-                  ) : messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-12">
+                  ) : conversations.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-32 px-6 text-center">
                       <span style={{ fontSize: 32 }}>💬</span>
-                      <p className="text-sm" style={{ color: T.gold.dim }}>
-                        Aucun message encore. Dis bonjour!
+                      <p className="text-sm mt-2" style={{ color: T.gold.dim }}>
+                        Aucune conversation encore.
+                      </p>
+                      <p
+                        className="text-xs mt-1 opacity-60"
+                        style={{ color: T.gold.dim }}
+                      >
+                        Clique sur «Nouveau» pour démarrer un DM.
                       </p>
                     </div>
                   ) : (
-                    messages.map((msg) => (
-                      <MessageBubble
-                        key={msg.id}
-                        message={msg}
-                        isMe={msg.senderId === currentUserId}
+                    conversations.map((conv) => (
+                      <ConversationRow
+                        key={conv.id}
+                        conv={conv}
+                        isActive={conv.id === activeConvId}
+                        onClick={() => selectConversation(conv.id)}
                       />
                     ))
                   )}
-                  <div ref={bottomRef} />
                 </div>
+              </LeatherPanel>
+            </div>
 
-                {/* Input area */}
-                <div
-                  className="flex-shrink-0 p-3"
-                  style={{
-                    borderTop: `2px solid ${T.leather.tan}`,
-                    background: T.leather.dark,
-                  }}
-                >
-                  <GoldBuckle
-                    value={inputValue}
-                    onChange={setInputValue}
-                    onSend={sendMessage}
-                    disabled={sending}
-                    placeholder="Écris ton message..."
+            {/* Message thread */}
+            <div
+              className={cn(
+                "flex-1 flex flex-col",
+                mobileView === "thread" ? "flex w-full" : "hidden",
+                "md:flex",
+              )}
+              style={{ minHeight: 0 }}
+            >
+              <LeatherPanel
+                className="flex-1 flex flex-col overflow-hidden"
+                style={{ minHeight: 0 }}
+              >
+                {!activeConvId ? (
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+                    <span style={{ fontSize: 48 }}>{hiveIcon}</span>
+                    <p
+                      className="text-lg font-bold"
+                      style={{
+                        color: T.gold.DEFAULT,
+                        textShadow: "0 0 20px rgba(212,175,55,0.4)",
+                      }}
+                    >
+                      {labels.messages}
+                    </p>
+                    <p className="text-sm" style={{ color: T.gold.dim }}>
+                      Sélectionne une conversation ou démarre un nouveau DM.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {activeConv && (
+                      <div
+                        className="flex items-center gap-3 px-4 py-3 flex-shrink-0"
+                        style={{ borderBottom: `1px solid ${T.leather.tan}` }}
+                      >
+                        <Avatar
+                          src={activeConv.otherUser.avatarUrl}
+                          alt={
+                            activeConv.otherUser.displayName ||
+                            activeConv.otherUser.username
+                          }
+                          size="xs"
+                          userId={activeConv.otherUser.id}
+                        />
+                        <div>
+                          <p
+                            className="font-bold text-sm"
+                            style={{ color: T.gold.bright }}
+                          >
+                            {activeConv.otherUser.displayName ||
+                              activeConv.otherUser.username}
+                          </p>
+                          <p
+                            className="text-xs opacity-60"
+                            style={{ color: T.gold.dim }}
+                          >
+                            @{activeConv.otherUser.username}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div
+                      className="flex-1 overflow-y-auto px-4 py-4"
+                      style={{
+                        background: `linear-gradient(180deg, ${T.leather.dark} 0%, ${T.leather.medium}88 100%)`,
+                      }}
+                    >
+                      {messagesLoading ? (
+                        <div className="flex items-center justify-center h-24">
+                          <div
+                            className="w-6 h-6 rounded-full border-2 animate-spin"
+                            style={{
+                              borderColor: `${T.gold.DEFAULT} transparent transparent transparent`,
+                            }}
+                          />
+                        </div>
+                      ) : messages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-12">
+                          <span style={{ fontSize: 32 }}>💬</span>
+                          <p className="text-sm" style={{ color: T.gold.dim }}>
+                            Aucun message encore. Dis bonjour!
+                          </p>
+                        </div>
+                      ) : (
+                        messages.map((msg) => (
+                          <MessageBubble
+                            key={msg.id}
+                            message={msg}
+                            isMe={msg.senderId === currentUserId}
+                          />
+                        ))
+                      )}
+                      <div ref={bottomRef} />
+                    </div>
+                    <div
+                      className="flex-shrink-0 p-3"
+                      style={{
+                        borderTop: `2px solid ${T.leather.tan}`,
+                        background: T.leather.dark,
+                      }}
+                    >
+                      <GoldBuckle
+                        value={inputValue}
+                        onChange={setInputValue}
+                        onSend={sendMessage}
+                        disabled={sending}
+                        placeholder="Écris ton message..."
+                      />
+                    </div>
+                  </>
+                )}
+              </LeatherPanel>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Tab: ACTIVITY ── */}
+      {activeTab === "activity" && (
+        <div className="flex-1 p-3">
+          <LeatherPanel className="flex flex-col" style={{ minHeight: "60vh" }}>
+            <div
+              className="px-4 py-3 flex-shrink-0"
+              style={{ borderBottom: `1px solid ${T.leather.tan}` }}
+            >
+              <p
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: T.gold.dim }}
+              >
+                {labels.activity}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto py-2">
+              {activityLoading ? (
+                <div className="flex items-center justify-center h-24">
+                  <div
+                    className="w-6 h-6 rounded-full border-2 animate-spin"
+                    style={{
+                      borderColor: `${T.gold.DEFAULT} transparent transparent transparent`,
+                    }}
                   />
                 </div>
-              </>
-            )}
+              ) : activityNotifs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center px-6">
+                  <span style={{ fontSize: 40 }}>🔥</span>
+                  <p className="text-sm mt-3" style={{ color: T.gold.dim }}>
+                    {hiveId === "brazil"
+                      ? "Nenhuma atividade ainda."
+                      : hiveId === "quebec"
+                        ? "Aucune activité encore."
+                        : "Sin actividad aún."}
+                  </p>
+                </div>
+              ) : (
+                activityNotifs.map((n) => (
+                  <div
+                    key={n.id}
+                    className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/5 rounded-xl"
+                    style={{ opacity: n.isRead ? 0.7 : 1 }}
+                  >
+                    <div
+                      className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl"
+                      style={{
+                        background: `linear-gradient(145deg, ${T.leather.medium}, ${T.leather.dark})`,
+                        border: `2px solid ${T.leather.tan}`,
+                      }}
+                    >
+                      {activityIcon(n.type)}
+                    </div>
+                    {n.fromUser && (
+                      <Avatar
+                        src={n.fromUser.avatarUrl}
+                        alt={n.fromUser.username}
+                        size="xs"
+                        userId={n.fromUser.id}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm" style={{ color: T.gold.bright }}>
+                        <span className="font-bold">
+                          {n.fromUser?.username ?? "Quelqu'un"}
+                        </span>{" "}
+                        <span style={{ color: T.gold.dim }}>
+                          {activityLabel(n.type, hiveId)}
+                        </span>
+                      </p>
+                      {n.message && (
+                        <p
+                          className="text-xs truncate mt-0.5"
+                          style={{ color: T.gold.dim }}
+                        >
+                          {n.message}
+                        </p>
+                      )}
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: T.leather.tan }}
+                      >
+                        {formatTime(n.createdAt)}
+                      </p>
+                    </div>
+                    {!n.isRead && (
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: T.gold.DEFAULT }}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </LeatherPanel>
         </div>
-      </div>
+      )}
+
+      {/* ── Tab: FOLLOWERS ── */}
+      {activeTab === "followers" && (
+        <div className="flex-1 p-3">
+          <LeatherPanel className="flex flex-col" style={{ minHeight: "60vh" }}>
+            <div
+              className="px-4 py-3 flex-shrink-0"
+              style={{ borderBottom: `1px solid ${T.leather.tan}` }}
+            >
+              <p
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: T.gold.dim }}
+              >
+                {labels.followers}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto py-2">
+              {followersLoading ? (
+                <div className="flex items-center justify-center h-24">
+                  <div
+                    className="w-6 h-6 rounded-full border-2 animate-spin"
+                    style={{
+                      borderColor: `${T.gold.DEFAULT} transparent transparent transparent`,
+                    }}
+                  />
+                </div>
+              ) : followerNotifs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-40 text-center px-6">
+                  <span style={{ fontSize: 40 }}>👥</span>
+                  <p className="text-sm mt-3" style={{ color: T.gold.dim }}>
+                    {hiveId === "brazil"
+                      ? "Nenhum novo seguidor ainda."
+                      : hiveId === "quebec"
+                        ? "Aucun nouvel abonné encore."
+                        : "Sin nuevos seguidores aún."}
+                  </p>
+                </div>
+              ) : (
+                followerNotifs.map((n) => (
+                  <div
+                    key={n.id}
+                    className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/5 rounded-xl"
+                    style={{ opacity: n.isRead ? 0.7 : 1 }}
+                  >
+                    {n.fromUser && (
+                      <Avatar
+                        src={n.fromUser.avatarUrl}
+                        alt={n.fromUser.username}
+                        size="sm"
+                        userId={n.fromUser.id}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm" style={{ color: T.gold.bright }}>
+                        <span className="font-bold">
+                          {n.fromUser?.username ?? "Quelqu'un"}
+                        </span>{" "}
+                        <span style={{ color: T.gold.dim }}>
+                          {hiveId === "brazil"
+                            ? "começou a te seguir"
+                            : hiveId === "quebec"
+                              ? "a commencé à te suivre"
+                              : "comenzó a seguirte"}
+                        </span>
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ color: T.leather.tan }}
+                      >
+                        {formatTime(n.createdAt)}
+                      </p>
+                    </div>
+                    {!n.isRead && (
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: T.gold.DEFAULT }}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </LeatherPanel>
+        </div>
+      )}
+
+      {/* ── Tab: SYSTEM ── */}
+      {activeTab === "system" && (
+        <div className="flex-1 p-3">
+          <LeatherPanel className="flex flex-col" style={{ minHeight: "60vh" }}>
+            <div
+              className="px-4 py-3 flex-shrink-0"
+              style={{ borderBottom: `1px solid ${T.leather.tan}` }}
+            >
+              <p
+                className="text-xs font-bold uppercase tracking-widest"
+                style={{ color: T.gold.dim }}
+              >
+                {labels.system}
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto py-2">
+              {systemNotifs.map((n) => (
+                <div
+                  key={n.id}
+                  className="flex items-start gap-3 px-4 py-4 border-b transition-all hover:bg-white/5"
+                  style={{ borderColor: `${T.leather.tan}33` }}
+                >
+                  <div
+                    className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl"
+                    style={{
+                      background: `linear-gradient(145deg, ${T.leather.medium}, ${T.leather.dark})`,
+                      border: `2px solid ${T.gold.DEFAULT}44`,
+                    }}
+                  >
+                    {n.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-bold"
+                      style={{ color: T.gold.bright }}
+                    >
+                      {n.title}
+                    </p>
+                    <p
+                      className="text-xs mt-1 leading-relaxed"
+                      style={{ color: T.gold.dim }}
+                    >
+                      {n.body}
+                    </p>
+                    <p
+                      className="text-[10px] mt-1.5"
+                      style={{ color: T.leather.tan }}
+                    >
+                      {formatTime(n.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </LeatherPanel>
+        </div>
+      )}
 
       <BottomNav />
     </div>
