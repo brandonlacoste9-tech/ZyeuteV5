@@ -650,65 +650,145 @@ const ConversationRow: React.FC<{
   conv: Conversation;
   isActive: boolean;
   onClick: () => void;
-}> = ({ conv, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className="w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 rounded-xl"
-    style={{
-      background: isActive
-        ? `linear-gradient(90deg, ${T.gold.DEFAULT}18, transparent)`
-        : "transparent",
-      borderLeft: isActive
-        ? `3px solid ${T.gold.bright}`
-        : "3px solid transparent",
-    }}
-  >
-    <div className="flex-shrink-0">
-      <Avatar
-        src={conv.otherUser.avatarUrl}
-        alt={conv.otherUser.displayName || conv.otherUser.username}
-        size="sm"
-        userId={conv.otherUser.id}
-      />
-    </div>
-    <div className="flex-1 min-w-0 text-left">
-      <p
-        className="font-semibold text-sm truncate"
-        style={{ color: isActive ? T.gold.bright : T.gold.DEFAULT }}
+  onDelete: (id: string) => void;
+}> = ({ conv, isActive, onClick, onDelete }) => {
+  const [hovered, setHovered] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  return (
+    <div
+      className="relative w-full"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        setConfirmDelete(false);
+      }}
+    >
+      <button
+        onClick={onClick}
+        className="w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 rounded-xl"
+        style={{
+          background: isActive
+            ? `linear-gradient(90deg, ${T.gold.DEFAULT}18, transparent)`
+            : "transparent",
+          borderLeft: isActive
+            ? `3px solid ${T.gold.bright}`
+            : "3px solid transparent",
+          paddingRight: hovered ? 44 : undefined,
+        }}
       >
-        {conv.otherUser.displayName || conv.otherUser.username}
-      </p>
-      {conv.lastMessage && (
-        <p
-          className="text-xs truncate opacity-70"
-          style={{ color: T.gold.dim }}
-        >
-          {conv.lastMessage.content}
-        </p>
-      )}
-    </div>
-    <div className="flex-shrink-0 flex flex-col items-end gap-1">
-      {conv.lastMessage && (
-        <span className="text-[10px]" style={{ color: T.gold.dim }}>
-          {formatTime(conv.lastMessage.createdAt)}
-        </span>
-      )}
-      {conv.unreadCount > 0 && (
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+        <div className="flex-shrink-0">
+          <Avatar
+            src={conv.otherUser.avatarUrl}
+            alt={conv.otherUser.displayName || conv.otherUser.username}
+            size="sm"
+            userId={conv.otherUser.id}
+          />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p
+            className="font-semibold text-sm truncate"
+            style={{ color: isActive ? T.gold.bright : T.gold.DEFAULT }}
+          >
+            {conv.otherUser.displayName || conv.otherUser.username}
+          </p>
+          {conv.lastMessage && (
+            <p
+              className="text-xs truncate opacity-70"
+              style={{ color: T.gold.dim }}
+            >
+              {conv.lastMessage.content}
+            </p>
+          )}
+        </div>
+        <div className="flex-shrink-0 flex flex-col items-end gap-1">
+          {conv.lastMessage && (
+            <span className="text-[10px]" style={{ color: T.gold.dim }}>
+              {formatTime(conv.lastMessage.createdAt)}
+            </span>
+          )}
+          {conv.unreadCount > 0 && (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{
+                background: T.gold.DEFAULT,
+                color: T.leather.dark,
+                minWidth: 18,
+                textAlign: "center",
+              }}
+            >
+              {conv.unreadCount}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Hover trash — desktop */}
+      {hovered && !confirmDelete && (
+        <button
+          className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all"
           style={{
-            background: T.gold.DEFAULT,
-            color: T.leather.dark,
-            minWidth: 18,
-            textAlign: "center",
+            background: "#3A1A1A",
+            border: "1px solid #8B1A1A",
+          }}
+          title="Supprimer la conversation"
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmDelete(true);
           }}
         >
-          {conv.unreadCount}
-        </span>
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="#FF6B6B"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* Confirm row */}
+      {confirmDelete && (
+        <div
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="text-[11px] px-2 py-1 rounded-lg font-semibold"
+            style={{
+              background: "#8B1A1A",
+              color: "#FFD0D0",
+              border: "1px solid #FF6B6B",
+            }}
+            onClick={() => {
+              onDelete(conv.id);
+              setConfirmDelete(false);
+            }}
+          >
+            Supprimer
+          </button>
+          <button
+            className="text-[11px] px-2 py-1 rounded-lg"
+            style={{
+              background: T.leather.medium,
+              color: T.gold.dim,
+              border: `1px solid ${T.leather.tan}`,
+            }}
+            onClick={() => setConfirmDelete(false)}
+          >
+            Annuler
+          </button>
+        </div>
       )}
     </div>
-  </button>
-);
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const MessagesReal: React.FC = () => {
@@ -1116,6 +1196,23 @@ export const MessagesReal: React.FC = () => {
     selectConversation(convId);
   };
 
+  const handleDeleteConversation = async (convId: string) => {
+    // Optimistically remove from list
+    setConversations((prev) => prev.filter((c) => c.id !== convId));
+    if (activeConvId === convId) {
+      setActiveConvId(null);
+      setMessages([]);
+      setMobileView("list");
+    }
+    const { error } = await apiCall(`/messaging/conversations/${convId}`, {
+      method: "DELETE",
+    });
+    if (error) {
+      toast.error("Impossible de supprimer la conversation.");
+      fetchConversations(); // restore
+    }
+  };
+
   const activeConv = conversations.find((c) => c.id === activeConvId);
   const systemNotifs = getSystemNotifs(hiveId);
 
@@ -1424,6 +1521,7 @@ export const MessagesReal: React.FC = () => {
                         conv={conv}
                         isActive={conv.id === activeConvId}
                         onClick={() => selectConversation(conv.id)}
+                        onDelete={handleDeleteConversation}
                       />
                     ))
                   )}
