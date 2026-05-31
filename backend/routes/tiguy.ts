@@ -1,6 +1,7 @@
 import express from "express";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 import { getGeminiModel } from "../ai/google.js";
+import { readMemory, compactMemory } from "../ai/tiguy-memory.js";
 
 const router = express.Router();
 
@@ -130,9 +131,16 @@ router.post("/chat", async (req, res) => {
           .join("\n")
       : "";
 
+    // ── Load persistent memory for this user ─────────────────────────────
+    const userId = context?.userId;
+    const existingMemory = userId ? await readMemory(userId) : "";
+
     const promptParts = [
       context?.username ? `Nom de l'utilisateur: ${context.username}` : "",
       context?.userId ? `User ID: ${context.userId}` : "",
+      existingMemory
+        ? `Mémoire persistante de cet utilisateur (ce que tu sais déjà sur lui):\n${existingMemory}`
+        : "",
       context?.fileName ? `Fichier partagé: ${context.fileName}` : "",
       conversationContext ? `Historique récent:\n${conversationContext}` : "",
       image
@@ -144,6 +152,13 @@ router.post("/chat", async (req, res) => {
       .join("\n\n");
 
     const aiResult = await generateTiGuyReply(promptParts);
+
+    // ── Compact memory async (fire-and-forget, never blocks the response) ─
+    if (userId && message) {
+      compactMemory(userId, existingMemory, message, aiResult.text).catch(
+        () => {},
+      );
+    }
 
     res.json({
       response: aiResult.text,
