@@ -985,7 +985,7 @@ export const Zyeute: React.FC = () => {
         {/* Right Side Actions - Leather style matching bottom nav */}
         {posts.length > 0 && currentPost && (
           <div
-            className={`fixed right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-30 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            className={`fixed right-3 bottom-24 flex flex-col items-center gap-3 z-30 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
             {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
             <Link
@@ -994,7 +994,7 @@ export const Zyeute: React.FC = () => {
               data-testid={`link-profile-${currentPost.id}`}
             >
               <div
-                className="w-12 h-12 rounded-full overflow-hidden transition-all duration-300 gold-glow gold-glow-soft"
+                className="w-10 h-10 rounded-full overflow-hidden transition-all duration-300 gold-glow gold-glow-soft"
                 style={{
                   background:
                     "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -1030,7 +1030,7 @@ export const Zyeute: React.FC = () => {
                   data-testid={`button-fire-${currentPost.id}`}
                 >
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
                     style={{
                       background: isFired
                         ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
@@ -1042,7 +1042,7 @@ export const Zyeute: React.FC = () => {
                     }}
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5"
                       viewBox="0 0 24 24"
                       fill={isFired ? "#FF3D3D" : "#FFD700"}
                       stroke={isFired ? "#FFD700" : "#8B4513"}
@@ -1071,7 +1071,7 @@ export const Zyeute: React.FC = () => {
               data-testid={`link-comments-${currentPost.id}`}
             >
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
                 style={{
                   background:
                     "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -1079,7 +1079,7 @@ export const Zyeute: React.FC = () => {
                 }}
               >
                 <svg
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                   fill="none"
                   stroke={edgeLighting}
                   strokeWidth={2}
@@ -1104,7 +1104,7 @@ export const Zyeute: React.FC = () => {
               data-testid={`button-share-${currentPost.id}`}
             >
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
                 style={{
                   background:
                     "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
@@ -1112,7 +1112,7 @@ export const Zyeute: React.FC = () => {
                 }}
               >
                 <svg
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                   fill="none"
                   stroke={edgeLighting}
                   strokeWidth={2}
@@ -1138,7 +1138,7 @@ export const Zyeute: React.FC = () => {
                   data-testid={`button-save-${currentPost.id}`}
                 >
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                    className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
                     style={{
                       background: isSaved
                         ? "linear-gradient(145deg, #FFD700 0%, #D4AF37 100%)"
@@ -1150,7 +1150,7 @@ export const Zyeute: React.FC = () => {
                     }}
                   >
                     <svg
-                      className="w-6 h-6"
+                      className="w-5 h-5"
                       viewBox="0 0 24 24"
                       fill={isSaved ? "#1A0F0A" : "none"}
                       stroke={isSaved ? "#1A0F0A" : edgeLighting}
@@ -1170,6 +1170,29 @@ export const Zyeute: React.FC = () => {
                 </button>
               );
             })()}
+
+            {/* TI-GUY Chat */}
+            <button
+              type="button"
+              onClick={() => setShowTiGuyChat(true)}
+              className="flex flex-col items-center gap-1 press-scale"
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                style={{
+                  background:
+                    "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                  border: "2px solid #D4AF37",
+                }}
+              >
+                <span className="text-[11px] font-black text-gold-400 leading-none">
+                  TG
+                </span>
+              </div>
+              <span className="text-[10px] font-bold text-gold-400/80">
+                Ti-Guy
+              </span>
+            </button>
           </div>
         )}
 
