@@ -15,6 +15,7 @@ import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { MessagingProvider } from "@/contexts/MessagingContext";
 import { ColonyProvider } from "@/components/providers/colony-provider";
+import { HiveProvider } from "@/contexts/HiveContext";
 import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
 import { AgeGateModal } from "@/components/system/AgeGateModal";
@@ -82,8 +83,10 @@ export default function App() {
             <NotificationProvider>
               <MessagingProvider>
                 <ColonyProvider>
-                  <AppContent />
-                  <Analytics />
+                  <HiveProvider>
+                    <AppContent />
+                    <Analytics />
+                  </HiveProvider>
                 </ColonyProvider>
               </MessagingProvider>
             </NotificationProvider>
