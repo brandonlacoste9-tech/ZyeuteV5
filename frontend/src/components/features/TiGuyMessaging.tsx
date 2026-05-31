@@ -407,13 +407,13 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
             ? "Une seconde, je check tes messages..."
             : isPremium
               ? renderGreeting()
-              : "Aye mon ami(e)! 🦫 Pour jaser avec moi, tu dois être abonné(e). Upgrade pis on se parle! 💬"}
+              : "Aye mon ami(e)! 🦫 Pour jaser avec moi, tu dois être abonné(e) Bronze+. Upgrade pis on se parle! 💬"}
         </div>
       </div>
 
       <GoldDivider gold={gold} />
 
-      {/* Upgrade CTA — shown only for free users */}
+      {/* Upgrade CTA — free users only */}
       {!isPremium && (
         <button
           type="button"
@@ -737,34 +737,12 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
       {/* Thread header */}
       {activeConv && (
         <div
-          className="flex items-center gap-3 px-3 py-2.5 flex-shrink-0"
+          className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
           style={{
             background: LEATHER_MID,
             borderBottom: `1px solid ${gold}30`,
           }}
         >
-          {/* Back to inbox */}
-          <button
-            type="button"
-            onClick={() => setMode("inbox")}
-            className="p-1.5 rounded-lg flex-shrink-0"
-            style={{ color: gold }}
-            aria-label="Retour à l'inbox"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
           <Avatar
             src={activeConv.otherUser.avatar_url}
             alt={
@@ -907,54 +885,56 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   // SHELL
   // ─────────────────────────────────────────────────────────────────────────
 
+  const panelTitle =
+    mode === "thread" && activeConv
+      ? activeConv.otherUser.display_name || activeConv.otherUser.username
+      : mode === "inbox"
+        ? "Messages directs"
+        : "Ti-Guy";
+
+  const panelSubtitle =
+    mode === "thread" && activeConv
+      ? `@${activeConv.otherUser.username}`
+      : mode === "inbox"
+        ? `${conversations.length} conversation${conversations.length !== 1 ? "s" : ""}`
+        : "ton concierge personnel ⚜️";
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.85)" }}
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-sm rounded-2xl overflow-hidden flex flex-col"
         style={{
           background: `linear-gradient(180deg, ${LEATHER_STRAP} 0%, ${LEATHER_MID} 30%, ${LEATHER_DARK} 100%)`,
           border: `2px solid ${gold}40`,
           boxShadow: `0 0 30px ${gold}20, inset 0 0 60px rgba(0,0,0,0.4)`,
-          maxHeight: "92vh",
-          height: "92vh",
+          maxHeight: "88vh",
+          height: "560px",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header: close row + persistent tab switcher ── */}
+        {/* ── Header ── */}
         <div
-          className="flex-shrink-0"
+          className="flex items-center justify-between px-4 py-3 flex-shrink-0"
           style={{
             background: `linear-gradient(180deg, ${LEATHER_LIGHT} 0%, ${LEATHER_STRAP} 100%)`,
             borderBottom: `2px solid ${gold}50`,
           }}
         >
-          {/* Top row: title + close */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-1">
-            <div className="flex items-center gap-2">
-              <span style={{ color: gold }}>
-                <FleurDeLysIcon size={20} />
-              </span>
-              <span
-                className="text-base font-black tracking-tight"
-                style={{
-                  color: gold,
-                  fontFamily: "'Cormorant Garamond', Georgia, serif",
-                  textShadow: `0 0 10px ${gold}60`,
-                }}
-              >
-                Zyeuté
-              </span>
-            </div>
+          {/* Back / fleur button */}
+          {mode !== "chat" ? (
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                if (mode === "thread") setMode("inbox");
+                else setMode("chat");
+              }}
               className="p-2 rounded-lg"
               style={{ color: gold }}
-              aria-label="Fermer"
+              aria-label="Retour"
             >
               <svg
                 className="w-5 h-5"
@@ -965,62 +945,59 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
+                  strokeWidth={2.5}
+                  d="M15 19l-7-7 7-7"
                 />
               </svg>
             </button>
-          </div>
+          ) : (
+            <div className="p-2" style={{ color: gold }}>
+              <FleurDeLysIcon size={26} />
+            </div>
+          )}
 
-          {/* Tab switcher */}
-          <div className="flex items-center gap-2 px-4 pb-2">
-            {/* Ti-Guy tab */}
-            <button
-              type="button"
-              onClick={() => setMode("chat")}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all duration-200"
+          {/* Title */}
+          <div className="flex flex-col items-center">
+            <h2
+              className="text-base font-black tracking-tight"
               style={{
-                background:
-                  mode === "chat"
-                    ? `linear-gradient(135deg, ${gold}30, ${gold}50)`
-                    : "transparent",
-                border: `1.5px solid ${mode === "chat" ? gold : gold + "30"}`,
-                color: mode === "chat" ? gold : GOLD_LIGHT + "80",
+                color: gold,
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                textShadow: `0 0 10px ${gold}60`,
               }}
             >
-              <span className="text-base">🦫</span>
-              <span className="text-xs font-black tracking-wide">Ti-Guy</span>
-            </button>
-
-            {/* Inbox tab */}
-            <button
-              type="button"
-              onClick={() => setMode("inbox")}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all duration-200 relative"
-              style={{
-                background:
-                  mode === "inbox" || mode === "thread"
-                    ? `linear-gradient(135deg, ${gold}30, ${gold}50)`
-                    : "transparent",
-                border: `1.5px solid ${mode === "inbox" || mode === "thread" ? gold : gold + "30"}`,
-                color:
-                  mode === "inbox" || mode === "thread"
-                    ? gold
-                    : GOLD_LIGHT + "80",
-              }}
+              {panelTitle}
+            </h2>
+            <span
+              className="text-[0.55rem] uppercase tracking-[0.2em] opacity-60"
+              style={{ color: GOLD_LIGHT }}
             >
-              <span className="text-base">✉️</span>
-              <span className="text-xs font-black tracking-wide">Messages</span>
-              {totalUnread > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
-                  style={{ background: gold, color: LEATHER_DARK }}
-                >
-                  {totalUnread > 9 ? "9+" : totalUnread}
-                </span>
-              )}
-            </button>
+              {panelSubtitle}
+            </span>
           </div>
+
+          {/* Close */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg"
+            style={{ color: gold }}
+            aria-label="Fermer"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
         </div>
 
         {/* ── Content ── */}
