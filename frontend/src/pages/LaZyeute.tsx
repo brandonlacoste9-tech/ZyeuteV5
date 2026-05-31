@@ -25,7 +25,7 @@ import { useInfiniteFeed, type FeedType } from "@/hooks/useInfiniteFeed";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
-import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
+
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
@@ -321,9 +321,7 @@ export const Zyeute: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const [forceEnter, setForceEnter] = useState(false);
-  const [tiGuyUnread, setTiGuyUnread] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -370,24 +368,6 @@ export const Zyeute: React.FC = () => {
     };
     fetchUser();
   }, []);
-
-  // Poll unread DM count for Ti-Guy badge (every 30s)
-  useEffect(() => {
-    if (!isPremium) return;
-    const fetchUnread = async () => {
-      const { data } = await apiCall<{
-        conversations: { unreadCount: number }[];
-      }>("/messaging/conversations");
-      const total = (data?.conversations ?? []).reduce(
-        (s, c) => s + (c.unreadCount || 0),
-        0,
-      );
-      setTiGuyUnread(total);
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30_000);
-    return () => clearInterval(interval);
-  }, [isPremium]);
 
   // Mark the previous video as watched when currentIndex changes
   const prevIndexRef = useRef<number>(-1);
@@ -1277,46 +1257,6 @@ export const Zyeute: React.FC = () => {
                 Cadeau
               </span>
             </button>
-
-            {/* TI-GUY Chat — Bronze+ only */}
-            <button
-              type="button"
-              onClick={() => {
-                tap();
-                setShowTiGuyChat(true);
-              }}
-              className="flex flex-col items-center gap-1 press-scale relative"
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
-                style={{
-                  background:
-                    "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                  border: "2px solid #D4AF37",
-                  opacity: 1,
-                }}
-              >
-                <span className="text-[11px] font-black text-gold-400 leading-none">
-                  TG
-                </span>
-
-                {isPremium && tiGuyUnread > 0 && (
-                  <span
-                    className="absolute -top-1 -right-1 text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center"
-                    style={{
-                      background: "#D4AF37",
-                      color: "#1A0F0A",
-                      boxShadow: "0 0 6px rgba(212,175,55,0.8)",
-                    }}
-                  >
-                    {tiGuyUnread > 9 ? "9+" : tiGuyUnread}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] font-bold text-gold-400/80">
-                Ti-Guy
-              </span>
-            </button>
           </div>
         )}
 
@@ -1612,13 +1552,6 @@ export const Zyeute: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* TI-GUY Messaging – Voyageur Luxury (dropdown: DMs, Last Chats, File upload, etc.) */}
-        <TiGuyMessaging
-          key={showTiGuyChat ? "open" : "closed"}
-          open={showTiGuyChat}
-          onClose={() => setShowTiGuyChat(false)}
-        />
 
         <ShareSheet
           open={shareOpen && !!sharePostId}
