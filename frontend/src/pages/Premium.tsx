@@ -63,7 +63,8 @@ export default function Premium() {
   const navigate = useNavigate();
   const { currentHive } = useHive();
   const isMexico = currentHive.id === "mexico";
-  const currency = currentHive.currency; // "CAD" or "MXN"
+  const isBrazil = currentHive.id === "brazil";
+  const currency = currentHive.currency; // "CAD", "MXN", or "BRL"
   const hivePrices = currentHive.prices;
 
   // Handle Stripe redirect callbacks (?success=true / ?canceled=true)
@@ -98,19 +99,27 @@ export default function Premium() {
             "💬 Soporte prioritario",
             "🔥 Boost de visibilidad x2",
           ]
-        : [
-            "⚜️ Badge Bronze vérifié",
-            "🚫 Pas de publicités",
-            "🦫 Accès Ti-Guy chat",
-            "💬 Support prioritaire",
-            "🔥 Boost de visibilité x2",
-          ],
+        : isBrazil
+          ? [
+              "🇧🇷 Badge Bronze verificado",
+              "🚫 Sem anúncios",
+              "🐆 Acesso chat Mano",
+              "💬 Suporte prioritário",
+              "🔥 Boost de visibilidade x2",
+            ]
+          : [
+              "⚜️ Badge Bronze vérifié",
+              "🚫 Pas de publicités",
+              "🦫 Accès Ti-Guy chat",
+              "💬 Support prioritaire",
+              "🔥 Boost de visibilité x2",
+            ],
       gradient: "from-orange-700 via-orange-600 to-orange-800",
       popular: false,
     },
     {
       id: "silver" as const,
-      name: isMexico ? "Plata" : "Argent",
+      name: isMexico ? "Plata" : isBrazil ? "Prata" : "Argent",
       emoji: "🥈",
       price: hivePrices.silver,
       features: isMexico
@@ -122,20 +131,29 @@ export default function Premium() {
             "🎁 100 fichas/mes",
             "⭐ Perfil destacado",
           ]
-        : [
-            "✨ Tout Bronze +",
-            "💎 Badge Argent premium",
-            "📊 Analytics avancés",
-            "🔥 Boost de visibilité x3",
-            "🎁 100 cennes/mois",
-            "⭐ Profil mis en avant",
-          ],
+        : isBrazil
+          ? [
+              "✨ Tudo Bronze +",
+              "💎 Badge Prata premium",
+              "📊 Analytics avançados",
+              "🔥 Boost visibilidade x3",
+              "🎁 100 fichas/mês",
+              "⭐ Perfil em destaque",
+            ]
+          : [
+              "✨ Tout Bronze +",
+              "💎 Badge Argent premium",
+              "📊 Analytics avancés",
+              "🔥 Boost de visibilité x3",
+              "🎁 100 cennes/mois",
+              "⭐ Profil mis en avant",
+            ],
       gradient: "from-gray-400 via-gray-300 to-gray-500",
       popular: true,
     },
     {
       id: "gold" as const,
-      name: isMexico ? "Oro" : "Or",
+      name: isMexico ? "Oro" : isBrazil ? "Ouro" : "Or",
       emoji: "🥇",
       price: hivePrices.gold,
       features: isMexico
@@ -149,16 +167,27 @@ export default function Premium() {
             "🤟 El Güey VIP exclusivo",
             "🎯 Estadísticas completas",
           ]
-        : [
-            "👑 Tout Argent +",
-            "⚜️ Badge Or royal",
-            "🚀 Priorité feed absolue",
-            "🔥 Boost visibilité x5",
-            "🎁 500 cennes/mois",
-            "💼 Outils créateurs PRO",
-            "🦫 Ti-Guy VIP exclusif",
-            "🎯 Statistiques complètes",
-          ],
+        : isBrazil
+          ? [
+              "👑 Tudo Prata +",
+              "🇧🇷 Badge Ouro real",
+              "🚀 Prioridade absoluta no feed",
+              "🔥 Boost visibilidade x5",
+              "🎁 500 fichas/mês",
+              "💼 Ferramentas criador PRO",
+              "🐆 Mano VIP exclusivo",
+              "🎯 Estatísticas completas",
+            ]
+          : [
+              "👑 Tout Argent +",
+              "⚜️ Badge Or royal",
+              "🚀 Priorité feed absolue",
+              "🔥 Boost visibilité x5",
+              "🎁 500 cennes/mois",
+              "💼 Outils créateurs PRO",
+              "🦫 Ti-Guy VIP exclusif",
+              "🎯 Statistiques complètes",
+            ],
       gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
       popular: false,
     },
@@ -264,14 +293,16 @@ export default function Premium() {
                       ${tier.price}
                     </span>
                     <span className="text-leather-300">
-                      {isMexico ? "/mes" : "/mois"}
+                      {isMexico ? "/mes" : isBrazil ? "/mês" : "/mois"}
                     </span>
                   </div>
                   <p className="text-leather-400 text-sm mt-1">
                     {currency}
                     {isMexico
                       ? " · Cancela cuando quieras"
-                      : " · Annule quand tu veux"}
+                      : isBrazil
+                        ? " · Cancela quando quiser"
+                        : " · Annule quand tu veux"}
                   </p>
                 </div>
 
@@ -306,14 +337,20 @@ export default function Premium() {
                   {isCurrentTier
                     ? isMexico
                       ? "✓ Tu plan actual"
-                      : "✓ Ton plan actuel"
+                      : isBrazil
+                        ? "✓ Seu plano atual"
+                        : "✓ Ton plan actuel"
                     : isUpgrade
                       ? isMexico
                         ? "⬆️ Mejorar"
-                        : "⬆️ Améliorer"
+                        : isBrazil
+                          ? "⬆️ Melhorar"
+                          : "⬆️ Améliorer"
                       : isMexico
                         ? "Suscribirse"
-                        : "S'abonner"}
+                        : isBrazil
+                          ? "Assinar"
+                          : "S'abonner"}
                 </button>
               </div>
             );

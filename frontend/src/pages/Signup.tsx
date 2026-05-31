@@ -91,7 +91,9 @@ export const Signup: React.FC = () => {
       const successMsg =
         selectedHive === "mexico"
           ? "¡Cuenta creada! Revisa tu correo para confirmar."
-          : "Compte créé! Vérifie ton courriel pour confirmer ton compte.";
+          : selectedHive === "brazil"
+            ? "Conta criada! Verifique seu e-mail para confirmar."
+            : "Compte créé! Vérifie ton courriel pour confirmer ton compte.";
       toast.success(successMsg);
 
       // Redirect to onboarding for first-time users, feed if already onboarded

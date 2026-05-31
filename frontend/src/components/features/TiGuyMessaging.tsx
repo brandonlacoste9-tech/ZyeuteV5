@@ -143,6 +143,163 @@ function FleurDeLysLarge({ size = 72, gold }: { size?: number; gold: string }) {
   );
 }
 
+// ─── Onça-Pintada — Brazil jaguar mascot ────────────────────────────────────
+function OncaPintada({
+  size = 72,
+  gold: _gold,
+}: {
+  size?: number;
+  gold: string;
+}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+      <defs>
+        <linearGradient id="oc_gold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#F4E2A6" />
+          <stop offset="40%" stopColor="#D4AF37" />
+          <stop offset="100%" stopColor="#7A5200" />
+        </linearGradient>
+        <linearGradient id="oc_fur" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F0C060" />
+          <stop offset="60%" stopColor="#D4882A" />
+          <stop offset="100%" stopColor="#A05010" />
+        </linearGradient>
+        <linearGradient id="oc_green" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3A9A3A" />
+          <stop offset="100%" stopColor="#1A5A1A" />
+        </linearGradient>
+        <filter id="jglow" x="-15%" y="-15%" width="130%" height="130%">
+          <feGaussianBlur stdDeviation="2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#jglow)">
+        {/* Branch / perch */}
+        <path
+          d="M10 95 Q60 88 110 95"
+          stroke="url(#oc_gold)"
+          strokeWidth="5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* Tail curving right */}
+        <path
+          d="M88 90 Q105 75 108 55 Q110 40 100 35"
+          stroke="url(#oc_fur)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* Body */}
+        <ellipse cx="60" cy="78" rx="30" ry="18" fill="url(#oc_fur)" />
+        {/* Chest white/cream patch */}
+        <ellipse cx="60" cy="82" rx="16" ry="10" fill="#F8EDD0" opacity="0.7" />
+        {/* Front legs */}
+        <rect x="42" y="88" width="8" height="12" rx="4" fill="url(#oc_fur)" />
+        <rect x="68" y="88" width="8" height="12" rx="4" fill="url(#oc_fur)" />
+        {/* Paws */}
+        <ellipse cx="46" cy="100" rx="6" ry="4" fill="#C07020" />
+        <ellipse cx="72" cy="100" rx="6" ry="4" fill="#C07020" />
+        {/* Neck */}
+        <ellipse cx="60" cy="62" rx="14" ry="10" fill="url(#oc_fur)" />
+        {/* Head */}
+        <ellipse cx="60" cy="46" rx="20" ry="17" fill="url(#oc_fur)" />
+        {/* Forehead white */}
+        <ellipse cx="60" cy="41" rx="11" ry="8" fill="#F8EDD0" opacity="0.5" />
+        {/* Ears */}
+        <path d="M42 34 L37 22 L50 30Z" fill="url(#oc_fur)" />
+        <path d="M78 34 L83 22 L70 30Z" fill="url(#oc_fur)" />
+        {/* Ear inner */}
+        <path d="M44 33 L40 25 L50 30Z" fill="#E08030" opacity="0.6" />
+        <path d="M76 33 L80 25 L70 30Z" fill="#E08030" opacity="0.6" />
+        {/* Eyes — amber with dark pupil */}
+        <ellipse cx="52" cy="44" rx="5" ry="4.5" fill="#F0A020" />
+        <ellipse cx="68" cy="44" rx="5" ry="4.5" fill="#F0A020" />
+        <ellipse cx="52" cy="44" rx="2.5" ry="3" fill="#1A0800" />
+        <ellipse cx="68" cy="44" rx="2.5" ry="3" fill="#1A0800" />
+        {/* Eye shine */}
+        <circle cx="53.5" cy="43" r="1" fill="white" opacity="0.8" />
+        <circle cx="69.5" cy="43" r="1" fill="white" opacity="0.8" />
+        {/* Nose */}
+        <path d="M57 52 Q60 55 63 52 Q60 58 57 52Z" fill="#8B3A1A" />
+        {/* Mouth */}
+        <path
+          d="M55 55 Q60 59 65 55"
+          stroke="#5A2010"
+          strokeWidth="1.5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {/* Whiskers */}
+        <line
+          x1="38"
+          y1="51"
+          x2="55"
+          y2="53"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.8"
+        />
+        <line
+          x1="38"
+          y1="54"
+          x2="55"
+          y2="55"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.6"
+        />
+        <line
+          x1="65"
+          y1="53"
+          x2="82"
+          y2="51"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.8"
+        />
+        <line
+          x1="65"
+          y1="55"
+          x2="82"
+          y2="54"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.6"
+        />
+        {/* Rosette spots on body */}
+        <circle cx="52" cy="74" r="4" fill="#7A3800" opacity="0.5" />
+        <circle cx="52" cy="74" r="2" fill="#F0C060" opacity="0.4" />
+        <circle cx="68" cy="74" r="4" fill="#7A3800" opacity="0.5" />
+        <circle cx="68" cy="74" r="2" fill="#F0C060" opacity="0.4" />
+        <circle cx="60" cy="70" r="3.5" fill="#7A3800" opacity="0.4" />
+        {/* Gold crown */}
+        <path
+          d="M46 30 L50 20 L55 28 L60 16 L65 28 L70 20 L74 30Z"
+          fill="url(#oc_gold)"
+        />
+        {/* Crown gems */}
+        <circle cx="60" cy="19" r="3" fill="#2A6A2A" />
+        <circle cx="51" cy="22" r="2" fill="#D4AF37" />
+        <circle cx="69" cy="22" r="2" fill="#D4AF37" />
+        {/* Brazil flag colors — green/yellow ribbon at base */}
+        <rect
+          x="20"
+          y="104"
+          width="80"
+          height="5"
+          rx="2.5"
+          fill="url(#oc_green)"
+        />
+        <rect x="30" y="109" width="60" height="4" rx="2" fill="#F0C020" />
+      </g>
+    </svg>
+  );
+}
+
 // ─── Águila Real — Mexico coat of arms mascot ────────────────────────────────
 function AguilaReal({
   size = 72,
@@ -491,6 +648,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   const gold = edgeLighting || GOLD;
   const { currentHive } = useHive();
   const isMexicoHive = currentHive.id === "mexico";
+  const isBrazilHive = currentHive.id === "brazil";
 
   const [tab, setTab] = useState<Tab>("tiguy");
 
@@ -795,6 +953,8 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
         <div className="flex flex-col items-center gap-1">
           {isMexicoHive ? (
             <AguilaReal size={70} gold={gold} />
+          ) : isBrazilHive ? (
+            <OncaPintada size={70} gold={gold} />
           ) : (
             <FleurDeLysLarge size={70} gold={gold} />
           )}
@@ -808,13 +968,17 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
                 letterSpacing: "0.08em",
               }}
             >
-              {isMexicoHive ? "El Güey" : "Ti-Guy"}
+              {isMexicoHive ? "El Güey" : isBrazilHive ? "Mano" : "Ti-Guy"}
             </h1>
             <p
               className="text-[0.5rem] uppercase tracking-[0.3em] font-bold"
               style={{ color: GOLD_LIGHT }}
             >
-              {isMexicoHive ? "¡Arriba México! 🇲🇽" : "Antigravity Gold ⚜️"}
+              {isMexicoHive
+                ? "¡Arriba México! 🇲🇽"
+                : isBrazilHive
+                  ? "Brasil no coração! 🇧🇷"
+                  : "Antigravity Gold ⚜️"}
             </p>
           </div>
         </div>
@@ -842,13 +1006,13 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           <span
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM, fontSize: 18 }}
           >
-            {isMexicoHive ? "🤟" : "🦫"}
+            {isMexicoHive ? "🤟" : isBrazilHive ? "🐆" : "🦫"}
           </span>
           <span
             className="text-xs font-black tracking-wide"
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM }}
           >
-            {isMexicoHive ? "El Güey" : "Ti-Guy"}
+            {isMexicoHive ? "El Güey" : isBrazilHive ? "Mano" : "Ti-Guy"}
           </span>
         </button>
 
@@ -910,6 +1074,8 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           <div className="flex flex-col items-center justify-center h-full gap-3 opacity-70">
             {isMexicoHive ? (
               <AguilaReal size={80} gold={gold} />
+            ) : isBrazilHive ? (
+              <OncaPintada size={80} gold={gold} />
             ) : (
               <FleurDeLysLarge size={80} gold={gold} />
             )}

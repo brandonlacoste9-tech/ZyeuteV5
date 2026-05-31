@@ -42,6 +42,10 @@ const PRICE_IDS: Record<string, string> = {
   mx_bronze: "price_1Td5QACzqBvMqSYFXsYrhL4F", // $59 MXN/mo
   mx_silver: "price_1Td5QPCzqBvMqSYF3uAy8vDn", // $119 MXN/mo
   mx_gold: "price_1Td5QWCzqBvMqSYF8JI9pJud", // $249 MXN/mo
+  // — Brazil (BRL) —
+  br_bronze: "price_1Td5lfCzqBvMqSYFd3v978yC", // R$19 BRL/mo
+  br_silver: "price_1Td5lfCzqBvMqSYF6FlscDdZ", // R$39 BRL/mo
+  br_gold: "price_1Td5lfCzqBvMqSYFoSarZKUF", // R$79 BRL/mo
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -73,7 +77,11 @@ router.post("/create-checkout", requireAuth, async (req, res) => {
   };
   // For Mexico hive, try the mx_ prefixed price first
   const tierKey =
-    hive === "mexico" ? `mx_${tier.toLowerCase()}` : tier.toLowerCase();
+    hive === "mexico"
+      ? `mx_${tier.toLowerCase()}`
+      : hive === "brazil"
+        ? `br_${tier.toLowerCase()}`
+        : tier.toLowerCase();
   const priceId = PRICE_IDS[tierKey] || PRICE_IDS[tier.toLowerCase()];
   if (!priceId) {
     return res
