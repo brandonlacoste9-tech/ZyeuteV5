@@ -36,7 +36,7 @@ async function enrichUserCounts(user: any): Promise<any> {
     return c ?? 0;
   }
 
-  // Helper: count via Drizzle with Supabase REST fallback
+  // Helper: count via Drizzle with 2.5s timeout + Supabase REST fallback
   async function safeCount(
     drizzleQuery: Promise<{ cnt: number }[]>,
     restTable: string,
@@ -44,7 +44,13 @@ async function enrichUserCounts(user: any): Promise<any> {
     userId: string,
   ): Promise<number> {
     try {
-      const result = await drizzleQuery;
+      const timedQuery = Promise.race([
+        drizzleQuery,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("count timeout")), 2500),
+        ),
+      ]);
+      const result = await timedQuery;
       return result[0]?.cnt ?? 0;
     } catch {
       return countViaRest(restTable, restColumn, userId);

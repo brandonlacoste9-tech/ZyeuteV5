@@ -94,7 +94,7 @@ export function getPool(): pg.Pool {
     }
     _pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 60000, // Increased to 60s for Supabase Cold Start
+      connectionTimeoutMillis: 3000, // Fail fast → triggers Supabase REST fallback
       idleTimeoutMillis: 30000,
       ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
     });
@@ -318,6 +318,20 @@ function mapSupabaseUser(data: any): User {
   } as User;
 }
 
+// Helper: race any promise against a timeout — lets Drizzle fail fast
+// instead of hanging for the full pool connectionTimeoutMillis.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`DB query timed out after ${ms}ms`)),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 // Helper: get a Supabase client for REST fallback when Drizzle pool can't connect
 function getSupabaseFallback() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
@@ -335,15 +349,18 @@ export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
     try {
-      return await traceDatabase("SELECT", "users", async (span) => {
-        span.setAttributes({ "db.user_id": id });
-        const result = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, id))
-          .limit(1);
-        return result[0];
-      });
+      return await withTimeout(
+        traceDatabase("SELECT", "users", async (span) => {
+          span.setAttributes({ "db.user_id": id });
+          const result = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, id))
+            .limit(1);
+          return result[0];
+        }),
+        2500,
+      );
     } catch (err) {
       console.error(
         "[storage.getUser] Drizzle failed, using Supabase REST fallback:",
@@ -362,15 +379,18 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      return await traceDatabase("SELECT", "users", async (span) => {
-        span.setAttributes({ "db.username": username });
-        const result = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-        return result[0];
-      });
+      return await withTimeout(
+        traceDatabase("SELECT", "users", async (span) => {
+          span.setAttributes({ "db.username": username });
+          const result = await db
+            .select()
+            .from(users)
+            .where(eq(users.username, username))
+            .limit(1);
+          return result[0];
+        }),
+        2500,
+      );
     } catch (err) {
       console.error(
         "[storage.getUserByUsername] Drizzle failed, using Supabase REST fallback:",
@@ -389,11 +409,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
+      const result = await withTimeout(
+        db.select().from(users).where(eq(users.email, email)).limit(1),
+        2500,
+      );
       return result[0];
     } catch (err) {
       console.error(
@@ -439,11 +458,14 @@ export class DatabaseStorage implements IStorage {
       snakeUpdates.subscription_tier = updates.subscriptionTier;
 
     try {
-      const result = await db
-        .update(users)
-        .set({ ...updates, createdAt: undefined }) // Prevent updating createdAt
-        .where(eq(users.id, id))
-        .returning();
+      const result = await withTimeout(
+        db
+          .update(users)
+          .set({ ...updates, createdAt: undefined })
+          .where(eq(users.id, id))
+          .returning(),
+        2500,
+      );
       return result[0];
     } catch (err) {
       console.error(
