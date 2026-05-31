@@ -213,4 +213,144 @@ router.get("/status", async (req, res) => {
   }
 });
 
+// ─── Mexico Pexels videos ─────────────────────────────────────────────────────
+const MEXICO_VIDEOS = [
+  {
+    caption: "🌮 Los mejores tacos de CDMX #mexico #cdmx #tacos #fyp",
+    media_url:
+      "https://videos.pexels.com/video-files/3214448/3214448-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/3214448/pexels-photo-3214448.jpeg",
+  },
+  {
+    caption: "🏖️ Cancún paradise 🇲🇽 #cancun #mexico #playa #viral",
+    media_url:
+      "https://videos.pexels.com/video-files/5532774/5532774-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/5532774/pexels-photo-5532774.jpeg",
+  },
+  {
+    caption: "🎭 Lucha Libre en vivo! #luchaLibre #mexico #cdmx",
+    media_url:
+      "https://videos.pexels.com/video-files/4761395/4761395-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4761395/pexels-photo-4761395.jpeg",
+  },
+  {
+    caption: "🌆 Ciudad de México de noche ✨ #cdmx #nightlife #mexico",
+    media_url:
+      "https://videos.pexels.com/video-files/2278095/2278095-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/2278095/pexels-photo-2278095.jpeg",
+  },
+  {
+    caption: "💃 Baile tradicional mexicano 🇲🇽 #folclor #mexico #viral",
+    media_url:
+      "https://videos.pexels.com/video-files/5896379/5896379-uhd_2560_1440_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/5896379/pexels-photo-5896379.jpeg",
+  },
+  {
+    caption: "🌋 Popocatépetl desde el aire #volcan #mexico #naturaleza",
+    media_url:
+      "https://videos.pexels.com/video-files/1448735/1448735-uhd_2560_1440_24fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/1448735/pexels-photo-1448735.jpeg",
+  },
+  {
+    caption: "🍺 Cerveza y amigos 🇲🇽 #mexico #fiesta #viral #fyp",
+    media_url:
+      "https://videos.pexels.com/video-files/3066561/3066561-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/3066561/pexels-photo-3066561.jpeg",
+  },
+  {
+    caption: "🎸 Mariachi en la Plaza Garibaldi #mariachi #mexico #cdmx",
+    media_url:
+      "https://videos.pexels.com/video-files/857251/857251-hd_1920_1080_25fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/857251/pexels-photo-857251.jpeg",
+  },
+  {
+    caption: "🏟️ Estadio Azteca puro corazón #futbol #mexico #tri",
+    media_url:
+      "https://videos.pexels.com/video-files/4824363/4824363-uhd_2560_1440_30fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4824363/pexels-photo-4824363.jpeg",
+  },
+  {
+    caption: "🌅 Amanecer en Oaxaca 😍 #oaxaca #mexico #travel #fyp",
+    media_url:
+      "https://videos.pexels.com/video-files/4763824/4763824-uhd_2560_1440_24fps.mp4",
+    thumbnail:
+      "https://images.pexels.com/videos/4763824/pexels-photo-4763824.jpeg",
+  },
+];
+
+/**
+ * POST /api/seed/mexico - Seed Mexico hive feed with sample videos
+ */
+router.post("/mexico", async (req, res) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: "Missing Supabase configuration" });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Use Brandon's account as the seed author (same as Quebec)
+    const BRANDON_ID = "46db6dc0-060d-4ffd-ba5e-0dfe46878855";
+
+    const insertedPosts = [];
+    for (const video of MEXICO_VIDEOS) {
+      const { data, error } = await supabase
+        .from("publications")
+        .insert({
+          user_id: BRANDON_ID,
+          caption: video.caption,
+          content: video.caption,
+          media_url: video.media_url,
+          thumbnail_url: video.thumbnail,
+          type: "video",
+          visibility: "public",
+          hive_id: "mexico",
+          region_id: "cdmx",
+          city: "Ciudad de México",
+          reactions_count: Math.floor(Math.random() * 150) + 20,
+          comments_count: Math.floor(Math.random() * 20),
+          shares_count: Math.floor(Math.random() * 10),
+          piasse_count: 0,
+          processing_status: "completed",
+          est_masque: false,
+          moderation_approved: true,
+          deleted_at: null,
+        })
+        .select("id, caption, media_url")
+        .single();
+
+      if (error) {
+        console.error("[Seed Mexico] Insert error:", error);
+        continue;
+      }
+
+      insertedPosts.push(data);
+    }
+
+    res.json({
+      success: true,
+      message: `Seeded ${insertedPosts.length} Mexico videos to the feed`,
+      posts: insertedPosts,
+    });
+  } catch (error: any) {
+    console.error("[Seed Mexico] error:", error);
+    res
+      .status(500)
+      .json({ error: "Mexico seed failed", details: error.message });
+  }
+});
+
 export default router;
