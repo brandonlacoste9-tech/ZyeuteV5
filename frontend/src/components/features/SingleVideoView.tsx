@@ -5,20 +5,12 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Heart,
   MessageCircle,
   Share2,
   Volume2,
   VolumeX,
-  MoreVertical,
   Music,
-  AlertCircle,
-  Eye,
-  Flag,
   UserPlus,
-  Ban,
-  Trash2,
-  Edit,
   Flame,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -109,7 +101,10 @@ export function SingleVideoView({
   }, [impact]);
 
   return (
-    <DoubleTapHeart onDoubleTap={handleDoubleTapLike} className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+    <DoubleTapHeart
+      onDoubleTap={handleDoubleTapLike}
+      className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden"
+    >
       {/* Background Blur for Portrait Videos */}
       <div
         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 pointer-events-none"
@@ -183,7 +178,7 @@ export function SingleVideoView({
         )}
 
         {/* Right Action Bar (TikTok Style) */}
-        <div className="absolute right-4 bottom-24 flex flex-col items-center gap-6 z-30">
+        <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 z-30">
           {/* Creator Avatar */}
           <div className="relative mb-2">
             <Avatar
@@ -193,64 +188,87 @@ export function SingleVideoView({
               }
               alt={post.user?.username || "User"}
               size="sm"
-              className="border-2 border-white shadow-lg"
+              className="border-2 shadow-lg"
+              style={{ borderColor: "#FFD700" }}
               userId={post.user?.id}
             />
             <Button
               size="sm"
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 min-w-5 min-h-5 rounded-full bg-gold-500 hover:bg-gold-600 text-black p-0 border-2 border-black"
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 min-w-5 min-h-5 rounded-full bg-gold-500 hover:bg-gold-400 text-black p-0 border-2 border-black"
             >
               <UserPlus size={12} />
             </Button>
           </div>
 
-          {/* Like Action */}
+          {/* Fire / Like Action */}
           <div className="flex flex-col items-center">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={handleLike}
-              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-transform active:scale-90"
+              style={{
+                background: isLiked
+                  ? "rgba(255,100,0,0.25)"
+                  : "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(8px)",
+              }}
             >
-              <Heart
-                size={28}
+              <Flame
+                size={26}
                 className={cn(
-                  isLiked &&
-                    "text-red-500 fill-red-500 animate-[fire-burst_0.3s_ease-out]",
+                  "transition-colors",
+                  isLiked
+                    ? "text-orange-400 fill-orange-400 drop-shadow-[0_0_6px_rgba(255,150,0,0.8)]"
+                    : "text-white",
                 )}
               />
-            </Button>
-            <span className="text-white text-xs font-bold mt-1 shadow-sm">
+            </button>
+            <span
+              className="text-xs font-bold mt-1"
+              style={{
+                color: isLiked ? "#FF8C00" : "white",
+                textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              }}
+            >
               {post.fireCount || 0}
             </span>
           </div>
 
           {/* Comment Action */}
           <div className="flex flex-col items-center">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setShowComments(true)}
-              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(8px)",
+              }}
             >
-              <MessageCircle size={28} />
-            </Button>
-            <span className="text-white text-xs font-bold mt-1 shadow-sm">
+              <MessageCircle size={26} />
+            </button>
+            <span
+              className="text-white text-xs font-bold mt-1"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
+            >
               {post.commentCount || 0}
             </span>
           </div>
 
           {/* Share Action */}
           <div className="flex flex-col items-center">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onShareClick}
-              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white p-0"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(8px)",
+              }}
             >
-              <Share2 size={28} />
-            </Button>
-            <span className="text-white text-xs font-bold mt-1 shadow-sm">
+              <Share2 size={26} />
+            </button>
+            <span
+              className="text-white text-xs font-bold mt-1"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
+            >
               {post.sharesCount || 0}
             </span>
           </div>
@@ -258,20 +276,43 @@ export function SingleVideoView({
 
         {/* Bottom Info Bar */}
         <div className="absolute left-0 right-16 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-white font-bold text-base">
-              @{post.user?.username || "anonyme"}
-            </h3>
+          <div className="flex flex-col gap-1.5">
+            {/* Username with gold accent */}
+            <div className="flex items-center gap-1.5">
+              <span
+                className="font-bold text-base"
+                style={{
+                  color: "#FFD700",
+                  textShadow: "0 1px 6px rgba(0,0,0,0.9)",
+                }}
+              >
+                @{post.user?.username || "anonyme"}
+              </span>
+              {/* Region fleur-de-lis tag */}
+              {post.region && (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(212,175,55,0.2)",
+                    border: "1px solid rgba(212,175,55,0.5)",
+                    color: "#FFD700",
+                  }}
+                >
+                  ⚜ {post.region}
+                </span>
+              )}
+            </div>
             <p className="text-white/90 text-sm line-clamp-2 leading-relaxed">
               {post.content}
             </p>
 
             {/* Music/Sound Info */}
-            <div className="flex items-center gap-2 text-white/80 text-xs mt-1 overflow-hidden">
-              <Music size={14} className="flex-shrink-0" />
-              <div className="flex gap-4 animate-marquee whitespace-nowrap">
-                <span>Son original - @{post.user?.username || "anonyme"}</span>
-                <span>Zyeuté V5 • {post.region || "Québec"}</span>
+            <div className="flex items-center gap-2 text-white/70 text-xs mt-0.5 overflow-hidden">
+              <Music size={12} className="flex-shrink-0 text-gold-400" />
+              <div className="overflow-hidden">
+                <span className="truncate block">
+                  Son original · @{post.user?.username || "anonyme"}
+                </span>
               </div>
             </div>
           </div>

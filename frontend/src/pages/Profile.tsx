@@ -37,9 +37,14 @@ const ProfileStat: React.FC<{ value: number | string; label: string }> = ({
   value,
   label,
 }) => (
-  <div className="flex flex-col items-center">
-    <span className="text-lg font-bold text-white">{value}</span>
-    <span className="text-xs text-gold-500/70 uppercase tracking-widest">
+  <div className="flex flex-col items-center gap-0.5 px-2">
+    <span className="text-lg font-black" style={{ color: "#FFFFFF" }}>
+      {value}
+    </span>
+    <span
+      className="text-[10px] font-semibold uppercase tracking-wider"
+      style={{ color: "rgba(212,175,55,0.8)" }}
+    >
       {label}
     </span>
   </div>
@@ -283,15 +288,38 @@ export const Profile: React.FC = () => {
     <div className="min-h-screen bg-black leather-overlay pb-20">
       <Header title={user.username} showBack={true} showSearch={false} />
 
-      {/* Profile Top Section with Gold Gradient Background */}
+      {/* Profile Top Section — dark banner with fleur-de-lis motif */}
       <div className="relative">
-        {/* Gold Gradient Background for Top Section */}
-        <div className="absolute top-0 left-0 w-full h-48 bg-gradient-to-b from-gold-900/50 to-black" />
+        {/* Banner background — dark charcoal with subtle fleur-de-lis texture */}
+        <div
+          className="absolute top-0 left-0 w-full h-52"
+          style={{
+            background:
+              "linear-gradient(180deg, #1a1208 0%, #0d0a04 60%, #000000 100%)",
+            borderBottom: "1px solid rgba(212,175,55,0.15)",
+          }}
+        >
+          {/* Subtle fleur-de-lis watermark pattern */}
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Ctext x='50%25' y='50%25' font-size='28' text-anchor='middle' dominant-baseline='central' fill='%23FFD700'%3E%E2%9A%9C%3C/text%3E%3C/svg%3E")`,
+              backgroundRepeat: "repeat",
+            }}
+          />
+        </div>
 
         <div className="relative p-4 z-10">
           {/* Profile Picture and Share Button */}
           <div className="flex justify-between items-start mb-4">
-            <div className="w-24 h-24 rounded-full border-4 border-gold-500 overflow-hidden shadow-lg">
+            <div
+              className="w-24 h-24 rounded-full overflow-hidden shadow-lg"
+              style={{
+                border: "3px solid #FFD700",
+                boxShadow:
+                  "0 0 20px rgba(212,175,55,0.4), 0 0 40px rgba(212,175,55,0.15)",
+              }}
+            >
               <Image
                 src={
                   user.avatar_url ||
@@ -360,25 +388,39 @@ export const Profile: React.FC = () => {
             </div>
           )}
 
-          {/* Stats Bar */}
-          <div className="flex justify-between items-center bg-black/50 p-3 mt-4 rounded-lg border border-gold-500/20 shadow-md">
+          {/* Stats Bar — gold premium style */}
+          <div
+            className="flex justify-between items-center p-3 mt-4 rounded-xl"
+            style={{
+              background: "rgba(0,0,0,0.6)",
+              border: "1px solid rgba(212,175,55,0.25)",
+              boxShadow:
+                "0 2px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)",
+            }}
+          >
             <ProfileStat
               value={formatNumber(user.posts_count || 0)}
-              label="Publications"
+              label="Vidéos"
             />
-            <div className="h-10 w-px bg-gold-500/20" />
+            <div
+              className="h-8 w-px"
+              style={{ background: "rgba(212,175,55,0.2)" }}
+            />
             <ProfileStat
               value={formatNumber(user.followers_count || 0)}
               label="Abonnés"
             />
-            <div className="h-10 w-px bg-gold-500/20" />
+            <div
+              className="h-8 w-px"
+              style={{ background: "rgba(212,175,55,0.2)" }}
+            />
             <ProfileStat
               value={
                 totalLikes >= 1000
                   ? `${(totalLikes / 1000).toFixed(1)}K`
                   : formatNumber(totalLikes)
               }
-              label="J'aime"
+              label="Feux 🔥"
             />
           </div>
 

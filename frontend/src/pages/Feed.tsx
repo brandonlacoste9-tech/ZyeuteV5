@@ -15,6 +15,7 @@ import ChoixDuGrandCastor from "@/components/features/ChoixDuGrandCastor";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { AvatarSkeleton } from "@/components/ui/Skeleton";
 import { HamburgerMenu } from "@/components/layout/HamburgerMenu";
+import { FlameEyeIcon } from "@/components/ui/Logo";
 
 import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
@@ -25,6 +26,41 @@ import { OfflineBanner } from "@/components/ui/OfflineBanner";
 const feedLogger = logger.withContext("Feed");
 
 // Gift emoji lookup moved outside to avoid re-creation on every render
+/** Découverte / Abonnements tab bar — matches App Store screenshot */
+const FeedTabBar: React.FC = () => {
+  const [active, setActive] = React.useState<"decouverte" | "abonnements">(
+    "decouverte",
+  );
+  return (
+    <div className="flex items-center gap-6 mt-2 pb-0">
+      {(["decouverte", "abonnements"] as const).map((tab) => {
+        const isActive = active === tab;
+        const label = tab === "decouverte" ? "Découverte" : "Abonnements";
+        return (
+          <button
+            key={tab}
+            onClick={() => setActive(tab)}
+            className="relative pb-2.5 text-sm font-semibold transition-colors"
+            style={{ color: isActive ? "#FFD700" : "rgba(255,255,255,0.45)" }}
+          >
+            {label}
+            {isActive && (
+              <span
+                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                  boxShadow: "0 0 6px rgba(255,215,0,0.7)",
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 const GIFT_EMOJIS: Record<string, string> = {
   comete: "☄️",
   feuille_erable: "⚜️",
@@ -129,8 +165,8 @@ export const Feed: React.FC = () => {
       setSentGiftEmoji(GIFT_EMOJIS[giftType] || "🎁");
       setSentGiftRecipientName(
         selectedRecipient?.display_name ||
-        selectedRecipient?.username ||
-        "Créateur",
+          selectedRecipient?.username ||
+          "Créateur",
       );
       setShowGiftOverlay(true);
 
@@ -155,46 +191,76 @@ export const Feed: React.FC = () => {
       )}
 
       {/* Premium Header - Fixed Top */}
-      <div className="flex-none z-30 bg-neutral-900/95 backdrop-blur-md border-b border-gold-500/30 shadow-lg shadow-black/50">
-        <div className="max-w-2xl mx-auto px-4 py-3">
+      <div
+        className="flex-none z-30"
+        style={{
+          background: "rgba(0,0,0,0.97)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(212,175,55,0.2)",
+        }}
+      >
+        <div className="max-w-2xl mx-auto px-4 pt-3 pb-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            {/* Left: menu + logo */}
+            <div className="flex items-center gap-2">
               <HamburgerMenu />
-              <h1 className="text-2xl font-black text-gold-400 embossed tracking-tight drop-shadow-sm">
-                Zyeuté
-              </h1>
+              <div className="flex items-center gap-1.5">
+                <FlameEyeIcon
+                  className="w-7 h-7"
+                  style={{
+                    filter: "drop-shadow(0 0 5px rgba(212,175,55,0.6))",
+                  }}
+                />
+                <span
+                  className="text-lg font-black tracking-widest uppercase"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #FFD700 0%, #C9A227 50%, #FFE566 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  Zyeuté
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+            {/* Right: search + VIP */}
+            <div className="flex items-center gap-2">
               <Link
-                to="/notifications"
-                className="relative text-stone-400 hover:text-gold-400 transition-colors group"
+                to="/explore"
+                className="p-2 rounded-full hover:bg-white/10 transition-colors text-gold-400"
               >
                 <svg
-                  className="w-6 h-6 group-hover:drop-shadow-[0_0_5px_rgba(255,191,0,0.5)] transition-all"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
-                  viewBox="0 0 24 24"
                   strokeWidth={2}
+                  viewBox="0 0 24 24"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                   />
                 </svg>
-                {/* Notification badge */}
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full border border-gold-500 text-[10px] font-bold text-white flex items-center justify-center shadow-sm">
-                  3
-                </span>
               </Link>
               <Link
                 to="/premium"
-                className="bg-gradient-to-r from-gold-400 to-gold-600 text-black text-[10px] font-black px-2 py-1 rounded-md shadow-[0_0_10px_rgba(255,191,0,0.3)] hover:shadow-[0_0_15px_rgba(255,191,0,0.5)] transition-all"
+                className="text-black text-[10px] font-black px-2.5 py-1 rounded-lg transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #FFD700, #C9A227)",
+                  boxShadow: "0 0 10px rgba(212,175,55,0.4)",
+                }}
               >
                 VIP
               </Link>
             </div>
           </div>
+
+          {/* Découverte / Abonnements tab bar */}
+          <FeedTabBar />
         </div>
 
         {/* Stories Section (Integrated into Header area) */}

@@ -32,9 +32,9 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       className={cn(
         "sticky top-0 z-50",
-        "bg-gradient-to-r from-[#F9DB6D] via-[#F5C842] to-[#D4AF37]",
-        "border-b border-black/20",
-        "shadow-lg shadow-gold/30",
+        "bg-black",
+        "border-b border-gold-600/30",
+        "shadow-lg",
         className,
       )}
     >
@@ -47,11 +47,11 @@ export const Header: React.FC<HeaderProps> = ({
           {showBack ? (
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-black/10 rounded-full transition-all hover:scale-110"
+              className="p-2 hover:bg-white/10 rounded-full transition-all hover:scale-110"
               aria-label="Go back"
             >
               <svg
-                className="w-6 h-6 text-black"
+                className="w-6 h-6 text-gold-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -80,11 +80,11 @@ export const Header: React.FC<HeaderProps> = ({
           {showSearch && (
             <Link
               to="/explore"
-              className="p-2 hover:bg-black/10 rounded-full transition-all hover:scale-110"
+              className="p-2 hover:bg-white/10 rounded-full transition-all hover:scale-110"
               aria-label="Search"
             >
               <svg
-                className="w-6 h-6 text-black"
+                className="w-6 h-6 text-gold-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -101,11 +101,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           <Link
             to="/notifications"
-            className="p-2 hover:bg-black/10 rounded-full transition-all hover:scale-110 relative"
+            className="p-2 hover:bg-white/10 rounded-full transition-all hover:scale-110 relative"
             aria-label="Notifications"
           >
             <svg
-              className="w-6 h-6 text-black"
+              className="w-6 h-6 text-gold-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -127,11 +127,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           <Link
             to="/settings"
-            className="p-2 hover:bg-black/10 rounded-full transition-all hover:scale-110"
+            className="p-2 hover:bg-white/10 rounded-full transition-all hover:scale-110"
             aria-label="Settings"
           >
             <svg
-              className="w-6 h-6 text-black"
+              className="w-6 h-6 text-gold-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
