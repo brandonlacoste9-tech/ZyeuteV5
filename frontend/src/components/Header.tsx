@@ -8,7 +8,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Logo } from "./Logo";
-import { ColonyStatus } from "./providers/colony-provider";
 
 export interface HeaderProps {
   showSearch?: boolean;
@@ -26,7 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
 
-  const isCustomStyles = className?.includes("bg-") || className?.includes("border-");
+  const isCustomStyles =
+    className?.includes("bg-") || className?.includes("border-");
 
   return (
     <header
@@ -35,13 +35,17 @@ export const Header: React.FC<HeaderProps> = ({
         !isCustomStyles && "backdrop-blur-md shadow-lg",
         className,
       )}
-      style={!isCustomStyles ? {
-        background:
-          "linear-gradient(to bottom, rgba(26, 20, 24, 0.98) 0%, rgba(15, 12, 14, 0.95) 100%)",
-        borderBottom: "1px solid rgba(255, 191, 0, 0.4)",
-        boxShadow:
-          "0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 15px rgba(255, 191, 0, 0.1)",
-      } : {}}
+      style={
+        !isCustomStyles
+          ? {
+              background:
+                "linear-gradient(to bottom, rgba(26, 20, 24, 0.98) 0%, rgba(15, 12, 14, 0.95) 100%)",
+              borderBottom: "1px solid rgba(255, 191, 0, 0.4)",
+              boxShadow:
+                "0 4px 20px rgba(0, 0, 0, 0.5), 0 2px 15px rgba(255, 191, 0, 0.1)",
+            }
+          : {}
+      }
     >
       {/* Gold Glow Line at Bottom */}
       <div
@@ -82,9 +86,6 @@ export const Header: React.FC<HeaderProps> = ({
               {title}
             </h1>
           )}
-
-          {/* Colony OS Status */}
-          <ColonyStatus />
         </div>
 
         {/* Right: Actions */}
