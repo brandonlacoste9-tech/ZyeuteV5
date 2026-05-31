@@ -606,9 +606,7 @@ router.get("/posts/:id/comments", async (req: Request, res: Response) => {
     const userIds = [...new Set(rows.map((r: any) => r.user_id))];
     const { data: profiles } = await supabaseRest
       .from("user_profiles")
-      .select(
-        "id, username, display_name, avatar_url, username_color, is_verified",
-      )
+      .select("id, username, display_name, avatar_url, username_color")
       .in("id", userIds);
 
     const profileMap: Record<string, any> = {};
@@ -669,9 +667,7 @@ router.post(
       // Fetch user profile for response
       const { data: userData } = await supabaseRest
         .from("user_profiles")
-        .select(
-          "id, username, display_name, avatar_url, username_color, is_verified",
-        )
+        .select("id, username, display_name, avatar_url, username_color")
         .eq("id", req.userId!)
         .single();
 
