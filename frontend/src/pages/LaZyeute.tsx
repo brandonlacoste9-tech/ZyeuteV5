@@ -874,7 +874,7 @@ export const Zyeute: React.FC = () => {
             return (
               <div
                 key={post.id}
-                className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
+                className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center"
                 data-testid={`post-slide-${post.id}`}
               >
                 {/* Video Playback Diagnostic (?debug=1) */}
@@ -1114,7 +1114,7 @@ export const Zyeute: React.FC = () => {
           {hasNextPage && (
             <div
               ref={loadMoreRef}
-              className="h-screen snap-start snap-always flex items-center justify-center"
+              className="h-[100dvh] snap-start snap-always flex items-center justify-center"
             >
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-gold-500/30 border-t-gold-500 rounded-full animate-spin mb-4" />
@@ -1128,7 +1128,7 @@ export const Zyeute: React.FC = () => {
 
           {/* End of Feed Message */}
           {!hasNextPage && posts.length > 0 && (
-            <div className="h-screen snap-start snap-always flex items-center justify-center">
+            <div className="h-[100dvh] snap-start snap-always flex items-center justify-center">
               <div className="text-center p-8">
                 <div className="text-6xl mb-4">⚜️</div>
                 <h2 className="text-gold-400 text-xl font-bold mb-2">
