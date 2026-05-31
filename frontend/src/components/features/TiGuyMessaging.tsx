@@ -143,6 +143,16 @@ function FleurDeLysLarge({ size = 72, gold }: { size?: number; gold: string }) {
   );
 }
 
+// ─── Fleur-de-lis icon ────────────────────────────────────────────────────
+function FleurIcon({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 22V11l-3 2 1-4 2-4 2 4 1 4-3-2v11z" />
+      <path d="M12 7c-1.5 0-2.5-1.5-2-3 .5-1.5 2-2 2-2s1.5.5 2 2c.5 1.5-.5 3-2 3z" />
+    </svg>
+  );
+}
+
 // ─── Envelope icon ─────────────────────────────────────────────────────────
 function EnvelopeIcon({ size = 26, gold }: { size?: number; gold: string }) {
   return (
