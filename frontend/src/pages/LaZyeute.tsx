@@ -34,6 +34,7 @@ import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { toast } from "@/components/Toast";
+import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
 
 // ========================
@@ -313,6 +314,7 @@ export const Zyeute: React.FC = () => {
   // Double-tap detection
   const lastTapRef = useRef<{ postId: string; time: number } | null>(null);
   // Heart burst animation
+  const { tap, impact, success } = useHaptics();
   const [uiVisible, setUiVisible] = useState(true);
   const [heartBurst, setHeartBurst] = useState<{
     postId: string;
@@ -481,10 +483,12 @@ export const Zyeute: React.FC = () => {
         now - lastTapRef.current.time < 300
       ) {
         lastTapRef.current = null;
+        impact();
         handleFireToggle(postId, true);
       } else {
         lastTapRef.current = { postId, time: now };
         // Single tap → toggle UI visibility (immersive mode)
+        tap();
         setUiVisible((v) => !v);
       }
     },
@@ -596,7 +600,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Failsafe for stuck loading */}
             <button
-              onClick={() => setForceEnter(true)}
+              onClick={() => {
+                tap();
+                setForceEnter(true);
+              }}
               className="mt-12 px-6 py-2 rounded-full border border-gold-500/30 text-gold-500/80 text-[10px] uppercase tracking-widest hover:bg-gold-500/10 transition-all"
             >
               Accès Manuel Direct
@@ -880,7 +887,10 @@ export const Zyeute: React.FC = () => {
                   {post.user?.id && post.user.id !== authUser?.id ? (
                     <button
                       type="button"
-                      onClick={() => handleFollowToggle(post.user as User)}
+                      onClick={() => {
+                        success();
+                        handleFollowToggle(post.user as User);
+                      }}
                       className="mb-2 px-3 py-1 rounded-full text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40"
                     >
                       {followedMap[post.user.id] ||
@@ -972,7 +982,10 @@ export const Zyeute: React.FC = () => {
                   Revenez plus tard pour plus de contenu
                 </p>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    tap();
+                    window.location.reload();
+                  }}
                   className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold press-scale"
                 >
                   Recharger le fil
@@ -1025,7 +1038,10 @@ export const Zyeute: React.FC = () => {
                 0;
               return (
                 <button
-                  onClick={() => handleFireToggle(currentPost.id)}
+                  onClick={() => {
+                    impact();
+                    handleFireToggle(currentPost.id);
+                  }}
                   className="flex flex-col items-center gap-1 press-scale"
                   data-testid={`button-fire-${currentPost.id}`}
                 >
@@ -1066,7 +1082,10 @@ export const Zyeute: React.FC = () => {
             {/* Comments */}
             <button
               type="button"
-              onClick={() => openComments(currentPost.id)}
+              onClick={() => {
+                tap();
+                openComments(currentPost.id);
+              }}
               className="flex flex-col items-center gap-1 press-scale"
               data-testid={`link-comments-${currentPost.id}`}
             >
@@ -1099,7 +1118,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Share */}
             <button
-              onClick={() => openShare(currentPost.id)}
+              onClick={() => {
+                tap();
+                openShare(currentPost.id);
+              }}
               className="flex flex-col items-center gap-1 press-scale"
               data-testid={`button-share-${currentPost.id}`}
             >
@@ -1133,7 +1155,10 @@ export const Zyeute: React.FC = () => {
               const isSaved = savedMap[currentPost.id] ?? false;
               return (
                 <button
-                  onClick={() => handleSaveToggle(currentPost.id)}
+                  onClick={() => {
+                    success();
+                    handleSaveToggle(currentPost.id);
+                  }}
                   className="flex flex-col items-center gap-1 press-scale"
                   data-testid={`button-save-${currentPost.id}`}
                 >
@@ -1174,7 +1199,10 @@ export const Zyeute: React.FC = () => {
             {/* TI-GUY Chat */}
             <button
               type="button"
-              onClick={() => setShowTiGuyChat(true)}
+              onClick={() => {
+                tap();
+                setShowTiGuyChat(true);
+              }}
               className="flex flex-col items-center gap-1 press-scale"
             >
               <div
@@ -1240,7 +1268,10 @@ export const Zyeute: React.FC = () => {
           <div className="flex items-center justify-around py-1">
             {/* Home */}
             <button
-              onClick={() => navigate("/feed")}
+              onClick={() => {
+                tap();
+                navigate("/feed");
+              }}
               className="flex flex-col items-center gap-1 press-scale relative"
             >
               {location.pathname === "/feed" && (
@@ -1290,7 +1321,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Search */}
             <button
-              onClick={() => navigate("/search")}
+              onClick={() => {
+                tap();
+                navigate("/search");
+              }}
               className="flex flex-col items-center gap-1 press-scale relative"
             >
               {location.pathname === "/search" && (
@@ -1340,7 +1374,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Center create (+) */}
             <button
-              onClick={() => navigate("/create")}
+              onClick={() => {
+                tap();
+                navigate("/create");
+              }}
               className="relative -top-3 press-scale"
               aria-label="Create"
             >
@@ -1369,7 +1406,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Notifications */}
             <button
-              onClick={() => navigate("/notifications")}
+              onClick={() => {
+                tap();
+                navigate("/notifications");
+              }}
               className="flex flex-col items-center gap-1 press-scale relative"
             >
               {location.pathname === "/notifications" && (
@@ -1421,7 +1461,10 @@ export const Zyeute: React.FC = () => {
 
             {/* Profile */}
             <button
-              onClick={() => navigate("/profile")}
+              onClick={() => {
+                tap();
+                navigate("/profile");
+              }}
               className="flex flex-col items-center gap-1 press-scale relative"
             >
               {location.pathname.startsWith("/profile") && (
