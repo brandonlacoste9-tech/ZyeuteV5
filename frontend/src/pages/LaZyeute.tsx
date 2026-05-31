@@ -888,7 +888,7 @@ export const Zyeute: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        success();
+                        newFollower();
                         handleFollowToggle(post.user as User);
                       }}
                       className="mb-2 px-3 py-1 rounded-full text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40"
@@ -1039,7 +1039,7 @@ export const Zyeute: React.FC = () => {
               return (
                 <button
                   onClick={() => {
-                    impact();
+                    fire();
                     handleFireToggle(currentPost.id);
                   }}
                   className="flex flex-col items-center gap-1 press-scale"
@@ -1083,7 +1083,7 @@ export const Zyeute: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                tap();
+                comment();
                 openComments(currentPost.id);
               }}
               className="flex flex-col items-center gap-1 press-scale"
@@ -1119,7 +1119,7 @@ export const Zyeute: React.FC = () => {
             {/* Share */}
             <button
               onClick={() => {
-                tap();
+                share();
                 openShare(currentPost.id);
               }}
               className="flex flex-col items-center gap-1 press-scale"
@@ -1156,7 +1156,7 @@ export const Zyeute: React.FC = () => {
               return (
                 <button
                   onClick={() => {
-                    success();
+                    save();
                     handleSaveToggle(currentPost.id);
                   }}
                   className="flex flex-col items-center gap-1 press-scale"

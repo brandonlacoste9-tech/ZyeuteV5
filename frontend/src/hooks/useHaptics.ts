@@ -10,12 +10,31 @@ import { logger } from "../lib/logger";
 const useHapticsLogger = logger.withContext("UseHaptics");
 
 // Haptic patterns (duration in milliseconds)
+// Format: [vibrate, pause, vibrate, pause, ...]
 const HAPTIC_PATTERNS = {
-  // Light tap - quick single vibration
+  // Light tap - quick single vibration (nav, UI toggles)
   tap: [10],
 
-  // Medium impact - slightly longer vibration
+  // Medium impact
   impact: [15],
+
+  // 🔥 Fire — rapid triple burst, like a flame crackling
+  fire: [25, 40, 20, 30, 35],
+
+  // 🔥 Double-tap fire — even more intense, 4 quick pulses
+  fireBurst: [30, 30, 25, 25, 20, 20, 30],
+
+  // ✨ New follower — ding! short-pause-short, crisp like a bell
+  newFollower: [15, 80, 10, 40, 20],
+
+  // 💾 Save/bookmark — satisfying double thud
+  save: [20, 60, 30],
+
+  // 💬 Comment — soft single tap with a little tail
+  comment: [10, 30, 8],
+
+  // 🔗 Share — quick double pulse
+  share: [12, 40, 12],
 
   // Success - double pulse pattern
   success: [10, 50, 20],
@@ -119,6 +138,13 @@ export const useHaptics = () => {
     trigger("notification");
   }, [trigger]);
 
+  const fire = useCallback(() => trigger("fire"), [trigger]);
+  const fireBurst = useCallback(() => trigger("fireBurst"), [trigger]);
+  const newFollower = useCallback(() => trigger("newFollower"), [trigger]);
+  const save = useCallback(() => trigger("save"), [trigger]);
+  const comment = useCallback(() => trigger("comment"), [trigger]);
+  const share = useCallback(() => trigger("share"), [trigger]);
+
   return {
     tap,
     impact,
@@ -127,6 +153,12 @@ export const useHaptics = () => {
     selection,
     heavy,
     notification,
+    fire,
+    fireBurst,
+    newFollower,
+    save,
+    comment,
+    share,
     trigger,
     isSupported: isVibrationSupported(),
   };
