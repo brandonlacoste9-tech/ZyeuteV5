@@ -53,7 +53,7 @@ router.get("/conversations", requireAuth, async (req, res) => {
     if (uniqueIds.length > 0) {
       const { data: users } = await supabaseAdmin
         .from("user_profiles")
-        .select("id, username, display_name, avatar_url, is_verified")
+        .select("id, username, display_name, avatar_url")
         .in("id", uniqueIds);
       (users || []).forEach((u) => (profiles[u.id] = u));
     }
@@ -380,7 +380,7 @@ router.get("/users/search", requireAuth, async (req, res) => {
 
     const { data, error } = await supabaseAdmin
       .from("user_profiles")
-      .select("id, username, display_name, avatar_url, is_verified")
+      .select("id, username, display_name, avatar_url")
       .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
       .neq("id", req.userId!)
       .limit(10);

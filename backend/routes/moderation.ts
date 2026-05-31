@@ -157,7 +157,7 @@ router.get("/queue", async (req: any, res) => {
     let query = supabaseAdmin
       .from("moderation_logs")
       .select(
-        "*, user:user_profiles!moderation_logs_user_id_fkey(id, username, avatar_url, is_verified)",
+        "*, user:user_profiles!moderation_logs_user_id_fkey(id, username, avatar_url)",
       )
       .order("created_at", { ascending: false })
       .range(

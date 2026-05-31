@@ -15,7 +15,7 @@ router.get("/", async (req: any, res) => {
     const { data, error } = await supabaseAdmin
       .from("live_streams")
       .select(
-        "*, user:user_profiles!live_streams_user_id_fkey(id, username, avatar_url, subscription_tier, is_verified)",
+        "*, user:user_profiles!live_streams_user_id_fkey(id, username, avatar_url, subscription_tier)",
       )
       .eq("status", "active")
       .order("viewer_count", { ascending: false })
@@ -98,7 +98,7 @@ router.get("/:id", async (req: any, res) => {
     const { data, error } = await supabaseAdmin
       .from("live_streams")
       .select(
-        "*, user:user_profiles!live_streams_user_id_fkey(id, username, avatar_url, subscription_tier, is_verified)",
+        "*, user:user_profiles!live_streams_user_id_fkey(id, username, avatar_url, subscription_tier)",
       )
       .eq("id", req.params.id)
       .single();

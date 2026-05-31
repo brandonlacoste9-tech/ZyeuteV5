@@ -14,7 +14,7 @@ router.get("/", async (req: any, res) => {
     const { data, error } = await supabaseAdmin
       .from("stories")
       .select(
-        "*, user:user_profiles!stories_user_id_fkey(id, username, avatar_url, subscription_tier, is_verified)",
+        "*, user:user_profiles!stories_user_id_fkey(id, username, avatar_url, subscription_tier)",
       )
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
