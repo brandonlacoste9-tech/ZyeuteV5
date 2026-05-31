@@ -607,7 +607,7 @@ export const Zyeute: React.FC = () => {
             </div>
 
             <h2 className="text-gold-400 font-black text-2xl tracking-tight mb-2 uppercase">
-              La Zyeute
+              Zyeute
             </h2>
             <div className="flex items-center justify-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-bounce [animation-delay:-0.3s]" />
@@ -662,7 +662,7 @@ export const Zyeute: React.FC = () => {
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
-      <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden">
+      <div className="fixed inset-0 leather-dark overflow-hidden">
         {/* Dynamic Edge Lighting (React-optimized) */}
         <div
           className="fixed inset-0 pointer-events-none z-10 transition-opacity duration-1000"
@@ -676,9 +676,11 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className="flex-shrink-0 z-50 px-4 py-3 flex items-center justify-between border-b"
+          className="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between border-b"
           style={{
-            background: "rgba(0,0,0,0.97)",
+            background: "rgba(0,0,0,0.75)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
             borderBottomColor: "rgba(212,175,55,0.2)",
           }}
         >
@@ -792,9 +794,12 @@ export const Zyeute: React.FC = () => {
 
         {/* Découverte / Abonnements tab bar */}
         <div
-          className="flex-shrink-0 z-40 flex items-center gap-6 px-5 border-b"
+          className="fixed left-0 right-0 z-40 flex items-center gap-6 px-5 border-b"
           style={{
-            background: "rgba(0,0,0,0.97)",
+            top: "58px",
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
             borderBottomColor: "rgba(212,175,55,0.15)",
           }}
         >
@@ -852,7 +857,7 @@ export const Zyeute: React.FC = () => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="flex-1 min-h-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+          className="fixed inset-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0"
           style={{ scrollSnapType: "y mandatory" }}
         >
           {emptyFeedContent}
@@ -1356,9 +1361,9 @@ export const Zyeute: React.FC = () => {
 
         {/* Bottom Navigation */}
         <div
-          className="flex-shrink-0 z-40 flex flex-col"
+          className="fixed bottom-0 left-0 right-0 z-50 flex flex-col"
           style={{
-            background: "rgba(0,0,0,0.97)",
+            background: "rgba(0,0,0,0.85)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
             borderTop: "1px solid rgba(212,175,55,0.25)",
