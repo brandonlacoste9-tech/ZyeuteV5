@@ -810,7 +810,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
 }) => {
   const { edgeLighting } = useTheme();
   const gold = edgeLighting || GOLD;
-  const { currentHive } = useHive();
+  const { currentHive, switchHive } = useHive();
   const isMexicoHive = currentHive.id === "mexico";
   const isBrazilHive = currentHive.id === "brazil";
   const isArgentinaHive = currentHive.id === "argentina";
@@ -1161,6 +1161,43 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
         {/* Spacer to balance close button */}
         <div className="w-8" />
       </div>
+
+      {/* Dev hive switcher — only visible to comet_test */}
+      {username === "comet_test" && (
+        <div
+          className="flex items-center justify-center gap-2 px-4 pb-1 relative z-10"
+          style={{ opacity: 0.7 }}
+        >
+          {(["quebec", "mexico", "brazil", "argentina"] as const).map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => {
+                switchHive(h);
+                localStorage.setItem("zyeute_hive_id", h);
+              }}
+              title={h}
+              style={{
+                fontSize: 18,
+                background: currentHive.id === h ? `${gold}30` : "transparent",
+                border: `1px solid ${currentHive.id === h ? gold : gold + "30"}`,
+                borderRadius: 8,
+                padding: "2px 6px",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {h === "quebec"
+                ? "⚜️"
+                : h === "mexico"
+                  ? "🇲🇽"
+                  : h === "brazil"
+                    ? "🇧🇷"
+                    : "🇦🇷"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tab switcher */}
       <div className="flex items-center gap-2 px-4 pb-3 relative z-10">
