@@ -314,6 +314,7 @@ export const Zyeute: React.FC = () => {
   // Double-tap detection
   const lastTapRef = useRef<{ postId: string; time: number } | null>(null);
   // Heart burst animation
+  const [uiVisible, setUiVisible] = useState(true);
   const [heartBurst, setHeartBurst] = useState<{
     postId: string;
     key: number;
@@ -484,8 +485,8 @@ export const Zyeute: React.FC = () => {
         handleFireToggle(postId, true);
       } else {
         lastTapRef.current = { postId, time: now };
-        // Single tap → toggle play/pause
-        togglePlayPause();
+        // Single tap → toggle UI visibility (immersive mode)
+        setUiVisible((v) => !v);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -676,7 +677,9 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between"
+          className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between transition-opacity duration-300 ${
+            uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
           style={{
             background: "transparent",
           }}
@@ -791,7 +794,9 @@ export const Zyeute: React.FC = () => {
 
         {/* Découverte / Abonnements tab bar */}
         <div
-          className="fixed left-0 right-0 z-40 flex items-center gap-6 px-5"
+          className={`fixed left-0 right-0 z-40 flex items-center gap-6 px-5 transition-opacity duration-300 ${
+            uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
           style={{
             top: "52px",
             background: "transparent",
@@ -1144,7 +1149,9 @@ export const Zyeute: React.FC = () => {
 
         {/* Right Side Actions - Leather style matching bottom nav */}
         {posts.length > 0 && currentPost && (
-          <div className="fixed right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-30">
+          <div
+            className={`fixed right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-4 z-30 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+          >
             {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
             <Link
               to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
@@ -1355,7 +1362,7 @@ export const Zyeute: React.FC = () => {
 
         {/* Bottom Navigation */}
         <div
-          className="fixed bottom-0 left-0 right-0 z-50 flex flex-col"
+          className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           style={{
             background: "rgba(0,0,0,0.85)",
             backdropFilter: "blur(20px)",
