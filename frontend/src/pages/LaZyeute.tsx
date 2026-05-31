@@ -676,12 +676,9 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between border-b"
+          className="fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between"
           style={{
-            background: "rgba(0,0,0,0.75)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderBottomColor: "rgba(212,175,55,0.2)",
+            background: "transparent",
           }}
         >
           <div className="flex items-center gap-1">
@@ -794,13 +791,10 @@ export const Zyeute: React.FC = () => {
 
         {/* Découverte / Abonnements tab bar */}
         <div
-          className="fixed left-0 right-0 z-40 flex items-center gap-6 px-5 border-b"
+          className="fixed left-0 right-0 z-40 flex items-center gap-6 px-5"
           style={{
-            top: "58px",
-            background: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            borderBottomColor: "rgba(212,175,55,0.15)",
+            top: "52px",
+            background: "transparent",
           }}
         >
           {(
@@ -997,7 +991,7 @@ export const Zyeute: React.FC = () => {
                 )}
 
                 {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60 pointer-events-none" />
 
                 {/* Bottom Info */}
                 <div className="absolute bottom-6 left-4 right-20 z-20">
