@@ -111,24 +111,8 @@ function LogoutRoute() {
   return <LoadingScreen message="Déconnexion..." />;
 }
 
-/** Redirect unauthenticated users who haven't completed onboarding on the feed route. */
+/** No longer redirects — onboarding is now a delayed overlay in AppShell. */
 function OnboardingGate({ children }: { children: ReactNode }) {
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && user && !localStorage.getItem("zyeute_onboarded")) {
-      // Check if the account was created within the last 10 minutes (new user)
-      const createdAt = user.created_at
-        ? new Date(user.created_at).getTime()
-        : 0;
-      const isNewUser = Date.now() - createdAt < 10 * 60 * 1000;
-      if (isNewUser) {
-        navigate("/onboarding", { replace: true });
-      }
-    }
-  }, [user, isLoading, navigate]);
-
   return <>{children}</>;
 }
 

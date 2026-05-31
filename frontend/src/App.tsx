@@ -3,7 +3,7 @@
  * Feature pages live under `src/pages` and are wired in `src/routes/AppRoutes.tsx`.\
  */
 
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
 import { BrowserRouter as Router, useLocation } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -22,12 +22,15 @@ import { AgeGateModal } from "@/components/system/AgeGateModal";
 import { Analytics } from "@vercel/analytics/react";
 
 // Lazy-load TIGuyFullScreen to keep it out of the main index chunk.
-// It imports from @/lib/supabase at module level; eagerly bundling it into
-// the index chunk caused a TDZ ReferenceError in the esbuild-minified output.
 const TIGuyFullScreen = lazy(() =>
   import("@/components/tiguy/TIGuyFullScreen").then((m) => ({
     default: m.TIGuyFullScreen,
   })),
+);
+
+// Lazy-load Onboarding overlay
+const OnboardingOverlay = lazy(() =>
+  import("@/pages/Onboarding").then((m) => ({ default: m.Onboarding })),
 );
 
 function LoadingScreen({ message }: { message?: string }) {
@@ -40,6 +43,21 @@ function AppShell() {
   const location = useLocation();
   const isFeedPage = location.pathname === "/feed" || location.pathname === "/";
   const isMessagesPage = location.pathname === "/messages";
+
+  // Show onboarding overlay for new users after 3s on the feed
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    if (!user || localStorage.getItem("zyeute_onboarded")) return;
+    const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
+    const isNewUser = Date.now() - createdAt < 30 * 60 * 1000; // 30 min window
+    if (!isNewUser) {
+      // Existing user who never completed onboarding — mark as done silently
+      localStorage.setItem("zyeute_onboarded", "true");
+      return;
+    }
+    const t = setTimeout(() => setShowOnboarding(true), 3000);
+    return () => clearTimeout(t);
+  }, [user]);
 
   if (isLoading) {
     return <LoadingScreen message="Chargement..." />;
@@ -63,6 +81,14 @@ function AppShell() {
               username={user.username}
             />
           </Suspense>
+          {showOnboarding && (
+            <Suspense fallback={null}>
+              <OnboardingOverlay
+                overlay
+                onClose={() => setShowOnboarding(false)}
+              />
+            </Suspense>
+          )}
         </>
       ) : null}
     </>

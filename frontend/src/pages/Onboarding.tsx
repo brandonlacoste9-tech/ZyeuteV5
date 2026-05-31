@@ -156,20 +156,35 @@ function StepBar({ step, total }: { step: number; total: number }) {
 
 // ─────────────────────────────── MAIN ────────────────────────────────
 
-export const Onboarding: React.FC = () => {
+interface OnboardingProps {
+  /** When provided, renders as a slide-up overlay instead of a full page */
+  overlay?: boolean;
+  onClose?: () => void;
+}
+
+export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
   const navigate = useNavigate();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [visible, setVisible] = useState(false);
 
-  // Guard: skip if already onboarded
+  // Slide-up entrance when used as overlay
   useEffect(() => {
-    if (localStorage.getItem("zyeute_onboarded")) {
+    if (overlay) {
+      const t = setTimeout(() => setVisible(true), 50);
+      return () => clearTimeout(t);
+    }
+  }, [overlay]);
+
+  // Guard: skip if already onboarded (page mode only)
+  useEffect(() => {
+    if (!overlay && localStorage.getItem("zyeute_onboarded")) {
       navigate("/feed", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, overlay]);
 
   const toggleInterest = (label: string) => {
     setSelectedInterests((prev) =>
@@ -179,7 +194,11 @@ export const Onboarding: React.FC = () => {
 
   const completeOnboarding = () => {
     localStorage.setItem("zyeute_onboarded", "true");
-    navigate("/feed", { replace: true });
+    if (overlay && onClose) {
+      onClose();
+    } else {
+      navigate("/feed", { replace: true });
+    }
   };
 
   const handleSkip = () => {
@@ -248,10 +267,10 @@ export const Onboarding: React.FC = () => {
   };
 
   // ── RENDER ──
-  return (
+  const inner = (
     <div
-      className="min-h-screen flex flex-col items-center justify-start px-4 py-8 relative"
-      style={{ backgroundColor: DARK }}
+      className="w-full max-w-md z-10 flex flex-col"
+      style={{ minHeight: overlay ? "100%" : "100vh" }}
     >
       {/* Background glow */}
       <div
@@ -260,8 +279,7 @@ export const Onboarding: React.FC = () => {
           background: `radial-gradient(ellipse at top, ${GOLD_FAINT} 0%, transparent 60%)`,
         }}
       />
-
-      <div className="w-full max-w-md z-10 flex flex-col min-h-screen">
+      <div className="w-full z-10 flex flex-col flex-1">
         {/* Step indicator */}
         <StepBar step={step} total={5} />
 
@@ -865,6 +883,46 @@ export const Onboarding: React.FC = () => {
           </div>
         )}
       </div>
+    </div>
+  );
+
+  if (overlay) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center"
+        style={{ pointerEvents: visible ? "auto" : "none" }}
+      >
+        {/* Dim backdrop */}
+        <div
+          className="absolute inset-0 transition-opacity duration-500"
+          style={{
+            background: "rgba(0,0,0,0.7)",
+            opacity: visible ? 1 : 0,
+          }}
+          onClick={handleSkip}
+        />
+        {/* Sheet slides up */}
+        <div
+          className="relative w-full max-w-md flex flex-col overflow-y-auto transition-transform duration-500 ease-out rounded-t-3xl px-4 py-8"
+          style={{
+            backgroundColor: DARK,
+            maxHeight: "92vh",
+            transform: visible ? "translateY(0)" : "translateY(100%)",
+            boxShadow: "0 -8px 40px rgba(0,0,0,0.8)",
+          }}
+        >
+          {inner}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-start px-4 py-8 relative"
+      style={{ backgroundColor: DARK }}
+    >
+      {inner}
     </div>
   );
 };
