@@ -279,10 +279,10 @@ export async function registerRoutes(
   // enhanceRoutes moved to end of file
 
   // ============ USER ROUTES ============
-  app.use("/api", userRoutes);
+  app.use("/api", attachBearerUserId, userRoutes);
 
   // ============ POSTS ROUTES ============
-  app.use("/api", postsRoutes);
+  app.use("/api", attachBearerUserId, postsRoutes);
 
   // ============ FEED ROUTES ============
   app.use("/api/feed", feedRoutes);
