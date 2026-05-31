@@ -6,11 +6,14 @@
  * GET  /api/messaging/conversations/:id/messages  — message history
  * POST /api/messaging/conversations/:id/messages  — send message
  * POST /api/messaging/messages/:id/read     — mark read
+ * DELETE /api/messaging/messages/:id        — soft-delete own message
+ * POST /api/messaging/conversations/:id/upload — upload image/file to chat-media bucket
  * DELETE /api/messaging/conversations/:id   — delete conversation
  * GET  /api/messaging/users/search          — search users to DM
  */
 
 import express from "express";
+import multer from "multer";
 import { requireAuth } from "../supabase-auth.js";
 import { supabaseAdmin } from "../supabase-auth.js";
 
@@ -249,9 +252,14 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
     const userId = req.userId!;
     const convId = req.params.id;
-    const { content, contentType = "text" } = req.body as {
+    const {
+      content,
+      contentType = "text",
+      contentUrl,
+    } = req.body as {
       content: string;
       contentType?: string;
+      contentUrl?: string;
     };
 
     if (!content?.trim())
@@ -279,8 +287,11 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
         sender_id: userId,
         content_text: content.trim(),
         content_type: contentType,
+        ...(contentUrl ? { content_url: contentUrl } : {}),
       })
-      .select("id, content_text, content_type, created_at, sender_id, is_read")
+      .select(
+        "id, content_text, content_type, content_url, created_at, sender_id, is_read",
+      )
       .single();
 
     if (error) throw error;
@@ -308,6 +319,7 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
         id: msg.id,
         content: msg.content_text,
         contentType: msg.content_type,
+        contentUrl: msg.content_url ?? null,
         senderId: msg.sender_id,
         isRead: msg.is_read,
         createdAt: msg.created_at,
@@ -369,6 +381,112 @@ router.delete("/conversations/:id", requireAuth, async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+
+// ─── DELETE /messages/:id ───────────────────────────────────────────────────
+// Soft-deletes a message (sets deleted_at). Only the sender can delete their own.
+router.delete("/messages/:id", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
+  try {
+    const userId = req.userId!;
+    const msgId = req.params.id;
+
+    // Verify sender owns this message
+    const { data: msg } = await supabaseAdmin
+      .from("messages")
+      .select("id, sender_id, conversation_id")
+      .eq("id", msgId)
+      .single();
+
+    if (!msg) return res.status(404).json({ error: "Message introuvable" });
+    if (msg.sender_id !== userId)
+      return res
+        .status(403)
+        .json({ error: "Tu ne peux supprimer que tes propres messages" });
+
+    await supabaseAdmin
+      .from("messages")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", msgId);
+
+    return res.json({ ok: true });
+  } catch (err: any) {
+    console.error("[Messaging] delete message error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /conversations/:id/upload ──────────────────────────────────────────
+// Uploads a file to chat-media bucket and returns its public URL.
+// Client then calls POST /conversations/:id/messages with content_type + content_url.
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+});
+
+router.post(
+  "/conversations/:id/upload",
+  requireAuth,
+  chatUpload.single("file"),
+  async (req, res) => {
+    if (!supabaseAdmin)
+      return res.status(503).json({ error: "DB not configured" });
+    try {
+      const userId = req.userId!;
+      const convId = req.params.id;
+
+      if (!req.file)
+        return res.status(400).json({ error: "Aucun fichier reçu" });
+
+      // Verify participant
+      const { data: conv } = await supabaseAdmin
+        .from("conversations")
+        .select("participant_a, participant_b")
+        .eq("id", convId)
+        .single();
+
+      if (
+        !conv ||
+        (conv.participant_a !== userId && conv.participant_b !== userId)
+      )
+        return res.status(403).json({ error: "Accès refusé" });
+
+      const ext =
+        req.file.originalname.split(".").pop()?.toLowerCase() ?? "bin";
+      const path = `${userId}/${convId}/${Date.now()}.${ext}`;
+
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from("chat-media")
+        .upload(path, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: false,
+        });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabaseAdmin.storage
+        .from("chat-media")
+        .getPublicUrl(path);
+
+      // Determine content type for the message
+      const mime = req.file.mimetype;
+      let contentType = "file";
+      if (mime.startsWith("image/")) contentType = "image";
+      else if (mime.startsWith("video/")) contentType = "video";
+
+      return res.json({
+        url: urlData.publicUrl,
+        contentType,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        mimeType: mime,
+      });
+    } catch (err: any) {
+      console.error("[Messaging] upload error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  },
+);
 
 // ─── GET /users/search ────────────────────────────────────────────────────────
 router.get("/users/search", requireAuth, async (req, res) => {

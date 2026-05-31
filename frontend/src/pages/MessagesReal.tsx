@@ -419,8 +419,10 @@ const MessageBubble: React.FC<{
   onDelete?: (id: string) => void;
 }> = ({ message, isMe, onDelete }) => {
   const [showDelete, setShowDelete] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Mobile: long-press to reveal delete
   const handlePressStart = () => {
     if (!isMe) return;
     holdTimer.current = setTimeout(() => setShowDelete(true), 600);
@@ -461,12 +463,47 @@ const MessageBubble: React.FC<{
         border: `2px solid ${isMe ? T.gold.DEFAULT : T.leather.tan}`,
         boxShadow: `${T.shadow.outer}${isMe ? `, ${T.shadow.gold}` : ""}`,
       }}
+      onMouseEnter={() => isMe && setHovered(true)}
+      onMouseLeave={() => {
+        setHovered(false);
+        handlePressEnd();
+      }}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
-      onMouseLeave={handlePressEnd}
       onTouchStart={handlePressStart}
       onTouchEnd={handlePressEnd}
     >
+      {/* Desktop delete — appears on hover for own messages */}
+      {isMe && onDelete && hovered && !showDelete && (
+        <button
+          className="absolute -top-3 -right-2 w-6 h-6 rounded-full flex items-center justify-center z-20 transition-opacity"
+          style={{
+            background: "#8B1A1A",
+            border: "1px solid #FF6B6B",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+          }}
+          title="Supprimer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(message.id);
+          }}
+        >
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            stroke="#FFD0D0"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      )}
+
       <div
         className="absolute inset-2 rounded-xl pointer-events-none"
         style={{
@@ -563,36 +600,36 @@ const MessageBubble: React.FC<{
           >
             {formatTime(message.createdAt)}
           </p>
-          {/* Delete button — appears on long-press (own messages only) */}
+          {/* Delete row — appears after long-press on mobile */}
           {showDelete && isMe && onDelete && (
-            <button
-              className="text-[11px] px-2 py-0.5 rounded-full"
-              style={{
-                background: "#8B1A1A",
-                color: "#FFD0D0",
-                border: "1px solid #FF6B6B",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(message.id);
-                setShowDelete(false);
-              }}
-            >
-              Supprimer
-            </button>
-          )}
-          {showDelete && (
-            <button
-              className="text-[11px] px-2 py-0.5 rounded-full"
-              style={{
-                background: T.leather.medium,
-                color: T.gold.dim,
-                border: `1px solid ${T.leather.tan}`,
-              }}
-              onClick={() => setShowDelete(false)}
-            >
-              Annuler
-            </button>
+            <>
+              <button
+                className="text-[11px] px-2 py-0.5 rounded-full"
+                style={{
+                  background: "#8B1A1A",
+                  color: "#FFD0D0",
+                  border: "1px solid #FF6B6B",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(message.id);
+                  setShowDelete(false);
+                }}
+              >
+                Supprimer
+              </button>
+              <button
+                className="text-[11px] px-2 py-0.5 rounded-full"
+                style={{
+                  background: T.leather.medium,
+                  color: T.gold.dim,
+                  border: `1px solid ${T.leather.tan}`,
+                }}
+                onClick={() => setShowDelete(false)}
+              >
+                Annuler
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -923,6 +960,15 @@ export const MessagesReal: React.FC = () => {
     e.target.value = "";
     setUploading(true);
     try {
+      // Grab auth token (same way apiCall does) — do NOT set Content-Type so
+      // the browser can set multipart/form-data with the correct boundary
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const uploadHeaders: Record<string, string> = {};
+      if (session?.access_token)
+        uploadHeaders["Authorization"] = `Bearer ${session.access_token}`;
+
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch(
@@ -930,24 +976,36 @@ export const MessagesReal: React.FC = () => {
         {
           method: "POST",
           credentials: "include",
+          headers: uploadHeaders,
           body: formData,
         },
       );
-      if (!res.ok) throw new Error("Upload failed");
-      const { url, contentType } = (await res.json()) as {
+      if (!res.ok) {
+        const errBody = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(errBody.error ?? `Upload failed (${res.status})`);
+      }
+      const {
+        url,
+        contentType,
+        fileName: serverFileName,
+      } = (await res.json()) as {
         url: string;
         contentType: string;
+        fileName: string;
       };
+      const displayName = serverFileName || file.name;
       // Send as a message with contentUrl + contentType
       const optimisticId = `opt-${Date.now()}`;
       setMessages((prev) => [
         ...prev,
         {
           id: optimisticId,
-          content: file.name,
+          content: displayName,
           contentUrl: url,
           contentType,
-          fileName: file.name,
+          fileName: displayName,
           senderId: currentUserId ?? "me",
           createdAt: new Date().toISOString(),
         },
@@ -957,7 +1015,7 @@ export const MessagesReal: React.FC = () => {
         {
           method: "POST",
           body: JSON.stringify({
-            content: file.name,
+            content: displayName,
             contentUrl: url,
             contentType,
           }),
