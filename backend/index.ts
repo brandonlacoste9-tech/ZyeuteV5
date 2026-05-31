@@ -41,6 +41,7 @@ const allowedOrigins = [
   "https://zyeute.com",
   "https://zyeute.vercel.app",
   "https://zyeutev5-production.up.railway.app",
+  "https://zyeutev5-1.onrender.com",
   "http://localhost:12000",
   "http://localhost:3000",
   "http://localhost:5173",
