@@ -502,26 +502,6 @@ export const Zyeute: React.FC = () => {
     setCommentsOpen(true);
   };
 
-  const tryPictureInPicture = useCallback(() => {
-    const root = containerRef.current;
-    const v = root?.querySelector("video") as HTMLVideoElement | null;
-    if (!v) {
-      toast.error("Aucune vidéo active.");
-      return;
-    }
-    if (!document.pictureInPictureEnabled) {
-      toast.error("PiP non supporté sur ce navigateur.");
-      return;
-    }
-    if (document.pictureInPictureElement) {
-      document.exitPictureInPicture().catch(() => {});
-      return;
-    }
-    v.requestPictureInPicture().catch(() => {
-      toast.error("Impossible d’activer le PiP.");
-    });
-  }, []);
-
   const handleFollowToggle = async (author: User | undefined) => {
     if (!author?.id) return;
     if (!authUser?.id) {
@@ -701,63 +681,6 @@ export const Zyeute: React.FC = () => {
           </div>
         </div>
 
-        {/* Découverte / Abonnements tab bar */}
-        <div
-          className={`fixed left-0 right-0 z-40 flex items-center gap-6 px-5 transition-opacity duration-300 ${
-            uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-          style={{
-            top: "calc(env(safe-area-inset-top, 0px) + 52px)",
-            background: "transparent",
-          }}
-        >
-          {(
-            [
-              { key: "explore", label: "Découverte" },
-              { key: "feed", label: "Abonnements" },
-            ] as const
-          ).map(({ key, label }) => {
-            const isActive = feedSource === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setFeedSource(key);
-                  feedRestoreOnce.current = false;
-                  void refetch();
-                }}
-                className="relative py-3 text-sm font-semibold transition-colors"
-                style={{
-                  color: isActive ? "#FFD700" : "rgba(255,255,255,0.45)",
-                }}
-              >
-                {label}
-                {isActive && (
-                  <span
-                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
-                      boxShadow: "0 0 6px rgba(255,215,0,0.7)",
-                    }}
-                  />
-                )}
-              </button>
-            );
-          })}
-          {/* PiP tucked to right */}
-          <button
-            type="button"
-            onClick={tryPictureInPicture}
-            className="ml-auto py-3 text-[10px] font-bold"
-            style={{ color: "rgba(212,175,55,0.5)" }}
-            title="Picture-in-picture"
-          >
-            PiP
-          </button>
-        </div>
-
         {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
         <div
           ref={containerRef}
@@ -863,13 +786,6 @@ export const Zyeute: React.FC = () => {
                       />
                     </div>
                   )}
-
-                  {/* Type Badge */}
-                  <div className="absolute top-20 left-4 z-30">
-                    <div className="px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md bg-gradient-to-r from-gold-400/80 to-gold-600/80 text-black border border-gold-300/50 shadow-lg gold-glow-soft">
-                      {post.type === "video" ? "▶ GOLD V" : "📷 GOLD P"}
-                    </div>
-                  </div>
 
                   {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
                   <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
