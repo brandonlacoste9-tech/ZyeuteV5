@@ -147,14 +147,16 @@ router.get(
       const { createClient } = await import("@supabase/supabase-js");
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      const limit = parseInt(req.query.limit as string) || 20;
-      const cursor = req.query.cursor as string | undefined;
+      const limit = parseInt(req.query.limit as string) || 30;
+      // cursor is now a numeric page offset (0-based), not a created_at timestamp
+      const cursorRaw = req.query.cursor as string | undefined;
+      const pageOffset = cursorRaw ? parseInt(cursorRaw, 10) || 0 : 0;
       const feedType = (req.query.type as string) || "explore";
       const hiveId = req.query.hive as string | undefined;
 
       console.log("[FeedInfinite] Query params", {
         limit,
-        cursor,
+        pageOffset,
         feedType,
         hiveId,
         userId: (req as any).userId || null,
@@ -239,7 +241,8 @@ router.get(
         .order("viral_score", { ascending: false })
         .order("reactions_count", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(limit + 1);
+        // Use range-based offset pagination — consistent with viral_score sort
+        .range(pageOffset, pageOffset + limit - 1);
 
       // Exclude watched posts for this user
       if (excludedIds.length > 0) {
@@ -248,10 +251,6 @@ router.get(
 
       if (authorIds && authorIds.length > 0) {
         query = query.in("user_id", authorIds);
-      }
-
-      if (cursor) {
-        query = query.lt("created_at", cursor);
       }
 
       const { data: posts, error } = await query;
@@ -292,16 +291,12 @@ router.get(
           b.reactions_count - a.reactions_count,
       );
 
-      let hasMore = false;
-      let nextCursor = null;
-
-      if (boostedPosts.length > limit) {
-        hasMore = true;
-        boostedPosts.pop();
-        nextCursor = boostedPosts[boostedPosts.length - 1].created_at;
-      } else if (boostedPosts.length > 0) {
-        nextCursor = boostedPosts[boostedPosts.length - 1].created_at;
-      }
+      // Offset-based pagination: if we got a full page there are likely more
+      const hasMore = boostedPosts.length === limit;
+      const nextCursor =
+        boostedPosts.length > 0
+          ? String(pageOffset + boostedPosts.length)
+          : null;
 
       res.json({
         posts: boostedPosts,
