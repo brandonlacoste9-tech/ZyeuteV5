@@ -33,7 +33,6 @@ import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
 import { GiftPicker } from "@/components/features/GiftPicker";
-import { StoriesRow } from "@/components/features/StoriesRow";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import usePremium from "@/hooks/usePremium";
@@ -702,9 +701,6 @@ export const Zyeute: React.FC = () => {
           </div>
         </div>
 
-        {/* Stories Row — fixed overlay just below the header */}
-        <StoriesRow />
-
         {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
         <div
           ref={containerRef}
@@ -855,7 +851,7 @@ export const Zyeute: React.FC = () => {
                 )}
 
                 {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/60 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none" />
 
                 {/* Bottom Info */}
                 <div className="absolute bottom-6 left-4 right-20 z-20">
