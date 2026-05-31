@@ -924,37 +924,41 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
             borderBottom: `2px solid ${gold}50`,
           }}
         >
-          {/* Back / fleur button */}
-          {mode !== "chat" ? (
+          {/* Ti-Guy / Inbox toggle icons */}
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => {
-                if (mode === "thread") setMode("inbox");
-                else setMode("chat");
+              onClick={() => setMode("chat")}
+              aria-label="Ti-Guy"
+              className="p-1.5 rounded-lg transition-all"
+              style={{
+                background: mode === "chat" ? `${gold}30` : "transparent",
+                border: `1.5px solid ${mode === "chat" ? gold : "transparent"}`,
               }}
-              className="p-2 rounded-lg"
-              style={{ color: gold }}
-              aria-label="Retour"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2.5}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <span className="text-xl leading-none">🦫</span>
             </button>
-          ) : (
-            <div className="p-2" style={{ color: gold }}>
-              <FleurDeLysIcon size={26} />
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setMode("inbox")}
+              aria-label="Boîte de réception"
+              className="p-1.5 rounded-lg transition-all relative"
+              style={{
+                background: mode !== "chat" ? `${gold}30` : "transparent",
+                border: `1.5px solid ${mode !== "chat" ? gold : "transparent"}`,
+              }}
+            >
+              <span className="text-xl leading-none">✉️</span>
+              {totalUnread > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 text-[8px] font-black rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5"
+                  style={{ background: gold, color: LEATHER_DARK }}
+                >
+                  {totalUnread > 9 ? "9+" : totalUnread}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Title */}
           <div className="flex flex-col items-center">
