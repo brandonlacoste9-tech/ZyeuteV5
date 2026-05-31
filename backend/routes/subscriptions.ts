@@ -173,129 +173,126 @@ router.get("/status", requireAuth, async (req, res) => {
 
 // ─── POST /webhook ────────────────────────────────────────────────────────────
 // Must use raw body — registered BEFORE express.json() in index.ts
-router.post(
-  "/webhook",
-  async (req: Request & { rawBody?: Buffer }, res: Response) => {
-    if (!stripe || !STRIPE_WEBHOOK_SECRET) {
-      console.warn("[Stripe] Webhook received but Stripe not configured");
-      return res.sendStatus(200);
-    }
+router.post("/webhook", async (req: Request, res: Response) => {
+  if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+    console.warn("[Stripe] Webhook received but Stripe not configured");
+    return res.sendStatus(200);
+  }
 
-    const sig = req.headers["stripe-signature"] as string;
-    const rawBody = (req as any).rawBody as Buffer | undefined;
+  const sig = req.headers["stripe-signature"] as string;
+  const rawBody = (req as any).rawBody as Buffer | undefined;
 
-    if (!rawBody) {
-      console.error("[Stripe] No raw body for webhook signature verification");
-      return res.status(400).send("Raw body missing");
-    }
+  if (!rawBody) {
+    console.error("[Stripe] No raw body for webhook signature verification");
+    return res.status(400).send("Raw body missing");
+  }
 
-    let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        sig,
-        STRIPE_WEBHOOK_SECRET,
-      );
-    } catch (err: any) {
-      console.error(
-        "[Stripe] Webhook signature verification failed:",
-        err.message,
-      );
-      return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+  let event: Stripe.Event;
+  try {
+    event = stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET);
+  } catch (err: any) {
+    console.error(
+      "[Stripe] Webhook signature verification failed:",
+      err.message,
+    );
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
-    console.log(`[Stripe] Webhook: ${event.type}`);
+  console.log(`[Stripe] Webhook: ${event.type}`);
 
-    try {
-      switch (event.type) {
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
-          if (session.mode === "subscription" && session.subscription) {
-            await handleSubscriptionActivated(
-              session.metadata?.userId,
-              session.subscription as string,
-              session.metadata?.tier || "silver",
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "subscription" && session.subscription) {
+          await handleSubscriptionActivated(
+            session.metadata?.userId,
+            session.subscription as string,
+            session.metadata?.tier || "silver",
+          );
+        } else if (
+          session.mode === "payment" &&
+          session.metadata?.type === "cenne_pack" &&
+          session.payment_status === "paid"
+        ) {
+          // Fulfill cenne pack purchase
+          const userId = session.metadata?.userId;
+          const cennes = parseInt(session.metadata?.cennes || "0", 10);
+          if (userId && cennes > 0) {
+            await fulfillCennePack(userId, cennes);
+            console.log(
+              `[Stripe] Cenne pack fulfilled: ${cennes}¢ → user ${userId}`,
             );
-          } else if (
-            session.mode === "payment" &&
-            session.metadata?.type === "cenne_pack" &&
-            session.payment_status === "paid"
-          ) {
-            // Fulfill cenne pack purchase
-            const userId = session.metadata?.userId;
-            const cennes = parseInt(session.metadata?.cennes || "0", 10);
-            if (userId && cennes > 0) {
-              await fulfillCennePack(userId, cennes);
-              console.log(
-                `[Stripe] Cenne pack fulfilled: ${cennes}¢ → user ${userId}`,
-              );
-            }
           }
-          break;
         }
+        break;
+      }
 
-        case "customer.subscription.updated":
-        case "customer.subscription.created": {
-          const sub = event.data.object as Stripe.Subscription;
-          const userId =
-            sub.metadata?.userId ||
-            (await lookupUserByStripeCustomer(sub.customer as string));
-          if (userId) {
-            const tier = sub.metadata?.tier || tierFromPriceId(sub);
-            await upsertSubscription(userId, sub.id, tier, sub.status, sub);
-          }
-          break;
+      case "customer.subscription.updated":
+      case "customer.subscription.created": {
+        const sub = event.data.object as Stripe.Subscription;
+        const userId =
+          sub.metadata?.userId ||
+          (await lookupUserByStripeCustomer(sub.customer as string));
+        if (userId) {
+          const tier = sub.metadata?.tier || tierFromPriceId(sub);
+          await upsertSubscription(userId, sub.id, tier, sub.status, sub);
         }
+        break;
+      }
 
-        case "customer.subscription.deleted": {
-          const sub = event.data.object as Stripe.Subscription;
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        await supabaseAdmin
+          .from("subscription_tiers")
+          .update({
+            status: "cancelled",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", sub.id);
+        console.log(`[Stripe] Subscription cancelled: ${sub.id}`);
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subIdFailed = (invoice as unknown as { subscription?: string })
+          .subscription;
+        if (subIdFailed) {
           await supabaseAdmin
             .from("subscription_tiers")
             .update({
-              status: "cancelled",
+              status: "past_due",
               updated_at: new Date().toISOString(),
             })
-            .eq("stripe_subscription_id", sub.id);
-          console.log(`[Stripe] Subscription cancelled: ${sub.id}`);
-          break;
+            .eq("stripe_subscription_id", subIdFailed);
         }
-
-        case "invoice.payment_failed": {
-          const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription) {
-            await supabaseAdmin
-              .from("subscription_tiers")
-              .update({
-                status: "past_due",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("stripe_subscription_id", invoice.subscription);
-          }
-          break;
-        }
-
-        case "invoice.payment_succeeded": {
-          const invoice = event.data.object as Stripe.Invoice;
-          if (invoice.subscription) {
-            await supabaseAdmin
-              .from("subscription_tiers")
-              .update({
-                status: "active",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("stripe_subscription_id", invoice.subscription);
-          }
-          break;
-        }
+        break;
       }
-    } catch (err) {
-      console.error("[Stripe] Webhook handler error:", err);
-      // Still return 200 to prevent Stripe retries on logic errors
-    }
 
-    return res.sendStatus(200);
-  },
-);
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subIdSucceeded = (invoice as unknown as { subscription?: string })
+          .subscription;
+        if (subIdSucceeded) {
+          await supabaseAdmin
+            .from("subscription_tiers")
+            .update({
+              status: "active",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("stripe_subscription_id", subIdSucceeded);
+        }
+        break;
+      }
+    }
+  } catch (err) {
+    console.error("[Stripe] Webhook handler error:", err);
+    // Still return 200 to prevent Stripe retries on logic errors
+  }
+
+  return res.sendStatus(200);
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -322,8 +319,18 @@ async function upsertSubscription(
   status: string,
   sub: Stripe.Subscription,
 ) {
-  const periodStart = new Date(sub.current_period_start * 1000).toISOString();
-  const periodEnd = new Date(sub.current_period_end * 1000).toISOString();
+  const subAny = sub as unknown as {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+  const rawStart =
+    subAny.current_period_start ??
+    sub.items?.data?.[0]?.current_period_start ??
+    0;
+  const rawEnd =
+    subAny.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? 0;
+  const periodStart = new Date(rawStart * 1000).toISOString();
+  const periodEnd = new Date(rawEnd * 1000).toISOString();
 
   const { error } = await supabaseAdmin.from("subscription_tiers").upsert(
     {

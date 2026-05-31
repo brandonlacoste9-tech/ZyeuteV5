@@ -48,7 +48,7 @@ export default function Studio() {
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoSize, setVideoSize] = useState("");
   const [captions, setCaptions] = useState<
-    { start: number; end: number; text: string }[]
+    { startTime: number; endTime: number; text: string }[]
   >([]);
   const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
 
@@ -388,8 +388,11 @@ export default function Studio() {
                   {captions.map((cue, i) => (
                     <div key={i} className="flex gap-3 text-xs">
                       <span className="text-gold-400/70 font-mono whitespace-nowrap shrink-0">
-                        {Math.floor(cue.start / 60)}:
-                        {String(Math.floor(cue.start % 60)).padStart(2, "0")}
+                        {Math.floor(cue.startTime / 60)}:
+                        {String(Math.floor(cue.startTime % 60)).padStart(
+                          2,
+                          "0",
+                        )}
                       </span>
                       <span className="text-white/80">{cue.text}</span>
                     </div>

@@ -647,7 +647,7 @@ router.post(
       const liveStream = await mux.video.liveStreams.create({
         playback_policy: ["public"],
         new_asset_settings: { playback_policy: ["public"] },
-        latency_mode: "ultra-low",
+        latency_mode: "low",
       });
 
       const playbackId = liveStream.playback_ids?.[0]?.id ?? null;

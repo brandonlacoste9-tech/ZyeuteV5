@@ -105,7 +105,10 @@ router.post("/:id/view", async (req: any, res) => {
     // Increment views using raw SQL RPC (fails silently if not defined)
     await supabaseAdmin
       .rpc("increment_story_views", { story_id: req.params.id })
-      .catch(() => {});
+      .then(
+        () => {},
+        () => {},
+      );
     res.json({ success: true });
   } catch {
     res.json({ success: true }); // fail silently

@@ -11,6 +11,17 @@ import { supabase } from "@/lib/supabase";
 import { Avatar } from "@/components/Avatar";
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
+// Format a date/ISO string as HH:MM
+function formatTime(dateInput: string | Date | undefined): string {
+  if (!dateInput) return "";
+  try {
+    const d = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 const GOLD = "#D4AF37";
 const GOLD_LIGHT = "#F4E2A6";
 const GOLD_DIM = "#A07820";

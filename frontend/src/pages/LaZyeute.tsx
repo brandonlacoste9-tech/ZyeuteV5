@@ -343,7 +343,8 @@ export const Zyeute: React.FC = () => {
   // Double-tap detection
   const lastTapRef = useRef<{ postId: string; time: number } | null>(null);
   // Heart burst animation
-  const { tap, impact, success } = useHaptics();
+  const { tap, impact, success, fire, comment, share, save, newFollower } =
+    useHaptics();
   const [uiVisible, setUiVisible] = useState(true);
   const [heartBurst, setHeartBurst] = useState<{
     postId: string;
@@ -709,9 +710,9 @@ export const Zyeute: React.FC = () => {
                 Pour toi
               </button>
               <button
-                onClick={() => setFeedSource("following")}
+                onClick={() => setFeedSource("explore")}
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
-                  feedSource === "following"
+                  feedSource === "explore"
                     ? "bg-gold-500 text-black"
                     : "text-white/60 hover:text-white"
                 }`}

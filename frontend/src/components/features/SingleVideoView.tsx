@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Post, User } from "@shared/schema";
+import type { Post, User } from "@/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,14 +62,7 @@ export function SingleVideoView({
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
-    const rawUrl =
-      post.hls_url ||
-      post.hlsUrl ||
-      post.enhanced_url ||
-      post.enhancedUrl ||
-      post.media_url ||
-      post.mediaUrl ||
-      "";
+    const rawUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
   }, [post]);
 
@@ -87,7 +80,7 @@ export function SingleVideoView({
   const handleLike = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation();
-      impact("medium");
+      impact();
       setIsLiked(true);
       // Like logic — fire toggle would go here
     },
@@ -95,7 +88,7 @@ export function SingleVideoView({
   );
 
   const handleDoubleTapLike = useCallback(() => {
-    impact("heavy");
+    impact();
     setIsLiked(true);
     // Like logic — fire toggle would go here
   }, [impact]);
@@ -109,7 +102,7 @@ export function SingleVideoView({
       <div
         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 pointer-events-none"
         style={{
-          backgroundImage: `url(${post.thumbnail_url || post.thumbnailUrl})`,
+          backgroundImage: `url(${post.thumbnailUrl})`,
         }}
       />
 
@@ -119,12 +112,10 @@ export function SingleVideoView({
           <VideoPlaybackDiagnostic
             postId={post.id}
             postType={post.type ?? undefined}
-            muxPlaybackId={post.mux_playback_id || post.muxPlaybackId}
+            muxPlaybackId={post.muxPlaybackId}
             mediaUrl={videoSrc}
             videoSrc={videoSrc}
-            playerPath={
-              post.mux_playback_id || post.muxPlaybackId ? "mux" : "native"
-            }
+            playerPath={post.muxPlaybackId ? "mux" : "native"}
             isActive={isActive}
             error={videoError}
           />
@@ -133,19 +124,16 @@ export function SingleVideoView({
         {/* Video Player Selection */}
         {!isActive && !priority ? (
           <img
-            src={post.thumbnail_url || post.thumbnailUrl || ""}
+            src={post.thumbnailUrl || ""}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        ) : post.mux_playback_id || post.muxPlaybackId ? (
+        ) : post.muxPlaybackId ? (
           <MuxVideoPlayer
-            playbackId={(post.mux_playback_id || post.muxPlaybackId) ?? ""}
+            playbackId={post.muxPlaybackId ?? ""}
             thumbnailUrl={getProxiedMediaUrl(
-              post.thumbnail_url ||
-                post.thumbnailUrl ||
-                post.media_url ||
-                post.mediaUrl,
+              post.thumbnailUrl || post.mediaUrl || undefined,
             )}
             className="w-full h-full object-cover"
             style={filterStyle}
@@ -158,10 +146,7 @@ export function SingleVideoView({
           <VideoPlayer
             src={videoSrc}
             poster={getProxiedMediaUrl(
-              post.thumbnail_url ||
-                post.thumbnailUrl ||
-                post.media_url ||
-                post.mediaUrl,
+              post.thumbnailUrl || post.mediaUrl || undefined,
             )}
             autoPlay={isActive}
             muted={isMuted}
@@ -188,8 +173,7 @@ export function SingleVideoView({
               }
               alt={post.user?.username || "User"}
               size="sm"
-              className="border-2 shadow-lg"
-              style={{ borderColor: "#FFD700" }}
+              className="border-2 shadow-lg border-amber-400"
               userId={post.user?.id}
             />
             <Button
@@ -269,7 +253,7 @@ export function SingleVideoView({
               className="text-white text-xs font-bold mt-1"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
             >
-              {post.sharesCount || 0}
+              {(post as any).sharesCount || (post as any).shares_count || 0}
             </span>
           </div>
         </div>
@@ -303,7 +287,7 @@ export function SingleVideoView({
               )}
             </div>
             <p className="text-white/90 text-sm line-clamp-2 leading-relaxed">
-              {post.content}
+              {(post as any).caption || (post as any).content || ""}
             </p>
 
             {/* Music/Sound Info */}

@@ -206,12 +206,13 @@ export const Feed: React.FC = () => {
             <div className="flex items-center gap-2">
               <HamburgerMenu />
               <div className="flex items-center gap-1.5">
-                <FlameEyeIcon
-                  className="w-7 h-7"
+                <div
                   style={{
                     filter: "drop-shadow(0 0 5px rgba(212,175,55,0.6))",
                   }}
-                />
+                >
+                  <FlameEyeIcon className="w-7 h-7" />
+                </div>
                 <span
                   className="text-lg font-black tracking-widest uppercase"
                   style={{

@@ -18,6 +18,8 @@ const router = express.Router();
 
 // ─── GET /conversations ───────────────────────────────────────────────────────
 router.get("/conversations", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
 
@@ -94,6 +96,8 @@ router.get("/conversations", requireAuth, async (req, res) => {
 
 // ─── POST /conversations/direct ──────────────────────────────────────────────
 router.post("/conversations/direct", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
     // Accept recipientId or userId (frontend sends userId)
@@ -155,6 +159,8 @@ router.post("/conversations/direct", requireAuth, async (req, res) => {
 
 // ─── GET /conversations/:id/messages ─────────────────────────────────────────
 router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
     const convId = req.params.id;
@@ -238,6 +244,8 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
 
 // ─── POST /conversations/:id/messages ────────────────────────────────────────
 router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
     const convId = req.params.id;
@@ -313,6 +321,8 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
 
 // ─── POST /messages/:id/read ──────────────────────────────────────────────────
 router.post("/messages/:id/read", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     await supabaseAdmin
       .from("messages")
@@ -327,6 +337,8 @@ router.post("/messages/:id/read", requireAuth, async (req, res) => {
 
 // ─── DELETE /conversations/:id ────────────────────────────────────────────────
 router.delete("/conversations/:id", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
     const convId = req.params.id;
@@ -360,6 +372,8 @@ router.delete("/conversations/:id", requireAuth, async (req, res) => {
 
 // ─── GET /users/search ────────────────────────────────────────────────────────
 router.get("/users/search", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const q = ((req.query.q as string) || "").trim();
     if (!q || q.length < 2) return res.json({ users: [] });

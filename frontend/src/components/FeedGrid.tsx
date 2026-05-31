@@ -74,10 +74,7 @@ const FeedGridComponent: React.FC<FeedGridProps> = ({
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {posts.map(
-          (post) =>
-            post.user && (
-              <VideoCard key={post.id} post={post} user={post.user} />
-            ),
+          (post) => post.user && <VideoCard key={post.id} post={post as any} />,
         )}
 
         {/* Loading skeletons */}

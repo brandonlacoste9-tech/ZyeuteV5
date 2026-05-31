@@ -317,8 +317,8 @@ export function TikTokCuration() {
 
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
                   <Button
-                    variant="secondary"
-                    size="icon"
+                    variant="ghost"
+                    size="sm"
                     type="button"
                     className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
                     onClick={() =>

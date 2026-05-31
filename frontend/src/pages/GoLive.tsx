@@ -93,7 +93,10 @@ export default function GoLive() {
     setActiveFilter,
     startWhipStream,
     stopStream,
-  } = useLiveCamera({ canvasRef, previewRef });
+  } = useLiveCamera({
+    canvasRef: canvasRef as React.RefObject<HTMLCanvasElement>,
+    previewRef: previewRef as React.RefObject<HTMLVideoElement>,
+  });
 
   // Start camera on mount
   useEffect(() => {
@@ -130,7 +133,8 @@ export default function GoLive() {
     setServerError(null);
 
     try {
-      const { session } = await getSessionWithTimeout(3000);
+      const { data: sessionData } = await getSessionWithTimeout(3000);
+      const session = sessionData.session;
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -173,7 +177,8 @@ export default function GoLive() {
     tap();
 
     try {
-      const { session } = await getSessionWithTimeout(3000);
+      const { data: sessionData2 } = await getSessionWithTimeout(3000);
+      const session = sessionData2.session;
       await fetch(`${API_BASE}/api/mux/end-livestream/${streamInfo.streamId}`, {
         method: "DELETE",
         headers: session?.access_token

@@ -521,17 +521,19 @@ router.post(
           const supabase = createClient(supabaseUrl, supabaseKey);
           // Simple score: reactions * 10 + comments * 5, time-decayed
           // Full batch recompute handles the HN-formula; this is a quick single-row refresh
-          await supabase
-            .rpc("recompute_viral_score", { post_id: req.params.id })
-            .catch(() => {
-              // RPC may not exist — fall back to simple update
-              return supabase
-                .from("publications")
-                .update({
-                  viral_score: result.newCount * 10, // rough proxy until batch runs
-                })
-                .eq("id", req.params.id);
-            });
+          const { error: rpcError } = await supabase.rpc(
+            "recompute_viral_score",
+            { post_id: req.params.id },
+          );
+          if (rpcError) {
+            // RPC may not exist — fall back to simple update
+            await supabase
+              .from("publications")
+              .update({
+                viral_score: result.newCount * 10, // rough proxy until batch runs
+              })
+              .eq("id", req.params.id);
+          }
         } catch (err) {
           // Non-critical — batch will catch it
           console.warn("[ViralScore] Quick update failed:", err);

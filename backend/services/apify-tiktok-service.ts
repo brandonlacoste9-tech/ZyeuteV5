@@ -112,7 +112,7 @@ export async function fetchQuebecTikTokVideos(options?: {
       .listItems({ limit: 1000 });
 
     console.log(`[Apify] Scraped ${items.length} TikTok videos`);
-    return items as ApifyTikTokVideo[];
+    return items as unknown as ApifyTikTokVideo[];
   } catch (err: any) {
     console.error("[Apify] Scrape failed:", err.message);
     return [];
@@ -130,7 +130,8 @@ export function apifyVideoToPublication(
     (video.videoMeta?.height || 0) > (video.videoMeta?.width || 0);
 
   // Build Quebec-flavored caption
-  const caption = video.text?.slice(0, 500) || `#${video.searchHashtag || "québec"} 🍁`;
+  const caption =
+    video.text?.slice(0, 500) || `#${video.searchHashtag || "québec"} 🍁`;
 
   return {
     user_id: userId,
@@ -170,16 +171,8 @@ function detectRegion(video: ApifyTikTokVideo): string {
     text.includes("montreal")
   )
     return "montreal";
-  if (
-    tag === "laval" ||
-    text.includes("laval")
-  )
-    return "laval";
-  if (
-    tag === "gatineau" ||
-    text.includes("gatineau")
-  )
-    return "gatineau";
+  if (tag === "laval" || text.includes("laval")) return "laval";
+  if (tag === "gatineau" || text.includes("gatineau")) return "gatineau";
   if (
     tag === "quebec" ||
     tag === "quebecois" ||

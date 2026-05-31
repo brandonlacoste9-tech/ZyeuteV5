@@ -342,12 +342,14 @@ export const Player: React.FC = () => {
         ref={containerRef}
         className="w-full h-full overflow-y-scroll snap-smooth-decel feed-root"
         onScroll={handleScroll}
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch",
-          willChange: "scroll-position",
-        } as React.CSSProperties}
+        style={
+          {
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+            willChange: "scroll-position",
+          } as React.CSSProperties
+        }
       >
         <style>{`
           div::-webkit-scrollbar {
@@ -371,12 +373,12 @@ export const Player: React.FC = () => {
                 }}
               >
                 <SingleVideoView
-                  post={post}
-                  user={post.user}
+                  post={post as unknown as any}
                   isActive={index === currentIndex}
-                  onFireToggle={handleFireToggle}
-                  onComment={handleComment}
-                  onShare={handleShare}
+                  isMuted={false}
+                  onToggleMute={() => {}}
+                  onCommentClick={() => handleComment(post.id)}
+                  onShareClick={() => handleShare(post.id)}
                 />
               </div>
             );

@@ -96,7 +96,7 @@ export const Explore: React.FC = () => {
         const data = await apiCall(
           `/api/search?q=${encodeURIComponent(searchQuery)}&hive=${currentHive.id}`,
         );
-        setUserResults(data?.users || []);
+        setUserResults((data as any)?.users || []);
       } catch {
         setUserResults([]);
       } finally {

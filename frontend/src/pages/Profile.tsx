@@ -32,6 +32,7 @@ import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { usePremium } from "@/hooks/usePremium";
+import { toast } from "@/components/Toast";
 
 const profileLogger = logger.withContext("Profile");
 

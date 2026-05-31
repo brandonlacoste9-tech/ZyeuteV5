@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { VideoCard, VideoCardSkeleton } from "../features/VideoCard";
+import { VideoCard } from "../features/VideoCard";
 import type { Post } from "../../types";
 import { cn } from "../../lib/utils";
 
@@ -80,7 +80,10 @@ export const FeedGrid: React.FC<FeedGridProps> = ({
         {/* Loading skeletons */}
         {isLoading &&
           Array.from({ length: 8 }).map((_, i) => (
-            <VideoCardSkeleton key={`skeleton-${i}`} />
+            <div
+              key={`skeleton-${i}`}
+              className="rounded-xl overflow-hidden aspect-[9/16] animate-pulse bg-zinc-800"
+            />
           ))}
       </div>
 

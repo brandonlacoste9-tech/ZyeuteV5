@@ -67,21 +67,19 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           !!rawPost.muxPlaybackId ||
           !!rawPost.mux_playback_id));
     if (isVideo) {
+      const postWithUser = { ...post, user: user } as unknown as Post & {
+        user?: User;
+      };
       return (
         <SingleVideoView
-          post={post}
-          user={user}
+          post={postWithUser}
           isActive={isActive}
-          onFireToggle={onFireToggle}
-          onComment={onComment}
-          onShare={onShare}
+          isMuted={false}
+          onToggleMute={() => {}}
           priority={priority}
-          preload={preload}
-          videoSource={videoSource}
-          isCached={isCached}
-          debug={debug}
+          onCommentClick={onComment ? () => onComment(post.id) : undefined}
+          onShareClick={onShare ? () => onShare(post.id) : undefined}
           onVideoProgress={onVideoProgress}
-          shouldPrefetch={shouldPrefetch}
         />
       );
     }
@@ -106,8 +104,9 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
     return (
       prevProps.post.id === nextProps.post.id &&
       prevProps.isActive === nextProps.isActive &&
-      prevProps.post.fire_count === nextProps.post.fire_count &&
-      prevProps.post.comment_count === nextProps.post.comment_count &&
+      (prevProps.post as any).fireCount === (nextProps.post as any).fireCount &&
+      (prevProps.post as any).commentCount ===
+        (nextProps.post as any).commentCount &&
       prevProps.priority === nextProps.priority &&
       prevProps.shouldPrefetch === nextProps.shouldPrefetch &&
       // Video-specific checks

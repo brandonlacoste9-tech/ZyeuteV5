@@ -24,6 +24,8 @@ const MIN_WITHDRAWAL_CENNES = 500; // $5.00 CAD minimum
 // ── POST /onboard ─────────────────────────────────────────────────────────────
 // Creates a Stripe Connect account (if needed) and returns an onboarding link.
 router.post("/onboard", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
 
@@ -76,6 +78,8 @@ router.post("/onboard", requireAuth, async (req, res) => {
 
 // ── GET /status ───────────────────────────────────────────────────────────────
 router.get("/status", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
 
@@ -123,6 +127,8 @@ router.get("/status", requireAuth, async (req, res) => {
 
 // ── POST /withdraw ────────────────────────────────────────────────────────────
 router.post("/withdraw", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
     const { cennes }: { cennes: number } = req.body;

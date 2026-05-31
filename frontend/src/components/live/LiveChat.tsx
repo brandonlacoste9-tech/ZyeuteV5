@@ -89,8 +89,11 @@ export function LiveChat({ streamId, compact = false }: LiveChatProps) {
       socket.emit("live:join", {
         streamId,
         userId: user?.id,
-        username: user?.user_metadata?.username || user?.email?.split("@")[0],
-        avatarUrl: user?.user_metadata?.avatar_url,
+        username:
+          user?.username ||
+          (user as any)?.user_metadata?.username ||
+          (user as any)?.email?.split("@")[0],
+        avatarUrl: (user as any)?.user_metadata?.avatar_url || user?.avatarUrl,
       });
     });
 
@@ -169,10 +172,11 @@ export function LiveChat({ streamId, compact = false }: LiveChatProps) {
       streamId,
       userId: user?.id,
       username:
-        user?.user_metadata?.username ||
-        user?.email?.split("@")[0] ||
+        user?.username ||
+        (user as any)?.user_metadata?.username ||
+        (user as any)?.email?.split("@")[0] ||
         "Anonyme",
-      avatarUrl: user?.user_metadata?.avatar_url,
+      avatarUrl: (user as any)?.user_metadata?.avatar_url || user?.avatarUrl,
       text,
       tier,
     });

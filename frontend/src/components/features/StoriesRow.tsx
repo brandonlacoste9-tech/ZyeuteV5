@@ -42,6 +42,8 @@ function mapApiStory(raw: any): Story {
           posts_count: 0,
           is_following: false,
           role: "citoyen" as const,
+          tiGuyCommentsEnabled: true,
+          nectar_points: 0,
         }
       : undefined,
   };
@@ -65,6 +67,8 @@ function mapApiUser(raw: any): User {
     posts_count: 0,
     is_following: false,
     role: "citoyen" as const,
+    tiGuyCommentsEnabled: true,
+    nectar_points: 0,
   };
 }
 

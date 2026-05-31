@@ -6,7 +6,7 @@
 import React, { useMemo, useState } from "react";
 import { Play, Eye, Flame, MessageCircle, Flag, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Post, User } from "@shared/schema";
+import type { Post, User } from "@/types";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
@@ -43,8 +43,8 @@ export function VideoCard({
     try {
       if (navigator.share) {
         await navigator.share({
-          title: post.content?.substring(0, 60) || "Vidéo sur Zyeute",
-          text: `@${post.user?.username || "zyeute"} — ${post.content?.substring(0, 80) || ""}`,
+          title: (post as any).caption?.substring(0, 60) || "Vidéo sur Zyeute",
+          text: `@${post.user?.username || "zyeute"} — ${(post as any).caption?.substring(0, 80) || ""}`,
           url,
         });
       } else {
@@ -60,18 +60,11 @@ export function VideoCard({
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
-    const rawUrl =
-      post.hls_url ||
-      post.hlsUrl ||
-      post.enhanced_url ||
-      post.enhancedUrl ||
-      post.media_url ||
-      post.mediaUrl ||
-      "";
+    const rawUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
   }, [post]);
 
-  const isMux = !!(post.mux_playback_id || post.muxPlaybackId);
+  const isMux = !!post.muxPlaybackId;
 
   const handleReport = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -127,7 +120,7 @@ export function VideoCard({
     >
       {/* Background Image (Poster) */}
       <img
-        src={post.thumbnail_url || post.thumbnailUrl || ""}
+        src={post.thumbnailUrl || ""}
         alt=""
         className={cn(
           "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
@@ -141,12 +134,9 @@ export function VideoCard({
         <VideoErrorBoundary>
           {isMux ? (
             <MuxVideoPlayer
-              playbackId={(post.mux_playback_id || post.muxPlaybackId) ?? ""}
+              playbackId={post.muxPlaybackId ?? ""}
               thumbnailUrl={getProxiedMediaUrl(
-                post.thumbnail_url ||
-                  post.thumbnailUrl ||
-                  post.media_url ||
-                  post.mediaUrl,
+                post.thumbnailUrl || post.mediaUrl,
               )}
               className="w-full h-full object-cover"
               autoPlay={autoPlay || isHovered}
@@ -157,19 +147,13 @@ export function VideoCard({
           ) : (
             <VideoPlayer
               src={videoSrc}
-              poster={getProxiedMediaUrl(
-                post.thumbnail_url ||
-                  post.thumbnailUrl ||
-                  post.media_url ||
-                  post.mediaUrl,
-              )}
+              poster={getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl)}
               autoPlay={autoPlay || isHovered}
               muted={muted}
               loop
               className="w-full h-full object-cover"
               priority={priority}
               preload={autoPlay ? "auto" : "metadata"}
-              onError={setVideoError}
             />
           )}
         </VideoErrorBoundary>
@@ -182,7 +166,7 @@ export function VideoCard({
             @{post.user?.username || "anonyme"}
           </h4>
           <p className="text-white/90 text-[11px] line-clamp-2 leading-tight">
-            {post.content}
+            {(post as any).caption || ""}
           </p>
 
           <div className="flex items-center gap-3 mt-2 text-white/90 text-[10px] font-bold">
@@ -196,7 +180,7 @@ export function VideoCard({
             </div>
             <div className="flex items-center gap-1.5 px-2 py-0.5 bg-black/30 rounded-full border border-white/10">
               <Eye size={12} className="text-white/70" />
-              <span>{post.viewCount || 0}</span>
+              <span>{(post as any).view_count || 0}</span>
             </div>
           </div>
         </div>

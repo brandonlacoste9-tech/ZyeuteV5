@@ -159,7 +159,7 @@ export async function signInWithBiometrics() {
       throw new Error("WebAuthn not supported in this browser");
     }
 
-    const { data, error } = await supabase.auth.signInWithWebAuthn({
+    const { data, error } = await (supabase.auth as any).signInWithWebAuthn({
       options: {
         authenticatorSelection: {
           authenticatorAttachment: "platform", // Built-in biometrics (Touch ID, Face ID, Windows Hello)
@@ -185,7 +185,7 @@ export async function registerBiometrics(email: string) {
       throw new Error("WebAuthn not supported in this browser");
     }
 
-    const { data, error } = await supabase.auth.signUpWithWebAuthn({
+    const { data, error } = await (supabase.auth as any).signUpWithWebAuthn({
       email,
       options: {
         authenticatorSelection: {

@@ -20,6 +20,7 @@ const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 // ─── Read ────────────────────────────────────────────────────────────────────
 
 export async function readMemory(userId: string): Promise<string> {
+  if (!supabaseAdmin) return "";
   try {
     const { data, error } = await supabaseAdmin
       .from("tiguy_memory")
@@ -98,6 +99,7 @@ RÈGLES STRICTES:
     }
 
     // Upsert into tiguy_memory
+    if (!supabaseAdmin) return;
     await supabaseAdmin.from("tiguy_memory").upsert(
       {
         user_id: userId,
@@ -111,9 +113,12 @@ RÈGLES STRICTES:
     await supabaseAdmin
       .rpc("increment_tiguy_turns", { p_user_id: userId })
       .throwOnError()
-      .catch(() => {
-        // RPC doesn't exist yet — silently ignore, turn_count is cosmetic
-      });
+      .then(
+        () => {},
+        () => {
+          // RPC doesn't exist yet — silently ignore, turn_count is cosmetic
+        },
+      );
   } catch (err) {
     // Memory compaction is best-effort — never crash the chat
     console.warn("[TI-GUY MEMORY] compact error:", err);

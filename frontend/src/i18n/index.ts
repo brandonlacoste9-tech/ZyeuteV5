@@ -15,7 +15,6 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.discover": "Découvrir",
     "nav.create": "Créer",
     "nav.notifications_short": "Notifs",
-    "nav.messages": "Mensagens",
     "nav.messages": "Messages",
 
     // Auth

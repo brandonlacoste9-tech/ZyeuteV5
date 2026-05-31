@@ -973,12 +973,15 @@ function mapBackendUser(user: Record<string, any>): User {
 
     // Gamification
     last_daily_bonus: user.last_daily_bonus || user.lastDailyBonus || null,
+    nectar_points: user.nectarPoints || user.nectar_points || 0,
+    piasse_balance: user.piasseBalance || user.piasse_balance || 0,
+    total_karma: user.totalKarma || user.total_karma || 0,
     // Subscription
     subscription_tier:
       user.subscriptionTier || user.subscription_tier || "free",
     cash_credits: user.cashCredits || user.cash_credits || 0,
     stripe_connect_id: user.stripeConnectId || user.stripe_connect_id || null,
-  } as User;
+  } as unknown as User;
 }
 
 /** Normalize backend post for feed display (handles snake_case/camelCase, Mux URLs) */

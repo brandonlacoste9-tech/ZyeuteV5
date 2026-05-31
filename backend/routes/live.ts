@@ -186,7 +186,10 @@ router.post("/:id/gift", async (req: any, res) => {
         stream_id: req.params.id,
         amount: giftAmount || 0,
       })
-      .catch(() => {});
+      .then(
+        () => {},
+        () => {},
+      );
 
     res.json({ success: true });
   } catch (err: any) {
@@ -202,7 +205,10 @@ router.post("/:id/viewer", async (req: any, res) => {
     if (action === "join") {
       await supabaseAdmin
         .rpc("increment_viewer_count", { stream_id: req.params.id })
-        .catch(() => {});
+        .then(
+          () => {},
+          () => {},
+        );
     }
     res.json({ success: true });
   } catch {
