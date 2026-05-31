@@ -518,12 +518,16 @@ const MessageBubble: React.FC<{
             href={message.contentUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <img
               src={message.contentUrl}
               alt="image"
-              className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+              className="rounded-xl max-w-full max-h-64 object-cover mb-1 cursor-pointer"
               style={{ border: `1px solid ${T.leather.tan}` }}
+              draggable={false}
             />
           </a>
         )}
@@ -534,6 +538,8 @@ const MessageBubble: React.FC<{
             controls
             className="rounded-xl max-w-full max-h-64 mb-1"
             style={{ border: `1px solid ${T.leather.tan}` }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
           />
         )}
         {/* File */}
@@ -542,6 +548,9 @@ const MessageBubble: React.FC<{
             href={message.contentUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl"
             style={{
               background: `${T.leather.tan}22`,
@@ -874,8 +883,26 @@ export const MessagesReal: React.FC = () => {
             table: "messages",
             filter: `conversation_id=eq.${activeConvId}`,
           },
-          (payload: { new: Message }) => {
-            const incoming = payload.new;
+          (payload: { new: Record<string, unknown> }) => {
+            // Realtime delivers raw snake_case DB columns — normalize to camelCase
+            const raw = payload.new;
+            const incoming: Message = {
+              id: raw.id as string,
+              content: (raw.content_text ?? raw.content) as string,
+              contentType: (raw.content_type ?? raw.contentType) as
+                | string
+                | undefined,
+              contentUrl: (raw.content_url ?? raw.contentUrl) as
+                | string
+                | undefined,
+              fileName: (raw.file_name ?? raw.fileName) as string | undefined,
+              senderId: (raw.sender_id ?? raw.senderId) as string,
+              isRead: (raw.is_read ?? raw.isRead) as boolean | undefined,
+              deletedAt: (raw.deleted_at ?? raw.deletedAt) as
+                | string
+                | undefined,
+              createdAt: (raw.created_at ?? raw.createdAt) as string,
+            };
             setMessages((prev) =>
               prev.some((m) => m.id === incoming.id)
                 ? prev
