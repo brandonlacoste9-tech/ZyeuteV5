@@ -48,11 +48,11 @@ export default function Premium() {
       emoji: "🥉",
       price: 4.99,
       features: [
-        "🎨 Ti-Guy Artiste (10 images/mois)",
-        "🎬 Ti-Guy Studio (5 vidéos/mois)",
         "⚜️ Badge Bronze vérifié",
         "🚫 Pas de publicités",
+        "🦫 Accès Ti-Guy chat",
         "💬 Support prioritaire",
+        "🔥 Boost de visibilité x2",
       ],
       gradient: "from-orange-700 via-orange-600 to-orange-800",
       popular: false,
@@ -64,12 +64,11 @@ export default function Premium() {
       price: 9.99,
       features: [
         "✨ Tout Bronze +",
-        "🎨 50 images AI/mois",
-        "🎬 20 vidéos AI/mois",
         "💎 Badge Argent premium",
         "📊 Analytics avancés",
-        "🔥 Boost de visibilité x2",
+        "🔥 Boost de visibilité x3",
         "🎁 100 cennes/mois",
+        "⭐ Profil mis en avant",
       ],
       gradient: "from-gray-400 via-gray-300 to-gray-500",
       popular: true,
@@ -81,14 +80,13 @@ export default function Premium() {
       price: 19.99,
       features: [
         "👑 Tout Argent +",
-        "🎨 Images AI ILLIMITÉES",
-        "🎬 Vidéos AI ILLIMITÉES",
         "⚜️ Badge Or royal",
         "🚀 Priorité feed absolue",
         "🔥 Boost visibilité x5",
         "🎁 500 cennes/mois",
         "💼 Outils créateurs PRO",
-        "🦫 Accès Ti-Guy VIP",
+        "🦫 Ti-Guy VIP exclusif",
+        "🎯 Statistiques complètes",
       ],
       gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
       popular: false,
@@ -248,14 +246,12 @@ export default function Premium() {
           <div className="grid md:grid-cols-2 gap-6">
             <div className="flex gap-4">
               <div className="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">🎨</span>
+                <span className="text-2xl">🚫</span>
               </div>
               <div>
-                <h3 className="text-white font-bold mb-1">
-                  Création AI illimitée
-                </h3>
+                <h3 className="text-white font-bold mb-1">Zéro publicités</h3>
                 <p className="text-leather-300 text-sm">
-                  Génère des images et vidéos avec Ti-Guy Artiste et Studio
+                  Profite du feed sans interruptions — pure expérience Zyeute
                 </p>
               </div>
             </div>
@@ -290,12 +286,13 @@ export default function Premium() {
 
             <div className="flex gap-4">
               <div className="w-12 h-12 rounded-full bg-gold-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">💰</span>
+                <span className="text-2xl">🎁</span>
               </div>
               <div>
-                <h3 className="text-white font-bold mb-1">Cennes gratuites</h3>
+                <h3 className="text-white font-bold mb-1">Cennes mensuelles</h3>
                 <p className="text-leather-300 text-sm">
-                  Reçois des cennes chaque mois pour acheter des gifts
+                  Reçois des cennes chaque mois pour envoyer des gifts aux
+                  créateurs
                 </p>
               </div>
             </div>
