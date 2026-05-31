@@ -1,15 +1,13 @@
 /**
- * 💎 usePremium Hook
- * Check user's premium subscription status
+ * usePremium — Checks the user's real Stripe subscription status
+ * Reads from GET /api/stripe/status (backed by subscription_tiers table)
  */
 
-import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { logger } from "../lib/logger";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { apiCall } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
-const usePremiumLogger = logger.withContext("UsePremium");
-
-export type PremiumTier = "free" | "bronze" | "silver" | "gold";
+export type PremiumTier = "free" | "bronze" | "argent" | "or";
 
 export interface PremiumStatus {
   tier: PremiumTier;
@@ -26,7 +24,7 @@ export interface PremiumStatus {
   };
 }
 
-const TIER_FEATURES = {
+const TIER_FEATURES: Record<PremiumTier, PremiumStatus["features"]> = {
   free: {
     aiImagesPerMonth: 0,
     aiVideosPerMonth: 0,
@@ -45,18 +43,18 @@ const TIER_FEATURES = {
     badge: "🥉",
     monthlyCennes: 0,
   },
-  silver: {
+  argent: {
     aiImagesPerMonth: 50,
     aiVideosPerMonth: 20,
     analytics: true,
     priorityFeed: true,
     noAds: true,
     badge: "🥈",
-    monthlyCennes: 0,
+    monthlyCennes: 100,
   },
-  gold: {
-    aiImagesPerMonth: 999999, // Unlimited
-    aiVideosPerMonth: 999999, // Unlimited
+  or: {
+    aiImagesPerMonth: 999999,
+    aiVideosPerMonth: 999999,
     analytics: true,
     priorityFeed: true,
     noAds: true,
@@ -65,25 +63,53 @@ const TIER_FEATURES = {
   },
 };
 
+interface StripeStatusResponse {
+  isPremium: boolean;
+  tier?: string;
+  status?: string;
+  currentPeriodEnd?: string;
+  stripeSubscriptionId?: string;
+}
+
+function normalizeTier(raw?: string): PremiumTier {
+  if (!raw) return "free";
+  const map: Record<string, PremiumTier> = {
+    bronze: "bronze",
+    argent: "argent",
+    silver: "argent",
+    or: "or",
+    gold: "or",
+  };
+  return map[raw.toLowerCase()] ?? "free";
+}
+
 export function usePremium() {
+  const { user: authUser } = useAuth();
   const [status, setStatus] = useState<PremiumStatus>({
     tier: "free",
     isActive: false,
     features: TIER_FEATURES.free,
   });
   const [isLoading, setIsLoading] = useState(true);
+  // Refresh counter — increment to trigger a re-fetch
+  const [refreshCount, setRefreshCount] = useState(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    loadPremiumStatus();
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
-  const loadPremiumStatus = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  useEffect(() => {
+    const userId = authUser?.id;
 
-      if (!user) {
+    // Wrap everything in a resolved promise so no setState runs synchronously
+    Promise.resolve(userId).then((uid) => {
+      if (!mountedRef.current) return;
+
+      if (!uid) {
         setStatus({
           tier: "free",
           isActive: false,
@@ -93,47 +119,45 @@ export function usePremium() {
         return;
       }
 
-      // Check for active subscription
-      const { data: subscription } = await supabase
-        .from("subscriptions")
-        .select("*, tier:subscription_tiers(*)")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .single();
+      apiCall<StripeStatusResponse>("/stripe/status").then(
+        ({ data, error }) => {
+          if (!mountedRef.current) return;
 
-      if (subscription && subscription.tier) {
-        const tierName = subscription.tier.name.toLowerCase() as PremiumTier;
-        setStatus({
-          tier: tierName,
-          isActive: true,
-          expiresAt: subscription.current_period_end,
-          features: TIER_FEATURES[tierName] || TIER_FEATURES.free,
-        });
-      } else {
-        // No active subscription - free tier
-        setStatus({
-          tier: "free",
-          isActive: false,
-          features: TIER_FEATURES.free,
-        });
-      }
-    } catch (error) {
-      usePremiumLogger.error("Error loading premium status:", error);
-      // Default to free on error
-      setStatus({
-        tier: "free",
-        isActive: false,
-        features: TIER_FEATURES.free,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+          if (error || !data) {
+            setStatus({
+              tier: "free",
+              isActive: false,
+              features: TIER_FEATURES.free,
+            });
+            setIsLoading(false);
+            return;
+          }
 
-  const refresh = () => {
+          if (!data.isPremium) {
+            setStatus({
+              tier: "free",
+              isActive: false,
+              features: TIER_FEATURES.free,
+            });
+          } else {
+            const tier = normalizeTier(data.tier);
+            setStatus({
+              tier,
+              isActive: true,
+              expiresAt: data.currentPeriodEnd,
+              features: TIER_FEATURES[tier],
+            });
+          }
+          setIsLoading(false);
+        },
+      );
+    });
+  }, [authUser, refreshCount]);
+
+  const refresh = useCallback(() => {
     setIsLoading(true);
-    loadPremiumStatus();
-  };
+    setRefreshCount((c) => c + 1);
+  }, []);
 
   return {
     ...status,
@@ -141,8 +165,11 @@ export function usePremium() {
     refresh,
     isPremium: status.tier !== "free",
     isBronze: status.tier === "bronze",
-    isSilver: status.tier === "silver",
-    isGold: status.tier === "gold",
+    isArgent: status.tier === "argent",
+    isOr: status.tier === "or",
+    // Legacy aliases
+    isSilver: status.tier === "argent",
+    isGold: status.tier === "or",
   };
 }
 

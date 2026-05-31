@@ -86,6 +86,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Capture raw body for Stripe webhook signature verification
+// Must come BEFORE express.json() and only for the webhook path
+app.use(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  (req: any, _res: any, next: any) => {
+    req.rawBody = req.body; // Buffer
+    next();
+  },
+);
+
 app.use(express.json());
 
 const httpServer = createServer(app);

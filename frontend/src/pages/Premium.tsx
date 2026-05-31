@@ -4,7 +4,8 @@
  * Beaver leather, gold embossing, stitched elegance
  */
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BottomNav } from "../components/BottomNav";
 import { subscribeToPremium } from "../services/stripeService";
 import { usePremium } from "../hooks/usePremium";
@@ -14,11 +15,31 @@ import { logger } from "../lib/logger";
 
 const premiumLogger = logger.withContext("Premium");
 
-type SubscriptionTier = "free" | "bronze" | "silver" | "gold";
+type SubscriptionTier = "free" | "bronze" | "argent" | "or";
 
 export default function Premium() {
-  const { tier: currentTier, isLoading } = usePremium();
+  const { tier: currentTier, isLoading, refresh } = usePremium();
   const { tap } = useHaptics();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Handle Stripe redirect callbacks (?success=true / ?canceled=true)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const success = params.get("success");
+    const canceled = params.get("canceled");
+
+    if (success === "true") {
+      toast.success("🎉 Abonnement activé! Bienvenue dans le VIP Zyeuté!");
+      // Refresh subscription status to reflect new tier
+      refresh();
+      // Clean URL
+      navigate("/premium", { replace: true });
+    } else if (canceled === "true") {
+      toast.info("Abonnement annulé. Tu peux t'abonner à tout moment.");
+      navigate("/premium", { replace: true });
+    }
+  }, [location.search, navigate, refresh]);
 
   const tiers = [
     {
@@ -37,7 +58,7 @@ export default function Premium() {
       popular: false,
     },
     {
-      id: "silver" as const,
+      id: "argent" as const,
       name: "Argent",
       emoji: "🥈",
       price: 9.99,
@@ -54,7 +75,7 @@ export default function Premium() {
       popular: true,
     },
     {
-      id: "gold" as const,
+      id: "or" as const,
       name: "Or",
       emoji: "🥇",
       price: 19.99,
@@ -69,7 +90,7 @@ export default function Premium() {
         "💼 Outils créateurs PRO",
         "🦫 Accès Ti-Guy VIP",
       ],
-      gradient: "from-gold-400 via-gold-500 to-gold-600",
+      gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
       popular: false,
     },
   ];
@@ -120,8 +141,8 @@ export default function Premium() {
             <div className="inline-flex items-center gap-3 bg-gold-gradient px-6 py-3 rounded-full">
               <span className="text-2xl">
                 {currentTier === "bronze" && "🥉"}
-                {currentTier === "silver" && "🥈"}
-                {currentTier === "gold" && "🥇"}
+                {currentTier === "argent" && "🥈"}
+                {currentTier === "or" && "🥇"}
               </span>
               <span className="text-leather-900 font-black text-lg">
                 Membre {currentTier.toUpperCase()}
@@ -138,8 +159,8 @@ export default function Premium() {
           {tiers.map((tier) => {
             const isCurrentTier = currentTier === tier.id;
             const isUpgrade =
-              tier.id === "gold" ||
-              (tier.id === "silver" && currentTier === "bronze");
+              tier.id === "or" ||
+              (tier.id === "argent" && currentTier === "bronze");
 
             return (
               <div
@@ -203,7 +224,7 @@ export default function Premium() {
                   className={`w-full py-3 rounded-xl font-bold transition-all ${
                     isCurrentTier
                       ? "bg-leather-700 text-leather-400 cursor-not-allowed"
-                      : tier.id === "gold"
+                      : tier.id === "or"
                         ? "btn-gold border-gold-500"
                         : "btn-leather hover:btn-gold"
                   }`}

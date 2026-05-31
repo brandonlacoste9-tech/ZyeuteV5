@@ -37,7 +37,7 @@ export const getStripe = (): Promise<Stripe | null> => {
  * Subscribe to Premium VIP tier
  */
 export async function subscribeToPremium(
-  tier: "bronze" | "silver" | "gold",
+  tier: "bronze" | "argent" | "or" | "silver" | "gold",
 ): Promise<void> {
   const stripe = await getStripe();
 

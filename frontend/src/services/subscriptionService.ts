@@ -175,7 +175,7 @@ export async function getCreatorSubscribers(creatorId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from("subscriptions")
       .select(
-        "*, subscriber:users(id, username, avatar_url, is_verified), tier:subscription_tiers(name_fr, price)",
+        "*, subscriber:user_profiles(id, username, avatar_url), tier:subscription_tiers(name_fr, price)",
       )
       .eq("creator_id", creatorId)
       .eq("status", "active")
@@ -508,7 +508,7 @@ export async function canViewExclusiveContent(
 
     // Check if user is creator
     const { data: post } = await supabase
-      .from("posts")
+      .from("publications")
       .select("user_id")
       .eq("id", postId)
       .single();

@@ -33,32 +33,59 @@ export const CreatorRevenue: React.FC = () => {
   >("overview");
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
+    let mounted = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!mounted || !user) {
+        if (mounted) setIsLoading(false);
+        return;
+      }
       setCurrentUser(user);
-
-      const [revenueData, earningsData, subscribersData] = await Promise.all([
+      Promise.all([
         getCreatorRevenue(user.id),
         getCreatorEarnings(user.id, 50),
         getCreatorSubscribers(user.id),
-      ]);
+      ])
+        .then(([revenueData, earningsData, subscribersData]) => {
+          if (!mounted) return;
+          setRevenue(revenueData);
+          setEarnings(earningsData);
+          setSubscribers(subscribersData);
+        })
+        .catch((error) => {
+          creatorRevenueLogger.error("Error loading revenue data:", error);
+        })
+        .finally(() => {
+          if (mounted) setIsLoading(false);
+        });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-      setRevenue(revenueData);
-      setEarnings(earningsData);
-      setSubscribers(subscribersData);
-    } catch (error) {
-      creatorRevenueLogger.error("Error loading revenue data:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const loadData = () => {
+    setIsLoading(true);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+      setCurrentUser(user);
+      Promise.all([
+        getCreatorRevenue(user.id),
+        getCreatorEarnings(user.id, 50),
+        getCreatorSubscribers(user.id),
+      ])
+        .then(([revenueData, earningsData, subscribersData]) => {
+          setRevenue(revenueData);
+          setEarnings(earningsData);
+          setSubscribers(subscribersData);
+        })
+        .catch((error) => {
+          creatorRevenueLogger.error("Error reloading revenue data:", error);
+        })
+        .finally(() => setIsLoading(false));
+    });
   };
 
   const handleRequestPayout = async () => {

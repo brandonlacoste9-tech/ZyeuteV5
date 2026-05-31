@@ -38,35 +38,37 @@ export const Achievements: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
+    let mounted = true;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!mounted || !user) {
+        if (mounted) setIsLoading(false);
+        return;
+      }
       setCurrentUser(user);
-
-      const [achievements, userAchs, statsData, tier] = await Promise.all([
+      Promise.all([
         getAllAchievements(),
         getUserAchievements(user.id),
         getAchievementStats(user.id),
         getUserTier(user.id),
-      ]);
-
-      setAllAchievements(achievements);
-      setUserAchievements(userAchs);
-      setStats(statsData);
-      setTierInfo(tier);
-    } catch (error) {
-      achievementsLogger.error("Error loading achievements:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      ])
+        .then(([achievements, userAchs, statsData, tier]) => {
+          if (!mounted) return;
+          setAllAchievements(achievements);
+          setUserAchievements(userAchs);
+          setStats(statsData);
+          setTierInfo(tier);
+        })
+        .catch((error) => {
+          achievementsLogger.error("Error loading achievements:", error);
+        })
+        .finally(() => {
+          if (mounted) setIsLoading(false);
+        });
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const isEarned = (achievementId: string) => {
     return userAchievements.some(
@@ -163,7 +165,7 @@ export const Achievements: React.FC = () => {
                       width: `${Math.min(
                         ((stats?.total_points - tierInfo.min_points) /
                           (tierInfo.max_points - tierInfo.min_points)) *
-                        100,
+                          100,
                         100,
                       )}%`,
                     }}
@@ -353,15 +355,15 @@ export const Achievements: React.FC = () => {
                         className={cn(
                           "px-2 py-0.5 rounded-full text-xs font-bold",
                           achievement.rarity === "legendary" &&
-                          "bg-yellow-500/20 text-yellow-400",
+                            "bg-yellow-500/20 text-yellow-400",
                           achievement.rarity === "epic" &&
-                          "bg-purple-500/20 text-purple-400",
+                            "bg-purple-500/20 text-purple-400",
                           achievement.rarity === "rare" &&
-                          "bg-blue-500/20 text-blue-400",
+                            "bg-blue-500/20 text-blue-400",
                           achievement.rarity === "uncommon" &&
-                          "bg-green-500/20 text-green-400",
+                            "bg-green-500/20 text-green-400",
                           achievement.rarity === "common" &&
-                          "bg-gray-500/20 text-gray-400",
+                            "bg-gray-500/20 text-gray-400",
                         )}
                       >
                         {achievement.rarity.toUpperCase()}
