@@ -285,7 +285,7 @@ export async function registerRoutes(
   app.use("/api/gifts", giftRoutes);
 
   // ============ STRIPE SUBSCRIPTION ROUTES ============
-  app.use("/api/stripe", subscriptionRoutes);
+  app.use("/api/stripe", attachBearerUserId, subscriptionRoutes);
 
   // ============ V3 SWARM ROUTES ============
   app.use("/api/v3", swarmRoutes);

@@ -50,9 +50,16 @@ export async function subscribeToPremium(
 
   try {
     // Use our Express backend for Stripe checkout
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
     const response = await fetch("/api/stripe/create-checkout", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       credentials: "include",
       body: JSON.stringify({ tier }),
     });
