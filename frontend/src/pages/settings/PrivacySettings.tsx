@@ -16,7 +16,7 @@ import { logger } from "@/lib/logger";
 const privacyLogger = logger.withContext("PrivacySettings");
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeute-backend.up.railway.app";
+  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
 export const PrivacySettings: React.FC = () => {
   const { preferences, setPreference } = useSettingsPreferences();

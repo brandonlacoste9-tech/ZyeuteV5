@@ -20,7 +20,7 @@ import { logger } from "../../lib/logger";
 const profileEditSettingsLogger = logger.withContext("ProfileEditSettings");
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeute-backend.up.railway.app";
+  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
 export const ProfileEditSettings: React.FC = () => {
   const { tap } = useHaptics();

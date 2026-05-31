@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeute-backend.up.railway.app";
+  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
 // ─────────────────────────────── DATA ────────────────────────────────
 
