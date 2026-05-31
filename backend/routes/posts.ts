@@ -500,10 +500,46 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const result = await storage.togglePostReaction(
-        req.params.id as string,
-        req.userId!,
-      );
+      const postId = req.params.id as string;
+      const userId = req.userId!;
+
+      // Use Supabase REST against the real `reactions` table
+      // (Drizzle schema references post_reactions which doesn't exist in prod)
+      if (!supabaseRest) throw new Error("Supabase not configured");
+
+      const { data: existing } = await supabaseRest
+        .from("reactions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("publication_id", postId)
+        .eq("type", "fire")
+        .maybeSingle();
+
+      let added: boolean;
+      if (existing) {
+        await supabaseRest.from("reactions").delete().eq("id", existing.id);
+        added = false;
+      } else {
+        await supabaseRest
+          .from("reactions")
+          .insert({ user_id: userId, publication_id: postId, type: "fire" });
+        added = true;
+      }
+
+      // Read then write updated reactions_count
+      const { data: pub } = await supabaseRest
+        .from("publications")
+        .select("reactions_count")
+        .eq("id", postId)
+        .single();
+      const current = (pub?.reactions_count as number) ?? 0;
+      const newCount = added ? current + 1 : Math.max(0, current - 1);
+      await supabaseRest
+        .from("publications")
+        .update({ reactions_count: newCount })
+        .eq("id", postId);
+
+      const result = { added, newCount };
       res.json(result);
 
       // [VIRAL SCORE] Recompute viral_score for this post immediately after a reaction

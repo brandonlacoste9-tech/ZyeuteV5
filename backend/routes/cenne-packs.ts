@@ -220,13 +220,19 @@ router.post("/gift", requireAuth, async (req, res) => {
       .set({ cashCredits: sql`${users.cashCredits} + ${creatorEarns}` })
       .where(eq(users.id, recipientId));
 
-    // Notify creator via Supabase
+    // Notify creator via Supabase (real schema: actor_id, post_id, payload jsonb)
     await supabaseAdmin.from("notifications").insert({
       user_id: recipientId,
       type: "gift",
-      from_user_id: senderId,
+      actor_id: senderId,
       post_id: postId || null,
-      message: `Tu as reçu un ${gift.emoji} ${gift.name} (${gift.cost}¢)!`,
+      payload: {
+        emoji: gift.emoji,
+        name: gift.name,
+        cost: gift.cost,
+        message: `Tu as reçu un ${gift.emoji} ${gift.name} (${gift.cost}¢)!`,
+      },
+      lu: false,
       created_at: new Date().toISOString(),
     });
 

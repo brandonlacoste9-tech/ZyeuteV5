@@ -64,6 +64,11 @@ export const Profile: React.FC = () => {
   const [user, setUser] = React.useState<User | null>(null);
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   const [posts, setPosts] = React.useState<Post[]>([]);
+  const [firedPosts, setFiredPosts] = React.useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = React.useState<Post[]>([]);
+  const [tabsLoaded, setTabsLoaded] = React.useState<Record<string, boolean>>(
+    {},
+  );
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [isBlocked, setIsBlocked] = React.useState(false);
   const [isBlocking, setIsBlocking] = React.useState(false);
@@ -273,6 +278,57 @@ export const Profile: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Fetch fired posts when fires tab activated
+  React.useEffect(() => {
+    if (activeTab !== "fires" || !user || tabsLoaded["fires"]) return;
+    const fetchFired = async () => {
+      try {
+        const { data } = await supabase
+          .from("reactions")
+          .select(
+            "publication:publication_id(id, media_url, thumbnail_url, caption, reactions_count, comments_count, type, hls_url, mux_playback_id, processing_status, user_id)",
+          )
+          .eq("user_id", user.id)
+          .eq("type", "fire")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        const raw = (data || []).map((r: any) => r.publication).filter(Boolean);
+        setFiredPosts(raw as Post[]);
+        setTabsLoaded((p) => ({ ...p, fires: true }));
+      } catch {
+        setFiredPosts([]);
+      }
+    };
+    fetchFired();
+  }, [activeTab, user, tabsLoaded, supabase]);
+
+  // Fetch saved posts when saved tab activated (own profile only)
+  React.useEffect(() => {
+    if (activeTab !== "saved" || !user || tabsLoaded["saved"]) return;
+    const fetchSaved = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("saved_posts")
+          .select(
+            "publication:publication_id(id, media_url, thumbnail_url, caption, reactions_count, comments_count, type, hls_url, mux_playback_id, processing_status, user_id)",
+          )
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (error && error.code === "42P01") {
+          setSavedPosts([]);
+          return;
+        }
+        const raw = (data || []).map((r: any) => r.publication).filter(Boolean);
+        setSavedPosts(raw as Post[]);
+        setTabsLoaded((p) => ({ ...p, saved: true }));
+      } catch {
+        setSavedPosts([]);
+      }
+    };
+    fetchSaved();
+  }, [activeTab, user, tabsLoaded, supabase]);
 
   // Check if following
   React.useEffect(() => {
@@ -759,96 +815,124 @@ export const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Posts Grid */}
-          {posts.length === 0 ? (
-            <QuebecEmptyState
-              type="profile"
-              title={isOwnProfile ? "Aucun post encore" : "Aucun post"}
-              description={
-                isOwnProfile
-                  ? "Commence à partager ton contenu québécois!"
-                  : `${user.display_name || user.username} n'a pas encore posté.`
-              }
-              actionText={isOwnProfile ? "Créer un post" : undefined}
-              onAction={isOwnProfile ? () => navigate("/upload") : undefined}
-            />
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {posts.map((post, index) => {
-                const isProcessing =
-                  post.processing_status === "pending" ||
-                  post.processing_status === "processing";
-
-                if (isProcessing) {
-                  return (
-                    <div
-                      key={post.id}
-                      className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle flex flex-col items-center justify-center gap-2"
-                    >
-                      {/* Animated shimmer background */}
-                      <div className="absolute inset-0 bg-leather-900 animate-pulse" />
-                      <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
-                      {/* Spinner + label */}
-                      <div className="relative z-10 flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[9px] font-bold text-gold-400 uppercase tracking-widest text-center leading-tight px-1">
-                          En cours de traitement
-                        </span>
-                      </div>
-                    </div>
-                  );
+          {/* Posts / Fires / Saved Grid */}
+          {(() => {
+            const gridPosts =
+              activeTab === "fires"
+                ? firedPosts
+                : activeTab === "saved"
+                  ? savedPosts
+                  : posts;
+            const emptyTitle =
+              activeTab === "fires"
+                ? "Aucun fire encore"
+                : activeTab === "saved"
+                  ? "Aucun post sauvegardé"
+                  : isOwnProfile
+                    ? "Aucun post encore"
+                    : "Aucun post";
+            const emptyDesc =
+              activeTab === "fires"
+                ? "Les posts que tu fires apparaissent ici."
+                : activeTab === "saved"
+                  ? "Sauvegarde des posts pour les retrouver ici."
+                  : isOwnProfile
+                    ? "Commence à partager ton contenu québécois!"
+                    : `${user.display_name || user.username} n'a pas encore posté.`;
+            return gridPosts.length === 0 ? (
+              <QuebecEmptyState
+                type="profile"
+                title={emptyTitle}
+                description={emptyDesc}
+                actionText={
+                  activeTab === "posts" && isOwnProfile
+                    ? "Créer un post"
+                    : undefined
                 }
+                onAction={
+                  activeTab === "posts" && isOwnProfile
+                    ? () => navigate("/upload")
+                    : undefined
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {gridPosts.map((post, index) => {
+                  const isProcessing =
+                    post.processing_status === "pending" ||
+                    post.processing_status === "processing";
 
-                return (
-                  <Link
-                    key={post.id}
-                    to={`/p/${post.id}`}
-                    className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
-                  >
-                    <Image
-                      src={post.media_url}
-                      alt={post.caption || "Post"}
-                      objectFit="cover"
-                      fetchPriority={index < 6 ? "high" : "auto"}
-                      loading={index < 6 ? "eager" : "lazy"}
-                    />
-                    {/* Overlay on hover */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                      <div className="flex items-center gap-1 text-white">
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                        </svg>
-                        <span className="font-bold">
-                          {formatNumber(post.fire_count)}
-                        </span>
+                  if (isProcessing) {
+                    return (
+                      <div
+                        key={post.id}
+                        className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle flex flex-col items-center justify-center gap-2"
+                      >
+                        {/* Animated shimmer background */}
+                        <div className="absolute inset-0 bg-leather-900 animate-pulse" />
+                        <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
+                        {/* Spinner + label */}
+                        <div className="relative z-10 flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-[9px] font-bold text-gold-400 uppercase tracking-widest text-center leading-tight px-1">
+                            En cours de traitement
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-white">
-                        <svg
-                          className="w-5 h-5"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <span className="font-bold">
-                          {formatNumber(post.comment_count)}
-                        </span>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={post.id}
+                      to={`/p/${post.id}`}
+                      className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                    >
+                      <Image
+                        src={post.media_url}
+                        alt={post.caption || "Post"}
+                        objectFit="cover"
+                        fetchPriority={index < 6 ? "high" : "auto"}
+                        loading={index < 6 ? "eager" : "lazy"}
+                      />
+                      {/* Overlay on hover */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                        <div className="flex items-center gap-1 text-white">
+                          <svg
+                            className="w-5 h-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                          </svg>
+                          <span className="font-bold">
+                            {formatNumber(post.fire_count)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 text-white">
+                          <svg
+                            className="w-5 h-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span className="font-bold">
+                            {formatNumber(post.comment_count)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    {/* Gold corner accent */}
-                    <div
-                      className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20"
-                      style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
-                    />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                      {/* Gold corner accent */}
+                      <div
+                        className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20"
+                        style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
+                      />
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
