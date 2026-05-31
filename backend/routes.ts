@@ -61,6 +61,7 @@ import aiVertexRoutes from "./routes/ai-vertex.js";
 import searchRoutes from "./routes/search.js";
 import videoDoctorRoutes from "./routes/video-doctor.routes.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
+import { banCheck } from "./middleware/banCheck.js";
 
 // Rate limiters for different endpoint types
 const generalRateLimiter = rateLimit({
@@ -132,7 +133,7 @@ export async function registerRoutes(
   app: Express,
 ): Promise<Server> {
   // Surgical Bypass - Launch Edition
-  app.use("/api/upload", surgicalUploadRouter);
+  app.use("/api/upload", banCheck, surgicalUploadRouter);
 
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
@@ -284,7 +285,7 @@ export async function registerRoutes(
   app.use("/api/email", emailRoutes);
 
   // ============ GIFT ROUTES ============
-  app.use("/api/gifts", giftRoutes);
+  app.use("/api/gifts", banCheck, giftRoutes);
 
   // ============ CENNE PACKS / STORE ROUTES ============
   app.use("/api/cennes", attachBearerUserId, cennePacksRoutes);

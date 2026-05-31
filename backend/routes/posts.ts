@@ -576,6 +576,23 @@ router.post(
       const comment = await storage.createComment(parsed.data);
       const user = await storage.getUser(req.userId!);
 
+      // Fire-and-forget push notification for new comment
+      try {
+        const post = await storage.getPost(req.params.id as string);
+        const postAuthorId = post?.userId;
+        const commenterUsername = user?.username || "";
+        const postId = req.params.id as string;
+        if (postAuthorId && postAuthorId !== req.userId && commenterUsername) {
+          const { notifyNewComment } =
+            await import("../services/pushNotify.js");
+          notifyNewComment(postAuthorId, commenterUsername, postId).catch(
+            () => {},
+          );
+        }
+      } catch (_e) {
+        /* non-critical */
+      }
+
       // Fire-and-forget moderation check
       try {
         const { getModerationQueue } = await import("../queue.js");

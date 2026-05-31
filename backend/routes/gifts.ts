@@ -163,6 +163,21 @@ router.post("/confirm", requireAuth, async (req: Request, res: Response) => {
     });
 
     res.json({ success: true, gift, giftInfo });
+
+    // Fire-and-forget push notification for gift received
+    try {
+      const senderUsername =
+        sender?.username || sender?.displayName || "quelqu'un";
+      const { notifyNewGift } = await import("../services/pushNotify.js");
+      notifyNewGift(
+        recipientId,
+        senderUsername,
+        giftInfo.name,
+        giftInfo.price,
+      ).catch(() => {});
+    } catch (_e) {
+      /* non-critical */
+    }
   } catch (error: any) {
     console.error("Gift confirm error:", error);
     res.status(500).json({ error: error.message || "Failed to confirm gift" });

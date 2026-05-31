@@ -390,6 +390,22 @@ router.post("/users/:id/follow", requireAuth, async (req, res) => {
       req.params.id as string,
     );
     res.json({ success, isFollowing: success });
+
+    // Fire-and-forget push notification for new follower
+    if (success) {
+      try {
+        const follower = await storage.getUser(req.userId!);
+        const followerUsername = follower?.username || "";
+        const followedUserId = req.params.id as string;
+        if (followerUsername) {
+          const { notifyNewFollower } =
+            await import("../services/pushNotify.js");
+          notifyNewFollower(followedUserId, followerUsername).catch(() => {});
+        }
+      } catch (_e) {
+        /* non-critical */
+      }
+    }
   } catch (error) {
     console.error("Follow error:", error);
     res.status(500).json({ error: "Failed to follow user" });
