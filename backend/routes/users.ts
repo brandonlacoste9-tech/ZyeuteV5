@@ -1,8 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
-import { db } from "../storage.js";
-import { follows, posts, users } from "../../shared/schema.js";
-import { eq, count, sql } from "drizzle-orm";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import multer from "multer";
@@ -16,95 +13,47 @@ const upload = multer({
 
 /**
  * Enrich a user object with real follower/following/post counts from DB.
- * These are not stored on the user_profiles row itself.
- * Uses Supabase REST fallback when Drizzle pool times out.
+ * Goes straight to Supabase REST — no Drizzle (pool is unreliable on Render).
+ * abonnements columns: follower_id, followee_id
  */
 async function enrichUserCounts(user: any): Promise<any> {
   const sb = supabaseAdmin;
-
-  // Helper: count rows via Supabase REST when Drizzle fails
-  async function countViaRest(
-    table: string,
-    column: string,
-    value: string,
-  ): Promise<number> {
-    if (!sb) return 0;
-    const { count: c } = await sb
-      .from(table)
-      .select("*", { count: "exact", head: true })
-      .eq(column, value);
-    return c ?? 0;
-  }
-
-  // Helper: count via Drizzle with 2.5s timeout + Supabase REST fallback
-  async function safeCount(
-    drizzleQuery: Promise<{ cnt: number }[]>,
-    restTable: string,
-    restColumn: string,
-    userId: string,
-  ): Promise<number> {
-    try {
-      const timedQuery = Promise.race([
-        drizzleQuery,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("count timeout")), 2500),
-        ),
-      ]);
-      const result = await timedQuery;
-      return result[0]?.cnt ?? 0;
-    } catch {
-      return countViaRest(restTable, restColumn, userId);
-    }
-  }
+  if (!sb) return user;
 
   try {
-    const [followersCount, followingCount, postsCount, subResult] =
-      await Promise.all([
-        // Followers: abonnements where following_id = user.id
-        safeCount(
-          db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(eq(follows.followingId, user.id)),
-          "abonnements",
-          "following_id",
-          user.id,
-        ),
-        // Following: abonnements where follower_id = user.id
-        safeCount(
-          db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(eq(follows.followerId, user.id)),
-          "abonnements",
-          "follower_id",
-          user.id,
-        ),
-        // Posts: publications by this user
-        safeCount(
-          db
-            .select({ cnt: count() })
-            .from(posts)
-            .where(eq(posts.userId, user.id)),
-          "publications",
-          "user_id",
-          user.id,
-        ),
-        // Active subscription tier (already uses Supabase REST)
-        sb
-          ? sb
-              .from("subscription_tiers")
-              .select("tier_name")
-              .eq("user_id", user.id)
-              .eq("status", "active")
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
-      ]);
+    const uid = user.id as string;
+    const [followersRes, followingRes, postsRes, subRes] = await Promise.all([
+      // Followers: rows where followee_id = uid
+      sb
+        .from("abonnements")
+        .select("*", { count: "exact", head: true })
+        .eq("followee_id", uid),
+      // Following: rows where follower_id = uid
+      sb
+        .from("abonnements")
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", uid),
+      // Posts: publications by this user
+      sb
+        .from("publications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", uid),
+      // Active subscription tier
+      sb
+        .from("subscription_tiers")
+        .select("tier_name")
+        .eq("user_id", uid)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
+    const followersCount = followersRes.count ?? 0;
+    const followingCount = followingRes.count ?? 0;
+    const postsCount = postsRes.count ?? 0;
     const tierName =
-      (subResult as any)?.data?.tier_name || user.subscriptionTier || "free";
+      (subRes as any)?.data?.tier_name || user.subscriptionTier || "free";
 
     return {
       ...user,
@@ -119,7 +68,7 @@ async function enrichUserCounts(user: any): Promise<any> {
     };
   } catch (err) {
     console.warn("[enrichUserCounts] Failed:", err);
-    return user; // Return unenriched rather than crash
+    return user;
   }
 }
 
@@ -174,50 +123,56 @@ router.get("/auth/me", optionalAuth, async (req: Request, res: Response) => {
     }
 
     let user: any = null;
-    // Try Drizzle first; fall back to supabaseAdmin if Drizzle has schema issues
-    try {
-      user = await storage.getUser(req.userId);
-    } catch (drizzleErr) {
-      console.error(
-        "[Auth] Drizzle getUser failed, trying supabaseAdmin fallback:",
-        drizzleErr,
-      );
-      if (supabaseAdmin) {
-        const { data } = await supabaseAdmin
-          .from("user_profiles")
-          .select("*")
-          .eq("id", req.userId)
-          .maybeSingle();
-        if (data) {
-          user = {
-            id: data.id,
-            username: data.username || "",
-            email: data.email || "",
-            displayName: data.display_name,
-            bio: data.bio,
-            avatarUrl: data.avatar_url,
-            region: data.region,
-            role: data.role || "citoyen",
-            isAdmin: data.is_admin || false,
-            isPremium: data.is_premium || false,
-            plan: data.plan || "free",
-            credits: data.credits || 0,
-            hiveId: data.hive_id || "quebec",
-            city: data.city,
-            regionId: data.region_id,
-            subscriptionTier: data.subscription_tier || "free",
-            createdAt: data.created_at,
-            updatedAt: data.updated_at,
-            raisonBannissement: data.raison_bannissement,
-          };
-        }
+
+    // Fast path: go straight to Supabase REST (skip Drizzle — pool unreliable on Render).
+    // Drizzle times out after 2.5s before falling back, which pushes auth/me over the
+    // frontend's 5s timeout and triggers the EMERGENCY render path.
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("user_profiles")
+        .select("*")
+        .eq("id", req.userId)
+        .maybeSingle();
+      if (data) {
+        user = {
+          id: data.id,
+          username: data.username || "",
+          email: data.email || "",
+          displayName: data.display_name,
+          bio: data.bio,
+          avatarUrl: data.avatar_url,
+          region: data.region,
+          role: data.role || "citoyen",
+          isAdmin: data.is_admin || false,
+          isPremium: data.is_premium || false,
+          plan: data.plan || "free",
+          credits: data.credits || 0,
+          hiveId: data.hive_id || "quebec",
+          city: data.city,
+          regionId: data.region_id,
+          subscriptionTier: data.subscription_tier || "free",
+          tiGuyCommentsEnabled: data.ti_guy_comments_enabled ?? true,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          raisonBannissement: data.raison_bannissement,
+          beeAlias: data.bee_alias,
+          nectarPoints: data.nectar_points || 0,
+          karmaCredits: data.karma_credits || 0,
+          cashCredits: data.cash_credits || 0,
+        };
+      }
+    } else {
+      // supabaseAdmin unavailable — fall back to Drizzle
+      try {
+        user = await storage.getUser(req.userId);
+      } catch (err) {
+        console.error("[Auth] getUser fallback failed:", err);
       }
     }
 
-    // Auto-provision: If Supabase user exists but no DB row, create one
+    // Auto-provision: Supabase auth user exists but no user_profiles row yet
     if (!user) {
       try {
-        // Get user metadata from Supabase auth token (already validated)
         const authHeader = req.headers.authorization;
         const token = authHeader?.split(" ")[1];
         let email = "";
@@ -237,14 +192,17 @@ router.get("/auth/me", optionalAuth, async (req: Request, res: Response) => {
           }
         }
 
-        if (!username) {
-          username = `user_${req.userId.slice(0, 8)}`;
-        }
+        if (!username) username = `user_${req.userId.slice(0, 8)}`;
 
-        // Ensure username is unique by appending random suffix if needed
-        const existingByUsername = await storage.getUserByUsername(username);
-        if (existingByUsername) {
-          username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
+        // Ensure username uniqueness
+        if (supabaseAdmin) {
+          const { data: existing } = await supabaseAdmin
+            .from("user_profiles")
+            .select("id")
+            .eq("username", username)
+            .maybeSingle();
+          if (existing)
+            username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
         }
 
         user = await storage.createUser({
@@ -263,7 +221,15 @@ router.get("/auth/me", optionalAuth, async (req: Request, res: Response) => {
       }
     }
 
-    // Exclude sensitive fields from response (taxId, internal permissions)
+    // Ban check
+    if (user?.role === "banned") {
+      return res.status(403).json({
+        error: "Compte désactivé.",
+        isBanned: true,
+        raisonBannissement: user.raisonBannissement,
+      });
+    }
+
     const { taxId, customPermissions, ...safeUser } = user;
     const enriched = await enrichUserCounts(safeUser);
     res.json({ user: enriched });
@@ -282,17 +248,59 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const identifier = req.params.username as string;
-      let user;
+      let user: any;
 
-      // Allow lookup by UUID if the identifier looks like one
+      // Fast path: Supabase REST (skip Drizzle — pool unreliable on Render)
       const uuidRegex =
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(identifier)) {
-        user = await storage.getUser(identifier);
-      }
-
-      if (!user) {
-        user = await storage.getUserByUsername(identifier);
+      if (supabaseAdmin) {
+        const isUuid = uuidRegex.test(identifier);
+        const { data } = isUuid
+          ? await supabaseAdmin
+              .from("user_profiles")
+              .select("*")
+              .eq("id", identifier)
+              .maybeSingle()
+          : await supabaseAdmin
+              .from("user_profiles")
+              .select("*")
+              .eq("username", identifier)
+              .maybeSingle();
+        if (data) {
+          user = {
+            id: data.id,
+            username: data.username || "",
+            email: data.email || "",
+            displayName: data.display_name,
+            bio: data.bio,
+            avatarUrl: data.avatar_url,
+            region: data.region,
+            role: data.role || "citoyen",
+            isAdmin: data.is_admin || false,
+            isPremium: data.is_premium || false,
+            plan: data.plan || "free",
+            credits: data.credits || 0,
+            hiveId: data.hive_id || "quebec",
+            city: data.city,
+            regionId: data.region_id,
+            subscriptionTier: data.subscription_tier || "free",
+            tiGuyCommentsEnabled: data.ti_guy_comments_enabled ?? true,
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            raisonBannissement: data.raison_bannissement,
+            beeAlias: data.bee_alias,
+            nectarPoints: data.nectar_points || 0,
+            karmaCredits: data.karma_credits || 0,
+            cashCredits: data.cash_credits || 0,
+            piasseBalance: data.piasse_balance || 0,
+            totalKarma: data.total_karma || 0,
+          };
+        }
+      } else {
+        // Drizzle fallback when supabaseAdmin not available
+        if (uuidRegex.test(identifier))
+          user = await storage.getUser(identifier);
+        if (!user) user = await storage.getUserByUsername(identifier);
       }
 
       // Auto-provision: If requesting own profile by UUID and no DB row yet, create one
@@ -319,9 +327,14 @@ router.get(
 
           if (!username) username = `user_${identifier.slice(0, 8)}`;
 
-          const existingByUsername = await storage.getUserByUsername(username);
-          if (existingByUsername) {
-            username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
+          if (supabaseAdmin) {
+            const { data: existing } = await supabaseAdmin
+              .from("user_profiles")
+              .select("id")
+              .eq("username", username)
+              .maybeSingle();
+            if (existing)
+              username = `${username}_${Math.random().toString(36).slice(2, 6)}`;
           }
 
           user = await storage.createUser({
@@ -363,17 +376,45 @@ router.get(
   },
 );
 
-// Get current user profile (alias for /api/auth/me)
+// Get current user profile (alias for /api/auth/me — same fast REST path)
 router.get("/users/me", optionalAuth, async (req: Request, res: Response) => {
+  if (!req.userId) return res.json({ user: null });
   try {
-    if (!req.userId) {
-      return res.json({ user: null });
+    if (!supabaseAdmin) {
+      const user = await storage.getUser(req.userId);
+      return res.json({ user });
     }
-    const user = await storage.getUser(req.userId);
-    res.json({ user });
+    const { data } = await supabaseAdmin
+      .from("user_profiles")
+      .select("*")
+      .eq("id", req.userId)
+      .maybeSingle();
+    if (!data) return res.status(404).json({ error: "User not found" });
+    const user = {
+      id: data.id,
+      username: data.username || "",
+      email: data.email || "",
+      displayName: data.display_name,
+      bio: data.bio,
+      avatarUrl: data.avatar_url,
+      region: data.region,
+      role: data.role || "citoyen",
+      isAdmin: data.is_admin || false,
+      isPremium: data.is_premium || false,
+      plan: data.plan || "free",
+      credits: data.credits || 0,
+      hiveId: data.hive_id || "quebec",
+      city: data.city,
+      regionId: data.region_id,
+      subscriptionTier: data.subscription_tier || "free",
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+    };
+    const enriched = await enrichUserCounts(user);
+    return res.json({ user: enriched });
   } catch (error) {
-    console.error("Get user error:", error);
-    res.status(500).json({ error: "Failed to get user" });
+    console.error("Get /users/me error:", error);
+    return res.status(500).json({ error: "Failed to get user" });
   }
 });
 
