@@ -1607,20 +1607,7 @@ export const Zyeute: React.FC = () => {
         <TiGuyMessaging
           key={showTiGuyChat ? "open" : "closed"}
           open={showTiGuyChat}
-          isPremium={isPremium}
-          onClose={async () => {
-            setShowTiGuyChat(false);
-            // Refresh unread badge after closing Ti-Guy
-            const { data } = await apiCall<{
-              conversations: { unreadCount: number }[];
-            }>("/messaging/conversations");
-            setTiGuyUnread(
-              (data?.conversations ?? []).reduce(
-                (s, c) => s + (c.unreadCount || 0),
-                0,
-              ),
-            );
-          }}
+          onClose={() => setShowTiGuyChat(false)}
         />
 
         <ShareSheet
