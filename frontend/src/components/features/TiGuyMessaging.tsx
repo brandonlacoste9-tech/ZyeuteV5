@@ -84,35 +84,60 @@ const STITCH_STYLE = `
 `;
 
 // ─── SVG icons ───────────────────────────────────────────────────────────────
-function BeaverIcon({ size = 40 }: { size?: number }) {
+function FleurDeLysLarge({ size = 72, gold }: { size?: number; gold: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      {/* Body */}
-      <ellipse cx="32" cy="38" rx="18" ry="14" fill="#7A4A2A" />
-      {/* Head */}
-      <ellipse cx="32" cy="22" rx="14" ry="12" fill="#8B5530" />
-      {/* Ears */}
-      <ellipse cx="20" cy="13" rx="5" ry="6" fill="#7A4A2A" />
-      <ellipse cx="44" cy="13" rx="5" ry="6" fill="#7A4A2A" />
-      <ellipse cx="20" cy="13" rx="3" ry="4" fill="#C47A5A" />
-      <ellipse cx="44" cy="13" rx="3" ry="4" fill="#C47A5A" />
-      {/* Eyes */}
-      <circle cx="26" cy="21" r="3.5" fill="#1A0F0A" />
-      <circle cx="38" cy="21" r="3.5" fill="#1A0F0A" />
-      <circle cx="27" cy="20" r="1.2" fill="white" />
-      <circle cx="39" cy="20" r="1.2" fill="white" />
-      {/* Nose */}
-      <ellipse cx="32" cy="27" rx="4" ry="2.5" fill="#3D1A10" />
-      {/* Teeth */}
-      <rect x="29" y="29" width="3" height="5" rx="1" fill="#F4E2A6" />
-      <rect x="33" y="29" width="3" height="5" rx="1" fill="#F4E2A6" />
-      {/* Tail */}
-      <ellipse cx="32" cy="54" rx="12" ry="5" fill="#5C3520" />
-      <ellipse cx="32" cy="54" rx="10" ry="3.5" fill="#4A2810" />
-      {/* Gold fleur on chest */}
-      <text x="27" y="42" fontSize="10" fill="#D4AF37">
-        ⚜️
-      </text>
+    <svg width={size} height={size} viewBox="0 0 100 130" fill="none">
+      <defs>
+        <linearGradient id="fg" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#F4E2A6" />
+          <stop offset="45%" stopColor="#D4AF37" />
+          <stop offset="100%" stopColor="#8B6914" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2.5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#glow)">
+        {/* Center top petal */}
+        <path
+          d="M50 45 C43 33 39 18 50 6 C61 18 57 33 50 45Z"
+          fill="url(#fg)"
+        />
+        {/* Left petal */}
+        <path
+          d="M50 65 C36 60 20 55 14 44 C25 36 40 46 50 60Z"
+          fill="url(#fg)"
+        />
+        {/* Right petal */}
+        <path
+          d="M50 65 C64 60 80 55 86 44 C75 36 60 46 50 60Z"
+          fill="url(#fg)"
+        />
+        {/* Left inner curl */}
+        <path
+          d="M50 60 C43 54 32 53 28 57 C33 64 45 63 50 60Z"
+          fill="url(#fg)"
+          opacity="0.75"
+        />
+        {/* Right inner curl */}
+        <path
+          d="M50 60 C57 54 68 53 72 57 C67 64 55 63 50 60Z"
+          fill="url(#fg)"
+          opacity="0.75"
+        />
+        {/* Cross bar */}
+        <rect x="36" y="64" width="28" height="6" rx="3" fill="url(#fg)" />
+        {/* Stem */}
+        <path d="M46 70 L50 122 L54 70Z" fill="url(#fg)" />
+        {/* Base foot */}
+        <rect x="38" y="118" width="24" height="5" rx="2.5" fill="url(#fg)" />
+        {/* Crown dot */}
+        <circle cx="50" cy="4" r="2.5" fill={gold} />
+      </g>
     </svg>
   );
 }
@@ -511,28 +536,27 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           </svg>
         </button>
 
-        {/* Center: beaver + title */}
-        <div className="flex flex-col items-center gap-0.5">
-          <div className="flex items-center gap-2">
-            <BeaverIcon size={36} />
-            <div>
-              <h1
-                className="text-xl font-black leading-none"
-                style={{
-                  color: gold,
-                  fontFamily: "'Cormorant Garamond', Georgia, serif",
-                  textShadow: `0 0 16px ${gold}80`,
-                }}
-              >
-                Ti-Guy
-              </h1>
-              <p
-                className="text-[0.5rem] uppercase tracking-[0.25em] opacity-70 font-bold"
-                style={{ color: GOLD_LIGHT }}
-              >
-                Antigravity Gold ⚜️
-              </p>
-            </div>
+        {/* Center: fleur-de-lis + title */}
+        <div className="flex flex-col items-center gap-1">
+          <FleurDeLysLarge size={70} gold={gold} />
+          <div className="flex flex-col items-center -mt-1">
+            <h1
+              className="text-2xl font-black leading-none"
+              style={{
+                color: gold,
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                textShadow: `0 0 20px ${gold}90, 0 0 40px ${gold}40`,
+                letterSpacing: "0.08em",
+              }}
+            >
+              Ti-Guy
+            </h1>
+            <p
+              className="text-[0.5rem] uppercase tracking-[0.3em] font-bold"
+              style={{ color: GOLD_LIGHT }}
+            >
+              Antigravity Gold ⚜️
+            </p>
           </div>
         </div>
 
@@ -625,7 +649,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
       >
         {chatMsgs.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 opacity-70">
-            <BeaverIcon size={64} />
+            <FleurDeLysLarge size={80} gold={gold} />
             <p
               className="text-sm font-semibold text-center"
               style={{ color: GOLD_LIGHT }}
