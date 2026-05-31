@@ -58,17 +58,28 @@ export interface TiGuyMessagingProps {
 
 // ─── Stitch border CSS injected once ─────────────────────────────────────────
 const STITCH_STYLE = `
-.tg-stitch {
+.tg-panel-header {
   position: relative;
 }
-.tg-stitch::before {
+/* Outer gold frame */
+.tg-panel-header::before {
   content: '';
   position: absolute;
-  inset: 6px;
-  border-radius: 14px;
-  border: 1.5px dashed rgba(212,175,55,0.35);
+  inset: 8px;
+  border-radius: 12px;
+  border: 2px solid rgba(212,175,55,0.55);
   pointer-events: none;
-  z-index: 0;
+  z-index: 1;
+}
+/* Inner dashed stitch */
+.tg-panel-header::after {
+  content: '';
+  position: absolute;
+  inset: 13px;
+  border-radius: 9px;
+  border: 1.5px dashed rgba(212,175,55,0.30);
+  pointer-events: none;
+  z-index: 1;
 }
 `;
 
@@ -303,12 +314,10 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
     setChatMsgs((p) => [...p, userMsg]);
     setChatSending(true);
     try {
-      const history = chatMsgs
-        .slice(-8)
-        .map((m) => ({
-          sender: m.from === "user" ? "user" : "tiguy",
-          text: m.text,
-        }));
+      const history = chatMsgs.slice(-8).map((m) => ({
+        sender: m.from === "user" ? "user" : "tiguy",
+        text: m.text,
+      }));
       const { data } = await apiCall<{ response: string }>("/tiguy/chat", {
         method: "POST",
         body: JSON.stringify({
@@ -467,7 +476,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   // ─── Shared header ──────────────────────────────────────────────────────────
   const renderHeader = () => (
     <div
-      className="tg-stitch flex-shrink-0 relative"
+      className="tg-panel-header flex-shrink-0 relative"
       style={{
         background: `linear-gradient(180deg, ${LEATHER_TAN} 0%, ${LEATHER_LIGHT} 30%, ${LEATHER_WARM} 100%)`,
         borderBottom: `3px solid ${gold}`,
