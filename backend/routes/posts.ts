@@ -635,24 +635,60 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const parsed = insertCommentSchema.safeParse({
-        postId: req.params.id,
-        userId: req.userId,
-        content: req.body.content,
-      });
-
-      if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.issues[0].message });
+      const content = (req.body.content || "").trim();
+      if (!content || content.length > 500) {
+        return res
+          .status(400)
+          .json({ error: "Contenu invalide (1-500 caractères)" });
       }
 
-      const comment = await storage.createComment(parsed.data);
-      const user = await storage.getUser(req.userId!);
+      if (!supabaseRest) throw new Error("Supabase not configured");
+
+      // Insert directly via Supabase REST (Drizzle pool is dead on Render)
+      const { data: commentData, error: insertErr } = await supabaseRest
+        .from("commentaires")
+        .insert({
+          publication_id: req.params.id,
+          user_id: req.userId,
+          content,
+        })
+        .select("id, publication_id, user_id, content, created_at")
+        .single();
+
+      if (insertErr || !commentData) {
+        console.error("[comments] insert error:", insertErr);
+        return res
+          .status(500)
+          .json({ error: "Impossible d'ajouter le commentaire" });
+      }
+
+      // Fetch user profile for response
+      const { data: userData } = await supabaseRest
+        .from("user_profiles")
+        .select(
+          "id, username, display_name, avatar_url, username_color, is_verified",
+        )
+        .eq("id", req.userId!)
+        .single();
+
+      const comment = {
+        id: commentData.id,
+        postId: commentData.publication_id,
+        userId: commentData.user_id,
+        content: commentData.content,
+        created_at: commentData.created_at,
+      };
+      const user = userData;
 
       // Fire-and-forget push notification for new comment
       try {
-        const post = await storage.getPost(req.params.id as string);
-        const postAuthorId = post?.userId;
-        const commenterUsername = user?.username || "";
+        const { data: pubData } = await supabaseRest!
+          .from("publications")
+          .select("user_id")
+          .eq("id", req.params.id)
+          .single();
+        const postAuthorId = pubData?.user_id;
+        const commenterUsername = (user as any)?.username || "";
         const postId = req.params.id as string;
         if (postAuthorId && postAuthorId !== req.userId && commenterUsername) {
           const { notifyNewComment } =
@@ -695,9 +731,19 @@ router.delete(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const success = await storage.deleteComment(req.params.id as string);
-      if (!success) {
-        return res.status(404).json({ error: "Comment not found" });
+      if (!supabaseRest) throw new Error("Supabase not configured");
+
+      // Soft-delete: set deleted_at (commentaires has this column)
+      const { data, error } = await supabaseRest
+        .from("commentaires")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", req.params.id)
+        .eq("user_id", req.userId!) // only own comments
+        .select("id")
+        .single();
+
+      if (error || !data) {
+        return res.status(404).json({ error: "Commentaire introuvable" });
       }
       res.json({ success: true });
     } catch (error) {
