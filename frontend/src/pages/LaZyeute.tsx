@@ -27,7 +27,6 @@ import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnos
 import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { GoldEditionSplash } from "@/components/features/GoldEditionSplash";
-import { HamburgerMenu } from "@/components/layout/HamburgerMenu";
 import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
@@ -569,10 +568,6 @@ export const Zyeute: React.FC = () => {
     });
   }, [posts.length, feedSource]);
 
-  const togglePlayPause = useCallback(() => {
-    setIsPlaying((prev) => !prev);
-  }, []);
-
   // Show splash immediately, don't wait for feed if it's the first time
   if (showSplash) {
     return (
@@ -677,7 +672,7 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className={`fixed top-0 left-0 right-0 z-50 px-4 flex items-end justify-between transition-opacity duration-300 ${
+          className={`fixed top-0 left-0 right-0 z-50 px-4 flex items-end justify-center transition-opacity duration-300 ${
             uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
           style={{
@@ -686,28 +681,6 @@ export const Zyeute: React.FC = () => {
             paddingBottom: "10px",
           }}
         >
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-white p-2 press-scale"
-              data-testid="button-back"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <HamburgerMenu />
-          </div>
           <div className="flex items-center gap-2 select-none">
             <FlameEyeIcon
               className="w-8 h-8"
@@ -725,72 +698,6 @@ export const Zyeute: React.FC = () => {
             >
               Zyeuté
             </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={togglePlayPause}
-              className="text-white p-2 press-scale"
-              data-testid="button-playpause"
-            >
-              {isPlaying ? (
-                <svg
-                  className="w-6 h-6"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                </svg>
-              ) : (
-                <svg
-                  className="w-6 h-6"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className="text-white p-2 press-scale"
-              data-testid="button-mute"
-            >
-              {isMuted ? (
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
-                  />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
 
