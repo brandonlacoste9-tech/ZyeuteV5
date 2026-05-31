@@ -55,7 +55,6 @@ export async function getSessionWithTimeout(ms = 3000): Promise<{
   }
 }
 
-
 if (credentialsMissing) {
   if (process.env.NODE_ENV === "production") {
     console.error(
@@ -65,7 +64,6 @@ if (credentialsMissing) {
     console.warn("⚠️ [SECURITY] Supabase credentials missing or invalid.");
   }
 }
-
 
 // Helper function to get dynamic redirect URL based on current domain
 function getRedirectUrl(): string {
@@ -94,6 +92,7 @@ export async function signUp(
   email: string,
   password: string,
   username: string,
+  hiveId?: string,
 ) {
   const redirectUrl = getRedirectUrl();
 
@@ -101,7 +100,7 @@ export async function signUp(
     email,
     password,
     options: {
-      data: { username },
+      data: { username, hive_id: hiveId ?? "quebec", display_name: username },
       emailRedirectTo: redirectUrl,
     },
   });

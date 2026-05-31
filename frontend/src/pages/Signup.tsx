@@ -71,7 +71,7 @@ export const Signup: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await signUp(email, password, username);
+      const { error } = await signUp(email, password, username, selectedHive);
 
       if (error) throw error;
 
