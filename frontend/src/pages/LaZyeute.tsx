@@ -28,6 +28,7 @@ import { TiGuyMessaging } from "@/components/features/TiGuyMessaging";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import { GoldEditionSplash } from "@/components/features/GoldEditionSplash";
 import { HamburgerMenu } from "@/components/layout/HamburgerMenu";
+import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
@@ -674,7 +675,13 @@ export const Zyeute: React.FC = () => {
         />
 
         {/* Header */}
-        <div className="flex-shrink-0 z-50 p-4 flex items-center justify-between glass-amber-strong border-b border-gold-500/20">
+        <div
+          className="flex-shrink-0 z-50 px-4 py-3 flex items-center justify-between border-b"
+          style={{
+            background: "rgba(0,0,0,0.97)",
+            borderBottomColor: "rgba(212,175,55,0.2)",
+          }}
+        >
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigate(-1)}
@@ -697,12 +704,24 @@ export const Zyeute: React.FC = () => {
             </button>
             <HamburgerMenu />
           </div>
-          <h1 className="text-gold-500 font-black text-xl flex items-baseline select-none amber-glow">
-            Zyeute
-            <span className="text-[0.6rem] uppercase tracking-[0.3em] ml-2 font-bold gold-text-shine whitespace-nowrap">
-              AG GOLD EDITION
+          <div className="flex items-center gap-2 select-none">
+            <FlameEyeIcon
+              className="w-8 h-8"
+              style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.6))" }}
+            />
+            <span
+              className="font-black text-lg tracking-widest uppercase leading-none"
+              style={{
+                background:
+                  "linear-gradient(135deg, #FFD700 0%, #C9A227 50%, #FFE566 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+              }}
+            >
+              Zyeuté
             </span>
-          </h1>
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={togglePlayPause}
@@ -771,42 +790,56 @@ export const Zyeute: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-shrink-0 z-40 flex justify-center items-center gap-2 px-3 py-2 border-b border-gold-500/10 bg-black/50">
-          <button
-            type="button"
-            onClick={() => {
-              setFeedSource("explore");
-              feedRestoreOnce.current = false;
-              void refetch();
-            }}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
-              feedSource === "explore"
-                ? "bg-gold-500 text-black"
-                : "bg-white/10 text-gold-200"
-            }`}
-          >
-            Pour toi
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setFeedSource("feed");
-              feedRestoreOnce.current = false;
-              void refetch();
-            }}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
-              feedSource === "feed"
-                ? "bg-gold-500 text-black"
-                : "bg-white/10 text-gold-200"
-            }`}
-          >
-            Abonnements
-          </button>
+        {/* Découverte / Abonnements tab bar */}
+        <div
+          className="flex-shrink-0 z-40 flex items-center gap-6 px-5 border-b"
+          style={{
+            background: "rgba(0,0,0,0.97)",
+            borderBottomColor: "rgba(212,175,55,0.15)",
+          }}
+        >
+          {(
+            [
+              { key: "explore", label: "Découverte" },
+              { key: "feed", label: "Abonnements" },
+            ] as const
+          ).map(({ key, label }) => {
+            const isActive = feedSource === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setFeedSource(key);
+                  feedRestoreOnce.current = false;
+                  void refetch();
+                }}
+                className="relative py-3 text-sm font-semibold transition-colors"
+                style={{
+                  color: isActive ? "#FFD700" : "rgba(255,255,255,0.45)",
+                }}
+              >
+                {label}
+                {isActive && (
+                  <span
+                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                      boxShadow: "0 0 6px rgba(255,215,0,0.7)",
+                    }}
+                  />
+                )}
+              </button>
+            );
+          })}
+          {/* PiP tucked to right */}
           <button
             type="button"
             onClick={tryPictureInPicture}
-            className="px-2 py-1.5 rounded-full text-[10px] font-bold bg-white/10 text-gold-200 border border-gold-500/30"
-            title="Picture-in-picture (vidéo native)"
+            className="ml-auto py-3 text-[10px] font-bold"
+            style={{ color: "rgba(212,175,55,0.5)" }}
+            title="Picture-in-picture"
           >
             PiP
           </button>
@@ -1321,69 +1354,123 @@ export const Zyeute: React.FC = () => {
           </div>
         )}
 
-        {/* Bottom Navigation - leather bar with 2 icons each side and center + */}
+        {/* Bottom Navigation */}
         <div
-          className="flex-shrink-0 z-40 flex flex-col leather-dark stitched"
+          className="flex-shrink-0 z-40 flex flex-col"
           style={{
-            background:
-              "linear-gradient(180deg, #2C1810 0%, #1A0F0A 60%, #0D0705 100%)",
-            borderTop: `1px solid ${edgeLighting}30`,
-            paddingInline: 24,
-            paddingTop: 8,
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
+            background: "rgba(0,0,0,0.97)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderTop: "1px solid rgba(212,175,55,0.25)",
+            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
           }}
         >
-          <div className="gold-nav-accent opacity-50" />
-          <div className="flex items-center justify-around py-2">
+          {/* Gold shimmer accent line */}
+          <div
+            style={{
+              height: 1,
+              background:
+                "linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.4) 30%, rgba(255,215,0,0.6) 50%, rgba(212,175,55,0.4) 70%, transparent 100%)",
+            }}
+          />
+          <div className="flex items-center justify-around py-1">
             {/* Home */}
             <button
               onClick={() => navigate("/feed")}
-              className="flex flex-col items-center gap-1 press-scale"
+              className="flex flex-col items-center gap-1 press-scale relative"
             >
+              {location.pathname === "/feed" && (
+                <span
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                    boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                  }}
+                />
+              )}
               <svg
-                width="26"
-                height="26"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
-                fill={location.pathname === "/feed" ? edgeLighting : "none"}
-                stroke={edgeLighting}
+                fill={location.pathname === "/feed" ? "#FFD700" : "none"}
+                stroke={
+                  location.pathname === "/feed"
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.5)"
+                }
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={
+                  location.pathname === "/feed"
+                    ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                    : {}
+                }
               >
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
               <span
-                className="text-xs"
-                style={{ color: edgeLighting, opacity: 0.9 }}
+                className="text-[10px] font-medium"
+                style={{
+                  color:
+                    location.pathname === "/feed"
+                      ? "#FFD700"
+                      : "rgba(255,255,255,0.5)",
+                }}
               >
-                Home
+                Accueil
               </span>
             </button>
 
             {/* Search */}
             <button
               onClick={() => navigate("/search")}
-              className="flex flex-col items-center gap-1 press-scale"
+              className="flex flex-col items-center gap-1 press-scale relative"
             >
+              {location.pathname === "/search" && (
+                <span
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                    boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                  }}
+                />
+              )}
               <svg
-                width="26"
-                height="26"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={edgeLighting}
+                stroke={
+                  location.pathname === "/search"
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.5)"
+                }
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={
+                  location.pathname === "/search"
+                    ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                    : {}
+                }
               >
                 <circle cx="11" cy="11" r="7" />
                 <path d="m21 21-4.35-4.35" />
               </svg>
               <span
-                className="text-xs"
-                style={{ color: edgeLighting, opacity: 0.9 }}
+                className="text-[10px] font-medium"
+                style={{
+                  color:
+                    location.pathname === "/search"
+                      ? "#FFD700"
+                      : "rgba(255,255,255,0.5)",
+                }}
               >
-                Search
+                Découvrir
               </span>
             </button>
 
@@ -1419,54 +1506,103 @@ export const Zyeute: React.FC = () => {
             {/* Notifications */}
             <button
               onClick={() => navigate("/notifications")}
-              className="flex flex-col items-center gap-1 press-scale"
+              className="flex flex-col items-center gap-1 press-scale relative"
             >
+              {location.pathname === "/notifications" && (
+                <span
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                    boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                  }}
+                />
+              )}
               <svg
-                width="26"
-                height="26"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
                 fill={
-                  location.pathname === "/notifications" ? edgeLighting : "none"
+                  location.pathname === "/notifications" ? "#FFD700" : "none"
                 }
-                stroke={edgeLighting}
+                stroke={
+                  location.pathname === "/notifications"
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.5)"
+                }
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={
+                  location.pathname === "/notifications"
+                    ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                    : {}
+                }
               >
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
               </svg>
               <span
-                className="text-xs"
-                style={{ color: edgeLighting, opacity: 0.9 }}
+                className="text-[10px] font-medium"
+                style={{
+                  color:
+                    location.pathname === "/notifications"
+                      ? "#FFD700"
+                      : "rgba(255,255,255,0.5)",
+                }}
               >
-                Notifications
+                Activité
               </span>
             </button>
 
             {/* Profile */}
             <button
               onClick={() => navigate("/profile")}
-              className="flex flex-col items-center gap-1 press-scale"
+              className="flex flex-col items-center gap-1 press-scale relative"
             >
+              {location.pathname.startsWith("/profile") && (
+                <span
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, #FFD700, transparent)",
+                    boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                  }}
+                />
+              )}
               <svg
-                width="26"
-                height="26"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
-                fill={location.pathname === "/profile" ? edgeLighting : "none"}
-                stroke={edgeLighting}
+                fill={
+                  location.pathname.startsWith("/profile") ? "#FFD700" : "none"
+                }
+                stroke={
+                  location.pathname.startsWith("/profile")
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.5)"
+                }
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={
+                  location.pathname.startsWith("/profile")
+                    ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                    : {}
+                }
               >
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
               <span
-                className="text-xs"
-                style={{ color: edgeLighting, opacity: 0.9 }}
+                className="text-[10px] font-medium"
+                style={{
+                  color: location.pathname.startsWith("/profile")
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.5)",
+                }}
               >
-                Profile
+                Profil
               </span>
             </button>
           </div>
