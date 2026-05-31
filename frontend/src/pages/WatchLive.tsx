@@ -9,6 +9,8 @@ import MuxPlayer from "@mux/mux-player-react";
 import { LiveChat } from "@/components/live/LiveChat";
 import { GiftPicker } from "@/components/features/GiftPicker";
 import { useHaptics } from "@/hooks/useHaptics";
+import { useAuth } from "@/contexts/AuthContext";
+import { getSessionWithTimeout } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
 const watchLogger = logger.withContext("WatchLive");
@@ -27,11 +29,24 @@ interface StreamData {
   viewerCount?: number;
 }
 
+interface ChatMessage {
+  id: string;
+  username: string;
+  avatar_url?: string;
+  message: string;
+  message_type: "chat" | "gift" | "join" | "system";
+  gift_name?: string;
+  gift_amount?: number;
+  created_at: string;
+}
+
 export default function WatchLive() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tap } = useHaptics();
+  const { user } = useAuth();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chatPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [stream, setStream] = useState<StreamData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +54,10 @@ export default function WatchLive() {
   const [showChat, setShowChat] = useState(true);
   const [showGiftPicker, setShowGiftPicker] = useState(false);
   const [streamEnded] = useState(false);
+
+  // Chat state for DB-backed polling
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [viewerCount, setViewerCount] = useState<number>(0);
 
   const fetchStream = useCallback(async () => {
     if (!id) return;
@@ -55,7 +74,7 @@ export default function WatchLive() {
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const { data } = await res.json();
 
-      // Also pull meta from live_streams table via supabase
+      // Also pull meta from live_streams table via API
       setStream({ streamId: data.streamId, ...data });
     } catch (err: any) {
       watchLogger.error("Failed to fetch stream:", err);
@@ -65,13 +84,111 @@ export default function WatchLive() {
     }
   }, [id]);
 
+  // Fetch live stream meta (viewer count, etc.) from our live API
+  const fetchLiveMeta = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/live/${id}`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const { stream: liveData } = await res.json();
+      if (liveData) {
+        setViewerCount(liveData.viewer_count || 0);
+        setStream((prev) =>
+          prev
+            ? {
+                ...prev,
+                title: liveData.title || prev.title,
+                userId: liveData.user_id || prev.userId,
+                username: liveData.user?.username || prev.username,
+                avatarUrl: liveData.user?.avatar_url || prev.avatarUrl,
+                viewerCount: liveData.viewer_count || prev.viewerCount,
+              }
+            : prev,
+        );
+      }
+    } catch {
+      // silently ignore — Mux status is primary
+    }
+  }, [id]);
+
+  // Poll chat messages from DB every 3 seconds
+  const fetchChatMessages = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/live/${id}/messages`, {
+        credentials: "include",
+      });
+      if (!res.ok) return;
+      const { messages } = await res.json();
+      if (messages) setChatMessages(messages);
+    } catch {
+      // silently ignore
+    }
+  }, [id]);
+
+  // Signal viewer join
+  const signalViewerJoin = useCallback(async () => {
+    if (!id) return;
+    try {
+      await fetch(`${API_BASE}/api/live/${id}/viewer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "join" }),
+      });
+    } catch {
+      // ignore
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchStream();
+    fetchLiveMeta();
+    signalViewerJoin();
+
     pollRef.current = setInterval(fetchStream, 10_000);
+    chatPollRef.current = setInterval(fetchChatMessages, 3_000);
+
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
+      if (chatPollRef.current) clearInterval(chatPollRef.current);
     };
-  }, [fetchStream]);
+  }, [fetchStream, fetchLiveMeta, fetchChatMessages, signalViewerJoin]);
+
+  // Handle gift sending via API
+  const handleSendGift = useCallback(
+    async (giftName: string, giftAmount: number) => {
+      if (!id || !user) return;
+      try {
+        const { session } = await getSessionWithTimeout(3000);
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+        await fetch(`${API_BASE}/api/live/${id}/gift`, {
+          method: "POST",
+          headers,
+          credentials: "include",
+          body: JSON.stringify({
+            giftName,
+            giftAmount,
+            username:
+              (user as any).user_metadata?.username || user.email || "Anonyme",
+            avatarUrl: (user as any).user_metadata?.avatar_url || null,
+          }),
+        });
+        // Refresh chat immediately after gift
+        fetchChatMessages();
+      } catch (err) {
+        watchLogger.error("Failed to send gift:", err);
+      }
+    },
+    [id, user, fetchChatMessages],
+  );
 
   // ─── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -213,12 +330,23 @@ export default function WatchLive() {
           </div>
         </div>
 
-        {/* Live badge */}
+        {/* Live badge + viewer count */}
         <div className="flex items-center gap-2 pointer-events-none">
           {stream?.status === "reconnecting" && (
             <span className="text-yellow-400 text-xs font-bold">
               ⚠️ Reconnexion...
             </span>
+          )}
+          {/* Viewer count display */}
+          {viewerCount > 0 && (
+            <div className="flex items-center gap-1 bg-black/60 px-2 py-1 rounded-full">
+              <span className="text-white/80 text-xs">👁️</span>
+              <span className="text-white text-xs font-bold">
+                {viewerCount >= 1000
+                  ? `${(viewerCount / 1000).toFixed(1)}k`
+                  : viewerCount}
+              </span>
+            </div>
           )}
           <div className="flex items-center gap-1.5 bg-red-600 px-3 py-1 rounded-full">
             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
@@ -292,22 +420,44 @@ export default function WatchLive() {
         </button>
       </div>
 
-      {/* Bottom: chat */}
+      {/* Bottom: chat — uses Socket.io LiveChat + DB messages fallback */}
       {showChat && (
         <div className="absolute bottom-0 inset-x-0 z-20 px-3 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16">
+          {/* DB-polled messages (gifts + join events shown above socket chat) */}
+          {chatMessages.filter((m) => m.message_type === "gift").length > 0 && (
+            <div className="mb-2 space-y-1 max-h-20 overflow-hidden">
+              {chatMessages
+                .filter((m) => m.message_type === "gift")
+                .slice(-3)
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2 bg-gold-500/20 border border-gold-500/30 rounded-xl px-3 py-1.5"
+                  >
+                    <span className="text-lg">🎁</span>
+                    <span className="text-gold-400 text-xs font-bold">
+                      {m.username} {m.message}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          )}
           <LiveChat
             streamId={stream?.streamId || id || ""}
-            viewerCount={stream?.viewerCount}
+            viewerCount={viewerCount || stream?.viewerCount}
           />
         </div>
       )}
 
-      {/* Gift picker */}
+      {/* Gift picker — calls API on gift send */}
       {showGiftPicker && stream?.userId && (
         <GiftPicker
           recipientId={stream.userId}
           recipientName={stream.username || "ce créateur"}
           onClose={() => setShowGiftPicker(false)}
+          onGiftSent={(giftName: string, giftAmount: number) => {
+            handleSendGift(giftName, giftAmount);
+          }}
         />
       )}
     </div>

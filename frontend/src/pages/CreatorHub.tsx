@@ -88,7 +88,9 @@ export default function CreatorHub() {
                   className="rounded-xl border border-white/10 p-3 flex justify-between gap-2"
                 >
                   <div>
-                    <p className="text-sm text-white line-clamp-2">{d.caption}</p>
+                    <p className="text-sm text-white line-clamp-2">
+                      {d.caption}
+                    </p>
                     <p className="text-[10px] text-zinc-500 mt-1">
                       {new Date(d.savedAt).toLocaleString()}
                     </p>
@@ -110,11 +112,28 @@ export default function CreatorHub() {
         )}
       </div>
 
-      <div className="px-4 mt-6 space-y-2 text-sm text-zinc-500">
+      {/* Revenue CTA */}
+      <div className="px-4 mt-4">
+        <Link
+          to="/creator/revenue"
+          className="flex items-center gap-3 rounded-xl border border-gold-500/30 bg-gold-500/8 px-4 py-4 hover:bg-gold-500/12 transition-colors"
+        >
+          <span className="text-2xl">💰</span>
+          <div className="flex-1">
+            <p className="text-gold-400 font-bold text-sm">Revenus Créateur</p>
+            <p className="text-zinc-500 text-xs mt-0.5">
+              Cadeaux · Stripe Connect · Retraits
+            </p>
+          </div>
+          <span className="text-gold-400 text-lg">→</span>
+        </Link>
+      </div>
+
+      <div className="px-4 mt-4 space-y-2 text-sm text-zinc-500">
         <p>
           <strong className="text-zinc-300">Attribution :</strong> si ton
-          contenu reprend une tendance ou un son, cite la source dans la
-          légende (#tendance + lien).
+          contenu reprend une tendance ou un son, cite la source dans la légende
+          (#tendance + lien).
         </p>
       </div>
 

@@ -62,6 +62,7 @@ import supportRoutes from "./routes/support.js";
 import aiVertexRoutes from "./routes/ai-vertex.js";
 import searchRoutes from "./routes/search.js";
 import videoDoctorRoutes from "./routes/video-doctor.routes.js";
+import creatorRevenueRoutes from "./routes/creator-revenue.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
 import { banCheck } from "./middleware/banCheck.js";
 
@@ -335,6 +336,7 @@ export async function registerRoutes(
   app.use("/api/ai/vertex", aiVertexRoutes);
 
   // ============ MODERATION & PRESENCE ============
+  app.use("/api/creator", requireAuth, creatorRevenueRoutes);
   app.use("/api/moderation", requireAuth, moderationRoutes);
   app.use("/api/admin/flagging", flaggingRoutes);
   app.use("/api/remix", remixRoutes);

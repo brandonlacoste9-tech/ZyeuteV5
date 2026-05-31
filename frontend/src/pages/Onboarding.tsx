@@ -81,7 +81,7 @@ const btnSkip: React.CSSProperties = {
 function StepDot({
   n,
   current,
-  total,
+  total: _total,
 }: {
   n: number;
   current: number;

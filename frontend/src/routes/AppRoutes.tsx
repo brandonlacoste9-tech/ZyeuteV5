@@ -53,6 +53,7 @@ const WatchLivePage = lazy(() => import("@/pages/WatchLive"));
 const LiveDiscoverPage = lazy(() => import("@/pages/LiveDiscover"));
 const EmailPreferencesPage = lazy(() => import("@/pages/EmailPreferences"));
 const AnalyticsPage = lazy(() => import("@/pages/Analytics"));
+const CreatorRevenuePage = lazy(() => import("@/pages/CreatorRevenue"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -108,6 +109,27 @@ function LogoutRoute() {
   }, [logout, navigate]);
 
   return <LoadingScreen message="Déconnexion..." />;
+}
+
+/** Redirect unauthenticated users who haven't completed onboarding on the feed route. */
+function OnboardingGate({ children }: { children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && user && !localStorage.getItem("zyeute_onboarded")) {
+      // Check if the account was created within the last 10 minutes (new user)
+      const createdAt = user.created_at
+        ? new Date(user.created_at).getTime()
+        : 0;
+      const isNewUser = Date.now() - createdAt < 10 * 60 * 1000;
+      if (isNewUser) {
+        navigate("/onboarding", { replace: true });
+      }
+    }
+  }, [user, isLoading, navigate]);
+
+  return <>{children}</>;
 }
 
 /** Session or guest mode — required for account-style surfaces (not for public /feed). */
@@ -215,7 +237,14 @@ export function AppRoutes() {
         />
 
         {/* Public — TikTok-style: anyone can open FYP, discover, and post links */}
-        <Route path="/feed" element={<Zyeute />} />
+        <Route
+          path="/feed"
+          element={
+            <OnboardingGate>
+              <Zyeute />
+            </OnboardingGate>
+          }
+        />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/feed/grid" element={<FeedGrid />} />
         <Route path="/search" element={<ExplorePage />} />
@@ -252,6 +281,16 @@ export function AppRoutes() {
             <RequireAuth>
               <RequireRealAccount>
                 <CreatorHubPage />
+              </RequireRealAccount>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/creator/revenue"
+          element={
+            <RequireAuth>
+              <RequireRealAccount>
+                <CreatorRevenuePage />
               </RequireRealAccount>
             </RequireAuth>
           }

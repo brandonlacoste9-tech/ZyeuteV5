@@ -1,6 +1,6 @@
 /**
  * LiveDiscover Page - Discover and browse live streams
- * Features: Grid/list view, search, filters, trending highlights
+ * Features: Grid/list view, search, filters, region tabs, trending highlights
  */
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -8,7 +8,9 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
 import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/Button";
-import { supabase } from "../lib/supabase";
+
+const API_BASE =
+  (import.meta as any).env?.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
 /**
  * Interface for a live stream
@@ -23,6 +25,7 @@ interface LiveStream {
   thumbnail_url: string;
   viewer_count: number;
   category: string;
+  region: string;
   tags: string[];
   is_trending: boolean;
   is_featured: boolean;
@@ -45,6 +48,20 @@ const CATEGORIES = [
 ];
 
 /**
+ * Regions matching the Explore page
+ */
+const REGIONS = [
+  { id: "all", name: "Tout le Québec", icon: "🍁" },
+  { id: "montreal", name: "Montréal", icon: "🏙️" },
+  { id: "quebec", name: "Québec", icon: "🏰" },
+  { id: "laval", name: "Laval", icon: "🌆" },
+  { id: "longueuil", name: "Longueuil", icon: "🌉" },
+  { id: "sherbrooke", name: "Sherbrooke", icon: "🌲" },
+  { id: "saguenay", name: "Saguenay", icon: "🏔️" },
+  { id: "gatineau", name: "Gatineau", icon: "🌳" },
+];
+
+/**
  * Format viewer count for display
  */
 const formatViewerCount = (count: number): string => {
@@ -61,57 +78,39 @@ const LiveDiscover: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedRegion, setSelectedRegion] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [liveStreams, setLiveStreams] = useState<LiveStream[]>([]);
 
-  // Fetch real active streams from Supabase
+  // Fetch real active streams from API
   useEffect(() => {
     const fetchStreams = async () => {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("live_streams")
-          .select(
-            `
-            id,
-            user_id,
-            title,
-            category,
-            playback_id,
-            viewer_count,
-            started_at,
-            user_profiles!user_id (
-              username,
-              display_name,
-              avatar_url
-            )
-          `,
-          )
-          .eq("status", "active")
-          .order("started_at", { ascending: false });
+        const res = await fetch(`${API_BASE}/api/live`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        const { streams } = await res.json();
 
-        if (error) throw error;
-
-        const mapped: LiveStream[] = (data || []).map((row: any) => ({
+        const mapped: LiveStream[] = (streams || []).map((row: any) => ({
           id: row.id,
           creator_id: row.user_id,
-          creator_name:
-            row.user_profiles?.display_name ||
-            row.user_profiles?.username ||
-            "Créateur",
-          creator_username: row.user_profiles?.username || "unknown",
+          creator_name: row.user?.username || "Créateur",
+          creator_username: row.user?.username || "unknown",
           creator_avatar:
-            row.user_profiles?.avatar_url ||
+            row.user?.avatar_url ||
             `https://api.dicebear.com/7.x/avataaars/svg?seed=${row.user_id}`,
           title: row.title,
-          thumbnail_url: row.playback_id
-            ? `https://image.mux.com/${row.playback_id}/thumbnail.jpg`
+          thumbnail_url: row.mux_playback_id
+            ? `https://image.mux.com/${row.mux_playback_id}/thumbnail.jpg`
             : "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&h=450&fit=crop",
           viewer_count: row.viewer_count || 0,
-          category: row.category,
+          category: row.category || "général",
+          region: row.region || "montreal",
           tags: [],
-          is_trending: row.viewer_count > 100,
-          is_featured: false,
+          is_trending: (row.viewer_count || 0) > 100,
+          is_featured: row.user?.subscription_tier === "or",
           started_at: row.started_at,
         }));
 
@@ -132,10 +131,15 @@ const LiveDiscover: React.FC = () => {
   }, []);
 
   /**
-   * Filter streams based on search query and selected category
+   * Filter streams based on search query, category, and region
    */
   const filteredStreams = useMemo(() => {
     let streams = [...liveStreams];
+
+    // Filter by region
+    if (selectedRegion !== "all") {
+      streams = streams.filter((stream) => stream.region === selectedRegion);
+    }
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -157,7 +161,7 @@ const LiveDiscover: React.FC = () => {
     }
 
     return streams;
-  }, [searchQuery, selectedCategory, liveStreams]);
+  }, [searchQuery, selectedCategory, selectedRegion, liveStreams]);
 
   /**
    * Handle navigation to watch a live stream
@@ -208,6 +212,26 @@ const LiveDiscover: React.FC = () => {
           />
         </div>
 
+        {/* Region Tabs */}
+        <div className="mb-6">
+          <h2 className="text-white font-bold mb-3">Région</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {REGIONS.map((region) => (
+              <button
+                key={region.id}
+                onClick={() => setSelectedRegion(region.id)}
+                className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                  selectedRegion === region.id
+                    ? "bg-gold-gradient text-black"
+                    : "bg-white/5 text-white/80 hover:bg-white/10"
+                }`}
+              >
+                {region.icon} {region.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Categories */}
         <div className="mb-8">
           <h2 className="text-white font-bold mb-3">Catégories</h2>
@@ -249,99 +273,117 @@ const LiveDiscover: React.FC = () => {
           <div className="text-center py-16">
             <div className="text-6xl mb-4">📺</div>
             <h3 className="text-xl font-bold text-white mb-2">
-              Aucun stream trouvé
+              {searchQuery ||
+              selectedCategory !== "all" ||
+              selectedRegion !== "all"
+                ? "Aucun stream trouvé"
+                : "Personne n'est en direct pour l'instant. Sois le premier! 🎬"}
             </h3>
             <p className="text-white/60 mb-6">
-              {searchQuery || selectedCategory !== "all"
-                ? "Essaye une autre recherche ou catégorie"
-                : "Sois le premier à aller live!"}
+              {searchQuery ||
+              selectedCategory !== "all" ||
+              selectedRegion !== "all"
+                ? "Essaye une autre recherche, catégorie ou région"
+                : "Lance ton live et connecte avec ta communauté québécoise"}
             </p>
             <Button
               onClick={handleGoLive}
               className="bg-red-600 hover:bg-red-700"
             >
-              🎥 Go Live
+              🎥 Commencer un live
             </Button>
           </div>
         ) : (
           <>
             {/* Trending/Featured Section */}
-            {selectedCategory === "all" && !searchQuery && (
-              <div className="mb-8">
-                <h2 className="text-white font-bold mb-4 flex items-center gap-2">
-                  🔥 Tendances & En vedette
-                </h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-                  {filteredStreams
-                    .filter(
-                      (stream) => stream.is_trending || stream.is_featured,
-                    )
-                    .slice(0, 2)
-                    .map((stream) => (
-                      <div
-                        key={stream.id}
-                        onClick={() => handleWatchStream(stream.id)}
-                        className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all cursor-pointer group"
-                      >
-                        <div className="relative aspect-video overflow-hidden">
-                          <img
-                            src={stream.thumbnail_url}
-                            alt={stream.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          {/* Live Badge */}
-                          <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            LIVE
-                          </div>
-                          {/* Viewer Count */}
-                          <div className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold">
-                            👁️ {formatViewerCount(stream.viewer_count)}
-                          </div>
-                          {/* Trending/Featured Badge */}
-                          {stream.is_trending && (
-                            <div className="absolute bottom-3 left-3 bg-gold-500 text-black px-2 py-1 rounded text-xs font-bold">
-                              🔥 TRENDING
-                            </div>
-                          )}
-                          {stream.is_featured && (
-                            <div className="absolute bottom-3 right-3 bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">
-                              ⭐ FEATURED
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <div className="flex items-start gap-3">
+            {selectedCategory === "all" &&
+              selectedRegion === "all" &&
+              !searchQuery && (
+                <div className="mb-8">
+                  <h2 className="text-white font-bold mb-4 flex items-center gap-2">
+                    🔥 Tendances & En vedette
+                  </h2>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+                    {filteredStreams
+                      .filter(
+                        (stream) => stream.is_trending || stream.is_featured,
+                      )
+                      .slice(0, 2)
+                      .map((stream) => (
+                        <div
+                          key={stream.id}
+                          onClick={() => handleWatchStream(stream.id)}
+                          className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all cursor-pointer group"
+                        >
+                          <div className="relative aspect-video overflow-hidden">
                             <img
-                              src={stream.creator_avatar}
-                              alt={stream.creator_name}
-                              className="w-10 h-10 rounded-full"
+                              src={stream.thumbnail_url}
+                              alt={stream.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             />
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-white mb-1 line-clamp-2">
-                                {stream.title}
-                              </h3>
-                              <p className="text-white/60 text-sm">
-                                {stream.creator_name}
-                              </p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded">
-                                  {stream.category}
-                                </span>
+                            {/* Live Badge */}
+                            <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                              <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                              LIVE
+                            </div>
+                            {/* Viewer Count Badge */}
+                            <div className="absolute top-3 right-3 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold">
+                              👁️ {formatViewerCount(stream.viewer_count)}
+                            </div>
+                            {/* Trending/Featured Badge */}
+                            {stream.is_trending && (
+                              <div className="absolute bottom-3 left-3 bg-gold-500 text-black px-2 py-1 rounded text-xs font-bold">
+                                🔥 TRENDING
+                              </div>
+                            )}
+                            {stream.is_featured && (
+                              <div className="absolute bottom-3 right-3 bg-purple-600 text-white px-2 py-1 rounded text-xs font-bold">
+                                ⭐ FEATURED
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <div className="flex items-start gap-3">
+                              <img
+                                src={stream.creator_avatar}
+                                alt={stream.creator_name}
+                                className="w-10 h-10 rounded-full"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-white mb-1 line-clamp-2">
+                                  {stream.title}
+                                </h3>
+                                <p className="text-white/60 text-sm">
+                                  {stream.creator_name}
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs bg-white/10 text-white/80 px-2 py-1 rounded">
+                                    {stream.category}
+                                  </span>
+                                  {stream.region &&
+                                    stream.region !== "montreal" && (
+                                      <span className="text-xs bg-gold-500/20 text-gold-400 px-2 py-1 rounded">
+                                        {REGIONS.find(
+                                          (r) => r.id === stream.region,
+                                        )?.name || stream.region}
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* All Streams Grid */}
             <div className="mb-6">
               <h2 className="text-white font-bold mb-4">
-                {selectedCategory !== "all" || searchQuery
+                {selectedCategory !== "all" ||
+                selectedRegion !== "all" ||
+                searchQuery
                   ? "Résultats"
                   : "Tous les streams"}
               </h2>
@@ -363,7 +405,7 @@ const LiveDiscover: React.FC = () => {
                         <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                         LIVE
                       </div>
-                      {/* Viewer Count */}
+                      {/* Viewer Count Badge */}
                       <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded text-xs font-bold">
                         👁️ {formatViewerCount(stream.viewer_count)}
                       </div>
@@ -388,9 +430,17 @@ const LiveDiscover: React.FC = () => {
                           <p className="text-white/60 text-xs truncate">
                             {stream.creator_name}
                           </p>
-                          <span className="inline-block text-xs bg-white/10 text-white/70 px-1.5 py-0.5 rounded mt-1">
-                            {stream.category}
-                          </span>
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            <span className="inline-block text-xs bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
+                              {stream.category}
+                            </span>
+                            {stream.region && (
+                              <span className="inline-block text-xs bg-gold-500/15 text-gold-400 px-1.5 py-0.5 rounded">
+                                {REGIONS.find((r) => r.id === stream.region)
+                                  ?.icon || "🍁"}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
