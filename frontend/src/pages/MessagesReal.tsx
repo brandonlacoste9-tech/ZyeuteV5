@@ -92,8 +92,12 @@ interface Conversation {
 interface Message {
   id: string;
   content: string;
+  contentType?: string; // 'text' | 'image' | 'video' | 'file'
+  contentUrl?: string;
+  fileName?: string;
   senderId: string;
   createdAt: string;
+  deletedAt?: string | null;
   sender?: { username: string; avatarUrl?: string };
 }
 interface SearchUser {
@@ -285,12 +289,16 @@ const GoldBuckle: React.FC<{
   value: string;
   onChange: (v: string) => void;
   onSend: () => void;
+  onAttach: () => void;
+  uploading?: boolean;
   placeholder?: string;
   disabled?: boolean;
 }> = ({
   value,
   onChange,
   onSend,
+  onAttach,
+  uploading,
   placeholder = "Écris ton message...",
   disabled,
 }) => {
@@ -309,16 +317,43 @@ const GoldBuckle: React.FC<{
         style={{ border: `1px dashed ${T.gold.dim}`, opacity: 0.4 }}
       />
       <div className="relative flex items-center gap-2 p-2">
-        <div
-          className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center"
+        {/* Attachment button */}
+        <button
+          type="button"
+          onClick={onAttach}
+          disabled={disabled || uploading}
+          className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-200"
           style={{
-            background: `linear-gradient(145deg, ${T.gold.DEFAULT} 0%, ${T.gold.dim} 50%, ${T.gold.DEFAULT} 100%)`,
-            boxShadow: `inset 0 1px 2px ${T.gold.shimmer}, 0 2px 4px rgba(0,0,0,0.4)`,
-            border: `2px solid ${T.gold.bright}`,
+            background: `linear-gradient(145deg, ${T.leather.light} 0%, ${T.leather.medium} 100%)`,
+            border: `2px solid ${T.leather.tan}`,
+            opacity: disabled || uploading ? 0.5 : 1,
           }}
+          title="Joindre un fichier"
         >
-          <span className="text-xl">⚜️</span>
-        </div>
+          {uploading ? (
+            <div
+              className="w-4 h-4 rounded-full border-2 animate-spin"
+              style={{
+                borderColor: `${T.gold.DEFAULT} transparent transparent transparent`,
+              }}
+            />
+          ) : (
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ color: T.gold.DEFAULT }}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              />
+            </svg>
+          )}
+        </button>
         <div className="flex-1 relative">
           <input
             type="text"
@@ -378,46 +413,192 @@ const GoldBuckle: React.FC<{
   );
 };
 
-const MessageBubble: React.FC<{ message: Message; isMe: boolean }> = ({
-  message,
-  isMe,
-}) => (
-  <div
-    className={cn(
-      "relative max-w-[78%] rounded-2xl p-3 mb-3",
-      isMe ? "ml-auto" : "mr-auto",
-    )}
-    style={{
-      background: isMe
-        ? `linear-gradient(145deg, ${T.gold.DEFAULT}22, ${T.gold.dim}12)`
-        : `linear-gradient(145deg, ${T.leather.medium}, ${T.leather.dark})`,
-      border: `2px solid ${isMe ? T.gold.DEFAULT : T.leather.tan}`,
-      boxShadow: `${T.shadow.outer}${isMe ? `, ${T.shadow.gold}` : ""}`,
-    }}
-  >
+const MessageBubble: React.FC<{
+  message: Message;
+  isMe: boolean;
+  onDelete?: (id: string) => void;
+}> = ({ message, isMe, onDelete }) => {
+  const [showDelete, setShowDelete] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handlePressStart = () => {
+    if (!isMe) return;
+    holdTimer.current = setTimeout(() => setShowDelete(true), 600);
+  };
+  const handlePressEnd = () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+  };
+
+  // Deleted message
+  if (message.deletedAt) {
+    return (
+      <div
+        className={cn(
+          "max-w-[78%] rounded-2xl px-3 py-2 mb-3 italic opacity-40 text-[13px]",
+          isMe ? "ml-auto" : "mr-auto",
+        )}
+        style={{ color: T.gold.dim, border: `1px dashed ${T.leather.tan}` }}
+      >
+        Message supprimé
+      </div>
+    );
+  }
+
+  const isImage = message.contentType === "image";
+  const isVideo = message.contentType === "video";
+  const isFile = message.contentType === "file";
+
+  return (
     <div
-      className="absolute inset-2 rounded-xl pointer-events-none"
+      className={cn(
+        "relative max-w-[78%] rounded-2xl p-3 mb-3 select-none",
+        isMe ? "ml-auto" : "mr-auto",
+      )}
       style={{
-        border: `1px dashed ${isMe ? T.gold.dim : T.leather.tan}`,
-        opacity: 0.45,
+        background: isMe
+          ? `linear-gradient(145deg, ${T.gold.DEFAULT}22, ${T.gold.dim}12)`
+          : `linear-gradient(145deg, ${T.leather.medium}, ${T.leather.dark})`,
+        border: `2px solid ${isMe ? T.gold.DEFAULT : T.leather.tan}`,
+        boxShadow: `${T.shadow.outer}${isMe ? `, ${T.shadow.gold}` : ""}`,
       }}
-    />
-    <div className="relative z-10">
-      <p
-        className="text-[14px] leading-relaxed"
-        style={{ color: isMe ? T.gold.bright : "#D4C4A8" }}
-      >
-        {message.content}
-      </p>
-      <p
-        className="text-[11px] mt-1 text-right opacity-50"
-        style={{ color: isMe ? T.gold.dim : T.leather.tan }}
-      >
-        {formatTime(message.createdAt)}
-      </p>
+      onMouseDown={handlePressStart}
+      onMouseUp={handlePressEnd}
+      onMouseLeave={handlePressEnd}
+      onTouchStart={handlePressStart}
+      onTouchEnd={handlePressEnd}
+    >
+      <div
+        className="absolute inset-2 rounded-xl pointer-events-none"
+        style={{
+          border: `1px dashed ${isMe ? T.gold.dim : T.leather.tan}`,
+          opacity: 0.45,
+        }}
+      />
+      <div className="relative z-10">
+        {/* Image */}
+        {isImage && message.contentUrl && (
+          <a
+            href={message.contentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              src={message.contentUrl}
+              alt="image"
+              className="rounded-xl max-w-full max-h-64 object-cover mb-1"
+              style={{ border: `1px solid ${T.leather.tan}` }}
+            />
+          </a>
+        )}
+        {/* Video */}
+        {isVideo && message.contentUrl && (
+          <video
+            src={message.contentUrl}
+            controls
+            className="rounded-xl max-w-full max-h-64 mb-1"
+            style={{ border: `1px solid ${T.leather.tan}` }}
+          />
+        )}
+        {/* File */}
+        {isFile && message.contentUrl && (
+          <a
+            href={message.contentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 mb-1 px-3 py-2 rounded-xl"
+            style={{
+              background: `${T.leather.tan}22`,
+              border: `1px solid ${T.leather.tan}`,
+            }}
+          >
+            <svg
+              className="w-5 h-5 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ color: T.gold.DEFAULT }}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span
+              className="text-[13px] truncate max-w-[160px]"
+              style={{ color: T.gold.bright }}
+            >
+              {message.fileName || "Fichier"}
+            </span>
+            <svg
+              className="w-4 h-4 flex-shrink-0 ml-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              style={{ color: T.gold.dim }}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+          </a>
+        )}
+        {/* Text (show even alongside media as caption) */}
+        {message.content && (
+          <p
+            className="text-[14px] leading-relaxed"
+            style={{ color: isMe ? T.gold.bright : "#D4C4A8" }}
+          >
+            {message.content}
+          </p>
+        )}
+        <div className="flex items-center justify-between mt-1 gap-2">
+          <p
+            className="text-[11px] opacity-50"
+            style={{ color: isMe ? T.gold.dim : T.leather.tan }}
+          >
+            {formatTime(message.createdAt)}
+          </p>
+          {/* Delete button — appears on long-press (own messages only) */}
+          {showDelete && isMe && onDelete && (
+            <button
+              className="text-[11px] px-2 py-0.5 rounded-full"
+              style={{
+                background: "#8B1A1A",
+                color: "#FFD0D0",
+                border: "1px solid #FF6B6B",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(message.id);
+                setShowDelete(false);
+              }}
+            >
+              Supprimer
+            </button>
+          )}
+          {showDelete && (
+            <button
+              className="text-[11px] px-2 py-0.5 rounded-full"
+              style={{
+                background: T.leather.medium,
+                color: T.gold.dim,
+                border: `1px solid ${T.leather.tan}`,
+              }}
+              onClick={() => setShowDelete(false)}
+            >
+              Annuler
+            </button>
+          )}
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ConversationRow: React.FC<{
   conv: Conversation;
@@ -507,6 +688,8 @@ export const MessagesReal: React.FC = () => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searching, setSearching] = useState(false);
@@ -724,6 +907,91 @@ export const MessagesReal: React.FC = () => {
         prev.map((m) => (m.id === optimisticId ? data.message : m)),
       );
       fetchConversations();
+    }
+  };
+
+  // ── Attachment handler ──────────────────────────────────────────────────
+  const handleAttach = () => {
+    if (uploading || sending) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConvId) return;
+    // Reset so same file can be re-selected
+    e.target.value = "";
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(
+        `/api/messaging/conversations/${activeConvId}/upload`,
+        {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        },
+      );
+      if (!res.ok) throw new Error("Upload failed");
+      const { url, contentType } = (await res.json()) as {
+        url: string;
+        contentType: string;
+      };
+      // Send as a message with contentUrl + contentType
+      const optimisticId = `opt-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: optimisticId,
+          content: file.name,
+          contentUrl: url,
+          contentType,
+          fileName: file.name,
+          senderId: currentUserId ?? "me",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+      const { data, error } = await apiCall<{ message: Message }>(
+        `/messaging/conversations/${activeConvId}/messages`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            content: file.name,
+            contentUrl: url,
+            contentType,
+          }),
+        },
+      );
+      if (error) {
+        toast.error("Fichier non envoyé. Réessaie.");
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+        return;
+      }
+      if (data?.message) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === optimisticId ? data.message : m)),
+        );
+        fetchConversations();
+      }
+    } catch {
+      toast.error("Erreur lors de l'envoi du fichier.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ── Delete message handler ────────────────────────────────────────────────
+  const handleDeleteMessage = async (msgId: string) => {
+    // Optimistically remove from UI
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    const { error } = await apiCall(`/messaging/messages/${msgId}`, {
+      method: "DELETE",
+    });
+    if (error) {
+      toast.error("Impossible de supprimer ce message.");
+      // Re-fetch to restore state
+      if (activeConvId) fetchMessages(activeConvId, true);
     }
   };
 
@@ -1169,6 +1437,7 @@ export const MessagesReal: React.FC = () => {
                             key={msg.id}
                             message={msg}
                             isMe={msg.senderId === currentUserId}
+                            onDelete={handleDeleteMessage}
                           />
                         ))
                       )}
@@ -1181,10 +1450,19 @@ export const MessagesReal: React.FC = () => {
                         background: T.leather.dark,
                       }}
                     >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip"
+                        onChange={handleFileChange}
+                      />
                       <GoldBuckle
                         value={inputValue}
                         onChange={setInputValue}
                         onSend={sendMessage}
+                        onAttach={handleAttach}
+                        uploading={uploading}
                         disabled={sending}
                         placeholder="Écris ton message..."
                       />
