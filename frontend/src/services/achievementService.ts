@@ -283,9 +283,10 @@ async function checkAchievementCondition(
       case "post_count":
         if (trigger.type === "post_created") {
           const { count } = await supabase
-            .from("posts")
+            .from("publications")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", userId);
+            .eq("user_id", userId)
+            .is("deleted_at", null);
           return (count || 0) >= condition.count;
         }
         break;
@@ -346,10 +347,11 @@ async function checkAchievementCondition(
           trigger.data?.region === condition.region
         ) {
           const { count } = await supabase
-            .from("posts")
+            .from("publications")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .eq("region", condition.region);
+            .eq("region", condition.region)
+            .is("deleted_at", null);
           return (count || 0) >= condition.count;
         }
         break;

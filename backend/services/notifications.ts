@@ -1,5 +1,6 @@
 import { db } from "../storage.js";
 import { notifications } from "../../shared/schema.js";
+import { sendPushToUser } from "../routes/push.js";
 
 export async function sendProgress(
   userId: string,
@@ -28,17 +29,20 @@ export async function notifyCompletion(
 
   await db.insert(notifications).values({
     userId,
-    type: "mention", // Fallback to 'mention' or similar if specific types aren't handled, but string is allowed.
-    // Let's use 'video_processed' and hope FE handles it gracefully or generic fallback.
-    // Actually, schema comments say: 'fire', 'comment', 'follow', 'mention', 'gift'
-    // If I use 'system', it might be safer if I add it to schema or just use 'mention' with custom message.
-    // I'll stick to 'mention' for now to ensure icon shows up (usually mention icon).
-    // Or better, let's try 'video_processed' and see.
+    type: "mention",
     message,
     postId,
     isRead: false,
-    fromUserId: userId, // Sys notif, maybe from self? or null. Schema allows null?
-    // fromUserId: uuid("from_user_id").references(() => users.id, { onDelete: 'cascade' }),
-    // It references users.id. If system, maybe null?
+    fromUserId: userId,
   });
+
+  // Fire push notification so user gets alerted even when app is closed
+  await sendPushToUser(
+    userId,
+    success ? "Ta vidéo est prête! 🎬" : "Erreur de traitement vidéo",
+    success
+      ? "Clique pour voir ta vidéo sur Zyeuté"
+      : "Une erreur est survenue lors du traitement. Réessaie.",
+    postId ? `/post/${postId}` : "/",
+  ).catch((err) => console.warn("[Push] notifyCompletion push failed:", err));
 }

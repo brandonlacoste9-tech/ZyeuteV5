@@ -53,6 +53,7 @@ import utilRoutes from "./routes/utils.js";
 import royaleRoutes from "./routes/royale.js";
 import storyRoutes from "./routes/stories.js";
 import notificationRoutes from "./routes/notifications.js";
+import pushRoutes from "./routes/push.js";
 import supportRoutes from "./routes/support.js";
 import aiVertexRoutes from "./routes/ai-vertex.js";
 import searchRoutes from "./routes/search.js";
@@ -309,6 +310,7 @@ export async function registerRoutes(
 
   // ============ NOTIFICATIONS ROUTES ============
   app.use("/api/notifications", notificationRoutes);
+  app.use("/api/push", pushRoutes);
 
   // ============ SUPPORT ROUTES ============
   app.use("/api/support", supportRoutes);

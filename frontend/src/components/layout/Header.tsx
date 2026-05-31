@@ -15,6 +15,7 @@ export interface HeaderProps {
   title?: string;
   showBack?: boolean;
   className?: string;
+  rightElement?: React.ReactNode;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   title,
   showBack = false,
   className,
+  rightElement,
 }) => {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
@@ -74,6 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {rightElement}
           {showSearch && (
             <Link
               to="/explore"

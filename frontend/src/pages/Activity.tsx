@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Header } from "../components/layout/Header";
+import { PushNotificationBell } from "../components/PushNotificationBell";
 import { cn } from "../lib/utils";
 import { BottomNav } from "../components/BottomNav";
 import {
@@ -203,7 +204,11 @@ export const Activity: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 pb-20">
-      <Header title="Activité" showBack />
+      <Header
+        title="Activité"
+        showBack
+        rightElement={<PushNotificationBell className="mr-2" />}
+      />
 
       <main className="max-w-2xl mx-auto p-4">
         {/* Filter Pills */}
