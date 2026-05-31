@@ -266,12 +266,14 @@ export async function getFeedPosts(
 export async function getExplorePosts(
   page: number = 0,
   limit: number = 20,
+  region?: string,
   hiveId?: string,
 ): Promise<Post[]> {
   const query = new URLSearchParams({
     limit: limit.toString(),
     page: page.toString(),
   });
+  if (region) query.append("region", region);
   if (hiveId) query.append("hive", hiveId);
 
   // Use Supabase HTTP API endpoint (works without DATABASE_URL)
@@ -894,7 +896,10 @@ export async function surgicalUpload(
     const formData = new FormData();
     formData.append("video", file);
     if (caption) formData.append("caption", caption);
-    formData.append("hiveId", "quebec");
+    formData.append(
+      "hiveId",
+      localStorage.getItem("zyeute_hive_id") || "quebec",
+    );
 
     // Get auth token for the upload
     const {

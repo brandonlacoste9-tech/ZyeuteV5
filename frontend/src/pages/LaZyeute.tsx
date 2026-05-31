@@ -97,7 +97,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     comment_count: 42,
     created_at: new Date().toISOString(),
     visibility: "public",
-    hive_id: "quebec",
+    hive_id: (localStorage.getItem("zyeute_hive_id") || "quebec") as
+      | "quebec"
+      | "mexico",
     is_moderated: false,
     moderation_approved: true,
     is_hidden: false,
@@ -137,7 +139,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     comment_count: 23,
     created_at: new Date(Date.now() - 3600000).toISOString(),
     visibility: "public",
-    hive_id: "quebec",
+    hive_id: (localStorage.getItem("zyeute_hive_id") || "quebec") as
+      | "quebec"
+      | "mexico",
     is_moderated: false,
     moderation_approved: true,
     is_hidden: false,
@@ -177,7 +181,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     comment_count: 15,
     created_at: new Date(Date.now() - 7200000).toISOString(),
     visibility: "public",
-    hive_id: "quebec",
+    hive_id: (localStorage.getItem("zyeute_hive_id") || "quebec") as
+      | "quebec"
+      | "mexico",
     is_moderated: false,
     moderation_approved: true,
     is_hidden: false,
@@ -217,7 +223,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     comment_count: 31,
     created_at: new Date(Date.now() - 10800000).toISOString(),
     visibility: "public",
-    hive_id: "quebec",
+    hive_id: (localStorage.getItem("zyeute_hive_id") || "quebec") as
+      | "quebec"
+      | "mexico",
     is_moderated: false,
     moderation_approved: true,
     is_hidden: false,
@@ -257,7 +265,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     comment_count: 56,
     created_at: new Date(Date.now() - 14400000).toISOString(),
     visibility: "public",
-    hive_id: "quebec",
+    hive_id: (localStorage.getItem("zyeute_hive_id") || "quebec") as
+      | "quebec"
+      | "mexico",
     is_moderated: false,
     moderation_approved: true,
     is_hidden: false,

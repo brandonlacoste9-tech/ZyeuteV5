@@ -23,6 +23,7 @@ router.get("/", async (req: Request, res: Response) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
     const pattern = `%${query}%`;
+    const hive = (req.query.hive as string) || "quebec";
 
     const [usersResult, postsResult] = await Promise.all([
       supabase
@@ -36,6 +37,7 @@ router.get("/", async (req: Request, res: Response) => {
         .or(`caption.ilike.${pattern},content.ilike.${pattern}`)
         .eq("visibility", "public")
         .eq("processing_status", "completed")
+        .eq("hive_id", hive)
         .limit(10),
     ]);
 

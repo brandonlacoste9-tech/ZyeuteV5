@@ -18,6 +18,15 @@ import {
 } from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
 
+/** Read current hive from localStorage — mirrors HiveContext default */
+function getStoredHive(): string {
+  try {
+    return localStorage.getItem("zyeute_hive_id") || "quebec";
+  } catch {
+    return "quebec";
+  }
+}
+
 interface FeedResponse {
   posts: Post[];
   nextCursor: string | null;
@@ -48,7 +57,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     error,
     refetch,
   } = useInfiniteQuery<FeedResponse>({
-    queryKey: ["feed-infinite", feedType],
+    queryKey: ["feed-infinite", feedType, getStoredHive()],
     staleTime: 30_000, // 30s - avoid aggressive refetch on mount
     gcTime: 5 * 60 * 1000, // 5 min cache
     retry: 2,
@@ -57,7 +66,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
-        hive: "quebec",
+        hive: getStoredHive(),
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 
@@ -156,12 +165,12 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
     error,
     refetch,
   } = useInfiniteQuery<FeedResponse>({
-    queryKey: ["feed-infinite-manual", feedType],
+    queryKey: ["feed-infinite-manual", feedType, getStoredHive()],
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({
         limit: "20",
         type: feedType,
-        hive: "quebec",
+        hive: getStoredHive(),
         ...(pageParam ? { cursor: pageParam as string } : {}),
       });
 

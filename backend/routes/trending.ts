@@ -12,6 +12,7 @@ router.get("/hashtags", async (req: any, res) => {
     return res.status(503).json({ error: "Service indisponible" });
   try {
     const region = req.query.region as string | undefined;
+    const hive = (req.query.hive as string) || "quebec";
 
     let query = supabaseAdmin
       .from("publications")
@@ -21,6 +22,7 @@ router.get("/hashtags", async (req: any, res) => {
         new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       ) // last 7 days
       .not("content", "is", null)
+      .eq("hive_id", hive)
       .limit(500);
 
     if (region && region !== "all") {

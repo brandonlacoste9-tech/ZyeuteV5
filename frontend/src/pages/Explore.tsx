@@ -7,6 +7,7 @@ import React, { useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { getExplorePosts, apiCall } from "@/services/api";
+import { useHive } from "@/contexts/HiveContext";
 import { Avatar } from "@/components/Avatar";
 import { QUEBEC_HASHTAGS, QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { formatNumber } from "@/lib/utils";
@@ -34,6 +35,7 @@ export const Explore: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { getFeedState, saveFeedState } = useNavigationState();
   const savedState = getFeedState("explore");
+  const { currentHive } = useHive();
 
   // Initialize from saved state
   const [posts, setPosts] = React.useState<Post[]>(savedState?.posts || []);
@@ -62,6 +64,7 @@ export const Explore: React.FC = () => {
     setIsTrendingLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set("hive", currentHive.id);
       if (region) params.set("region", region);
       const res = await fetch(
         `/api/trending/hashtags${params.toString() ? `?${params.toString()}` : ""}`,
@@ -91,7 +94,7 @@ export const Explore: React.FC = () => {
     const timer = setTimeout(async () => {
       try {
         const data = await apiCall(
-          `/api/search?q=${encodeURIComponent(searchQuery)}`,
+          `/api/search?q=${encodeURIComponent(searchQuery)}&hive=${currentHive.id}`,
         );
         setUserResults(data?.users || []);
       } catch {
@@ -164,7 +167,12 @@ export const Explore: React.FC = () => {
     setIsLoading(true);
     try {
       // Use the dedicated explore endpoint for better performance/discovery
-      const explorePosts = await getExplorePosts(0, 50, selectedRegion);
+      const explorePosts = await getExplorePosts(
+        0,
+        50,
+        selectedRegion,
+        currentHive.id,
+      );
 
       // Apply client-side filters for hashtag and search (since backend might not support them yet)
       let filtered = explorePosts;
@@ -201,7 +209,13 @@ export const Explore: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedRegion, selectedHashtag, searchQuery, savedState]);
+  }, [
+    selectedRegion,
+    selectedHashtag,
+    searchQuery,
+    savedState,
+    currentHive.id,
+  ]);
 
   React.useEffect(() => {
     fetchPosts();
