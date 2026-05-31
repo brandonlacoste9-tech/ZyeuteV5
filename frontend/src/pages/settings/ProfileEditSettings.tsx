@@ -148,21 +148,22 @@ export const ProfileEditSettings: React.FC = () => {
     try {
       let publicUrl: string | null = null;
 
-      // Strategy 1: Try Supabase Storage
+      // Strategy 1: Upload directly to Supabase Storage 'avatars' bucket (public)
       try {
         const fileExt = file.name.split(".").pop() || "jpg";
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const filePath = `avatars/${user.id}/${fileName}`;
+        // Simple flat path: avatars/<userId>.<ext> — upsert overwrites on each upload
+        const filePath = `${user.id}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("media")
+          .from("avatars")
           .upload(filePath, file, { upsert: true });
 
         if (!uploadError) {
           const {
             data: { publicUrl: url },
-          } = supabase.storage.from("media").getPublicUrl(filePath);
-          publicUrl = url;
+          } = supabase.storage.from("avatars").getPublicUrl(filePath);
+          // Bust cache so the browser re-fetches the new image
+          publicUrl = `${url}?t=${Date.now()}`;
         } else {
           profileEditSettingsLogger.warn(
             "Supabase storage upload failed, trying backend:",
