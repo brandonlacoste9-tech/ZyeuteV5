@@ -1,14 +1,10 @@
 /**
  * Content Moderation Service
- * Uses OpenAI Moderation API (free) for text + Gemini Flash for video frames
+ * Uses DeepSeek for text moderation + Gemini Flash for video frame analysis
  */
 
-import OpenAI from "openai";
+import { deepseek } from "../ai/deepseek.js";
 import { supabaseAdmin } from "../supabase-auth.js";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface ModerationResult {
   severity: "safe" | "low" | "medium" | "high" | "critical";
@@ -19,9 +15,29 @@ export interface ModerationResult {
   flagged: boolean;
 }
 
+const MODERATION_PROMPT = `Tu es un modérateur de contenu strict pour Zyeute, une app sociale québécoise.
+Analyse le texte et retourne UNIQUEMENT un JSON valide sans markdown:
+{
+  "safe": boolean,
+  "severity": "safe" | "low" | "medium" | "high" | "critical",
+  "categories": [],
+  "confidence": number (0-100),
+  "reason": "explication courte en français"
+}
+
+Catégories possibles: "haine", "harcèlement", "menace", "violence", "contenu_sexuel", "csam", "automutilation", "spam", "intimidation"
+
+RÈGLES STRICTES:
+- "critical" si contenu impliquant des mineurs de manière sexuelle (CSAM) — toujours signaler
+- "critical" si menaces de mort ou violence graphique extrême
+- "high" si harcèlement direct, haine ciblée, contenu sexuel explicite
+- "medium" si insultes graves, intimidation, contenu choquant
+- "low" si langage vulgaire léger, contenu ambigu
+- "safe" si contenu normal (le joual québécois et sacres légers = safe)
+Retourne SEULEMENT le JSON.`;
+
 /**
- * Moderate text content (captions, comments, DMs, bios)
- * Uses OpenAI Moderation API — free tier, very reliable
+ * Moderate text content (captions, comments, DMs, bios) using DeepSeek
  */
 export async function moderateText(text: string): Promise<ModerationResult> {
   if (!text || text.trim().length === 0) {
@@ -36,110 +52,57 @@ export async function moderateText(text: string): Promise<ModerationResult> {
   }
 
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn("[Moderation] No OPENAI_API_KEY — skipping text moderation");
+    const response = await deepseek.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        { role: "system", content: MODERATION_PROMPT },
+        {
+          role: "user",
+          content: `Texte à analyser: "${text.substring(0, 1000)}"`,
+        },
+      ],
+      temperature: 0,
+      max_tokens: 256,
+      response_format: { type: "json_object" },
+    });
+
+    const raw = response.choices[0]?.message?.content || "{}";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
       return {
         severity: "safe",
         categories: [],
         confidence: 0,
-        reason: "Service non configuré",
+        reason: "Analyse impossible",
         action: "none",
         flagged: false,
       };
     }
 
-    const response = await openai.moderations.create({
-      model: "omni-moderation-latest",
-      input: text,
-    });
+    const parsed = JSON.parse(jsonMatch[0]);
 
-    const result = response.results[0];
-    const flaggedCategories: string[] = [];
-
-    // Map OpenAI categories to our system
-    const categoryMap: Record<string, string> = {
-      hate: "haine",
-      "hate/threatening": "haine_menace",
-      harassment: "harcèlement",
-      "harassment/threatening": "harcèlement_menace",
-      "self-harm": "automutilation",
-      "self-harm/intent": "automutilation_intention",
-      "self-harm/instructions": "automutilation_instructions",
-      sexual: "contenu_sexuel",
-      "sexual/minors": "csam",
-      violence: "violence",
-      "violence/graphic": "violence_graphique",
-      illicit: "illicite",
-      "illicit/violent": "illicite_violent",
-    };
-
-    let maxScore = 0;
-    for (const [category, score] of Object.entries(
-      result.category_scores as Record<string, number>,
-    )) {
-      if (score > 0.1) {
-        flaggedCategories.push(categoryMap[category] || category);
-      }
-      if (score > maxScore) maxScore = score;
-    }
-
-    // CSAM = always critical + auto_remove
-    if ((result.categories as Record<string, boolean>)["sexual/minors"]) {
-      return {
-        severity: "critical",
-        categories: ["csam"],
-        confidence: 100,
-        reason:
-          "Contenu impliquant des mineurs détecté — suppression automatique",
-        action: "auto_remove",
-        flagged: true,
-      };
-    }
-
-    if (!result.flagged && maxScore < 0.3) {
-      return {
-        severity: "safe",
-        categories: [],
-        confidence: Math.round((1 - maxScore) * 100),
-        reason: "Contenu approuvé",
-        action: "none",
-        flagged: false,
-      };
-    }
-
-    // Determine severity from score
-    let severity: ModerationResult["severity"];
-    let action: ModerationResult["action"];
-    if (maxScore >= 0.9) {
-      severity = "critical";
-      action = "auto_remove";
-    } else if (maxScore >= 0.7) {
-      severity = "high";
-      action = "escalate";
-    } else if (maxScore >= 0.5) {
-      severity = "medium";
-      action = "flag";
-    } else if (maxScore >= 0.3) {
-      severity = "low";
-      action = "flag";
-    } else {
-      severity = "safe";
-      action = "none";
-    }
+    const action: ModerationResult["action"] =
+      parsed.severity === "critical"
+        ? "auto_remove"
+        : parsed.severity === "high"
+          ? "escalate"
+          : parsed.severity === "medium" || parsed.severity === "low"
+            ? "flag"
+            : "none";
 
     return {
-      severity,
-      categories:
-        flaggedCategories.length > 0
-          ? flaggedCategories
-          : ["contenu_inapproprié"],
-      confidence: Math.round(maxScore * 100),
-      reason: `Contenu potentiellement problématique: ${flaggedCategories.join(", ") || "contenu inapproprié"}`,
+      severity: parsed.severity || "safe",
+      categories: parsed.categories || [],
+      confidence: parsed.confidence || 0,
+      reason: parsed.reason || "Analyse complétée",
       action,
-      flagged: result.flagged || maxScore >= 0.3,
+      flagged: !parsed.safe,
     };
   } catch (error: any) {
-    console.error("[Moderation] OpenAI text moderation error:", error.message);
+    console.error(
+      "[Moderation] DeepSeek text moderation error:",
+      error.message,
+    );
     // Fail open — don't block users if moderation is down
     return {
       severity: "safe",
@@ -154,13 +117,14 @@ export async function moderateText(text: string): Promise<ModerationResult> {
 
 /**
  * Moderate a video thumbnail/frame using Gemini Flash vision
- * Called with a public URL of a video frame or thumbnail
  */
 export async function moderateVideoFrame(
   frameUrl: string,
 ): Promise<ModerationResult> {
   try {
-    if (!process.env.GOOGLE_API_KEY && !process.env.VITE_GEMINI_API_KEY) {
+    const apiKey =
+      process.env.GOOGLE_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
       console.warn("[Moderation] No Gemini key — skipping frame moderation");
       return {
         severity: "safe",
@@ -172,12 +136,8 @@ export async function moderateVideoFrame(
       };
     }
 
-    const apiKey =
-      process.env.GOOGLE_API_KEY || process.env.VITE_GEMINI_API_KEY;
-
-    // Fetch the image as base64
-    const response = await fetch(frameUrl);
-    if (!response.ok) {
+    const imgResponse = await fetch(frameUrl);
+    if (!imgResponse.ok) {
       return {
         severity: "safe",
         categories: [],
@@ -187,9 +147,9 @@ export async function moderateVideoFrame(
         flagged: false,
       };
     }
-    const buffer = await response.arrayBuffer();
+    const buffer = await imgResponse.arrayBuffer();
     const base64 = Buffer.from(buffer).toString("base64");
-    const mimeType = response.headers.get("content-type") || "image/jpeg";
+    const mimeType = imgResponse.headers.get("content-type") || "image/jpeg";
 
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
@@ -201,28 +161,19 @@ export async function moderateVideoFrame(
             {
               parts: [
                 {
-                  text: `Tu es un modérateur de contenu pour Zyeute, une app sociale québécoise. 
+                  text: `Tu es un modérateur de contenu pour Zyeute, une app sociale québécoise.
 Analyse cette image et retourne UNIQUEMENT un JSON valide:
 {
   "safe": boolean,
   "severity": "safe" | "low" | "medium" | "high" | "critical",
-  "categories": ["haine", "violence", "contenu_sexuel", "csam", "nudité", "automutilation"],
+  "categories": ["haine","violence","contenu_sexuel","csam","nudité","automutilation"],
   "confidence": number (0-100),
   "reason": "explication courte en français"
 }
-
-RÈGLES STRICTES:
-- "critical" + "csam" si enfants en situation sexuelle (toujours signaler)
-- "critical" si violence graphique extrême
-- "high" si nudité adulte explicite
-- "medium" si contenu violent ou choquant
-- "low" si contenu ambigu
-- "safe" si contenu normal
-Retourne SEULEMENT le JSON, rien d'autre.`,
+RÈGLES: critical si CSAM ou violence extrême, high si nudité adulte explicite, medium si choquant, low si ambigu.
+Retourne SEULEMENT le JSON.`,
                 },
-                {
-                  inline_data: { mime_type: mimeType, data: base64 },
-                },
+                { inline_data: { mime_type: mimeType, data: base64 } },
               ],
             },
           ],
@@ -251,11 +202,9 @@ Retourne SEULEMENT le JSON, rien d'autre.`,
         ? "auto_remove"
         : parsed.severity === "high"
           ? "escalate"
-          : parsed.severity === "medium"
+          : parsed.severity === "medium" || parsed.severity === "low"
             ? "flag"
-            : parsed.severity === "low"
-              ? "flag"
-              : "none";
+            : "none";
 
     return {
       severity: parsed.severity || "safe",
@@ -309,7 +258,7 @@ export async function saveModerationLog(params: {
         ai_reason: params.result.reason,
         ai_action: params.result.action,
         status: params.result.action === "auto_remove" ? "removed" : "pending",
-        content_text: params.contentText || null,
+        content_text: params.contentText?.substring(0, 500) || null,
         report_reason: params.reportReason || null,
       })
       .select("id")
