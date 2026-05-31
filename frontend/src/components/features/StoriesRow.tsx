@@ -102,8 +102,8 @@ export const StoriesRow: React.FC = () => {
     fetchStories();
   }, []);
 
-  // Don't render if nothing to show
-  if (storyGroups.length === 0 && !currentUser) return null;
+  // Don't render if no stories to show — avoids dark overlay on empty feed
+  if (storyGroups.length === 0) return null;
 
   return (
     <>
@@ -117,21 +117,6 @@ export const StoriesRow: React.FC = () => {
           backdropFilter: "blur(2px)",
         }}
       >
-        {/* Add your own story */}
-        {currentUser && (
-          <button
-            onClick={() => navigate("/story/create")}
-            className="flex flex-col items-center gap-1 flex-shrink-0"
-          >
-            <div className="w-14 h-14 rounded-full border-2 border-dashed border-yellow-400/60 flex items-center justify-center bg-white/5 hover:bg-white/10 transition-colors">
-              <span className="text-yellow-400 text-2xl leading-none">+</span>
-            </div>
-            <span className="text-white/70 text-[10px] truncate w-14 text-center">
-              Ma story
-            </span>
-          </button>
-        )}
-
         {/* Story circles */}
         {storyGroups.map((group) => (
           <button

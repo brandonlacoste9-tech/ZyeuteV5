@@ -1325,6 +1325,8 @@ export const Zyeute: React.FC = () => {
             WebkitBackdropFilter: "blur(20px)",
             borderTop: "1px solid rgba(212,175,55,0.25)",
             paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
+            transform: "translateY(0)",
+            willChange: "opacity",
           }}
         >
           {/* Gold shimmer accent line */}
