@@ -677,11 +677,13 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 flex items-center justify-between transition-opacity duration-300 ${
+          className={`fixed top-0 left-0 right-0 z-50 px-4 flex items-end justify-between transition-opacity duration-300 ${
             uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
           style={{
             background: "transparent",
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
+            paddingBottom: "10px",
           }}
         >
           <div className="flex items-center gap-1">
@@ -798,7 +800,7 @@ export const Zyeute: React.FC = () => {
             uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
           style={{
-            top: "52px",
+            top: "calc(env(safe-area-inset-top, 0px) + 52px)",
             background: "transparent",
           }}
         >
@@ -856,8 +858,18 @@ export const Zyeute: React.FC = () => {
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          className="fixed inset-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0"
-          style={{ scrollSnapType: "y mandatory" }}
+          className="fixed overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0"
+          style={{
+            scrollSnapType: "y mandatory",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            // Force video to start at absolute pixel 0 — under status bar
+            // viewport-fit=cover + this overrides any env(safe-area-inset-top)
+            marginTop: 0,
+            paddingTop: 0,
+          }}
         >
           {emptyFeedContent}
           {posts.map((post, index) => {
