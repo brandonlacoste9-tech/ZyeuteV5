@@ -9,7 +9,6 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { apiCall } from "@/services/api";
 import { supabase } from "@/lib/supabase";
@@ -111,18 +110,15 @@ function GoldDivider({ gold }: { gold: string }) {
 export interface TiGuyMessagingProps {
   open: boolean;
   onClose: () => void;
-  isPremium?: boolean;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   open,
   onClose,
-  isPremium = false,
 }) => {
   const { edgeLighting } = useTheme();
   const gold = edgeLighting || GOLD;
-  const navigate = useNavigate();
 
   // Panel mode
   const [mode, setMode] = useState<Mode>("chat");
@@ -179,7 +175,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
     if (!open) return;
     // Defer all state updates so the effect doesn't cascade synchronously
     const timer = setTimeout(() => {
-      setMode(isPremium ? "chat" : "inbox");
+      setMode("chat");
       setActiveConv(null);
       setMessages([]);
       setShowSearch(false);
@@ -405,36 +401,11 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
         >
           {convsLoading
             ? "Une seconde, je check tes messages..."
-            : isPremium
-              ? renderGreeting()
-              : "Aye mon ami(e)! 🦫 Pour jaser avec moi, tu dois être abonné(e) Bronze+. Upgrade pis on se parle! 💬"}
+            : renderGreeting()}
         </div>
       </div>
 
       <GoldDivider gold={gold} />
-
-      {/* Upgrade CTA — free users only */}
-      {!isPremium && (
-        <button
-          type="button"
-          onClick={() => {
-            onClose();
-            navigate("/premium");
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all active:scale-95"
-          style={{
-            background: `linear-gradient(135deg, ${gold}22 0%, ${gold}44 100%)`,
-            border: `2px solid ${gold}`,
-            boxShadow: `0 0 16px ${gold}40`,
-          }}
-        >
-          <span className="text-lg">⚜️</span>
-          <span className="text-sm font-black" style={{ color: gold }}>
-            Deviens abonné Bronze+ — Débloque Ti-Guy
-          </span>
-          <span className="text-lg">💎</span>
-        </button>
-      )}
 
       {/* Quick action buttons */}
       <div className="space-y-2">
@@ -924,41 +895,37 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
             borderBottom: `2px solid ${gold}50`,
           }}
         >
-          {/* Ti-Guy / Inbox toggle icons */}
-          <div className="flex items-center gap-1">
+          {/* Back / fleur button */}
+          {mode !== "chat" ? (
             <button
               type="button"
-              onClick={() => setMode("chat")}
-              aria-label="Ti-Guy"
-              className="p-1.5 rounded-lg transition-all"
-              style={{
-                background: mode === "chat" ? `${gold}30` : "transparent",
-                border: `1.5px solid ${mode === "chat" ? gold : "transparent"}`,
+              onClick={() => {
+                if (mode === "thread") setMode("inbox");
+                else setMode("chat");
               }}
+              className="p-2 rounded-lg"
+              style={{ color: gold }}
+              aria-label="Retour"
             >
-              <span className="text-xl leading-none">🦫</span>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
             </button>
-            <button
-              type="button"
-              onClick={() => setMode("inbox")}
-              aria-label="Boîte de réception"
-              className="p-1.5 rounded-lg transition-all relative"
-              style={{
-                background: mode !== "chat" ? `${gold}30` : "transparent",
-                border: `1.5px solid ${mode !== "chat" ? gold : "transparent"}`,
-              }}
-            >
-              <span className="text-xl leading-none">✉️</span>
-              {totalUnread > 0 && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 text-[8px] font-black rounded-full min-w-[14px] h-3.5 flex items-center justify-center px-0.5"
-                  style={{ background: gold, color: LEATHER_DARK }}
-                >
-                  {totalUnread > 9 ? "9+" : totalUnread}
-                </span>
-              )}
-            </button>
-          </div>
+          ) : (
+            <div className="p-2" style={{ color: gold }}>
+              <FleurDeLysIcon size={26} />
+            </div>
+          )}
 
           {/* Title */}
           <div className="flex flex-col items-center">
