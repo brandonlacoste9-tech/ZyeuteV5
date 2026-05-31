@@ -31,12 +31,17 @@ const supabaseAdmin = createClient(
 
 // ─── Confirmed Stripe price IDs (CAD) ────────────────────────────────────────
 const PRICE_IDS: Record<string, string> = {
+  // — Quebec (CAD) —
   bronze: "price_1SZuC6CzqBvMqSYF419Lh1xg", // $4.99 CAD/mo
   silver: "price_1SZuCACzqBvMqSYFpfpfFc9M", // $9.99 CAD/mo
   gold: "price_1SZuCDCzqBvMqSYFIl0C1r2T", // $19.99 CAD/mo
   // Legacy French aliases accepted from frontend
   argent: "price_1SZuCACzqBvMqSYFpfpfFc9M",
   or: "price_1SZuCDCzqBvMqSYFIl0C1r2T",
+  // — Mexico (MXN) — IDs filled after Stripe creation
+  mx_bronze: "price_1Td5QACzqBvMqSYFXsYrhL4F", // $59 MXN/mo
+  mx_silver: "price_1Td5QPCzqBvMqSYF3uAy8vDn", // $119 MXN/mo
+  mx_gold: "price_1Td5QWCzqBvMqSYF8JI9pJud", // $249 MXN/mo
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -62,10 +67,18 @@ router.post("/create-checkout", requireAuth, async (req, res) => {
       .json({ error: "Stripe non configuré sur ce serveur" });
   }
 
-  const { tier = "silver" } = req.body as { tier?: string };
-  const priceId = PRICE_IDS[tier.toLowerCase()];
+  const { tier = "silver", hive } = req.body as {
+    tier?: string;
+    hive?: string;
+  };
+  // For Mexico hive, try the mx_ prefixed price first
+  const tierKey =
+    hive === "mexico" ? `mx_${tier.toLowerCase()}` : tier.toLowerCase();
+  const priceId = PRICE_IDS[tierKey] || PRICE_IDS[tier.toLowerCase()];
   if (!priceId) {
-    return res.status(400).json({ error: `Niveau inconnu: ${tier}` });
+    return res
+      .status(400)
+      .json({ error: `Niveau inconnu ou prix non configuré: ${tier}` });
   }
 
   try {

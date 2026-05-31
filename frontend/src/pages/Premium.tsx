@@ -13,6 +13,7 @@ import { toast } from "../components/Toast";
 import { useHaptics } from "../hooks/useHaptics";
 import { logger } from "../lib/logger";
 import { useSEO } from "../hooks/useSEO";
+import { useHive } from "../contexts/HiveContext";
 
 const premiumLogger = logger.withContext("Premium");
 
@@ -60,6 +61,10 @@ export default function Premium() {
   const { tap } = useHaptics();
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentHive } = useHive();
+  const isMexico = currentHive.id === "mexico";
+  const currency = currentHive.currency; // "CAD" or "MXN"
+  const hivePrices = currentHive.prices;
 
   // Handle Stripe redirect callbacks (?success=true / ?canceled=true)
   useEffect(() => {
@@ -84,48 +89,76 @@ export default function Premium() {
       id: "bronze" as const,
       name: "Bronze",
       emoji: "🥉",
-      price: 4.99,
-      features: [
-        "⚜️ Badge Bronze vérifié",
-        "🚫 Pas de publicités",
-        "🦫 Accès Ti-Guy chat",
-        "💬 Support prioritaire",
-        "🔥 Boost de visibilité x2",
-      ],
+      price: hivePrices.bronze,
+      features: isMexico
+        ? [
+            "🇲🇽 Badge Bronze verificado",
+            "🚫 Sin publicidad",
+            "🤟 Acceso El Güey chat",
+            "💬 Soporte prioritario",
+            "🔥 Boost de visibilidad x2",
+          ]
+        : [
+            "⚜️ Badge Bronze vérifié",
+            "🚫 Pas de publicités",
+            "🦫 Accès Ti-Guy chat",
+            "💬 Support prioritaire",
+            "🔥 Boost de visibilité x2",
+          ],
       gradient: "from-orange-700 via-orange-600 to-orange-800",
       popular: false,
     },
     {
       id: "silver" as const,
-      name: "Argent",
+      name: isMexico ? "Plata" : "Argent",
       emoji: "🥈",
-      price: 9.99,
-      features: [
-        "✨ Tout Bronze +",
-        "💎 Badge Argent premium",
-        "📊 Analytics avancés",
-        "🔥 Boost de visibilité x3",
-        "🎁 100 cennes/mois",
-        "⭐ Profil mis en avant",
-      ],
+      price: hivePrices.silver,
+      features: isMexico
+        ? [
+            "✨ Todo Bronze +",
+            "💎 Badge Plata premium",
+            "📊 Analytics avanzados",
+            "🔥 Boost visibilidad x3",
+            "🎁 100 fichas/mes",
+            "⭐ Perfil destacado",
+          ]
+        : [
+            "✨ Tout Bronze +",
+            "💎 Badge Argent premium",
+            "📊 Analytics avancés",
+            "🔥 Boost de visibilité x3",
+            "🎁 100 cennes/mois",
+            "⭐ Profil mis en avant",
+          ],
       gradient: "from-gray-400 via-gray-300 to-gray-500",
       popular: true,
     },
     {
       id: "gold" as const,
-      name: "Or",
+      name: isMexico ? "Oro" : "Or",
       emoji: "🥇",
-      price: 19.99,
-      features: [
-        "👑 Tout Argent +",
-        "⚜️ Badge Or royal",
-        "🚀 Priorité feed absolue",
-        "🔥 Boost visibilité x5",
-        "🎁 500 cennes/mois",
-        "💼 Outils créateurs PRO",
-        "🦫 Ti-Guy VIP exclusif",
-        "🎯 Statistiques complètes",
-      ],
+      price: hivePrices.gold,
+      features: isMexico
+        ? [
+            "👑 Todo Plata +",
+            "🇲🇽 Badge Oro real",
+            "🚀 Prioridad absoluta en feed",
+            "🔥 Boost visibilidad x5",
+            "🎁 500 fichas/mes",
+            "💼 Herramientas creador PRO",
+            "🤟 El Güey VIP exclusivo",
+            "🎯 Estadísticas completas",
+          ]
+        : [
+            "👑 Tout Argent +",
+            "⚜️ Badge Or royal",
+            "🚀 Priorité feed absolue",
+            "🔥 Boost visibilité x5",
+            "🎁 500 cennes/mois",
+            "💼 Outils créateurs PRO",
+            "🦫 Ti-Guy VIP exclusif",
+            "🎯 Statistiques complètes",
+          ],
       gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
       popular: false,
     },
@@ -135,7 +168,7 @@ export default function Premium() {
     if (tier === "free" || tier === currentTier) return;
 
     try {
-      await subscribeToPremium(tier);
+      await subscribeToPremium(tier, currentHive.id);
     } catch (error) {
       premiumLogger.error("Subscription error:", error);
       toast.error("Erreur lors de l'abonnement. Réessaie plus tard.");
@@ -230,10 +263,15 @@ export default function Premium() {
                     <span className="text-4xl font-black text-white embossed">
                       ${tier.price}
                     </span>
-                    <span className="text-leather-300">/mois</span>
+                    <span className="text-leather-300">
+                      {isMexico ? "/mes" : "/mois"}
+                    </span>
                   </div>
                   <p className="text-leather-400 text-sm mt-1">
-                    CAD · Annule quand tu veux
+                    {currency}
+                    {isMexico
+                      ? " · Cancela cuando quieras"
+                      : " · Annule quand tu veux"}
                   </p>
                 </div>
 
@@ -266,10 +304,16 @@ export default function Premium() {
                   }`}
                 >
                   {isCurrentTier
-                    ? "✓ Ton plan actuel"
+                    ? isMexico
+                      ? "✓ Tu plan actual"
+                      : "✓ Ton plan actuel"
                     : isUpgrade
-                      ? "⬆️ Améliorer"
-                      : "S'abonner"}
+                      ? isMexico
+                        ? "⬆️ Mejorar"
+                        : "⬆️ Améliorer"
+                      : isMexico
+                        ? "Suscribirse"
+                        : "S'abonner"}
                 </button>
               </div>
             );

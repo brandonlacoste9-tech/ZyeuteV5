@@ -15,6 +15,12 @@ import {
   GUEST_TIMESTAMP_KEY,
   GUEST_VIEWS_KEY,
 } from "@/lib/constants";
+import {
+  useHive,
+  HIVES,
+  HiveId,
+  detectHiveFromLocale,
+} from "@/contexts/HiveContext";
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +28,7 @@ export const Signup: React.FC = () => {
   const navigationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const { enterGuestMode } = useAuth();
+  const { switchHive } = useHive();
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -29,6 +36,10 @@ export const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState("");
+  // Hive selection — auto-detect locale on mount
+  const [selectedHive, setSelectedHive] = React.useState<HiveId>(() =>
+    detectHiveFromLocale(),
+  );
 
   // Cleanup on unmount to prevent state updates after navigation
   React.useEffect(() => {
@@ -67,15 +78,21 @@ export const Signup: React.FC = () => {
       // Check if component is still mounted before updating state
       if (!isMountedRef.current) return;
 
+      // Apply selected hive
+      switchHive(selectedHive);
+      localStorage.setItem("zyeute_hive_id", selectedHive);
+
       // Clear guest mode on successful signup
       localStorage.removeItem(GUEST_MODE_KEY);
       localStorage.removeItem(GUEST_TIMESTAMP_KEY);
       localStorage.removeItem(GUEST_VIEWS_KEY);
 
       // Show success toast (non-blocking)
-      toast.success(
-        "Compte créé! Vérifie ton courriel pour confirmer ton compte.",
-      );
+      const successMsg =
+        selectedHive === "mexico"
+          ? "¡Cuenta creada! Revisa tu correo para confirmar."
+          : "Compte créé! Vérifie ton courriel pour confirmer ton compte.";
+      toast.success(successMsg);
 
       // Redirect to onboarding for first-time users, feed if already onboarded
       // (Supabase creates the session even before email confirmation unless
@@ -206,6 +223,32 @@ export const Signup: React.FC = () => {
               </p>
             </div>
 
+            {/* Hive / Region selector */}
+            <div>
+              <label className="block text-gold-400 font-semibold mb-2 text-sm embossed">
+                {selectedHive === "mexico" ? "Tu región" : "Ta région"}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {(
+                  Object.values(HIVES) as (typeof HIVES)[keyof typeof HIVES][]
+                ).map((hive) => (
+                  <button
+                    key={hive.id}
+                    type="button"
+                    onClick={() => setSelectedHive(hive.id as HiveId)}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all font-semibold text-sm ${
+                      selectedHive === hive.id
+                        ? "border-gold-500 bg-gold-500/10 text-gold-400"
+                        : "border-leather-600 bg-transparent text-leather-300 hover:border-gold-500/50"
+                    }`}
+                  >
+                    <span className="text-xl">{hive.flag}</span>
+                    <span>{hive.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Button
               type="submit"
               variant="primary"
@@ -213,7 +256,9 @@ export const Signup: React.FC = () => {
               className="w-full btn-gold"
               isLoading={isLoading}
             >
-              Créer mon compte
+              {selectedHive === "mexico"
+                ? "Crear mi cuenta"
+                : "Créer mon compte"}
             </Button>
           </form>
 

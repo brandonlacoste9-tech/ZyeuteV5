@@ -1,5 +1,5 @@
 import express from "express";
-import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
+import { getSystemPromptForHive } from "../ai/orchestrator.js";
 import { getGeminiModel } from "../ai/google.js";
 import { readMemory, compactMemory } from "../ai/tiguy-memory.js";
 
@@ -41,7 +41,9 @@ function buildLocalTiGuyReply(prompt: string) {
   return "Salut mon chum! Chu là, pis j'suis prêt à t'aider avec Zyeuté, tes captions, tes idées de vidéos, ou juste jaser un brin. 🦫";
 }
 
-async function generateTiGuyReply(prompt: string) {
+async function generateTiGuyReply(prompt: string, hive?: string) {
+  const systemPrompt = getSystemPromptForHive(hive);
+
   if (process.env.DEEPSEEK_API_KEY) {
     try {
       const response = await fetch(DEEPSEEK_CHAT_COMPLETIONS_URL, {
@@ -53,7 +55,7 @@ async function generateTiGuyReply(prompt: string) {
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: [
-            { role: "system", content: TIGUY_SYSTEM_PROMPT },
+            { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
           ],
           temperature: 0.7,
@@ -80,7 +82,7 @@ async function generateTiGuyReply(prompt: string) {
   }
 
   try {
-    const geminiModel = getGeminiModel("gemini-1.5-flash", TIGUY_SYSTEM_PROMPT);
+    const geminiModel = getGeminiModel("gemini-1.5-flash", systemPrompt);
     const result = await geminiModel.generateContent(prompt);
     const response = await result.response;
     const text = response.text().trim();
@@ -107,6 +109,7 @@ router.post("/chat", async (req, res) => {
         userId?: string;
         username?: string;
         fileName?: string;
+        hive?: string; // "quebec" | "mexico"
       };
     };
 
@@ -151,7 +154,7 @@ router.post("/chat", async (req, res) => {
       .filter(Boolean)
       .join("\n\n");
 
-    const aiResult = await generateTiGuyReply(promptParts);
+    const aiResult = await generateTiGuyReply(promptParts, context?.hive);
 
     // ── Compact memory async (fire-and-forget, never blocks the response) ─
     if (userId && message) {

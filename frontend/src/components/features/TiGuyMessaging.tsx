@@ -5,6 +5,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useHive } from "@/contexts/HiveContext";
 import { apiCall } from "@/services/api";
 import { supabase } from "@/lib/supabase";
 import { Avatar } from "@/components/Avatar";
@@ -236,6 +237,8 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
 }) => {
   const { edgeLighting } = useTheme();
   const gold = edgeLighting || GOLD;
+  const { currentHive } = useHive();
+  const isMexicoHive = currentHive.id === "mexico";
 
   const [tab, setTab] = useState<Tab>("tiguy");
 
@@ -348,7 +351,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
         body: JSON.stringify({
           message: text,
           history,
-          context: { userId, username },
+          context: { userId, username, hive: currentHive.id },
         }),
       });
       setChatMsgs((p) => [
@@ -371,7 +374,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
     } finally {
       setChatSending(false);
     }
-  }, [chatInput, chatSending, chatMsgs, userId, username]);
+  }, [chatInput, chatSending, chatMsgs, userId, username, currentHive.id]);
 
   // ── Open DM thread ──────────────────────────────────────────────────────────
   const openThread = useCallback(
@@ -549,13 +552,13 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
                 letterSpacing: "0.08em",
               }}
             >
-              Ti-Guy
+              {isMexicoHive ? "El Güey" : "Ti-Guy"}
             </h1>
             <p
               className="text-[0.5rem] uppercase tracking-[0.3em] font-bold"
               style={{ color: GOLD_LIGHT }}
             >
-              Antigravity Gold ⚜️
+              {isMexicoHive ? "¡Arriba México! 🇲🇽" : "Antigravity Gold ⚜️"}
             </p>
           </div>
         </div>
@@ -583,13 +586,13 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           <span
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM, fontSize: 18 }}
           >
-            🦫
+            {isMexicoHive ? "🤟" : "🦫"}
           </span>
           <span
             className="text-xs font-black tracking-wide"
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM }}
           >
-            Ti-Guy
+            {isMexicoHive ? "El Güey" : "Ti-Guy"}
           </span>
         </button>
 

@@ -7,16 +7,20 @@ import React, {
 } from "react";
 import { useTranslation as useI18n } from "../i18n";
 
-// Define the available Hives - Only Quebec is active
-export type HiveId = "quebec";
+// Define the available Hives
+export type HiveId = "quebec" | "mexico";
 
 interface HiveConfig {
   id: HiveId;
   name: string;
   flag: string; // Emoji
   locale: string;
-  culture: "joual";
-  currency: "CAD";
+  culture: "joual" | "chilango";
+  currency: "CAD" | "MXN";
+  // Pricing in local currency
+  prices: { bronze: number; silver: number; gold: number };
+  // Personality name for Ti-Guy equivalent
+  personality: string;
 }
 
 export const HIVES: Record<HiveId, HiveConfig> = {
@@ -27,6 +31,18 @@ export const HIVES: Record<HiveId, HiveConfig> = {
     locale: "fr-CA",
     culture: "joual",
     currency: "CAD",
+    prices: { bronze: 4.99, silver: 9.99, gold: 19.99 },
+    personality: "Ti-Guy",
+  },
+  mexico: {
+    id: "mexico",
+    name: "México",
+    flag: "🇲🇽",
+    locale: "es-MX",
+    culture: "chilango",
+    currency: "MXN",
+    prices: { bronze: 59, silver: 119, gold: 249 },
+    personality: "El Güey",
   },
 };
 
@@ -38,13 +54,26 @@ interface HiveContextType {
 
 const HiveContext = createContext<HiveContextType | undefined>(undefined);
 
+/** Detect best hive from browser/device locale */
+export function detectHiveFromLocale(): HiveId {
+  const lang =
+    navigator.language ||
+    (navigator.languages && navigator.languages[0]) ||
+    "fr-CA";
+  if (lang.toLowerCase().startsWith("es")) return "mexico";
+  return "quebec";
+}
+
 export const HiveProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // Initialize from localStorage (avoids setState-in-effect)
+  // Initialize from localStorage, then locale auto-detect, then default quebec
   const [currentHive, setCurrentHive] = useState<HiveConfig>(() => {
     const saved = localStorage.getItem("zyeute_hive_id") as HiveId;
-    return saved && HIVES[saved] ? HIVES[saved] : HIVES.quebec;
+    if (saved && HIVES[saved]) return HIVES[saved];
+    // Auto-detect from browser locale on first visit
+    const detected = detectHiveFromLocale();
+    return HIVES[detected];
   });
 
   const switchHive = (hiveId: HiveId) => {
@@ -57,19 +86,16 @@ export const HiveProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const value = React.useMemo(() => ({
-    currentHive,
-    switchHive,
-    availableHives: Object.values(HIVES),
-  }), [currentHive]);
-
-  return (
-    <HiveContext.Provider
-      value={value}
-    >
-      {children}
-    </HiveContext.Provider>
+  const value = React.useMemo(
+    () => ({
+      currentHive,
+      switchHive,
+      availableHives: Object.values(HIVES),
+    }),
+    [currentHive],
   );
+
+  return <HiveContext.Provider value={value}>{children}</HiveContext.Provider>;
 };
 
 export const useHive = (): HiveContextType => {

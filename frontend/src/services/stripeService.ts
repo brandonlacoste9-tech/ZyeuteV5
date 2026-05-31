@@ -38,6 +38,7 @@ export const getStripe = (): Promise<Stripe | null> => {
  */
 export async function subscribeToPremium(
   tier: "bronze" | "argent" | "or" | "silver" | "gold",
+  hive?: string,
 ): Promise<void> {
   const stripe = await getStripe();
 
@@ -61,7 +62,7 @@ export async function subscribeToPremium(
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: "include",
-      body: JSON.stringify({ tier }),
+      body: JSON.stringify({ tier, hive }),
     });
 
     const data = await response.json();
