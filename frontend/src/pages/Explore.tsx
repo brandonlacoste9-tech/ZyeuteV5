@@ -16,6 +16,7 @@ import { useNavigationState } from "@/contexts/NavigationStateContext";
 import type { Post, User } from "@/types";
 import { logger } from "@/lib/logger";
 import { BottomNav } from "@/components/BottomNav";
+import { useSEO } from "@/hooks/useSEO";
 import { QuebecHashtags } from "@/components/trending/QuebecHashtags";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
@@ -23,6 +24,13 @@ import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
 const exploreLogger = logger.withContext("Explore");
 
 export const Explore: React.FC = () => {
+  useSEO({
+    title: "Découvrir — Vidéos et créateurs du Québec",
+    description:
+      "Explore les vidéos tendances, trouve des créateurs québécois et découvre les hashtags populaires. Filtre par région — Montréal, Québec, Gatineau et plus.",
+    url: "/explore",
+  });
+
   const [searchParams] = useSearchParams();
   const { getFeedState, saveFeedState } = useNavigationState();
   const savedState = getFeedState("explore");

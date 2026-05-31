@@ -54,8 +54,48 @@ export function useOpenGraph(post: Post | null) {
     const prevTitle = document.title;
     document.title = title;
 
+    // ── VideoObject JSON-LD for Google & AI search ────────────────────────
+    const JSON_LD_ID = "zyeute-post-jsonld";
+    let ldScript = document.getElementById(
+      JSON_LD_ID,
+    ) as HTMLScriptElement | null;
+    if (!ldScript) {
+      ldScript = document.createElement("script");
+      ldScript.id = JSON_LD_ID;
+      ldScript.type = "application/ld+json";
+      document.head.appendChild(ldScript);
+    }
+
+    const videoLd: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": post.type === "video" ? "VideoObject" : "ImageObject",
+      name: title,
+      description: description,
+      thumbnailUrl: image,
+      url: url,
+      embedUrl: url,
+      uploadDate: post.created_at ?? new Date().toISOString(),
+      inLanguage: "fr-CA",
+    };
+
+    if (post.mux_playback_id) {
+      videoLd["contentUrl"] =
+        `https://stream.mux.com/${post.mux_playback_id}/high.mp4`;
+    }
+
+    if (post.user) {
+      videoLd["author"] = {
+        "@type": "Person",
+        name: post.user.display_name || post.user.username,
+        url: `https://zyeute.com/profile/${post.user.username}`,
+      };
+    }
+
+    ldScript.textContent = JSON.stringify(videoLd);
+
     return () => {
       document.title = prevTitle;
+      document.getElementById(JSON_LD_ID)?.remove();
     };
   }, [post]);
 }

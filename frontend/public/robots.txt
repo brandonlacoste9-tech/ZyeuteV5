@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Public pages — fully crawlable
+Allow: /explore
+Allow: /premium
+Allow: /sitemap.xml
+
+# Private/auth pages — no need to index
+Disallow: /settings
+Disallow: /notifications
+Disallow: /messages
+Disallow: /upload
+Disallow: /wallet
+Disallow: /store
+Disallow: /go-live
+Disallow: /auth/
+Disallow: /api/
+Disallow: /admin/
+Disallow: /moderation/
+
+# Sitemap
+Sitemap: https://zyeute.com/sitemap.xml

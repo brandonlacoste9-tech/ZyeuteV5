@@ -6,60 +6,154 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
-    <title>Zyeuté - L'app sociale du Québec 🇨🇦⚜️</title>
 
-    <!-- Prevent Google Translate interference with React -->
-    <meta name="google" content="notranslate" />
+    <!-- ─── Primary SEO ──────────────────────────────────────────────────── -->
+    <title>Zyeute — L'app vidéo du Québec | TikTok québécois</title>
     <meta
       name="description"
-      content="Partage tes photos et vidéos avec le Québec entier! La seule app sociale 100% québécoise."
+      content="Zyeute est la plateforme de vidéos courtes 100% québécoise. Partage tes clips, découvre des créateurs de Montréal, Québec, Gatineau et partout au Québec. L'alternative québécoise à TikTok."
     />
-    <!-- Match phone status/navigation bar with app leather background -->
-    <meta name="theme-color" content="#0D0705" />
-    
-    <!-- Cache control - force fresh load -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
+    <meta
+      name="keywords"
+      content="Zyeute, vidéos courtes Québec, TikTok québécois, app sociale québécoise, créateurs québécois, Montréal, partager vidéos, clips courts, réseau social Québec, zyeute.com"
+    />
+    <meta name="author" content="Zyeute" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://zyeute.com" />
 
-    <!-- Google Fonts - Inter & Cormorant Garamond (Elegant Serif) -->
+    <!-- ─── Open Graph ────────────────────────────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Zyeute" />
+    <meta property="og:title" content="Zyeute — L'app vidéo du Québec" />
+    <meta property="og:description" content="La plateforme de vidéos courtes 100% québécoise. Partage, découvre et connecte-toi avec les créateurs du Québec." />
+    <meta property="og:image" content="https://zyeute.com/zyeute_og_image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Zyeute — L'app vidéo du Québec" />
+    <meta property="og:url" content="https://zyeute.com" />
+    <meta property="og:locale" content="fr_CA" />
+
+    <!-- ─── Twitter / X Card ─────────────────────────────────────────────── -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@zyeute" />
+    <meta name="twitter:title" content="Zyeute — L'app vidéo du Québec" />
+    <meta name="twitter:description" content="La plateforme de vidéos courtes 100% québécoise. Partage, découvre et connecte-toi avec les créateurs du Québec." />
+    <meta name="twitter:image" content="https://zyeute.com/zyeute_og_image.png" />
+
+    <!-- ─── App / PWA ─────────────────────────────────────────────────────── -->
+    <meta name="theme-color" content="#0D0705" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Zyeute" />
+    <meta name="application-name" content="Zyeute" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- ─── Icons ────────────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/png" href="/zyeute_app_icon.png" />
+    <link rel="apple-touch-icon" href="/zyeute_app_icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/zyeute_app_icon.png" />
+
+    <!-- ─── Prevent Google Translate ─────────────────────────────────────── -->
+    <meta name="google" content="notranslate" />
+
+    <!-- ─── JSON-LD Structured Data ──────────────────────────────────────── -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://zyeute.com/#app",
+          "name": "Zyeute",
+          "url": "https://zyeute.com",
+          "description": "Zyeute est la plateforme de vidéos courtes 100% québécoise. Partage tes clips, découvre des créateurs de partout au Québec et connecte-toi avec ta communauté.",
+          "applicationCategory": "SocialNetworkingApplication",
+          "operatingSystem": "Web, iOS, Android",
+          "inLanguage": "fr-CA",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "CAD",
+            "description": "Gratuit — abonnements Bronze, Argent et Or disponibles"
+          },
+          "author": {
+            "@type": "Organization",
+            "name": "Zyeute",
+            "url": "https://zyeute.com",
+            "logo": "https://zyeute.com/zyeute_app_icon.png",
+            "areaServed": {
+              "@type": "Place",
+              "name": "Québec, Canada"
+            }
+          },
+          "screenshot": "https://zyeute.com/zyeute_og_image.png",
+          "featureList": [
+            "Vidéos courtes",
+            "Messages directs",
+            "Diffusion en direct",
+            "Cadeaux virtuels avec Cennesé",
+            "Badges abonnés exclusifs",
+            "Filtres en direct",
+            "Portefeuille créateur"
+          ],
+          "sameAs": [
+            "https://www.tiktok.com/@zyeute",
+            "https://www.instagram.com/zyeute"
+          ]
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://zyeute.com/#org",
+          "name": "Zyeute",
+          "url": "https://zyeute.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://zyeute.com/zyeute_app_icon.png",
+            "width": 512,
+            "height": 512
+          },
+          "description": "Plateforme de vidéos courtes 100% québécoise",
+          "areaServed": "Québec, Canada",
+          "foundingLocation": {
+            "@type": "Place",
+            "name": "Québec, Canada"
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://zyeute.com/#website",
+          "url": "https://zyeute.com",
+          "name": "Zyeute",
+          "description": "L'app vidéo du Québec",
+          "inLanguage": "fr-CA",
+          "publisher": { "@id": "https://zyeute.com/#org" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://zyeute.com/explore?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ─── Fonts ──────────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
-    <meta name="apple-mobile-web-app-title" content="Zyeuté" />
-
-    <!-- Icons -->
-    <link rel="icon" type="image/png" href="/zyeute_app_icon.png" />
-    <link rel="apple-touch-icon" href="/zyeute_app_icon.png" />
-
-    <!-- Open Graph -->
-    <meta property="og:title" content="Zyeute — La scène québécoise" />
-    <meta property="og:description" content="Partage tes vidéos et connecte-toi avec le Québec entier. La plateforme vidéo 100% québécoise." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://zyeute.com/zyeute_og_image.png" />
-    <meta property="og:url" content="https://zyeute.com" />
-    <meta property="og:site_name" content="Zyeute" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://zyeute.com/zyeute_og_image.png" />
-    <meta name="twitter:title" content="Zyeute — La scène québécoise" />
-    <meta name="twitter:description" content="La plateforme vidéo 100% québécoise." />
 
     <style>
       html,
       body {
         margin: 0;
-        background: #0D0705;
+        background: #0d0705;
         color: #e5e7eb;
         font-family:
           "Inter",
@@ -71,7 +165,6 @@
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
-
       #root {
         min-height: 100vh;
       }
@@ -82,7 +175,7 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Service Worker Registration - DEFERRED to avoid blocking initial load/freeze -->
+    <!-- Service Worker Registration -->
     <script>
       if ("serviceWorker" in navigator && !window.location.search.includes("noSW=1")) {
         window.addEventListener("load", () => {
@@ -90,13 +183,10 @@
             navigator.serviceWorker
               .register("/sw.js", { updateViaCache: "none" })
               .then((registration) => {
-                console.log("✅ SW registered:", registration.scope);
                 registration.update();
                 setInterval(() => registration.update(), 60 * 60 * 1000);
               })
-              .catch((error) => {
-                console.error("❌ SW registration failed:", error);
-              });
+              .catch(() => {});
           }, { timeout: 3000 });
         });
       }

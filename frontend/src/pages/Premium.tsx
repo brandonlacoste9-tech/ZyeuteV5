@@ -12,12 +12,50 @@ import { usePremium } from "../hooks/usePremium";
 import { toast } from "../components/Toast";
 import { useHaptics } from "../hooks/useHaptics";
 import { logger } from "../lib/logger";
+import { useSEO } from "../hooks/useSEO";
 
 const premiumLogger = logger.withContext("Premium");
 
 type SubscriptionTier = "free" | "bronze" | "argent" | "or";
 
 export default function Premium() {
+  useSEO({
+    title: "Abonnements VIP — Bronze, Argent et Or",
+    description:
+      "Débloque des fonctionnalités exclusives sur Zyeute. Abonnements Bronze (4,99$/mois), Argent (9,99$/mois) et Or (19,99$/mois). Badges exclusifs, filtres premium, cennes mensuels et plus.",
+    url: "/premium",
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: "Zyeute Premium",
+      description: "Abonnements VIP pour la plateforme vidéo québécoise Zyeute",
+      brand: { "@type": "Brand", name: "Zyeute" },
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Bronze",
+          price: "4.99",
+          priceCurrency: "CAD",
+          billingDuration: "P1M",
+        },
+        {
+          "@type": "Offer",
+          name: "Argent",
+          price: "9.99",
+          priceCurrency: "CAD",
+          billingDuration: "P1M",
+        },
+        {
+          "@type": "Offer",
+          name: "Or",
+          price: "19.99",
+          priceCurrency: "CAD",
+          billingDuration: "P1M",
+        },
+      ],
+    },
+  });
+
   const { tier: currentTier, isLoading, refresh } = usePremium();
   const { tap } = useHaptics();
   const location = useLocation();

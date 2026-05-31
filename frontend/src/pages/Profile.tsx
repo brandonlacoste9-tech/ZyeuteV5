@@ -26,6 +26,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { IoShareOutline } from "react-icons/io5";
 import type { User, Post } from "@/types";
 import { logger } from "@/lib/logger";
+import { useSEO } from "@/hooks/useSEO";
 import { QuebecEmptyState } from "@/components/ui/QuebecEmptyState";
 import { ProfileSkeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,6 +69,34 @@ export const Profile: React.FC = () => {
   );
 
   const isOwnProfile = username === "me" || user?.id === currentUser?.id;
+
+  useSEO(
+    user
+      ? {
+          title: `${user.display_name || user.username} (@${user.username})`,
+          description: user.bio
+            ? `${user.bio} — Créateur sur Zyeute, la plateforme vidéo québécoise.`
+            : `Découvre les vidéos de @${user.username} sur Zyeute, la plateforme vidéo 100% québécoise.`,
+          image: user.avatar_url || undefined,
+          url: `/profile/${user.username}`,
+          type: "profile",
+          jsonLd: {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: user.display_name || user.username,
+            alternateName: `@${user.username}`,
+            url: `https://zyeute.com/profile/${user.username}`,
+            image: user.avatar_url || undefined,
+            description: user.bio || `Créateur sur Zyeute`,
+            memberOf: {
+              "@type": "Organization",
+              name: "Zyeute",
+              url: "https://zyeute.com",
+            },
+          },
+        }
+      : { title: "Profil", url: `/profile/${username}` },
+  );
 
   // Wait for auth to complete before doing anything
   React.useEffect(() => {
