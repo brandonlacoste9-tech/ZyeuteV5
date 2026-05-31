@@ -329,6 +329,11 @@ export const HamburgerMenu: React.FC = () => {
       to: "/premium",
     },
     {
+      label: "Boutique",
+      icon: <span className="text-lg">🪙</span>,
+      to: "/store",
+    },
+    {
       label: "Help & Support",
       icon: (
         <svg

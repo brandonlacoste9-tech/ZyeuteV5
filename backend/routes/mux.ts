@@ -622,4 +622,82 @@ router.get("/video-stats", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/mux/create-whip-livestream
+ * Create a Mux Live Stream with WHIP ingest enabled so the browser
+ * can publish directly via WebRTC (no OBS needed).
+ * Returns the WHIP endpoint URL + stream key + playback ID.
+ */
+router.post(
+  "/create-whip-livestream",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res.status(503).json({
+        success: false,
+        error: "MUX non configuré.",
+      });
+    }
+
+    try {
+      const { title = "Live Zyeuté", category = "général" } = req.body;
+      const userId = (req as any).userId as string;
+
+      // Create a low-latency live stream with WHIP enabled
+      const liveStream = await mux.video.liveStreams.create({
+        playback_policy: ["public"],
+        new_asset_settings: { playback_policy: ["public"] },
+        latency_mode: "ultra-low",
+      });
+
+      const playbackId = liveStream.playback_ids?.[0]?.id ?? null;
+      const streamKey = liveStream.stream_key;
+      // Mux WHIP endpoint format
+      const whipUrl = `https://global-live.mux.com:443/app/${streamKey}/whip`;
+
+      // Register in live_streams table
+      if (supabaseAdmin && userId) {
+        const { error: insertError } = await supabaseAdmin
+          .from("live_streams")
+          .insert({
+            id: liveStream.id,
+            user_id: userId,
+            title,
+            category,
+            playback_id: playbackId,
+            status: "active",
+          });
+        if (insertError) {
+          console.warn(
+            "[MUX WHIP] Failed to insert live_streams:",
+            insertError.message,
+          );
+        }
+      }
+
+      console.log(
+        `[MUX WHIP] Created WHIP stream: ${liveStream.id} title="${title}"`,
+      );
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          streamId: liveStream.id,
+          streamKey,
+          whipUrl,
+          playbackId,
+          title,
+          category,
+        },
+      });
+    } catch (error) {
+      console.error("[MUX WHIP] Erreur création:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la création du live WHIP",
+      });
+    }
+  },
+);
+
 export default router;

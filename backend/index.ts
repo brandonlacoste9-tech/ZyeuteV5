@@ -142,6 +142,92 @@ app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log("🔌 Socket.IO Client Connected:", socket.id);
+
+  // ─── LIVE CHAT ────────────────────────────────────────────────────────────
+  // Join a live stream room to receive/send chat messages
+  socket.on("live:join", ({ streamId, userId, username, avatarUrl }: any) => {
+    if (!streamId) return;
+    const room = `live:${streamId}`;
+    socket.join(room);
+    console.log(`[Live] ${username || socket.id} joined ${room}`);
+
+    // Broadcast viewer joined to room
+    socket.to(room).emit("live:viewer_joined", {
+      userId,
+      username,
+      avatarUrl,
+      timestamp: Date.now(),
+    });
+
+    // Update and broadcast viewer count
+    const count = io.sockets.adapter.rooms.get(room)?.size ?? 1;
+    io.to(room).emit("live:viewer_count", { count });
+  });
+
+  socket.on("live:leave", ({ streamId }: any) => {
+    if (!streamId) return;
+    const room = `live:${streamId}`;
+    socket.leave(room);
+    const count = io.sockets.adapter.rooms.get(room)?.size ?? 0;
+    io.to(room).emit("live:viewer_count", { count });
+  });
+
+  // Chat message in a live room
+  socket.on(
+    "live:message",
+    ({ streamId, userId, username, avatarUrl, text, tier }: any) => {
+      if (!streamId || !text?.trim()) return;
+      const room = `live:${streamId}`;
+      const message = {
+        id: `${Date.now()}-${socket.id}`,
+        userId,
+        username: username || "Anonyme",
+        avatarUrl,
+        text: text.slice(0, 200),
+        tier: tier || "free", // bronze/argent/or — used for coloured name
+        timestamp: Date.now(),
+      };
+      io.to(room).emit("live:message", message);
+    },
+  );
+
+  // Gift sent during a live
+  socket.on(
+    "live:gift",
+    ({
+      streamId,
+      senderId,
+      senderName,
+      recipientId,
+      giftEmoji,
+      giftName,
+      giftCost,
+    }: any) => {
+      if (!streamId) return;
+      const room = `live:${streamId}`;
+      io.to(room).emit("live:gift", {
+        id: `${Date.now()}-${socket.id}`,
+        senderId,
+        senderName: senderName || "Quelqu'un",
+        recipientId,
+        giftEmoji,
+        giftName,
+        giftCost,
+        timestamp: Date.now(),
+      });
+    },
+  );
+
+  // Broadcaster ends stream
+  socket.on("live:end", ({ streamId }: any) => {
+    if (!streamId) return;
+    const room = `live:${streamId}`;
+    io.to(room).emit("live:ended", { streamId });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Socket.IO Client Disconnected:", socket.id);
+  });
 });
 
 // Port Management - Strictly follow PORT on Railway
@@ -336,6 +422,76 @@ app.use((req, res, next) => {
       // Run once on startup, then every 10 minutes
       runBatch();
       setInterval(runBatch, 10 * 60 * 1000);
+
+      // [MONTHLY CENNES] Credit Argent/Or subscribers their monthly cenne allowance
+      // Runs once per hour; only credits users whose last_cenne_credit was > 30 days ago
+      const creditMonthlyCennes = async () => {
+        try {
+          const supabase = (await import("@supabase/supabase-js")).createClient(
+            process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
+            process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+          );
+
+          const TIER_CENNES: Record<string, number> = { argent: 100, or: 500 };
+          const thirtyDaysAgo = new Date(
+            Date.now() - 30 * 24 * 60 * 60 * 1000,
+          ).toISOString();
+
+          for (const [tier, amount] of Object.entries(TIER_CENNES)) {
+            // Find active subscribers not credited in last 30 days
+            const { data: subs } = await supabase
+              .from("subscription_tiers")
+              .select("user_id, last_cenne_credit")
+              .eq("tier", tier)
+              .eq("status", "active");
+
+            if (!subs?.length) continue;
+
+            const due = subs.filter(
+              (s: any) =>
+                !s.last_cenne_credit || s.last_cenne_credit < thirtyDaysAgo,
+            );
+
+            for (const sub of due) {
+              try {
+                // Credit cennes
+                await db
+                  .update((await import("../shared/schema.js")).users)
+                  .set({
+                    cashCredits: (await import("drizzle-orm")).sql`${
+                      (await import("../shared/schema.js")).users.cashCredits
+                    } + ${amount}`,
+                  })
+                  .where(
+                    (await import("drizzle-orm")).eq(
+                      (await import("../shared/schema.js")).users.id,
+                      sub.user_id,
+                    ),
+                  );
+
+                // Record credit timestamp
+                await supabase
+                  .from("subscription_tiers")
+                  .update({ last_cenne_credit: new Date().toISOString() })
+                  .eq("user_id", sub.user_id)
+                  .eq("tier", tier);
+
+                console.log(
+                  `[Cennes] Credited ${amount}¢ to ${tier} subscriber ${sub.user_id}`,
+                );
+              } catch (e) {
+                console.warn(`[Cennes] Failed to credit ${sub.user_id}:`, e);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("[Cennes] Monthly credit job failed:", e);
+        }
+      };
+
+      // Run every hour
+      setInterval(creditMonthlyCennes, 60 * 60 * 1000);
+      creditMonthlyCennes(); // run once on startup to catch any missed credits
     } catch (err) {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }

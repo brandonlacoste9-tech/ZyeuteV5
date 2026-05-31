@@ -8,6 +8,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { fulfillCennePack } from "./cenne-packs.js";
 
 const router = Router();
 
@@ -187,6 +188,20 @@ router.post(
               session.subscription as string,
               session.metadata?.tier || "argent",
             );
+          } else if (
+            session.mode === "payment" &&
+            session.metadata?.type === "cenne_pack" &&
+            session.payment_status === "paid"
+          ) {
+            // Fulfill cenne pack purchase
+            const userId = session.metadata?.userId;
+            const cennes = parseInt(session.metadata?.cennes || "0", 10);
+            if (userId && cennes > 0) {
+              await fulfillCennePack(userId, cennes);
+              console.log(
+                `[Stripe] Cenne pack fulfilled: ${cennes}¢ → user ${userId}`,
+              );
+            }
           }
           break;
         }

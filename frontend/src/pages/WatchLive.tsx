@@ -1,37 +1,46 @@
 /**
- * WatchLive Page - Watch a Mux live stream
- * Uses MuxVideoPlayer with the live stream's playback ID
+ * WatchLive — TikTok-style fullscreen live viewer
+ * Fullscreen Mux player + real-time chat overlay + gift button
  */
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Header } from "../components/Header";
-import { BottomNav } from "../components/BottomNav";
-import { MuxVideoPlayer } from "../components/video/MuxVideoPlayer";
-import { logger } from "../lib/logger";
+import MuxPlayer from "@mux/mux-player-react";
+import { LiveChat } from "@/components/live/LiveChat";
+import { GiftPicker } from "@/components/features/GiftPicker";
+import { useHaptics } from "@/hooks/useHaptics";
+import { logger } from "@/lib/logger";
 
 const watchLogger = logger.withContext("WatchLive");
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeute-backend.up.railway.app";
+  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
-interface StreamStatus {
+interface StreamData {
+  streamId: string;
   status: "idle" | "active" | "disabled" | "reconnecting" | "not_found";
   playbackId: string | null;
   title?: string;
+  userId?: string;
+  username?: string;
+  avatarUrl?: string;
   viewerCount?: number;
 }
 
-const WatchLive: React.FC = () => {
+export default function WatchLive() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [stream, setStream] = useState<StreamStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [viewerCount, setViewerCount] = useState(0);
+  const { tap } = useHaptics();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchStreamStatus = async () => {
+  const [stream, setStream] = useState<StreamData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(true);
+  const [showGiftPicker, setShowGiftPicker] = useState(false);
+  const [streamEnded] = useState(false);
+
+  const fetchStream = useCallback(async () => {
     if (!id) return;
     try {
       const res = await fetch(`${API_BASE}/api/mux/livestream-status/${id}`, {
@@ -39,223 +48,268 @@ const WatchLive: React.FC = () => {
       });
 
       if (res.status === 404) {
-        setStream({
-          status: "not_found",
-          playbackId: null,
-        });
+        setStream({ streamId: id, status: "not_found", playbackId: null });
         return;
       }
 
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
-
       const { data } = await res.json();
-      setStream(data);
-      if (data.viewerCount !== undefined) setViewerCount(data.viewerCount);
+
+      // Also pull meta from live_streams table via supabase
+      setStream({ streamId: data.streamId, ...data });
     } catch (err: any) {
-      watchLogger.error("Failed to fetch stream status:", err);
+      watchLogger.error("Failed to fetch stream:", err);
       setError(err.message || "Impossible de charger le live.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    fetchStreamStatus();
-
-    // Poll every 10s to update status / viewer count
-    pollRef.current = setInterval(fetchStreamStatus, 10_000);
+    fetchStream();
+    pollRef.current = setInterval(fetchStream, 10_000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [id]);
+  }, [fetchStream]);
 
   // ─── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
-        <svg
-          className="w-10 h-10 text-gold-400 animate-spin"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          />
-        </svg>
-        <p className="text-white/60">Connexion au live...</p>
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-gold-400 border-t-transparent rounded-full animate-spin" />
+        <p className="text-white/60 text-sm">Connexion au live...</p>
       </div>
     );
   }
 
   // ─── Error ───────────────────────────────────────────────────────────────
-  if (error) {
+  if (error || stream?.status === "not_found") {
     return (
-      <div className="min-h-screen bg-black pb-20">
-        <Header title="Live" showBack={true} />
-        <div className="max-w-xl mx-auto px-4 py-12 text-center">
-          <div className="text-5xl mb-4">😕</div>
-          <h2 className="text-xl font-bold text-white mb-2">
-            Oups, quelque chose a mal tourné
-          </h2>
-          <p className="text-white/60 mb-6">{error}</p>
-          <button
-            onClick={() => navigate("/live")}
-            className="px-6 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
-          >
-            Retour aux lives
-          </button>
-        </div>
-        <BottomNav />
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="text-6xl mb-2">📡</div>
+        <h2 className="text-xl font-bold text-white">Live introuvable</h2>
+        <p className="text-white/50 text-sm">
+          {error || "Ce live n'existe pas ou est déjà terminé."}
+        </p>
+        <button
+          onClick={() => navigate("/live")}
+          className="mt-4 px-6 py-3 rounded-2xl bg-white/10 text-white font-semibold"
+        >
+          Voir les lives
+        </button>
       </div>
     );
   }
 
-  // ─── Not found ───────────────────────────────────────────────────────────
-  if (stream?.status === "not_found") {
+  // ─── Stream ended (received via socket) ─────────────────────────────────
+  if (streamEnded) {
     return (
-      <div className="min-h-screen bg-black pb-20">
-        <Header title="Live" showBack={true} />
-        <div className="max-w-xl mx-auto px-4 py-12 text-center">
-          <div className="text-5xl mb-4">📡</div>
-          <h2 className="text-xl font-bold text-white mb-2">
-            Ce live n&apos;existe pas
-          </h2>
-          <p className="text-white/60 mb-6">
-            Le stream que tu cherches n&apos;a pas été trouvé.
-          </p>
-          <button
-            onClick={() => navigate("/live")}
-            className="px-6 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all"
-          >
-            Voir les lives actifs
-          </button>
-        </div>
-        <BottomNav />
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="text-6xl mb-2">🏁</div>
+        <h2 className="text-2xl font-black text-white">Live terminé</h2>
+        <p className="text-white/50">Le créateur a terminé son live.</p>
+        <button
+          onClick={() => navigate("/live")}
+          className="mt-4 px-6 py-3 rounded-2xl bg-gold-gradient text-black font-black"
+        >
+          Voir d'autres lives
+        </button>
       </div>
     );
   }
 
-  // ─── Stream idle / not yet started ──────────────────────────────────────
+  // ─── Waiting for stream to start ─────────────────────────────────────────
   if (
     stream?.status === "idle" ||
     stream?.status === "disabled" ||
     !stream?.playbackId
   ) {
     return (
-      <div className="min-h-screen bg-black pb-20">
-        <Header title="Live" showBack={true} />
-        <div className="max-w-xl mx-auto px-4 py-12 text-center">
-          <div className="text-5xl mb-4">⏳</div>
-          <h2 className="text-xl font-bold text-white mb-3">
-            {stream?.title || "Le live n'a pas encore commencé"}
-          </h2>
-          <p className="text-white/60 mb-2">
-            Le créateur n&apos;a pas encore démarré la diffusion.
-          </p>
-          <p className="text-white/40 text-sm mb-8">
-            Cette page se rafraîchit automatiquement toutes les 10 secondes.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={fetchStreamStatus}
-              className="px-6 py-3 rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all font-semibold"
-            >
-              Actualiser maintenant
-            </button>
-            <button
-              onClick={() => navigate("/live")}
-              className="px-6 py-3 rounded-xl bg-gold-gradient text-black font-bold transition-all"
-            >
-              Autres lives
-            </button>
-          </div>
+      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="text-6xl mb-2">⏳</div>
+        <h2 className="text-xl font-bold text-white">
+          {stream?.title || "Le live commence bientôt..."}
+        </h2>
+        <p className="text-white/40 text-sm">
+          Cette page se rafraîchit automatiquement.
+        </p>
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={fetchStream}
+            className="px-5 py-2.5 rounded-2xl bg-white/10 text-white text-sm font-semibold"
+          >
+            Actualiser
+          </button>
+          <button
+            onClick={() => navigate("/live")}
+            className="px-5 py-2.5 rounded-2xl bg-gold-gradient text-black text-sm font-bold"
+          >
+            Autres lives
+          </button>
         </div>
-        <BottomNav />
       </div>
     );
   }
 
-  // ─── Active stream ───────────────────────────────────────────────────────
+  // ─── Active stream — TikTok fullscreen layout ─────────────────────────────
   return (
-    <div className="min-h-screen bg-black pb-20">
-      <Header title={stream.title || "Live"} showBack={true} />
+    <div className="fixed inset-0 bg-black overflow-hidden">
+      {/* Mux player — fullscreen */}
+      {stream?.playbackId && (
+        <MuxPlayer
+          playbackId={stream.playbackId}
+          streamType="live"
+          autoPlay
+          muted={false}
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      )}
 
-      <div className="max-w-3xl mx-auto px-0 md:px-4 py-0 md:py-4">
-        {/* Video player */}
-        <div className="relative bg-black aspect-video w-full overflow-hidden md:rounded-2xl">
-          {stream.playbackId && (
-            <MuxVideoPlayer
-              playbackId={stream.playbackId}
-              autoPlay={true}
-              loop={false}
-              muted={false}
-              className="w-full h-full"
-              onError={(err) => watchLogger.error("Player error:", err)}
-            />
-          )}
+      {/* Top bar — gradient overlay */}
+      <div className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-4 pt-12 pb-6 bg-gradient-to-b from-black/70 to-transparent pointer-events-none">
+        <div className="flex items-center gap-3 pointer-events-auto">
+          {/* Back */}
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-black/40 flex items-center justify-center"
+          >
+            <svg
+              className="w-5 h-5 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
 
-          {/* Live badge overlay */}
-          <div className="absolute top-3 left-3 flex items-center gap-3">
-            <div className="flex items-center gap-1.5 bg-red-600 px-3 py-1 rounded-full text-white text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              LIVE
-            </div>
-            {viewerCount > 0 && (
-              <div className="bg-black/60 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                👁️ {viewerCount.toLocaleString("fr-CA")} spectateurs
-              </div>
+          {/* Creator info */}
+          <div className="flex items-center gap-2">
+            {stream?.avatarUrl && (
+              <img
+                src={stream.avatarUrl}
+                alt=""
+                className="w-8 h-8 rounded-full object-cover border-2 border-red-500"
+              />
             )}
+            <div>
+              <p className="text-white font-bold text-sm leading-none">
+                {stream?.username || stream?.title || "Live"}
+              </p>
+              <p className="text-white/60 text-xs">{stream?.title}</p>
+            </div>
           </div>
         </div>
 
-        {/* Stream info */}
-        <div className="px-4 py-4">
-          <h1 className="text-white text-xl font-bold mb-1">
-            {stream.title || "Live en direct"}
-          </h1>
-
-          {/* Reconnecting notice */}
-          {stream.status === "reconnecting" && (
-            <div className="mt-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3">
-              <p className="text-yellow-400 text-sm font-semibold">
-                ⚠️ Le créateur se reconnecte...
-              </p>
-              <p className="text-white/50 text-xs mt-1">
-                Le stream reprendra dans quelques instants.
-              </p>
-            </div>
+        {/* Live badge */}
+        <div className="flex items-center gap-2 pointer-events-none">
+          {stream?.status === "reconnecting" && (
+            <span className="text-yellow-400 text-xs font-bold">
+              ⚠️ Reconnexion...
+            </span>
           )}
-
-          {/* Share link */}
-          <div className="mt-4 bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between gap-3">
-            <p className="text-white/60 text-sm truncate">
-              Partage ce live avec tes amis
-            </p>
-            <button
-              onClick={() => {
-                void navigator.clipboard.writeText(window.location.href);
-              }}
-              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/10 text-white text-sm hover:bg-white/20 transition-all font-medium"
-            >
-              Copier le lien
-            </button>
+          <div className="flex items-center gap-1.5 bg-red-600 px-3 py-1 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <span className="text-white text-xs font-black">LIVE</span>
           </div>
         </div>
       </div>
 
-      <BottomNav />
+      {/* Right sidebar */}
+      <div className="absolute right-4 bottom-48 z-20 flex flex-col gap-4">
+        {/* Toggle chat */}
+        <button
+          onClick={() => {
+            tap();
+            setShowChat((v) => !v);
+          }}
+          className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20"
+        >
+          <svg
+            className="w-5 h-5 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+        </button>
+
+        {/* Gift */}
+        <button
+          onClick={() => {
+            tap();
+            setShowGiftPicker(true);
+          }}
+          className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20"
+        >
+          <span className="text-xl">🎁</span>
+        </button>
+
+        {/* Share */}
+        <button
+          onClick={() => {
+            tap();
+            navigator
+              .share?.({
+                title: stream?.title || "Live Zyeuté",
+                url: window.location.href,
+              })
+              .catch(() => navigator.clipboard.writeText(window.location.href));
+          }}
+          className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20"
+        >
+          <svg
+            className="w-5 h-5 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Bottom: chat */}
+      {showChat && (
+        <div className="absolute bottom-0 inset-x-0 z-20 px-3 pb-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-16">
+          <LiveChat
+            streamId={stream?.streamId || id || ""}
+            viewerCount={stream?.viewerCount}
+          />
+        </div>
+      )}
+
+      {/* Gift picker */}
+      {showGiftPicker && stream?.userId && (
+        <GiftPicker
+          recipientId={stream.userId}
+          recipientName={stream.username || "ce créateur"}
+          onClose={() => setShowGiftPicker(false)}
+        />
+      )}
     </div>
   );
-};
-
-export default WatchLive;
+}

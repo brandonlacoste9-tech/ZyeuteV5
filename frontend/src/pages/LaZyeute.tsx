@@ -32,6 +32,7 @@ import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
+import { GiftPicker } from "@/components/features/GiftPicker";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -302,6 +303,7 @@ export const Zyeute: React.FC = () => {
   const [sharePostId, setSharePostId] = useState<string | null>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [giftOpen, setGiftOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportCtx, setReportCtx] = useState<{
     postId: string;
@@ -1196,6 +1198,30 @@ export const Zyeute: React.FC = () => {
               );
             })()}
 
+            {/* Gift */}
+            <button
+              type="button"
+              onClick={() => {
+                tap();
+                setGiftOpen(true);
+              }}
+              className="flex flex-col items-center gap-1 press-scale"
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
+                style={{
+                  background:
+                    "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
+                  border: `2px solid ${edgeLighting}`,
+                }}
+              >
+                <span className="text-lg">🎁</span>
+              </div>
+              <span className="text-[10px] font-bold text-white/80">
+                Cadeau
+              </span>
+            </button>
+
             {/* TI-GUY Chat */}
             <button
               type="button"
@@ -1548,6 +1574,20 @@ export const Zyeute: React.FC = () => {
             setReportCtx(null);
           }}
         />
+
+        {/* Gift Picker */}
+        {giftOpen && currentPost && (
+          <GiftPicker
+            recipientId={currentPost.user?.id || currentPost.user_id || ""}
+            recipientName={
+              currentPost.user?.displayName ||
+              currentPost.user?.username ||
+              "ce créateur"
+            }
+            postId={currentPost.id}
+            onClose={() => setGiftOpen(false)}
+          />
+        )}
       </div>
     </FeedErrorBoundary>
   );

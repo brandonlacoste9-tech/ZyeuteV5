@@ -45,6 +45,7 @@ import maxApiRoutes from "./routes/max-api.js";
 import emailRoutes from "./routes/email.js";
 import giftRoutes from "./routes/gifts.js";
 import subscriptionRoutes from "./routes/subscriptions.js";
+import cennePacksRoutes from "./routes/cenne-packs.js";
 import swarmRoutes from "./routes/swarm.js";
 import vaultRoutes from "./routes/vault.js";
 import familyRoutes from "./routes/family.js";
@@ -283,6 +284,9 @@ export async function registerRoutes(
 
   // ============ GIFT ROUTES ============
   app.use("/api/gifts", giftRoutes);
+
+  // ============ CENNE PACKS / STORE ROUTES ============
+  app.use("/api/cennes", attachBearerUserId, cennePacksRoutes);
 
   // ============ STRIPE SUBSCRIPTION ROUTES ============
   app.use("/api/stripe", attachBearerUserId, subscriptionRoutes);
