@@ -512,17 +512,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPostsByUser(userId: string, limit: number = 50): Promise<Post[]> {
-    return await db
-      .select()
-      .from(posts)
-      .where(
-        and(
-          eq(posts.userId, userId),
-          or(eq(posts.isHidden, false), isNull(posts.isHidden)),
-        ),
-      )
-      .orderBy(desc(posts.createdAt))
-      .limit(limit);
+    try {
+      return await db
+        .select()
+        .from(posts)
+        .where(
+          and(
+            eq(posts.userId, userId),
+            or(eq(posts.isHidden, false), isNull(posts.isHidden)),
+          ),
+        )
+        .orderBy(desc(posts.createdAt))
+        .limit(limit);
+    } catch (err) {
+      console.error(
+        "[storage.getPostsByUser] Drizzle failed, using Supabase REST fallback:",
+        (err as Error).message,
+      );
+      const sb = getSupabaseFallback();
+      if (!sb) return [];
+      const { data } = await sb
+        .from("publications")
+        .select("*")
+        .eq("user_id", userId)
+        .or("est_masque.is.null,est_masque.eq.false")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      return (data || []) as unknown as Post[];
+    }
   }
 
   async getFeedPosts(

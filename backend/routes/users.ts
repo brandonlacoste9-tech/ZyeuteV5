@@ -17,29 +17,76 @@ const upload = multer({
 /**
  * Enrich a user object with real follower/following/post counts from DB.
  * These are not stored on the user_profiles row itself.
+ * Uses Supabase REST fallback when Drizzle pool times out.
  */
 async function enrichUserCounts(user: any): Promise<any> {
+  const sb = supabaseAdmin;
+
+  // Helper: count rows via Supabase REST when Drizzle fails
+  async function countViaRest(
+    table: string,
+    column: string,
+    value: string,
+  ): Promise<number> {
+    if (!sb) return 0;
+    const { count: c } = await sb
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .eq(column, value);
+    return c ?? 0;
+  }
+
+  // Helper: count via Drizzle with Supabase REST fallback
+  async function safeCount(
+    drizzleQuery: Promise<{ cnt: number }[]>,
+    restTable: string,
+    restColumn: string,
+    userId: string,
+  ): Promise<number> {
+    try {
+      const result = await drizzleQuery;
+      return result[0]?.cnt ?? 0;
+    } catch {
+      return countViaRest(restTable, restColumn, userId);
+    }
+  }
+
   try {
-    const [followersResult, followingResult, postsResult, subResult] =
+    const [followersCount, followingCount, postsCount, subResult] =
       await Promise.all([
-        // Followers: rows in abonnements where followee_id = user.id
-        db
-          .select({ cnt: count() })
-          .from(follows)
-          .where(eq(follows.followingId, user.id)),
-        // Following: rows in abonnements where follower_id = user.id
-        db
-          .select({ cnt: count() })
-          .from(follows)
-          .where(eq(follows.followerId, user.id)),
+        // Followers: abonnements where following_id = user.id
+        safeCount(
+          db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(eq(follows.followingId, user.id)),
+          "abonnements",
+          "following_id",
+          user.id,
+        ),
+        // Following: abonnements where follower_id = user.id
+        safeCount(
+          db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(eq(follows.followerId, user.id)),
+          "abonnements",
+          "follower_id",
+          user.id,
+        ),
         // Posts: publications by this user
-        db
-          .select({ cnt: count() })
-          .from(posts)
-          .where(eq(posts.userId, user.id)),
-        // Active subscription tier
-        supabaseAdmin
-          ? supabaseAdmin
+        safeCount(
+          db
+            .select({ cnt: count() })
+            .from(posts)
+            .where(eq(posts.userId, user.id)),
+          "publications",
+          "user_id",
+          user.id,
+        ),
+        // Active subscription tier (already uses Supabase REST)
+        sb
+          ? sb
               .from("subscription_tiers")
               .select("tier_name")
               .eq("user_id", user.id)
@@ -55,12 +102,12 @@ async function enrichUserCounts(user: any): Promise<any> {
 
     return {
       ...user,
-      followers_count: followersResult[0]?.cnt ?? 0,
-      followersCount: followersResult[0]?.cnt ?? 0,
-      following_count: followingResult[0]?.cnt ?? 0,
-      followingCount: followingResult[0]?.cnt ?? 0,
-      posts_count: postsResult[0]?.cnt ?? 0,
-      postsCount: postsResult[0]?.cnt ?? 0,
+      followers_count: followersCount,
+      followersCount: followersCount,
+      following_count: followingCount,
+      followingCount: followingCount,
+      posts_count: postsCount,
+      postsCount: postsCount,
       subscriptionTier: tierName,
       subscription_tier: tierName,
     };
