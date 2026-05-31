@@ -528,7 +528,9 @@ export const NotificationSchema = z.preprocess((val: unknown) => {
         ? v.isRead
         : v.is_read !== undefined
           ? v.is_read
-          : false,
+          : v.lu !== undefined
+            ? v.lu
+            : false,
     created_at: v.createdAt || v.created_at || new Date().toISOString(),
     actor: v.actor || v.fromUser,
     post: v.post,

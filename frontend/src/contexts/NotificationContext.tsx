@@ -71,14 +71,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       // Fetch notifications with actor profile and post thumbnail joined
       const { data, error } = await supabase
         .from("notifications")
-        .select(`
+        .select(
+          `
           *,
           actor:actor_id (
             id,
             username,
             display_name,
-            avatar_url,
-            is_verified
+            avatar_url
           ),
           post:post_id (
             id,
@@ -86,7 +86,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
             thumbnail_url,
             caption
           )
-        `)
+        `,
+        )
         .eq("user_id", currentUserId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -171,7 +172,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const { error } = await supabase
         .from("notifications")
-        .update({ is_read: true })
+        .update({ lu: true })
         .eq("id", notificationId)
         .eq("user_id", currentUserId);
 
@@ -199,9 +200,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const { error } = await supabase
         .from("notifications")
-        .update({ is_read: true })
+        .update({ lu: true })
         .eq("user_id", currentUserId)
-        .eq("is_read", false);
+        .eq("lu", false);
 
       if (error) throw error;
 
@@ -259,19 +260,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const value = React.useMemo(() => ({
-    notifications,
-    unreadCount,
-    loading,
-    markAsRead,
-    markAllAsRead,
-    refreshNotifications,
-  }), [notifications, unreadCount, loading, markAsRead, markAllAsRead, refreshNotifications]);
+  const value = React.useMemo(
+    () => ({
+      notifications,
+      unreadCount,
+      loading,
+      markAsRead,
+      markAllAsRead,
+      refreshNotifications,
+    }),
+    [
+      notifications,
+      unreadCount,
+      loading,
+      markAsRead,
+      markAllAsRead,
+      refreshNotifications,
+    ],
+  );
 
   return (
-    <NotificationContext.Provider
-      value={value}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

@@ -119,7 +119,7 @@ export const users = pgTable("user_profiles", {
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   region: text("region"),
-  role: roleEnum("role").default("citoyen"), // RBAC Role
+  role: text("role").default("citoyen"), // RBAC Role
   customPermissions: jsonb("custom_permissions").default({}), // Granular overrides
   isAdmin: boolean("is_admin").default(false),
   isPremium: boolean("is_premium").default(false),
@@ -136,7 +136,7 @@ export const users = pgTable("user_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow(),
   tiGuyCommentsEnabled: boolean("ti_guy_comments_enabled").default(true),
-  hiveId: hiveEnum("hive_id").default("quebec"),
+  hiveId: text("hive_id").default("quebec"),
   // Hive Economy (Le Protocole d'Économie Sociale) 🚀
   karmaCredits: integer("karma_credits").default(0), // Points de Karma (non-monétaire)
   cashCredits: integer("cash_credits").default(0), // Piasses/Huards (cents)
@@ -169,8 +169,7 @@ export const posts = pgTable(
     mediaUrl: text("media_url"), // Optional in some cases?
     originalUrl: text("original_url"), // Backup of original upload
     enhancedUrl: text("enhanced_url"), // URL of upscaled/enhanced version
-    processingStatus:
-      processingStatusEnum("processing_status").default("pending"),
+    processingStatus: text("processing_status").default("pending"),
     mediaMetadata: jsonb("media_metadata").default({}), // Key moments, AI tags, etc.
     muxAssetId: text("mux_asset_id"),
     muxUploadId: text("mux_upload_id"),
