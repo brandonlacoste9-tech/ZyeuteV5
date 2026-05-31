@@ -13,14 +13,12 @@ import { supabase } from "@/lib/supabase";
 import { QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
-import { getCurrentUser } from "@/services/api";
+import { apiCall, getCurrentUser } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { getSessionWithTimeout } from "@/lib/supabase";
 import { logger } from "../../lib/logger";
 
 const profileEditSettingsLogger = logger.withContext("ProfileEditSettings");
-
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
 
 export const ProfileEditSettings: React.FC = () => {
   const { tap } = useHaptics();
@@ -92,21 +90,9 @@ export const ProfileEditSettings: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Use backend PATCH /api/users/me — it handles camelCase mapping,
-      // username uniqueness check, and Drizzle ORM field names correctly
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const res = await fetch(`${API_BASE}/api/users/me`, {
+      // Use apiCall (relative URL → Vercel proxy → Render backend)
+      const { data, error, code } = await apiCall<{ user: any }>("/users/me", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({
           username: formData.username,
           display_name: formData.display_name,
@@ -116,15 +102,15 @@ export const ProfileEditSettings: React.FC = () => {
         }),
       });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 409) {
-          setErrors({ username: body.error || "Nom d'utilisateur déjà pris" });
+      if (error) {
+        if (code === 409) {
+          setErrors({ username: error || "Nom d'utilisateur déjà pris" });
           return;
         }
-        throw new Error(body.error || `Erreur ${res.status}`);
+        throw new Error(error);
       }
 
+      profileEditSettingsLogger.info("Profile updated:", data);
       toast.success("Profil mis à jour! ✨");
 
       // Refresh auth context so Header/Profile reflect new data
@@ -192,27 +178,24 @@ export const ProfileEditSettings: React.FC = () => {
 
       // Strategy 2: Upload via backend if Supabase storage failed
       if (!publicUrl) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const { data: sessionData } = await getSessionWithTimeout(3000);
+        const token = sessionData?.session?.access_token;
 
         const formPayload = new FormData();
         formPayload.append("avatar", file);
 
-        const uploadRes = await fetch(`${API_BASE}/api/users/me/avatar`, {
+        const uploadRes = await fetch("/api/users/me/avatar", {
           method: "POST",
           headers: {
-            ...(session?.access_token
-              ? { Authorization: `Bearer ${session.access_token}` }
-              : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           credentials: "include",
           body: formPayload,
         });
 
         if (uploadRes.ok) {
-          const data = await uploadRes.json();
-          publicUrl = data.avatar_url || data.avatarUrl;
+          const uploadData = await uploadRes.json();
+          publicUrl = uploadData.avatar_url || uploadData.avatarUrl;
         }
       }
 
@@ -220,24 +203,13 @@ export const ProfileEditSettings: React.FC = () => {
         throw new Error("Impossible de téléverser la photo");
       }
 
-      // Update the avatar_url via the backend
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const patchRes = await fetch(`${API_BASE}/api/users/me`, {
+      // Update the avatar_url via apiCall (relative URL)
+      const { error: patchError } = await apiCall<{ user: any }>("/users/me", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({ avatar_url: publicUrl }),
       });
 
-      if (!patchRes.ok) {
+      if (patchError) {
         throw new Error("Impossible de mettre à jour la photo de profil");
       }
 
