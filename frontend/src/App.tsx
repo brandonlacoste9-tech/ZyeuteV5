@@ -4,11 +4,10 @@
  */
 
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router, useLocation } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { TIGuyButton } from "@/components/tiguy/TIGuyButton";
-import { useLocation } from "react-router-dom";
 import { useTIGuy } from "@/components/tiguy/useTIGuy";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
@@ -33,7 +32,7 @@ function LoadingScreen({ message }: { message?: string }) {
   return <LoadingScreenComponent message={message || "Chargement..."} />;
 }
 
-function AppContent() {
+function AppShell() {
   const { isLoading, user } = useAuth();
   const { isOpen, openChat, closeChat } = useTIGuy(user?.id ?? "anonymous");
   const location = useLocation();
@@ -44,7 +43,7 @@ function AppContent() {
   }
 
   return (
-    <Router>
+    <>
       <ApiHealthBanner />
       <AgeGateModal />
       <AppRoutes />
@@ -61,6 +60,14 @@ function AppContent() {
           </Suspense>
         </>
       ) : null}
+    </>
+  );
+}
+
+function AppContent() {
+  return (
+    <Router>
+      <AppShell />
     </Router>
   );
 }
