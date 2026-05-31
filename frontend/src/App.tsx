@@ -39,6 +39,7 @@ function AppShell() {
   const { isOpen, openChat, closeChat } = useTIGuy(user?.id ?? "anonymous");
   const location = useLocation();
   const isFeedPage = location.pathname === "/feed" || location.pathname === "/";
+  const isMessagesPage = location.pathname === "/messages";
 
   if (isLoading) {
     return <LoadingScreen message="Chargement..." />;
@@ -51,7 +52,9 @@ function AppShell() {
       <AppRoutes />
       {user ? (
         <>
-          {!isOpen && !isFeedPage && <TIGuyButton onClick={openChat} />}
+          {!isOpen && !isFeedPage && !isMessagesPage && (
+            <TIGuyButton onClick={openChat} />
+          )}
           <Suspense fallback={null}>
             <TIGuyFullScreen
               isOpen={isOpen}
