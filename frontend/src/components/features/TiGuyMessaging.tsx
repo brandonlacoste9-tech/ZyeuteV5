@@ -143,91 +143,343 @@ function FleurDeLysLarge({ size = 72, gold }: { size?: number; gold: string }) {
   );
 }
 
-function EnvelopeIcon({ size = 26, gold }: { size?: number; gold: string }) {
+// ─── Águila Real — Mexico coat of arms mascot ────────────────────────────────
+function AguilaReal({
+  size = 72,
+  gold: _gold,
+}: {
+  size?: number;
+  gold: string;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect
-        x="2"
-        y="4"
-        width="20"
-        height="16"
-        rx="3"
-        fill={gold}
-        opacity="0.15"
-        stroke={gold}
-        strokeWidth="1.5"
-      />
-      <path
-        d="M2 7l10 7 10-7"
-        stroke={gold}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {/* Gold stitching dots on envelope */}
-      <circle cx="5" cy="6" r="0.8" fill={gold} opacity="0.6" />
-      <circle cx="7" cy="6" r="0.8" fill={gold} opacity="0.6" />
-      <circle cx="9" cy="6" r="0.8" fill={gold} opacity="0.6" />
-      <circle cx="15" cy="6" r="0.8" fill={gold} opacity="0.6" />
-      <circle cx="17" cy="6" r="0.8" fill={gold} opacity="0.6" />
-      <circle cx="19" cy="6" r="0.8" fill={gold} opacity="0.6" />
+    <svg width={size} height={size} viewBox="0 0 120 130" fill="none">
+      <defs>
+        <linearGradient id="ag_gold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#F4E2A6" />
+          <stop offset="40%" stopColor="#D4AF37" />
+          <stop offset="100%" stopColor="#7A5200" />
+        </linearGradient>
+        <linearGradient id="ag_brown" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#C8861A" />
+          <stop offset="100%" stopColor="#5C3000" />
+        </linearGradient>
+        <linearGradient id="ag_cactus" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#2A7A5A" />
+          <stop offset="100%" stopColor="#1A5A3A" />
+        </linearGradient>
+        <filter id="eglow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <g filter="url(#eglow)">
+        {/* ── Nopal cactus base ── */}
+        {/* Center pad */}
+        <ellipse cx="60" cy="98" rx="12" ry="9" fill="url(#ag_cactus)" />
+        {/* Left pad */}
+        <ellipse
+          cx="44"
+          cy="100"
+          rx="9"
+          ry="7"
+          fill="url(#ag_cactus)"
+          transform="rotate(-15 44 100)"
+        />
+        {/* Right pad */}
+        <ellipse
+          cx="76"
+          cy="100"
+          rx="9"
+          ry="7"
+          fill="url(#ag_cactus)"
+          transform="rotate(15 76 100)"
+        />
+        {/* Far left pad */}
+        <ellipse
+          cx="32"
+          cy="105"
+          rx="7"
+          ry="5.5"
+          fill="url(#ag_cactus)"
+          transform="rotate(-25 32 105)"
+        />
+        {/* Far right pad */}
+        <ellipse
+          cx="88"
+          cy="105"
+          rx="7"
+          ry="5.5"
+          fill="url(#ag_cactus)"
+          transform="rotate(25 88 105)"
+        />
+        {/* Cactus spines */}
+        <line
+          x1="60"
+          y1="92"
+          x2="58"
+          y2="88"
+          stroke="#1A5A3A"
+          strokeWidth="0.8"
+        />
+        <line
+          x1="64"
+          y1="91"
+          x2="66"
+          y2="87"
+          stroke="#1A5A3A"
+          strokeWidth="0.8"
+        />
+        <line
+          x1="56"
+          y1="94"
+          x2="53"
+          y2="91"
+          stroke="#1A5A3A"
+          strokeWidth="0.8"
+        />
+        {/* Cactus fruits (tunas) — pink/red */}
+        <ellipse cx="52" cy="94" rx="3" ry="4" fill="#C8385A" />
+        <ellipse cx="68" cy="93" rx="3" ry="4" fill="#C8385A" />
+        <ellipse cx="38" cy="98" rx="2.5" ry="3.5" fill="#C8385A" />
+        <ellipse cx="83" cy="98" rx="2.5" ry="3.5" fill="#C8385A" />
+        {/* Fruit dots */}
+        <circle cx="52" cy="93" r="0.8" fill="#FF6688" />
+        <circle cx="68" cy="92" r="0.8" fill="#FF6688" />
+
+        {/* Rock / stone base */}
+        <path
+          d="M48 107 C44 110 44 115 60 116 C76 115 76 110 72 107Z"
+          fill="url(#ag_gold)"
+          opacity="0.8"
+        />
+
+        {/* ── Eagle body ── */}
+        {/* Main body */}
+        <ellipse cx="63" cy="72" rx="13" ry="17" fill="url(#ag_brown)" />
+
+        {/* Left wing — spread upward and left */}
+        <path
+          d="M52 65 C44 56 28 46 10 42 C12 52 22 60 36 65 C24 66 12 68 6 76 C18 80 32 74 44 69 C34 76 26 86 26 95 C36 88 46 76 52 68Z"
+          fill="url(#ag_brown)"
+        />
+        {/* Left wing highlight */}
+        <path
+          d="M50 63 C40 55 24 48 12 46 C16 54 26 60 38 64"
+          stroke="#C8861A"
+          strokeWidth="1.2"
+          fill="none"
+          opacity="0.6"
+        />
+        <path
+          d="M48 70 C36 68 22 70 10 76"
+          stroke="#C8861A"
+          strokeWidth="1"
+          fill="none"
+          opacity="0.5"
+        />
+        {/* Left primary feather tips */}
+        <path
+          d="M26 95 C22 101 20 107 23 107"
+          stroke="url(#ag_gold)"
+          strokeWidth="2.2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M32 97 C28 103 27 109 30 108"
+          stroke="url(#ag_gold)"
+          strokeWidth="2.2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M20 90 C15 96 14 102 17 102"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+
+        {/* Right wing — spread upward and right */}
+        <path
+          d="M74 65 C82 56 98 46 116 42 C114 52 104 60 90 65 C102 66 114 68 120 76 C108 80 94 74 82 69 C92 76 100 86 100 95 C90 88 80 76 74 68Z"
+          fill="url(#ag_brown)"
+        />
+        {/* Right wing highlight */}
+        <path
+          d="M76 63 C86 55 102 48 114 46 C110 54 100 60 88 64"
+          stroke="#C8861A"
+          strokeWidth="1.2"
+          fill="none"
+          opacity="0.6"
+        />
+        {/* Right primary feather tips */}
+        <path
+          d="M100 95 C104 101 106 107 103 107"
+          stroke="url(#ag_gold)"
+          strokeWidth="2.2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M94 97 C98 103 99 109 96 108"
+          stroke="url(#ag_gold)"
+          strokeWidth="2.2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M106 90 C111 96 112 102 109 102"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+
+        {/* ── Head — turned LEFT (heraldic, coat of arms style) ── */}
+        {/* Neck */}
+        <path
+          d="M56 57 C56 52 72 52 70 57 L68 64 L58 64Z"
+          fill="url(#ag_brown)"
+        />
+        {/* Head */}
+        <ellipse cx="56" cy="48" rx="11" ry="10" fill="url(#ag_brown)" />
+        {/* Crest feathers */}
+        <path d="M50 40 C46 31 51 26 54 33Z" fill="url(#ag_gold)" />
+        <path d="M55 39 C53 30 58 25 60 32Z" fill="url(#ag_gold)" />
+        <path d="M60 40 C59 31 64 27 64 34Z" fill="url(#ag_gold)" />
+        {/* White head patch */}
+        <ellipse cx="52" cy="47" rx="5" ry="5" fill="#E8D090" opacity="0.5" />
+
+        {/* Beak — turned left, open (holding serpent) */}
+        <path
+          d="M46 46 C40 44 36 47 38 51 C41 50 45 49 47 47Z"
+          fill="url(#ag_gold)"
+        />
+        {/* Lower beak */}
+        <path
+          d="M46 47 C41 48 38 51 40 54 C43 53 46 51 47 49Z"
+          fill="#C8A020"
+        />
+        {/* Beak hook */}
+        <path d="M36 51 C33 54 35 57 38 55Z" fill="#A07010" />
+
+        {/* Eye */}
+        <circle cx="52" cy="45" r="3" fill="#1A0A00" />
+        <circle cx="51" cy="44" r="1" fill="#FF6600" opacity="0.9" />
+        <circle cx="50.5" cy="43.5" r="0.5" fill="#FFD700" />
+
+        {/* ── Serpent — in beak, coiling ── */}
+        <path
+          d="M38 51 C30 48 24 42 26 36 C28 30 34 30 36 36 C32 38 30 44 34 46 C38 44 40 38 36 34"
+          stroke="#6A9A40"
+          strokeWidth="3.5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M38 51 C30 48 24 42 26 36 C28 30 34 30 36 36 C32 38 30 44 34 46"
+          stroke="#8ABB50"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {/* Serpent head / tongue */}
+        <path
+          d="M26 36 C23 32 22 29 24 28"
+          stroke="#6A9A40"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M24 28 C22 25 20 24 19 26"
+          stroke="#FF4444"
+          strokeWidth="1.5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M24 28 C23 25 22 23 23 22"
+          stroke="#FF4444"
+          strokeWidth="1.5"
+          fill="none"
+          strokeLinecap="round"
+        />
+
+        {/* ── Talons gripping cactus ── */}
+        <path
+          d="M56 88 C52 90 50 92 52 94"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M58 89 C55 92 54 95 56 96"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M62 89 C60 93 60 96 62 97"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M66 88 C68 91 68 94 66 95"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+        <path
+          d="M70 87 C73 90 73 93 71 94"
+          stroke="url(#ag_gold)"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+
+        {/* ── Laurel & oak wreath hints (bottom) ── */}
+        <path
+          d="M30 112 C24 108 20 112 22 116 C26 116 30 114 32 112Z"
+          fill="#4A7A30"
+          opacity="0.8"
+        />
+        <path
+          d="M24 116 C18 114 16 118 19 120 C22 120 25 118 26 116Z"
+          fill="#4A7A30"
+          opacity="0.8"
+        />
+        <path
+          d="M90 112 C96 108 100 112 98 116 C94 116 90 114 88 112Z"
+          fill="#4A7A30"
+          opacity="0.8"
+        />
+        <path
+          d="M96 116 C102 114 104 118 101 120 C98 120 95 118 94 116Z"
+          fill="#4A7A30"
+          opacity="0.8"
+        />
+        {/* Wreath ribbon */}
+        <path
+          d="M50 122 C55 124 65 124 70 122"
+          stroke="#C8861A"
+          strokeWidth="2"
+          fill="none"
+          strokeLinecap="round"
+        />
+      </g>
     </svg>
   );
-}
-
-function FleurIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 22V11l-3 2 1-4 2-4 2 4 1 4-3-2v11z" />
-      <path d="M12 7c-1.5 0-2.5-1.5-2-3 .5-1.5 2-2 2-2s1.5.5 2 2c.5 1.5-.5 3-2 3z" />
-    </svg>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="#1A0F0A"
-      strokeWidth={2.5}
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-      />
-    </svg>
-  );
-}
-
-function BackIcon({ gold }: { gold: string }) {
-  return (
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke={gold}
-      strokeWidth={2.5}
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-    </svg>
-  );
-}
-
-function formatTime(iso: string) {
-  try {
-    const d = new Date(iso);
-    const diffH = (Date.now() - d.getTime()) / 3_600_000;
-    if (diffH < 24)
-      return d.toLocaleTimeString("fr-CA", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    return d.toLocaleDateString("fr-CA", { month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -541,7 +793,11 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
 
         {/* Center: fleur-de-lis + title */}
         <div className="flex flex-col items-center gap-1">
-          <FleurDeLysLarge size={70} gold={gold} />
+          {isMexicoHive ? (
+            <AguilaReal size={70} gold={gold} />
+          ) : (
+            <FleurDeLysLarge size={70} gold={gold} />
+          )}
           <div className="flex flex-col items-center -mt-1">
             <h1
               className="text-2xl font-black leading-none"
@@ -652,7 +908,11 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
       >
         {chatMsgs.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 opacity-70">
-            <FleurDeLysLarge size={80} gold={gold} />
+            {isMexicoHive ? (
+              <AguilaReal size={80} gold={gold} />
+            ) : (
+              <FleurDeLysLarge size={80} gold={gold} />
+            )}
             <p
               className="text-sm font-semibold text-center"
               style={{ color: GOLD_LIGHT }}

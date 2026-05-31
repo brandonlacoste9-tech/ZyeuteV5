@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
-import { useTranslation as useI18n } from "../i18n";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // Define the available Hives
 export type HiveId = "quebec" | "mexico";
@@ -21,6 +14,9 @@ interface HiveConfig {
   prices: { bronze: number; silver: number; gold: number };
   // Personality name for Ti-Guy equivalent
   personality: string;
+  // Mascot identity
+  mascot: string;
+  mascotEmoji: string;
 }
 
 export const HIVES: Record<HiveId, HiveConfig> = {
@@ -33,6 +29,8 @@ export const HIVES: Record<HiveId, HiveConfig> = {
     currency: "CAD",
     prices: { bronze: 4.99, silver: 9.99, gold: 19.99 },
     personality: "Ti-Guy",
+    mascot: "Grand Castor",
+    mascotEmoji: "🦫",
   },
   mexico: {
     id: "mexico",
@@ -43,6 +41,8 @@ export const HIVES: Record<HiveId, HiveConfig> = {
     currency: "MXN",
     prices: { bronze: 59, silver: 119, gold: 249 },
     personality: "El Güey",
+    mascot: "Águila Real",
+    mascotEmoji: "🦅",
   },
 };
 
