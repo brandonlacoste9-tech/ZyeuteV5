@@ -31,7 +31,7 @@ async function attachOptionalUser(
 async function getPostsViaSupabase(
   limit: number,
   page: number,
-  hiveId = "quebec",
+  _hiveId = "quebec",
 ) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   const offset = page * limit;
@@ -46,9 +46,8 @@ async function getPostsViaSupabase(
     .not("media_url", "is", null)
     // Only serve permanent video sources (Mux HLS, Supabase storage)
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%",
     )
-    .eq("hive_id", hiveId)
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -71,6 +70,7 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
       const posts = await getPostsViaSupabase(limit, page, hive);
       return res.json({
         posts,
+        nextCursor: posts.length === limit ? String(page + 1) : null,
         isGuestMode: !(req as any).userId,
         source: "supabase",
       });
