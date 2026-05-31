@@ -14,7 +14,7 @@ import { supabaseAdmin } from "../supabase-auth.js";
 const router = Router();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2025-04-30.basil",
+  apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
 });
 
 const CENNE_TO_CAD = 0.01; // 1 cenne = $0.01 CAD
@@ -140,11 +140,9 @@ router.post("/withdraw", requireAuth, async (req, res) => {
       .single();
 
     if (!profile?.stripe_connect_id) {
-      return res
-        .status(400)
-        .json({
-          error: "Compte bancaire non connecté. Lance l'intégration d'abord.",
-        });
+      return res.status(400).json({
+        error: "Compte bancaire non connecté. Lance l'intégration d'abord.",
+      });
     }
 
     if ((profile.cash_credits || 0) < cennes) {
@@ -154,11 +152,9 @@ router.post("/withdraw", requireAuth, async (req, res) => {
     // Verify account is ready for payouts
     const account = await stripe.accounts.retrieve(profile.stripe_connect_id);
     if (!account.payouts_enabled) {
-      return res
-        .status(400)
-        .json({
-          error: "Compte bancaire non vérifié. Complète ton profil Stripe.",
-        });
+      return res.status(400).json({
+        error: "Compte bancaire non vérifié. Complète ton profil Stripe.",
+      });
     }
 
     const amountCAD = Math.floor(cennes * CENNE_TO_CAD * 100); // cents for Stripe
