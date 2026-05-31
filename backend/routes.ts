@@ -258,8 +258,10 @@ export async function registerRoutes(
   // ============ STUDIO AI HIVE ROUTES ============
   app.use("/api/studio", requireAuth, studioRoutes);
 
-  // ============ TI-GUY CHAT (Uses Dialogflow CX - $813.16 credits) ============
-  app.use("/api/tiguy", tiguyRoutes);
+  // ============ TI-GUY ENHANCED ACTIONS (extra endpoints like /trends, /history, /credits) ============
+  // NOTE: primary /api/tiguy/chat is handled by tiGuyRouter (DeepSeek) mounted in index.ts first
+  // This router only adds supplementary endpoints that don't conflict
+  // app.use("/api/tiguy", tiguyRoutes); // DISABLED — conflicts with DeepSeek router in index.ts
 
   // ============ TI-GUY ENHANCED ACTIONS (Browser, Image Gen, etc.) ============
   app.use("/api/tiguy/actions", tiguyActionsRoutes);

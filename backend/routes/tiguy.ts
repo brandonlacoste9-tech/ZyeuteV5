@@ -1,5 +1,5 @@
 import express from "express";
-import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator";
+import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 import { getGeminiModel } from "../ai/google.js";
 
 const router = express.Router();
@@ -22,10 +22,18 @@ function buildLocalTiGuyReply(prompt: string) {
   if (lower.includes("habs") || lower.includes("hockey")) {
     return "Les Habs, c'est une religion icitte mon loup! Donne-moi ton angle pis j'te monte une réponse de partisan solide. 🏒";
   }
-  if (lower.includes("météo") || lower.includes("meteo") || lower.includes("temps")) {
+  if (
+    lower.includes("météo") ||
+    lower.includes("meteo") ||
+    lower.includes("temps")
+  ) {
     return "J'ai pas le radar live en ce moment, mais au Québec faut toujours prévoir une petite surprise du ciel, hein! 🌤️";
   }
-  if (lower.includes("poutine") || lower.includes("resto") || lower.includes("bouffe")) {
+  if (
+    lower.includes("poutine") ||
+    lower.includes("resto") ||
+    lower.includes("bouffe")
+  ) {
     return "Si on parle bouffe, vise quelque chose de décadent, local, pis sans fla-fla. Une bonne poutine, ça règle bien des affaires. 🍟";
   }
 
@@ -53,7 +61,9 @@ async function generateTiGuyReply(prompt: string) {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`DeepSeek ${response.status}: ${text || "request failed"}`);
+        throw new Error(
+          `DeepSeek ${response.status}: ${text || "request failed"}`,
+        );
       }
 
       const data = (await response.json()) as {
