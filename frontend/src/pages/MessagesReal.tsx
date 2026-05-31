@@ -592,13 +592,28 @@ export const MessagesReal: React.FC = () => {
   }, [activeTab]);
 
   // ── Fetch messages for active convo ──────────────────────────────────────
-  const fetchMessages = useCallback(async (convId: string) => {
-    setMessagesLoading(true);
+  // silent=true → background poll, never shows spinner or wipes optimistic messages
+  const fetchMessages = useCallback(async (convId: string, silent = false) => {
+    if (!silent) setMessagesLoading(true);
     const { data, error } = await apiCall<{ messages: Message[] }>(
       `/messaging/conversations/${convId}/messages`,
     );
-    if (!error) setMessages(data?.messages ?? []);
-    setMessagesLoading(false);
+    if (!error) {
+      const serverMsgs = data?.messages ?? [];
+      if (silent) {
+        // Merge: keep any optimistic messages not yet confirmed, append new server msgs
+        setMessages((prev) => {
+          const serverIds = new Set(serverMsgs.map((m) => m.id));
+          const optimistic = prev.filter(
+            (m) => m.id.startsWith("opt-") && !serverIds.has(m.id),
+          );
+          return [...serverMsgs, ...optimistic];
+        });
+      } else {
+        setMessages(serverMsgs);
+      }
+    }
+    if (!silent) setMessagesLoading(false);
   }, []);
 
   useEffect(() => {
@@ -617,6 +632,8 @@ export const MessagesReal: React.FC = () => {
       realtimeRef.current = null;
     }
 
+    // Initial load — show spinner only if conversation has no messages yet
+    setMessagesLoading(true);
     apiCall<{ messages: Message[] }>(
       `/messaging/conversations/${activeConvId}/messages`,
     ).then(({ data, error }) => {
@@ -652,7 +669,11 @@ export const MessagesReal: React.FC = () => {
       /* fall through to polling */
     }
 
-    pollRef.current = setInterval(() => fetchMessages(activeConvId), 5000);
+    // silent=true: background poll never blanks the conversation with a spinner
+    pollRef.current = setInterval(
+      () => fetchMessages(activeConvId, true),
+      5000,
+    );
     return () => {
       if (pollRef.current) {
         clearInterval(pollRef.current);
@@ -1125,7 +1146,8 @@ export const MessagesReal: React.FC = () => {
                         background: `linear-gradient(180deg, ${T.leather.dark} 0%, ${T.leather.medium}88 100%)`,
                       }}
                     >
-                      {messagesLoading ? (
+                      {messagesLoading && messages.length === 0 ? (
+                        // Only show spinner on first open when there are no messages yet
                         <div className="flex items-center justify-center h-24">
                           <div
                             className="w-6 h-6 rounded-full border-2 animate-spin"
