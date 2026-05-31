@@ -75,6 +75,26 @@ const BellIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
+const InboxIcon = ({ active }: { active: boolean }) => (
+  <svg
+    className="w-6 h-6"
+    fill={active ? "currentColor" : "none"}
+    stroke="currentColor"
+    strokeWidth={active ? 0 : 2}
+    viewBox="0 0 24 24"
+  >
+    {active ? (
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+    ) : (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+      />
+    )}
+  </svg>
+);
+
 const ProfileIcon = ({ active }: { active: boolean }) => (
   <svg
     className="w-6 h-6"

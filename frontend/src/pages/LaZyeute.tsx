@@ -17,6 +17,7 @@ import {
   togglePostFire,
   toggleFollow,
   toggleSavePost,
+  apiCall,
 } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -291,6 +292,7 @@ export const Zyeute: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(true);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const [forceEnter, setForceEnter] = useState(false);
+  const [tiGuyUnread, setTiGuyUnread] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -337,6 +339,24 @@ export const Zyeute: React.FC = () => {
     };
     fetchUser();
   }, []);
+
+  // Poll unread DM count for Ti-Guy badge (every 30s)
+  useEffect(() => {
+    if (!isPremium) return;
+    const fetchUnread = async () => {
+      const { data } = await apiCall<{
+        conversations: { unreadCount: number }[];
+      }>("/messaging/conversations");
+      const total = (data?.conversations ?? []).reduce(
+        (s, c) => s + (c.unreadCount || 0),
+        0,
+      );
+      setTiGuyUnread(total);
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30_000);
+    return () => clearInterval(interval);
+  }, [isPremium]);
 
   // Pre-fetch next page when user is 3 videos from the end
   useEffect(() => {
@@ -1243,6 +1263,18 @@ export const Zyeute: React.FC = () => {
                     🔒
                   </span>
                 )}
+                {isPremium && tiGuyUnread > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center"
+                    style={{
+                      background: "#D4AF37",
+                      color: "#1A0F0A",
+                      boxShadow: "0 0 6px rgba(212,175,55,0.8)",
+                    }}
+                  >
+                    {tiGuyUnread > 9 ? "9+" : tiGuyUnread}
+                  </span>
+                )}
               </div>
               <span className="text-[10px] font-bold text-gold-400/80">
                 Ti-Guy
@@ -1546,7 +1578,19 @@ export const Zyeute: React.FC = () => {
         <TiGuyMessaging
           key={showTiGuyChat ? "open" : "closed"}
           open={showTiGuyChat}
-          onClose={() => setShowTiGuyChat(false)}
+          onClose={async () => {
+            setShowTiGuyChat(false);
+            // Refresh unread badge after closing Ti-Guy
+            const { data } = await apiCall<{
+              conversations: { unreadCount: number }[];
+            }>("/messaging/conversations");
+            setTiGuyUnread(
+              (data?.conversations ?? []).reduce(
+                (s, c) => s + (c.unreadCount || 0),
+                0,
+              ),
+            );
+          }}
         />
 
         <ShareSheet
