@@ -283,7 +283,7 @@ export const Zyeute: React.FC = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showTiGuyChat, setShowTiGuyChat] = useState(false);
   const [forceEnter, setForceEnter] = useState(false);
