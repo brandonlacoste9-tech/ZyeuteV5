@@ -4,21 +4,15 @@
  */
 
 import React, { useMemo, useState } from "react";
-import {
-  Play,
-  Volume2,
-  VolumeX,
-  Eye,
-  Flame,
-  Share2,
-  MessageCircle,
-} from "lucide-react";
+import { Play, Eye, Flame, MessageCircle, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Post, User } from "@shared/schema";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import VideoErrorBoundary from "@/components/video/VideoErrorBoundary";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/Toast";
 
 interface VideoCardProps {
   post: Post & { user?: User };
@@ -39,6 +33,8 @@ export function VideoCard({
 }: VideoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [videoError, setVideoError] = useState<Error | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
+  const [reported, setReported] = useState(false);
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
@@ -54,6 +50,48 @@ export function VideoCard({
   }, [post]);
 
   const isMux = !!(post.mux_playback_id || post.muxPlaybackId);
+
+  const handleReport = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isReporting || reported) return;
+    setIsReporting(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("Connexion requise pour signaler.");
+        setIsReporting(false);
+        return;
+      }
+      const postUserId =
+        (post as any).user_id || (post as any).userId || post.user?.id || "";
+      const response = await fetch("/api/moderation/report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          contentType: "post",
+          contentId: post.id,
+          userId: postUserId,
+          reason: "user_report",
+        }),
+      });
+      if (response.ok) {
+        setReported(true);
+        toast.success("Signalement envoyé. Merci!");
+      } else {
+        toast.error("Erreur lors du signalement.");
+      }
+    } catch {
+      toast.error("Erreur lors du signalement.");
+    } finally {
+      setIsReporting(false);
+    }
+  };
 
   return (
     <div
@@ -147,6 +185,24 @@ export function VideoCard({
         <Play size={10} fill="currentColor" className="amber-glow-icon" />
         <span className="amber-glow">Vidéo</span>
       </div>
+
+      {/* Report Button — visible on hover */}
+      <button
+        type="button"
+        aria-label="Signaler ce contenu"
+        onClick={handleReport}
+        disabled={isReporting || reported}
+        className={cn(
+          "absolute top-3 left-3 p-1.5 rounded-full transition-all duration-200",
+          "opacity-0 group-hover:opacity-100",
+          reported
+            ? "bg-red-500/80 text-white"
+            : "bg-black/50 text-white/70 hover:bg-red-500/60 hover:text-white",
+          (isReporting || reported) && "cursor-not-allowed",
+        )}
+      >
+        <Flag size={12} fill={reported ? "currentColor" : "none"} />
+      </button>
     </div>
   );
 }

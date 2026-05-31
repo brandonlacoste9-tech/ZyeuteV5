@@ -93,7 +93,8 @@ surgicalUploadRouter.post(
       );
 
       // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
-      const caption = req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
+      const caption =
+        req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
       // Match columns Supabase `publications` actually exposes (avoid unknown cols → insert 400)
       const insertRow = {
         user_id: userId,
@@ -118,11 +119,32 @@ surgicalUploadRouter.post(
 
       if (postError) {
         console.error("❌ Post insert error:", postError);
-        return res.status(500).json({ error: "Failed to create post: " + postError.message });
+        return res
+          .status(500)
+          .json({ error: "Failed to create post: " + postError.message });
       }
 
       const created = postData as { id: string };
       console.log(`✅ [Surgical Upload] Success! Post created: ${created.id}`);
+
+      // 🛡️ Queue moderation check
+      try {
+        const { getModerationQueue } = await import("../queue.js");
+        const moderationQueue = getModerationQueue();
+        await moderationQueue.add("moderate-post", {
+          contentType: "post",
+          contentId: created.id,
+          userId,
+          text: caption,
+          mediaUrl: publicUrl,
+        });
+        console.log(`🛡️ [Moderation] Queued check for post ${created.id}`);
+      } catch (modErr: any) {
+        console.warn(
+          "[Moderation] Failed to queue moderation:",
+          modErr.message,
+        );
+      }
 
       res.status(201).json({
         success: true,

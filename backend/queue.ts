@@ -194,3 +194,32 @@ export const getPrivacyQueue = (): Queue => {
 
 // Export type for TypeScript usage
 export type VideoQueue = Queue;
+
+// 🛡️ QUEUE 6: Content Moderation (Medium Priority)
+let moderationQueueInstance: Queue | null = null;
+
+export const getModerationQueue = (): Queue => {
+  if (moderationQueueInstance) return moderationQueueInstance;
+  if (!connection) {
+    console.warn(
+      "⚠️ Redis connection config missing. Moderation queue disabled.",
+    );
+    return {
+      add: async () => console.log("Mock Moderation Queue: Job added"),
+      close: async () => {},
+    } as unknown as Queue;
+  }
+  moderationQueueInstance = new Queue("zyeute-content-moderation", {
+    connection,
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 3000 },
+      removeOnComplete: 100,
+      removeOnFail: 50,
+    },
+  });
+  moderationQueueInstance.on("error", (err) => {
+    console.error("❌ Moderation Queue Redis Error:", err.message);
+  });
+  return moderationQueueInstance;
+};

@@ -576,6 +576,20 @@ router.post(
       const comment = await storage.createComment(parsed.data);
       const user = await storage.getUser(req.userId!);
 
+      // Fire-and-forget moderation check
+      try {
+        const { getModerationQueue } = await import("../queue.js");
+        const moderationQueue = getModerationQueue();
+        await moderationQueue.add("moderate-comment", {
+          contentType: "comment",
+          contentId: comment.id,
+          userId: req.userId!,
+          text: req.body.content,
+        });
+      } catch (modErr: any) {
+        console.warn("[Moderation] Comment queue failed:", modErr.message);
+      }
+
       res.status(201).json({
         comment: { ...comment, user, isFired: false },
       });

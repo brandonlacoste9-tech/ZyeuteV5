@@ -95,7 +95,9 @@ export const Moderation: React.FC = () => {
     try {
       let query = supabase
         .from("moderation_logs")
-        .select("*, user:users(*)")
+        .select(
+          "*, user:user_profiles!moderation_logs_user_id_fkey(id, username, avatar_url, is_verified)",
+        )
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -233,7 +235,10 @@ export const Moderation: React.FC = () => {
 
       // Delete the actual content
       if (log.content_type === "post") {
-        await supabase.from("posts").delete().eq("id", log.content_id);
+        await supabase
+          .from("publications")
+          .update({ est_masque: true, moderation_approved: false })
+          .eq("id", log.content_id);
       } else if (log.content_type === "comment") {
         await supabase.from("commentaires").delete().eq("id", log.content_id);
       }

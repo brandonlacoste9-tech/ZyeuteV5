@@ -6,6 +6,12 @@ import { MemoryMinerBee } from "./ai/bees/memory-miner.js";
 import { PrivacyAuditorBee } from "./ai/bees/privacy-auditor.js";
 import { HiveTask } from "./ai/types.js";
 import { getBullMQConnection } from "./redis.js";
+import {
+  moderateText,
+  moderateVideoFrame,
+  saveModerationLog,
+  autoRemoveContent,
+} from "./services/contentModeration.js";
 
 const connection = getBullMQConnection();
 
@@ -170,3 +176,122 @@ try {
 }
 
 export { privacyWorker };
+
+// --- CONTENT MODERATION WORKER ---
+
+export interface ModerationJob {
+  contentType: "post" | "comment" | "message" | "bio";
+  contentId: string;
+  userId: string;
+  text?: string;
+  mediaUrl?: string;
+  reporterId?: string;
+  reportReason?: string;
+}
+
+let moderationWorker: Worker<ModerationJob>;
+try {
+  if (!connection) {
+    throw new Error("Redis connection not configured");
+  }
+  moderationWorker = new Worker<ModerationJob>(
+    "zyeute-content-moderation",
+    async (job) => {
+      const {
+        contentType,
+        contentId,
+        userId,
+        text,
+        mediaUrl,
+        reporterId,
+        reportReason,
+      } = job.data;
+      console.log(`[ModerationWorker] 🛡️ Checking ${contentType} ${contentId}`);
+
+      // Run text and image moderation in parallel
+      const [textResult, frameResult] = await Promise.all([
+        text ? moderateText(text) : Promise.resolve(null),
+        mediaUrl ? moderateVideoFrame(mediaUrl) : Promise.resolve(null),
+      ]);
+
+      // Combine results — take worst severity
+      const severityOrder = [
+        "safe",
+        "low",
+        "medium",
+        "high",
+        "critical",
+      ] as const;
+      const textSev = textResult?.severity || "safe";
+      const frameSev = frameResult?.severity || "safe";
+      const finalSeverity =
+        severityOrder.indexOf(textSev) >= severityOrder.indexOf(frameSev)
+          ? textResult!
+          : frameResult || textResult!;
+
+      // Skip saving if everything is safe and not a user report
+      if (finalSeverity.severity === "safe" && !reporterId) {
+        console.log(
+          `[ModerationWorker] ✅ ${contentType} ${contentId} is safe`,
+        );
+        return { safe: true };
+      }
+
+      const logId = await saveModerationLog({
+        contentType,
+        contentId,
+        userId,
+        reporterId,
+        result: finalSeverity,
+        contentText: text?.substring(0, 500),
+        reportReason,
+      });
+
+      // Auto-remove critical content immediately
+      if (finalSeverity.action === "auto_remove") {
+        await autoRemoveContent(
+          contentType as "post" | "comment" | "message",
+          contentId,
+        );
+        console.log(
+          `[ModerationWorker] 🚨 Auto-removed ${contentType} ${contentId} (${finalSeverity.severity})`,
+        );
+      }
+
+      return {
+        safe: finalSeverity.severity === "safe",
+        logId,
+        severity: finalSeverity.severity,
+      };
+    },
+    {
+      connection,
+      concurrency: 5,
+      limiter: { max: 30, duration: 60000 },
+    },
+  );
+
+  moderationWorker.on("completed", (job) => {
+    console.log(`[ModerationWorker] ✅ Job ${job.id} done`);
+  });
+  moderationWorker.on("failed", (job, err) => {
+    console.error(
+      `[ModerationWorker] ❌ Job ${job?.id} failed: ${err.message}`,
+    );
+  });
+  moderationWorker.on("error", (err) => {
+    console.error("[ModerationWorker] Redis error:", err.message);
+  });
+} catch (e: any) {
+  if (e.message !== "Redis connection not configured") {
+    console.error("Failed to initialize Moderation Worker:", e.message);
+  } else {
+    console.log("⚠️ [ModerationWorker] Disabled (no Redis)");
+  }
+  moderationWorker = {
+    close: async () => {},
+    on: () => {},
+  } as unknown as Worker<ModerationJob>;
+}
+
+export { moderationWorker };
