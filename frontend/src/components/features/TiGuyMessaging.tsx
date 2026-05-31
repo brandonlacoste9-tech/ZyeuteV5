@@ -300,6 +300,170 @@ function OncaPintada({
   );
 }
 
+// ─── Puma — Argentina mascot ─────────────────────────────────────────────────
+function Puma({ size = 72, gold: _gold }: { size?: number; gold: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+      <defs>
+        <linearGradient id="pu_gold" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#F4E2A6" />
+          <stop offset="40%" stopColor="#D4AF37" />
+          <stop offset="100%" stopColor="#7A5200" />
+        </linearGradient>
+        <linearGradient id="pu_fur" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#D4A060" />
+          <stop offset="50%" stopColor="#A06830" />
+          <stop offset="100%" stopColor="#703010" />
+        </linearGradient>
+        <linearGradient id="pu_sky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#74ACDF" />
+          <stop offset="100%" stopColor="#4A8AC0" />
+        </linearGradient>
+        <filter id="puglow" x="-15%" y="-15%" width="130%" height="130%">
+          <feGaussianBlur stdDeviation="2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter="url(#puglow)">
+        {/* Argentina flag stripe at base */}
+        <rect
+          x="10"
+          y="106"
+          width="100"
+          height="5"
+          rx="2"
+          fill="url(#pu_sky)"
+        />
+        <rect
+          x="10"
+          y="111"
+          width="100"
+          height="4"
+          rx="2"
+          fill="white"
+          opacity="0.9"
+        />
+        <rect
+          x="10"
+          y="115"
+          width="100"
+          height="5"
+          rx="2"
+          fill="url(#pu_sky)"
+        />
+        {/* Body — sleek crouching puma */}
+        <ellipse cx="62" cy="80" rx="32" ry="17" fill="url(#pu_fur)" />
+        {/* Belly lighter patch */}
+        <ellipse cx="62" cy="84" rx="18" ry="9" fill="#E8C090" opacity="0.6" />
+        {/* Hind haunch */}
+        <ellipse cx="85" cy="76" rx="14" ry="12" fill="#A06830" />
+        {/* Front legs */}
+        <rect x="42" y="88" width="9" height="14" rx="4" fill="url(#pu_fur)" />
+        <rect x="56" y="90" width="9" height="12" rx="4" fill="url(#pu_fur)" />
+        {/* Paws */}
+        <ellipse cx="46.5" cy="102" rx="6" ry="3.5" fill="#703010" />
+        <ellipse cx="60.5" cy="102" rx="6" ry="3.5" fill="#703010" />
+        {/* Tail — long, curving up */}
+        <path
+          d="M90 78 Q108 65 112 45 Q114 30 106 25"
+          stroke="url(#pu_fur)"
+          strokeWidth="7"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <path
+          d="M106 25 Q102 18 108 15"
+          stroke="#A06830"
+          strokeWidth="5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* Neck */}
+        <ellipse cx="48" cy="66" rx="13" ry="11" fill="url(#pu_fur)" />
+        {/* Head */}
+        <ellipse cx="40" cy="50" rx="20" ry="17" fill="url(#pu_fur)" />
+        {/* Muzzle */}
+        <ellipse cx="32" cy="55" rx="10" ry="7" fill="#C08040" />
+        {/* Forehead lighter */}
+        <ellipse cx="42" cy="44" rx="10" ry="7" fill="#D4A060" opacity="0.5" />
+        {/* Ears — pointed */}
+        <path d="M28 38 L22 24 L36 34Z" fill="url(#pu_fur)" />
+        <path d="M52 36 L56 22 L44 32Z" fill="url(#pu_fur)" />
+        {/* Ear inner */}
+        <path d="M30 37 L26 27 L36 33Z" fill="#C07030" opacity="0.7" />
+        <path d="M50 35 L53 25 L44 31Z" fill="#C07030" opacity="0.7" />
+        {/* Eyes — intense amber-green */}
+        <ellipse cx="34" cy="48" rx="5" ry="4" fill="#80C040" />
+        <ellipse cx="48" cy="46" rx="5" ry="4" fill="#80C040" />
+        <ellipse cx="34" cy="48" rx="2.5" ry="3" fill="#0A0600" />
+        <ellipse cx="48" cy="46" rx="2.5" ry="3" fill="#0A0600" />
+        {/* Eye shine */}
+        <circle cx="35.5" cy="47" r="1" fill="white" opacity="0.9" />
+        <circle cx="49.5" cy="45" r="1" fill="white" opacity="0.9" />
+        {/* Nose */}
+        <path d="M29 56 Q32 59 35 56 Q32 62 29 56Z" fill="#5A1A0A" />
+        {/* Mouth */}
+        <path
+          d="M27 58 Q32 63 37 58"
+          stroke="#3A0A00"
+          strokeWidth="1.5"
+          fill="none"
+          strokeLinecap="round"
+        />
+        {/* Whiskers */}
+        <line
+          x1="14"
+          y1="54"
+          x2="28"
+          y2="56"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.8"
+        />
+        <line
+          x1="14"
+          y1="57"
+          x2="28"
+          y2="57"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.6"
+        />
+        <line
+          x1="36"
+          y1="56"
+          x2="50"
+          y2="54"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.8"
+        />
+        <line
+          x1="36"
+          y1="57"
+          x2="50"
+          y2="57"
+          stroke="#F8EDD0"
+          strokeWidth="1"
+          opacity="0.6"
+        />
+        {/* Gold crown */}
+        <path
+          d="M26 34 L30 23 L35 31 L40 19 L45 31 L50 23 L54 34Z"
+          fill="url(#pu_gold)"
+        />
+        {/* Crown gems — light blue (Argentina) */}
+        <circle cx="40" cy="22" r="3" fill="#74ACDF" />
+        <circle cx="31" cy="25" r="2" fill="#D4AF37" />
+        <circle cx="49" cy="25" r="2" fill="#D4AF37" />
+      </g>
+    </svg>
+  );
+}
+
 // ─── Águila Real — Mexico coat of arms mascot ────────────────────────────────
 function AguilaReal({
   size = 72,
@@ -649,6 +813,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   const { currentHive } = useHive();
   const isMexicoHive = currentHive.id === "mexico";
   const isBrazilHive = currentHive.id === "brazil";
+  const isArgentinaHive = currentHive.id === "argentina";
 
   const [tab, setTab] = useState<Tab>("tiguy");
 
@@ -955,6 +1120,8 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
             <AguilaReal size={70} gold={gold} />
           ) : isBrazilHive ? (
             <OncaPintada size={70} gold={gold} />
+          ) : isArgentinaHive ? (
+            <Puma size={70} gold={gold} />
           ) : (
             <FleurDeLysLarge size={70} gold={gold} />
           )}
@@ -968,7 +1135,13 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
                 letterSpacing: "0.08em",
               }}
             >
-              {isMexicoHive ? "El Güey" : isBrazilHive ? "Mano" : "Ti-Guy"}
+              {isMexicoHive
+                ? "El Güey"
+                : isBrazilHive
+                  ? "Mano"
+                  : isArgentinaHive
+                    ? "Pibe"
+                    : "Ti-Guy"}
             </h1>
             <p
               className="text-[0.5rem] uppercase tracking-[0.3em] font-bold"
@@ -978,7 +1151,9 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
                 ? "¡Arriba México! 🇲🇽"
                 : isBrazilHive
                   ? "Brasil no coração! 🇧🇷"
-                  : "Antigravity Gold ⚜️"}
+                  : isArgentinaHive
+                    ? "¡Vamos Argentina! 🇦🇷"
+                    : "Antigravity Gold ⚜️"}
             </p>
           </div>
         </div>
@@ -1006,13 +1181,25 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
           <span
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM, fontSize: 18 }}
           >
-            {isMexicoHive ? "🤟" : isBrazilHive ? "🐆" : "🦫"}
+            {isMexicoHive
+              ? "🤟"
+              : isBrazilHive
+                ? "🐆"
+                : isArgentinaHive
+                  ? "🐆"
+                  : "🦫"}
           </span>
           <span
             className="text-xs font-black tracking-wide"
             style={{ color: tab === "tiguy" ? gold : GOLD_DIM }}
           >
-            {isMexicoHive ? "El Güey" : isBrazilHive ? "Mano" : "Ti-Guy"}
+            {isMexicoHive
+              ? "El Güey"
+              : isBrazilHive
+                ? "Mano"
+                : isArgentinaHive
+                  ? "Pibe"
+                  : "Ti-Guy"}
           </span>
         </button>
 
@@ -1076,6 +1263,8 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
               <AguilaReal size={80} gold={gold} />
             ) : isBrazilHive ? (
               <OncaPintada size={80} gold={gold} />
+            ) : isArgentinaHive ? (
+              <Puma size={80} gold={gold} />
             ) : (
               <FleurDeLysLarge size={80} gold={gold} />
             )}

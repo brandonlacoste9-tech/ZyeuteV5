@@ -64,7 +64,8 @@ export default function Premium() {
   const { currentHive } = useHive();
   const isMexico = currentHive.id === "mexico";
   const isBrazil = currentHive.id === "brazil";
-  const currency = currentHive.currency; // "CAD", "MXN", or "BRL"
+  const isArgentina = currentHive.id === "argentina";
+  const currency = currentHive.currency; // "CAD", "MXN", "BRL", or "ARS"
   const hivePrices = currentHive.prices;
 
   // Handle Stripe redirect callbacks (?success=true / ?canceled=true)
@@ -107,19 +108,33 @@ export default function Premium() {
               "💬 Suporte prioritário",
               "🔥 Boost de visibilidade x2",
             ]
-          : [
-              "⚜️ Badge Bronze vérifié",
-              "🚫 Pas de publicités",
-              "🦫 Accès Ti-Guy chat",
-              "💬 Support prioritaire",
-              "🔥 Boost de visibilité x2",
-            ],
+          : isArgentina
+            ? [
+                "🇦🇷 Badge Bronce verificado",
+                "🚫 Sin publicidad",
+                "🐆 Acceso chat Pibe",
+                "💬 Soporte prioritario",
+                "🔥 Boost de visibilidad x2",
+              ]
+            : [
+                "⚜️ Badge Bronze vérifié",
+                "🚫 Pas de publicités",
+                "🦫 Accès Ti-Guy chat",
+                "💬 Support prioritaire",
+                "🔥 Boost de visibilité x2",
+              ],
       gradient: "from-orange-700 via-orange-600 to-orange-800",
       popular: false,
     },
     {
       id: "silver" as const,
-      name: isMexico ? "Plata" : isBrazil ? "Prata" : "Argent",
+      name: isMexico
+        ? "Plata"
+        : isBrazil
+          ? "Prata"
+          : isArgentina
+            ? "Plata"
+            : "Argent",
       emoji: "🥈",
       price: hivePrices.silver,
       features: isMexico
@@ -140,20 +155,29 @@ export default function Premium() {
               "🎁 100 fichas/mês",
               "⭐ Perfil em destaque",
             ]
-          : [
-              "✨ Tout Bronze +",
-              "💎 Badge Argent premium",
-              "📊 Analytics avancés",
-              "🔥 Boost de visibilité x3",
-              "🎁 100 cennes/mois",
-              "⭐ Profil mis en avant",
-            ],
+          : isArgentina
+            ? [
+                "✨ Todo Bronce +",
+                "💎 Badge Plata premium",
+                "📊 Analytics avanzados",
+                "🔥 Boost visibilidad x3",
+                "🎁 100 fichas/mes",
+                "⭐ Perfil destacado",
+              ]
+            : [
+                "✨ Tout Bronze +",
+                "💎 Badge Argent premium",
+                "📊 Analytics avancés",
+                "🔥 Boost de visibilité x3",
+                "🎁 100 cennes/mois",
+                "⭐ Profil mis en avant",
+              ],
       gradient: "from-gray-400 via-gray-300 to-gray-500",
       popular: true,
     },
     {
       id: "gold" as const,
-      name: isMexico ? "Oro" : isBrazil ? "Ouro" : "Or",
+      name: isMexico ? "Oro" : isBrazil ? "Ouro" : isArgentina ? "Oro" : "Or",
       emoji: "🥇",
       price: hivePrices.gold,
       features: isMexico
@@ -178,16 +202,27 @@ export default function Premium() {
               "🐆 Mano VIP exclusivo",
               "🎯 Estatísticas completas",
             ]
-          : [
-              "👑 Tout Argent +",
-              "⚜️ Badge Or royal",
-              "🚀 Priorité feed absolue",
-              "🔥 Boost visibilité x5",
-              "🎁 500 cennes/mois",
-              "💼 Outils créateurs PRO",
-              "🦫 Ti-Guy VIP exclusif",
-              "🎯 Statistiques complètes",
-            ],
+          : isArgentina
+            ? [
+                "👑 Todo Plata +",
+                "🇦🇷 Badge Oro de verdad",
+                "🚀 Prioridad absoluta en feed",
+                "🔥 Boost visibilidad x5",
+                "🎁 500 fichas/mes",
+                "💼 Herramientas creador PRO",
+                "🐆 Pibe VIP exclusivo",
+                "🎯 Estadísticas completas",
+              ]
+            : [
+                "👑 Tout Argent +",
+                "⚜️ Badge Or royal",
+                "🚀 Priorité feed absolue",
+                "🔥 Boost visibilité x5",
+                "🎁 500 cennes/mois",
+                "💼 Outils créateurs PRO",
+                "🦫 Ti-Guy VIP exclusif",
+                "🎯 Statistiques complètes",
+              ],
       gradient: "from-yellow-500 via-yellow-400 to-yellow-600",
       popular: false,
     },
@@ -293,7 +328,13 @@ export default function Premium() {
                       ${tier.price}
                     </span>
                     <span className="text-leather-300">
-                      {isMexico ? "/mes" : isBrazil ? "/mês" : "/mois"}
+                      {isMexico
+                        ? "/mes"
+                        : isBrazil
+                          ? "/mês"
+                          : isArgentina
+                            ? "/mes"
+                            : "/mois"}
                     </span>
                   </div>
                   <p className="text-leather-400 text-sm mt-1">
@@ -302,7 +343,9 @@ export default function Premium() {
                       ? " · Cancela cuando quieras"
                       : isBrazil
                         ? " · Cancela quando quiser"
-                        : " · Annule quand tu veux"}
+                        : isArgentina
+                          ? " · Cancelá cuando quieras"
+                          : " · Annule quand tu veux"}
                   </p>
                 </div>
 
@@ -339,18 +382,24 @@ export default function Premium() {
                       ? "✓ Tu plan actual"
                       : isBrazil
                         ? "✓ Seu plano atual"
-                        : "✓ Ton plan actuel"
+                        : isArgentina
+                          ? "✓ Tu plan actual"
+                          : "✓ Ton plan actuel"
                     : isUpgrade
                       ? isMexico
                         ? "⬆️ Mejorar"
                         : isBrazil
                           ? "⬆️ Melhorar"
-                          : "⬆️ Améliorer"
+                          : isArgentina
+                            ? "⬆️ Mejorar"
+                            : "⬆️ Améliorer"
                       : isMexico
                         ? "Suscribirse"
                         : isBrazil
                           ? "Assinar"
-                          : "S'abonner"}
+                          : isArgentina
+                            ? "Suscribirse"
+                            : "S'abonner"}
                 </button>
               </div>
             );

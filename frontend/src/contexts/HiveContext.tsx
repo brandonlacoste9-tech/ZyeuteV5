@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // Define the available Hives
-export type HiveId = "quebec" | "mexico" | "brazil";
+export type HiveId = "quebec" | "mexico" | "brazil" | "argentina";
 
 interface HiveConfig {
   id: HiveId;
   name: string;
   flag: string; // Emoji
   locale: string;
-  culture: "joual" | "chilango" | "carioca";
-  currency: "CAD" | "MXN" | "BRL";
+  culture: "joual" | "chilango" | "carioca" | "porteño";
+  currency: "CAD" | "MXN" | "BRL" | "ARS";
   // Pricing in local currency
   prices: { bronze: number; silver: number; gold: number };
   // Personality name for Ti-Guy equivalent
@@ -56,6 +56,18 @@ export const HIVES: Record<HiveId, HiveConfig> = {
     mascot: "Onça-Pintada",
     mascotEmoji: "🐆",
   },
+  argentina: {
+    id: "argentina",
+    name: "Argentina",
+    flag: "🇦🇷",
+    locale: "es-AR",
+    culture: "porteño",
+    currency: "ARS",
+    prices: { bronze: 500, silver: 999, gold: 1999 },
+    personality: "Pibe",
+    mascot: "Puma",
+    mascotEmoji: "🐆",
+  },
 };
 
 interface HiveContextType {
@@ -72,6 +84,7 @@ export function detectHiveFromLocale(): HiveId {
     navigator.language ||
     (navigator.languages && navigator.languages[0]) ||
     "fr-CA";
+  if (lang.toLowerCase().startsWith("es-ar")) return "argentina";
   if (lang.toLowerCase().startsWith("es")) return "mexico";
   if (lang.toLowerCase().startsWith("pt")) return "brazil";
   return "quebec";
