@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useState } from "react";
-import { Play, Eye, Flame, MessageCircle, Flag } from "lucide-react";
+import { Play, Eye, Flame, MessageCircle, Flag, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Post, User } from "@shared/schema";
 import { VideoPlayer } from "./VideoPlayer";
@@ -35,6 +35,28 @@ export function VideoCard({
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isReporting, setIsReporting] = useState(false);
   const [reported, setReported] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/p/${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: post.content?.substring(0, 60) || "Vidéo sur Zyeute",
+          text: `@${post.user?.username || "zyeute"} — ${post.content?.substring(0, 80) || ""}`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        toast.success("Lien copié!");
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch {
+      // User cancelled share or clipboard unavailable
+    }
+  };
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
@@ -202,6 +224,22 @@ export function VideoCard({
         )}
       >
         <Flag size={12} fill={reported ? "currentColor" : "none"} />
+      </button>
+
+      {/* Share Button — visible on hover */}
+      <button
+        type="button"
+        aria-label="Partager"
+        onClick={handleShare}
+        className={cn(
+          "absolute bottom-3 right-3 p-1.5 rounded-full transition-all duration-200",
+          "opacity-0 group-hover:opacity-100",
+          shareCopied
+            ? "bg-gold-500/80 text-black"
+            : "bg-black/50 text-white/70 hover:bg-gold-500/60 hover:text-white",
+        )}
+      >
+        <Share2 size={12} />
       </button>
     </div>
   );

@@ -675,23 +675,30 @@ export const Zyeute: React.FC = () => {
             paddingBottom: "10px",
           }}
         >
-          <div className="flex items-center gap-2 select-none">
-            <FlameEyeIcon
-              className="w-8 h-8"
-              style={{ filter: "drop-shadow(0 0 6px rgba(212,175,55,0.6))" }}
-            />
-            <span
-              className="font-black text-lg tracking-widest uppercase leading-none"
-              style={{
-                background:
-                  "linear-gradient(135deg, #FFD700 0%, #C9A227 50%, #FFE566 100%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              Zyeuté
-            </span>
+          <div className="flex items-center gap-4 select-none">
+            {/* Pour toi / Abonnements toggle */}
+            <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-1 py-1 border border-white/10">
+              <button
+                onClick={() => setFeedSource("explore")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
+                  feedSource === "explore"
+                    ? "bg-gold-500 text-black"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                Pour toi
+              </button>
+              <button
+                onClick={() => setFeedSource("following")}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
+                  feedSource === "following"
+                    ? "bg-gold-500 text-black"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                Abonnements
+              </button>
+            </div>
           </div>
         </div>
 

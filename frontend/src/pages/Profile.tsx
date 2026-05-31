@@ -62,6 +62,51 @@ export const Profile: React.FC = () => {
   const [currentUser, setCurrentUser] = React.useState<User | null>(null);
   const [posts, setPosts] = React.useState<Post[]>([]);
   const [isFollowing, setIsFollowing] = React.useState(false);
+  const [isBlocked, setIsBlocked] = React.useState(false);
+  const [isBlocking, setIsBlocking] = React.useState(false);
+
+  const handleBlock = async () => {
+    if (!currentUser || !user || isBlocking) return;
+    setIsBlocking(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      if (isBlocked) {
+        // Unblock
+        await fetch("/api/moderation/unblock-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ blockedUserId: user.id }),
+        });
+        setIsBlocked(false);
+        toast.success("Utilisateur débloqué");
+      } else {
+        // Block
+        await fetch("/api/moderation/block-user", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ blockedUserId: user.id }),
+        });
+        setIsBlocked(true);
+        if (isFollowing) setIsFollowing(false);
+        toast.success("Utilisateur bloqué");
+      }
+    } catch {
+      toast.error("Erreur lors du blocage");
+    } finally {
+      setIsBlocking(false);
+    }
+  };
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<"posts" | "fires" | "saved">(
@@ -464,14 +509,28 @@ export const Profile: React.FC = () => {
                 </GoldButton>
               </Link>
             ) : (
-              <GoldButton
-                onClick={handleFollow}
-                isInverse={isFollowing}
-                className="w-full"
-                size="md"
-              >
-                {isFollowing ? "Abonné" : "S'abonner"}
-              </GoldButton>
+              <div className="flex gap-2 w-full">
+                <GoldButton
+                  onClick={handleFollow}
+                  isInverse={isFollowing}
+                  className="flex-1"
+                  size="md"
+                >
+                  {isFollowing ? "Abonné" : "S'abonner"}
+                </GoldButton>
+                <button
+                  onClick={handleBlock}
+                  disabled={isBlocking}
+                  title={isBlocked ? "Débloquer" : "Bloquer"}
+                  className={`px-3 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                    isBlocked
+                      ? "border-red-500/60 bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                      : "border-white/20 bg-white/5 text-white/60 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-400"
+                  }`}
+                >
+                  {isBlocked ? "🔓" : "🚫"}
+                </button>
+              </div>
             )}
           </div>
 
