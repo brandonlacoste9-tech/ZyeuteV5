@@ -34,6 +34,7 @@ import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
 import { GiftPicker } from "@/components/features/GiftPicker";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
+import usePremium from "@/hooks/usePremium";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -258,6 +259,7 @@ export const Zyeute: React.FC = () => {
   const location = useLocation();
   const { edgeLighting } = useTheme();
   const { user: authUser, isGuest } = useAuth();
+  const { isPremium } = usePremium();
 
   /** Pour toi = explore; Abonnements = people you follow (requires auth for filtering). */
   const [feedSource, setFeedSource] = useState<FeedType>("explore");
@@ -1208,14 +1210,21 @@ export const Zyeute: React.FC = () => {
               </span>
             </button>
 
-            {/* TI-GUY Chat */}
+            {/* TI-GUY Chat — Bronze+ only */}
             <button
               type="button"
               onClick={() => {
                 tap();
+                if (!isPremium) {
+                  toast.info(
+                    "Ti-Guy est réservé aux abonnés Bronze+. Upgrade!",
+                  );
+                  navigate("/premium");
+                  return;
+                }
                 setShowTiGuyChat(true);
               }}
-              className="flex flex-col items-center gap-1 press-scale"
+              className="flex flex-col items-center gap-1 press-scale relative"
             >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
@@ -1223,11 +1232,17 @@ export const Zyeute: React.FC = () => {
                   background:
                     "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
                   border: "2px solid #D4AF37",
+                  opacity: isPremium ? 1 : 0.5,
                 }}
               >
                 <span className="text-[11px] font-black text-gold-400 leading-none">
                   TG
                 </span>
+                {!isPremium && (
+                  <span className="absolute -top-1 -right-1 text-[9px] bg-gold-500 text-black font-black rounded-full w-4 h-4 flex items-center justify-center">
+                    🔒
+                  </span>
+                )}
               </div>
               <span className="text-[10px] font-bold text-gold-400/80">
                 Ti-Guy

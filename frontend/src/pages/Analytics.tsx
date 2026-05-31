@@ -11,6 +11,8 @@ import { formatNumber } from "../lib/utils";
 import type { User } from "../types";
 import { logger } from "../lib/logger";
 import { apiCall } from "../services/api";
+import usePremium from "../hooks/usePremium";
+import { useNavigate } from "react-router-dom";
 
 const analyticsLogger = logger.withContext("Analytics");
 
@@ -33,6 +35,9 @@ interface AnalyticsData {
 }
 
 export const Analytics: React.FC = () => {
+  const { isArgent, isOr, isLoading: premiumLoading } = usePremium();
+  const navigate = useNavigate();
+  const canViewAnalytics = isArgent || isOr;
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -254,6 +259,53 @@ export const Analytics: React.FC = () => {
     };
     fetchVideoStats();
   }, []);
+
+  // Gate: Argent+ only
+  if (!premiumLoading && !canViewAnalytics) {
+    return (
+      <div className="min-h-screen bg-black pb-20">
+        <Header title="Statistiques" showBack={true} />
+        <div className="flex flex-col items-center justify-center min-h-[70vh] px-6 text-center gap-5">
+          <div className="text-6xl">📊</div>
+          <h2 className="text-2xl font-black text-white">
+            Statistiques Argent+
+          </h2>
+          <p className="text-white/60 text-sm max-w-xs">
+            Les statistiques détaillées sont disponibles pour les abonnés Argent
+            ($9.99/mo) et Or ($19.99/mo). Vois exactement qui regarde tes
+            vidéos, d&apos;où ils viennent, et ce qui performe le mieux.
+          </p>
+          <div className="w-full max-w-xs space-y-3">
+            <button
+              onClick={() => navigate("/premium")}
+              className="w-full py-3 rounded-2xl bg-gold-500 text-black font-black text-sm"
+            >
+              Upgrader vers Argent — $9.99/mo
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full py-3 rounded-2xl border border-white/20 text-white/60 text-sm"
+            >
+              Retour
+            </button>
+          </div>
+          {/* Preview blur */}
+          <div className="relative w-full max-w-sm mt-4 rounded-2xl overflow-hidden select-none pointer-events-none">
+            <div className="blur-sm opacity-40 p-4 bg-white/5 rounded-2xl space-y-3">
+              <div className="h-4 bg-white/20 rounded w-3/4" />
+              <div className="h-20 bg-white/10 rounded" />
+              <div className="h-4 bg-white/20 rounded w-1/2" />
+              <div className="h-16 bg-white/10 rounded" />
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-4xl">🔒</span>
+            </div>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
   if (isLoading || !analytics) {
     return (

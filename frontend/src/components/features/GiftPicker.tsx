@@ -15,6 +15,7 @@ import {
 import { toast } from "../Toast";
 import { useHaptics } from "../../hooks/useHaptics";
 import { useAuth } from "../../contexts/AuthContext";
+import usePremium from "../../hooks/usePremium";
 
 interface FloatingGift {
   id: string;
@@ -40,6 +41,7 @@ export function GiftPicker({
   const { user } = useAuth();
   const { fire: fireHaptic } = useHaptics();
   const navigate = useNavigate();
+  const { isPremium } = usePremium();
 
   const [gifts, setGifts] = useState<GiftItem[]>([]);
   const [balance, setBalance] = useState<number>(0);
@@ -152,6 +154,36 @@ export function GiftPicker({
             </button>
           </div>
         </div>
+
+        {/* Upsell banner — free users with no balance */}
+        {!isPremium && balance === 0 && (
+          <div
+            className="mb-4 rounded-xl p-3 flex items-center justify-between"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))",
+              border: "1px solid rgba(212,175,55,0.3)",
+            }}
+          >
+            <div>
+              <p className="text-gold-300 text-xs font-bold">
+                Abonnés Argent et Or reçoivent des cennes chaque mois 🎁
+              </p>
+              <p className="text-white/50 text-[11px] mt-0.5">
+                Ou achète un pack dans la boutique
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                navigate("/premium");
+                onClose();
+              }}
+              className="ml-3 flex-shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black"
+            >
+              Upgrader
+            </button>
+          </div>
+        )}
 
         {/* Gift grid */}
         <div className="grid grid-cols-4 gap-3 mb-5">

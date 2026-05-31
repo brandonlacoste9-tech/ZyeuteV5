@@ -21,6 +21,7 @@ import {
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { getSessionWithTimeout } from "@/lib/supabase";
+import usePremium from "@/hooks/usePremium";
 import { logger } from "@/lib/logger";
 
 const liveLogger = logger.withContext("GoLive");
@@ -63,6 +64,9 @@ export default function GoLive() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tap, fire } = useHaptics();
+  const { isPremium } = usePremium();
+  // Free users only get none + bright; all other filters need Bronze+
+  const FREE_FILTERS: LiveFilter[] = ["none", "bright"];
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLVideoElement>(null);
@@ -268,53 +272,74 @@ export default function GoLive() {
           {/* Filter strip */}
           <div className="absolute bottom-0 inset-x-0 pb-3 bg-gradient-to-t from-black/70 to-transparent">
             <div className="flex gap-3 overflow-x-auto px-4 scrollbar-none py-2">
-              {FILTERS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => {
-                    tap();
-                    setActiveFilter(f);
-                  }}
-                  className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all ${
-                    activeFilter === f ? "scale-110" : "opacity-70"
-                  }`}
-                >
-                  <div
-                    className={`w-12 h-12 rounded-full border-2 overflow-hidden ${
-                      activeFilter === f ? "border-gold-400" : "border-white/30"
-                    }`}
-                    style={{
-                      filter:
-                        f !== "none"
-                          ? `${f === "beauty" ? "contrast(1.1) brightness(1.1)" : f === "bw" ? "grayscale(1)" : f === "vintage" ? "sepia(0.5)" : f === "blur" ? "blur(1px)" : f === "bright" ? "brightness(1.3)" : "saturate(1.5)"}`
-                          : undefined,
+              {FILTERS.map((f) => {
+                const locked = !isPremium && !FREE_FILTERS.includes(f);
+                return (
+                  <button
+                    key={f}
+                    onClick={() => {
+                      tap();
+                      if (locked) {
+                        navigate("/premium");
+                        return;
+                      }
+                      setActiveFilter(f);
                     }}
+                    className={`flex-shrink-0 flex flex-col items-center gap-1 transition-all relative ${
+                      activeFilter === f ? "scale-110" : "opacity-70"
+                    }`}
                   >
-                    <div className="w-full h-full bg-gradient-to-br from-gold-500/30 to-purple-500/30 flex items-center justify-center">
-                      <span className="text-lg">
-                        {f === "none"
-                          ? "🎥"
-                          : f === "beauty"
-                            ? "✨"
-                            : f === "bright"
-                              ? "☀️"
-                              : f === "vintage"
-                                ? "🎞️"
-                                : f === "bw"
-                                  ? "⚫"
-                                  : f === "blur"
-                                    ? "🌫️"
-                                    : "⚜️"}
-                      </span>
+                    <div
+                      className={`w-12 h-12 rounded-full border-2 overflow-hidden ${
+                        activeFilter === f
+                          ? "border-gold-400"
+                          : "border-white/30"
+                      }`}
+                      style={{
+                        filter:
+                          f !== "none"
+                            ? `${f === "beauty" ? "contrast(1.1) brightness(1.1)" : f === "bw" ? "grayscale(1)" : f === "vintage" ? "sepia(0.5)" : f === "blur" ? "blur(1px)" : f === "bright" ? "brightness(1.3)" : "saturate(1.5)"}`
+                            : undefined,
+                        opacity: locked ? 0.4 : 1,
+                      }}
+                    >
+                      <div className="w-full h-full bg-gradient-to-br from-gold-500/30 to-purple-500/30 flex items-center justify-center">
+                        <span className="text-lg">
+                          {f === "none"
+                            ? "🎥"
+                            : f === "beauty"
+                              ? "✨"
+                              : f === "bright"
+                                ? "☀️"
+                                : f === "vintage"
+                                  ? "🎞️"
+                                  : f === "bw"
+                                    ? "⚫"
+                                    : f === "blur"
+                                      ? "🌫️"
+                                      : "⚜️"}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <span
-                    className={`text-[10px] font-semibold ${activeFilter === f ? "text-gold-400" : "text-white/70"}`}
-                  >
-                    {FILTER_LABELS[f]}
-                  </span>
-                </button>
-              ))}
+                    {locked && (
+                      <span className="absolute top-0 right-0 text-[9px] bg-gold-500 text-black font-black rounded-full w-4 h-4 flex items-center justify-center">
+                        🔒
+                      </span>
+                    )}
+                    <span
+                      className={`text-[10px] font-semibold ${
+                        activeFilter === f
+                          ? "text-gold-400"
+                          : locked
+                            ? "text-white/30"
+                            : "text-white/70"
+                      }`}
+                    >
+                      {FILTER_LABELS[f]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
