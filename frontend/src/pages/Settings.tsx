@@ -1044,6 +1044,49 @@ export const Settings: React.FC = () => {
             Fait au Québec avec fierté 🦫⚜️
           </p>
         </div>
+
+        {/* Legal Footer */}
+        <div className="mt-6 pt-4 border-t border-leather-800/40 text-center space-y-2">
+          <div className="flex items-center justify-center gap-3 flex-wrap text-xs text-leather-500">
+            <a
+              href="/legal/terms"
+              className="hover:text-gold-400 transition-colors"
+            >
+              Conditions d&apos;utilisation
+            </a>
+            <span>·</span>
+            <a
+              href="/legal/privacy"
+              className="hover:text-gold-400 transition-colors"
+            >
+              Confidentialité
+            </a>
+            <span>·</span>
+            <a
+              href="/legal/community-guidelines"
+              className="hover:text-gold-400 transition-colors"
+            >
+              Lignes directrices
+            </a>
+          </div>
+          <p className="text-xs text-leather-500">
+            <a
+              href="mailto:zyeutequebec@gmail.com"
+              className="hover:text-gold-400 transition-colors"
+            >
+              zyeutequebec@gmail.com
+            </a>
+          </p>
+          <p className="text-xs text-leather-600">
+            © {new Date().getFullYear()} Zyeuté™. Tous droits réservés.
+          </p>
+          <p className="text-xs text-leather-700 leading-relaxed px-4">
+            Zyeuté™ est une marque de commerce. Zyeuté n&apos;est pas
+            responsable du contenu publié par les utilisateurs. En utilisant
+            cette application, vous acceptez nos conditions d&apos;utilisation
+            et notre politique de confidentialité.
+          </p>
+        </div>
       </div>
 
       <BottomNav />

@@ -273,6 +273,23 @@ export const Signup: React.FC = () => {
             <span className="text-gold-500">⚜️</span>
           </p>
         </div>
+
+        {/* Legal Footer */}
+        <div className="mt-6 pt-4 border-t border-white/10 text-center space-y-1">
+          <p className="text-xs text-white/30">
+            © {new Date().getFullYear()} Zyeuté™ — Tous droits réservés.{" "}
+            <a
+              href="mailto:zyeutequebec@gmail.com"
+              className="hover:text-gold-400 transition-colors"
+            >
+              zyeutequebec@gmail.com
+            </a>
+          </p>
+          <p className="text-xs text-white/20 px-4 leading-relaxed">
+            Zyeuté™ est une marque de commerce. Zyeuté n&apos;est pas
+            responsable du contenu publié par les utilisateurs.
+          </p>
+        </div>
       </div>
     </div>
   );
