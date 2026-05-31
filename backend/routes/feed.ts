@@ -173,6 +173,26 @@ router.get(
         void viewerProfile;
       }
 
+      // ── Exclude already-watched videos for authenticated users ──────────
+      let excludedIds: string[] = [];
+      if (viewerId) {
+        try {
+          const { data: watched } = await supabase
+            .from("video_views")
+            .select("publication_id")
+            .eq("user_id", viewerId)
+            .order("watched_at", { ascending: false })
+            .limit(500); // last 500 watched — beyond that recycle is fine
+          if (watched?.length) {
+            excludedIds = watched.map(
+              (r: { publication_id: string }) => r.publication_id,
+            );
+          }
+        } catch {
+          // non-critical
+        }
+      }
+
       let authorIds: string[] | null = null;
       if (feedType === "feed" && viewerId) {
         const { data: subs, error: subErr } = await supabase
@@ -220,6 +240,11 @@ router.get(
         .order("reactions_count", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(limit + 1);
+
+      // Exclude watched posts for this user
+      if (excludedIds.length > 0) {
+        query = query.not("id", "in", `(${excludedIds.join(",")})`);
+      }
 
       if (authorIds && authorIds.length > 0) {
         query = query.in("user_id", authorIds);
@@ -289,6 +314,51 @@ router.get(
         details: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
+    }
+  },
+);
+
+// ── Record a watched video ──────────────────────────────────────────────────
+// POST /api/feed/watched  { publicationId, watchDurationMs? }
+router.post(
+  "/watched",
+  attachOptionalUser,
+  async (req: Request, res: Response) => {
+    const viewerId = (req as any).userId as string | undefined;
+    if (!viewerId) return res.status(401).json({ error: "Not authenticated" });
+
+    const { publicationId, watchDurationMs } = req.body as {
+      publicationId: string;
+      watchDurationMs?: number;
+    };
+    if (!publicationId)
+      return res.status(400).json({ error: "publicationId required" });
+
+    try {
+      const supabaseUrl =
+        process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+      const supabaseKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SUPABASE_ANON_KEY ||
+        process.env.VITE_SUPABASE_ANON_KEY;
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(supabaseUrl!, supabaseKey!);
+
+      await supabase
+        .from("video_views")
+        .upsert(
+          {
+            user_id: viewerId,
+            publication_id: publicationId,
+            watched_at: new Date().toISOString(),
+            watch_duration_ms: watchDurationMs ?? null,
+          },
+          { onConflict: "user_id,publication_id", ignoreDuplicates: false },
+        );
+      res.json({ ok: true });
+    } catch (err) {
+      // fail silently — watch tracking is non-critical
+      res.json({ ok: false });
     }
   },
 );

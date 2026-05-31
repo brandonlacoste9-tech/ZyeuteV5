@@ -40,6 +40,27 @@ import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
 
+// ── Watch history: fire-and-forget POST to backend ───────────────────────
+async function markVideoWatched(postId: string): Promise<void> {
+  try {
+    const { supabase } = await import("@/lib/supabase");
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return; // guest — skip
+    fetch("/api/feed/watched", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ publicationId: postId }),
+    }).catch(() => {}); // truly fire-and-forget
+  } catch {
+    // non-critical
+  }
+}
+
 // ========================
 // DEMO FALLBACK VIDEOS
 // ========================
@@ -357,6 +378,16 @@ export const Zyeute: React.FC = () => {
     const interval = setInterval(fetchUnread, 30_000);
     return () => clearInterval(interval);
   }, [isPremium]);
+
+  // Mark the previous video as watched when currentIndex changes
+  const prevIndexRef = useRef<number>(-1);
+  useEffect(() => {
+    const prev = prevIndexRef.current;
+    if (prev >= 0 && prev !== currentIndex && posts[prev]?.id) {
+      markVideoWatched(posts[prev].id);
+    }
+    prevIndexRef.current = currentIndex;
+  }, [currentIndex, posts]);
 
   // Pre-fetch next page when user is 3 videos from the end
   useEffect(() => {
