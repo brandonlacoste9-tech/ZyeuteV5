@@ -1273,13 +1273,6 @@ export const Zyeute: React.FC = () => {
               type="button"
               onClick={() => {
                 tap();
-                if (!isPremium) {
-                  toast.info(
-                    "Ti-Guy est réservé aux abonnés Bronze+. Upgrade!",
-                  );
-                  navigate("/premium");
-                  return;
-                }
                 setShowTiGuyChat(true);
               }}
               className="flex flex-col items-center gap-1 press-scale relative"
@@ -1290,17 +1283,13 @@ export const Zyeute: React.FC = () => {
                   background:
                     "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
                   border: "2px solid #D4AF37",
-                  opacity: isPremium ? 1 : 0.5,
+                  opacity: 1,
                 }}
               >
                 <span className="text-[11px] font-black text-gold-400 leading-none">
                   TG
                 </span>
-                {!isPremium && (
-                  <span className="absolute -top-1 -right-1 text-[9px] bg-gold-500 text-black font-black rounded-full w-4 h-4 flex items-center justify-center">
-                    🔒
-                  </span>
-                )}
+
                 {isPremium && tiGuyUnread > 0 && (
                   <span
                     className="absolute -top-1 -right-1 text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center"
@@ -1618,6 +1607,7 @@ export const Zyeute: React.FC = () => {
         <TiGuyMessaging
           key={showTiGuyChat ? "open" : "closed"}
           open={showTiGuyChat}
+          isPremium={isPremium}
           onClose={async () => {
             setShowTiGuyChat(false);
             // Refresh unread badge after closing Ti-Guy

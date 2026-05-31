@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { apiCall } from "@/services/api";
 import { supabase } from "@/lib/supabase";
@@ -110,15 +111,18 @@ function GoldDivider({ gold }: { gold: string }) {
 export interface TiGuyMessagingProps {
   open: boolean;
   onClose: () => void;
+  isPremium?: boolean;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
   open,
   onClose,
+  isPremium = false,
 }) => {
   const { edgeLighting } = useTheme();
   const gold = edgeLighting || GOLD;
+  const navigate = useNavigate();
 
   // Panel mode
   const [mode, setMode] = useState<Mode>("chat");
@@ -175,7 +179,7 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
     if (!open) return;
     // Defer all state updates so the effect doesn't cascade synchronously
     const timer = setTimeout(() => {
-      setMode("chat");
+      setMode(isPremium ? "chat" : "inbox");
       setActiveConv(null);
       setMessages([]);
       setShowSearch(false);
@@ -401,11 +405,36 @@ export const TiGuyMessaging: React.FC<TiGuyMessagingProps> = ({
         >
           {convsLoading
             ? "Une seconde, je check tes messages..."
-            : renderGreeting()}
+            : isPremium
+              ? renderGreeting()
+              : "Aye mon ami(e)! 🦫 Pour jaser avec moi, tu dois être abonné(e). Upgrade pis on se parle! 💬"}
         </div>
       </div>
 
       <GoldDivider gold={gold} />
+
+      {/* Upgrade CTA — shown only for free users */}
+      {!isPremium && (
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            navigate("/premium");
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all active:scale-95"
+          style={{
+            background: `linear-gradient(135deg, ${gold}22 0%, ${gold}44 100%)`,
+            border: `2px solid ${gold}`,
+            boxShadow: `0 0 16px ${gold}40`,
+          }}
+        >
+          <span className="text-lg">⚜️</span>
+          <span className="text-sm font-black" style={{ color: gold }}>
+            Deviens abonné Bronze+ — Débloque Ti-Guy
+          </span>
+          <span className="text-lg">💎</span>
+        </button>
+      )}
 
       {/* Quick action buttons */}
       <div className="space-y-2">

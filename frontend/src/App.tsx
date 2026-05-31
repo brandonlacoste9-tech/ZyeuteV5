@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
 import { NavigationStateProvider } from "@/contexts/NavigationStateContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { MessagingProvider } from "@/contexts/MessagingContext";
 import { ColonyProvider } from "@/components/providers/colony-provider";
 import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
@@ -79,10 +80,12 @@ export default function App() {
         <BorderColorProvider>
           <NavigationStateProvider>
             <NotificationProvider>
-              <ColonyProvider>
-                <AppContent />
-                <Analytics />
-              </ColonyProvider>
+              <MessagingProvider>
+                <ColonyProvider>
+                  <AppContent />
+                  <Analytics />
+                </ColonyProvider>
+              </MessagingProvider>
             </NotificationProvider>
           </NavigationStateProvider>
         </BorderColorProvider>

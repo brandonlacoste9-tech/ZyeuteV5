@@ -8,6 +8,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useTranslation } from "@/i18n";
 import { cn } from "../lib/utils";
+import { useMessaging } from "@/contexts/MessagingContext";
 
 interface NavItem {
   to: string;
@@ -62,6 +63,30 @@ const navItems: NavItem[] = [
     activeIcon: (
       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+      </svg>
+    ),
+  },
+  {
+    to: "/messages",
+    labelKey: "nav.messages",
+    icon: (
+      <svg
+        className="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4z"
+        />
+      </svg>
+    ),
+    activeIcon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
       </svg>
     ),
   },
@@ -137,6 +162,7 @@ export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { tap } = useHaptics();
   const { t } = useTranslation();
+  const { dmUnread } = useMessaging();
 
   // Helper to check if a path is active (handles profile routes)
   const isActivePath = (path: string): boolean => {
@@ -251,6 +277,19 @@ export const BottomNav: React.FC = () => {
                           }}
                         >
                           {active ? item.activeIcon : item.icon}
+                          {/* DM unread badge on Messages tab */}
+                          {item.to === "/messages" && dmUnread > 0 && (
+                            <span
+                              className="absolute -top-1 -right-1 text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1"
+                              style={{
+                                background: "#D4AF37",
+                                color: "#1A0F0A",
+                                boxShadow: "0 0 6px rgba(212,175,55,0.8)",
+                              }}
+                            >
+                              {dmUnread > 9 ? "9+" : dmUnread}
+                            </span>
+                          )}
                         </div>
                       )}
 
