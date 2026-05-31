@@ -33,6 +33,7 @@ import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
 import { GiftPicker } from "@/components/features/GiftPicker";
+import { StoriesRow } from "@/components/features/StoriesRow";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import usePremium from "@/hooks/usePremium";
@@ -693,6 +694,9 @@ export const Zyeute: React.FC = () => {
             </span>
           </div>
         </div>
+
+        {/* Stories Row — fixed overlay just below the header */}
+        <StoriesRow />
 
         {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
         <div

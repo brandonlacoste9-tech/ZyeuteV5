@@ -31,6 +31,7 @@ import remixRoutes from "./routes/remix.js";
 import soundRoutes from "./routes/sounds.js";
 import studioRoutes from "./routes/studio.js";
 import muxRoutes from "./routes/mux.js";
+import liveRoutes from "./routes/live.js";
 import mediaProxyRoutes from "./routes/media-proxy.js";
 
 import tiguyActionsRoutes from "./routes/tiguy-actions.js";
@@ -54,6 +55,7 @@ import economyRoutes from "./routes/economy.js";
 import utilRoutes from "./routes/utils.js";
 import royaleRoutes from "./routes/royale.js";
 import storyRoutes from "./routes/stories.js";
+import trendingRoutes from "./routes/trending.js";
 import notificationRoutes from "./routes/notifications.js";
 import pushRoutes from "./routes/push.js";
 import supportRoutes from "./routes/support.js";
@@ -238,6 +240,7 @@ export async function registerRoutes(
   app.use("/api", generalRateLimiter);
 
   app.use("/api/mux", muxRoutes);
+  app.use("/api/live", attachBearerUserId, liveRoutes);
   app.use("/api/video-doctor", videoDoctorRoutes);
 
   // Media proxy - streams external video/image URLs (fixes Mixkit 403, Unsplash ORB)
@@ -314,6 +317,9 @@ export async function registerRoutes(
 
   // ============ STORIES ROUTES ============
   app.use("/api/stories", storyRoutes);
+
+  // ============ TRENDING ROUTES ============
+  app.use("/api/trending", trendingRoutes);
 
   // ============ NOTIFICATIONS ROUTES ============
   app.use("/api/notifications", notificationRoutes);

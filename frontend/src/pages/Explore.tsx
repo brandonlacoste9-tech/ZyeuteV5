@@ -3,7 +3,7 @@
  * Discover trending content with leather grid and gold filters
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { getExplorePosts, apiCall } from "@/services/api";
@@ -51,6 +51,35 @@ export const Explore: React.FC = () => {
     savedState?.filters?.selectedHashtag || "",
   );
   const { tap } = useHaptics();
+
+  // Dynamic trending hashtags from API
+  const [trendingFromApi, setTrendingFromApi] = React.useState<
+    Array<{ tag: string; count: number }>
+  >([]);
+  const [isTrendingLoading, setIsTrendingLoading] = React.useState(false);
+
+  const fetchTrending = useCallback(async (region: string) => {
+    setIsTrendingLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (region) params.set("region", region);
+      const res = await fetch(
+        `/api/trending/hashtags${params.toString() ? `?${params.toString()}` : ""}`,
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTrendingFromApi(data.trending || []);
+      }
+    } catch {
+      // fail silently
+    } finally {
+      setIsTrendingLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchTrending(selectedRegion);
+  }, [selectedRegion, fetchTrending]);
 
   // Debounced user search
   React.useEffect(() => {
@@ -234,6 +263,59 @@ export const Explore: React.FC = () => {
 
         {/* Enhanced Trending Hashtags Component */}
         <QuebecHashtags />
+
+        {/* Dynamic Tendances — live hashtags from API based on selected region */}
+        {(trendingFromApi.length > 0 || isTrendingLoading) && (
+          <div className="mb-6">
+            <h2 className="text-gold-400 font-bold mb-3 embossed flex items-center gap-2">
+              <span>📈</span>
+              <span>
+                Tendances
+                {selectedRegion
+                  ? ` — ${QUEBEC_REGIONS.find((r) => r.id === selectedRegion)?.name || selectedRegion}`
+                  : ""}
+              </span>
+            </h2>
+            <div className="flex gap-2 overflow-x-auto gold-scrollbar pb-2">
+              {isTrendingLoading
+                ? [1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="flex-shrink-0 h-9 w-20 rounded-full bg-white/10 animate-pulse"
+                    />
+                  ))
+                : trendingFromApi.map(({ tag, count }) => {
+                    const tagWithoutHash = tag.startsWith("#")
+                      ? tag.slice(1)
+                      : tag;
+                    const isSelected =
+                      selectedHashtag === tag ||
+                      selectedHashtag === tagWithoutHash;
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => {
+                          tap();
+                          const newTag = isSelected ? "" : tagWithoutHash;
+                          setSelectedHashtag(newTag);
+                          if (newTag) toast.info(`Filtre: #${newTag}`);
+                        }}
+                        className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                          isSelected ? "btn-gold" : "btn-leather"
+                        }`}
+                      >
+                        <span>{tag}</span>
+                        {count > 1 && (
+                          <span className="text-[10px] opacity-60">
+                            ({count})
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+            </div>
+          </div>
+        )}
 
         {/* Original Trending Hashtags - Keep for filter functionality */}
         <div className="mb-6">
