@@ -184,6 +184,40 @@ function EnvelopeIcon({ size = 26, gold }: { size?: number; gold: string }) {
   );
 }
 
+// ─── Send icon ──────────────────────────────────────────────────────────────
+function SendIcon() {
+  return (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="#1A0F0A"
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+      />
+    </svg>
+  );
+}
+
+// ─── Back icon ────────────────────────────────────────────────────────────────
+function BackIcon({ gold }: { gold: string }) {
+  return (
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke={gold}
+      strokeWidth={2.5}
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  );
+}
+
 // ─── Onça-Pintada — Brazil jaguar mascot ────────────────────────────────────
 function OncaPintada({
   size = 72,
