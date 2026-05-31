@@ -270,9 +270,12 @@ router.get(
 
       // ── Subscription boost: multiply viral_score by tier multiplier then re-sort ──
       const BOOST: Record<string, number> = {
+        gold: 5,
+        silver: 3,
+        bronze: 2,
+        // Legacy French aliases
         or: 5,
         argent: 3,
-        bronze: 2,
       };
       const boostedPosts = (posts || []).map((p: any) => {
         const tier: string = p.user?.subscription_tier?.toLowerCase() || "free";
@@ -344,17 +347,15 @@ router.post(
       const { createClient } = await import("@supabase/supabase-js");
       const supabase = createClient(supabaseUrl!, supabaseKey!);
 
-      await supabase
-        .from("video_views")
-        .upsert(
-          {
-            user_id: viewerId,
-            publication_id: publicationId,
-            watched_at: new Date().toISOString(),
-            watch_duration_ms: watchDurationMs ?? null,
-          },
-          { onConflict: "user_id,publication_id", ignoreDuplicates: false },
-        );
+      await supabase.from("video_views").upsert(
+        {
+          user_id: viewerId,
+          publication_id: publicationId,
+          watched_at: new Date().toISOString(),
+          watch_duration_ms: watchDurationMs ?? null,
+        },
+        { onConflict: "user_id,publication_id", ignoreDuplicates: false },
+      );
       res.json({ ok: true });
     } catch (err) {
       // fail silently — watch tracking is non-critical

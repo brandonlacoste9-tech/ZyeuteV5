@@ -16,7 +16,7 @@ import { useSEO } from "../hooks/useSEO";
 
 const premiumLogger = logger.withContext("Premium");
 
-type SubscriptionTier = "free" | "bronze" | "argent" | "or";
+type SubscriptionTier = "free" | "bronze" | "silver" | "gold";
 
 export default function Premium() {
   useSEO({
@@ -96,7 +96,7 @@ export default function Premium() {
       popular: false,
     },
     {
-      id: "argent" as const,
+      id: "silver" as const,
       name: "Argent",
       emoji: "🥈",
       price: 9.99,
@@ -112,7 +112,7 @@ export default function Premium() {
       popular: true,
     },
     {
-      id: "or" as const,
+      id: "gold" as const,
       name: "Or",
       emoji: "🥇",
       price: 19.99,
@@ -177,8 +177,8 @@ export default function Premium() {
             <div className="inline-flex items-center gap-3 bg-gold-gradient px-6 py-3 rounded-full">
               <span className="text-2xl">
                 {currentTier === "bronze" && "🥉"}
-                {currentTier === "argent" && "🥈"}
-                {currentTier === "or" && "🥇"}
+                {currentTier === "silver" && "🥈"}
+                {currentTier === "gold" && "🥇"}
               </span>
               <span className="text-leather-900 font-black text-lg">
                 Membre {currentTier.toUpperCase()}
@@ -195,8 +195,8 @@ export default function Premium() {
           {tiers.map((tier) => {
             const isCurrentTier = currentTier === tier.id;
             const isUpgrade =
-              tier.id === "or" ||
-              (tier.id === "argent" && currentTier === "bronze");
+              tier.id === "gold" ||
+              (tier.id === "silver" && currentTier === "bronze");
 
             return (
               <div
@@ -260,7 +260,7 @@ export default function Premium() {
                   className={`w-full py-3 rounded-xl font-bold transition-all ${
                     isCurrentTier
                       ? "bg-leather-700 text-leather-400 cursor-not-allowed"
-                      : tier.id === "or"
+                      : tier.id === "gold"
                         ? "btn-gold border-gold-500"
                         : "btn-leather hover:btn-gold"
                   }`}

@@ -6,7 +6,15 @@
 import React from "react";
 import { cn } from "../../lib/utils";
 
-export type BadgeTier = "bronze" | "argent" | "or" | "free" | null | undefined;
+export type BadgeTier =
+  | "bronze"
+  | "silver"
+  | "gold"
+  | "argent"
+  | "or"
+  | "free"
+  | null
+  | undefined;
 
 interface SubscriberBadgeProps {
   tier: BadgeTier;
@@ -24,13 +32,13 @@ const BADGE_CONFIG: Record<
     text: "text-[#CD7F32]",
     border: "border-[#CD7F32]/50",
   },
-  argent: {
+  silver: {
     label: "Argent",
     bg: "bg-slate-400/20",
     text: "text-slate-300",
     border: "border-slate-400/50",
   },
-  or: {
+  gold: {
     label: "Or",
     bg: "bg-yellow-400/20",
     text: "text-yellow-300",
@@ -38,6 +46,9 @@ const BADGE_CONFIG: Record<
     glow: "shadow-[0_0_8px_rgba(255,215,0,0.35)]",
   },
 };
+// Legacy French aliases
+BADGE_CONFIG.argent = BADGE_CONFIG.silver;
+BADGE_CONFIG.or = BADGE_CONFIG.gold;
 
 const SIZE_CLASSES = {
   xs: "text-[9px] px-1 py-0 leading-4",

@@ -32,19 +32,20 @@ const supabaseAdmin = createClient(
 // ─── Confirmed Stripe price IDs (CAD) ────────────────────────────────────────
 const PRICE_IDS: Record<string, string> = {
   bronze: "price_1SZuC6CzqBvMqSYF419Lh1xg", // $4.99 CAD/mo
-  argent: "price_1SZuCACzqBvMqSYFpfpfFc9M", // $9.99 CAD/mo
-  or: "price_1SZuCDCzqBvMqSYFIl0C1r2T", // $19.99 CAD/mo
-  // Legacy alias accepted from frontend
-  silver: "price_1SZuCACzqBvMqSYFpfpfFc9M",
-  gold: "price_1SZuCDCzqBvMqSYFIl0C1r2T",
+  silver: "price_1SZuCACzqBvMqSYFpfpfFc9M", // $9.99 CAD/mo
+  gold: "price_1SZuCDCzqBvMqSYFIl0C1r2T", // $19.99 CAD/mo
+  // Legacy French aliases accepted from frontend
+  argent: "price_1SZuCACzqBvMqSYFpfpfFc9M",
+  or: "price_1SZuCDCzqBvMqSYFIl0C1r2T",
 };
 
 const TIER_LABELS: Record<string, string> = {
   bronze: "Bronze",
-  argent: "Argent",
   silver: "Argent",
-  or: "Or",
   gold: "Or",
+  // Legacy French aliases
+  argent: "Argent",
+  or: "Or",
 };
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ router.post("/create-checkout", requireAuth, async (req, res) => {
       .json({ error: "Stripe non configuré sur ce serveur" });
   }
 
-  const { tier = "argent" } = req.body as { tier?: string };
+  const { tier = "silver" } = req.body as { tier?: string };
   const priceId = PRICE_IDS[tier.toLowerCase()];
   if (!priceId) {
     return res.status(400).json({ error: `Niveau inconnu: ${tier}` });
@@ -186,7 +187,7 @@ router.post(
             await handleSubscriptionActivated(
               session.metadata?.userId,
               session.subscription as string,
-              session.metadata?.tier || "argent",
+              session.metadata?.tier || "silver",
             );
           } else if (
             session.mode === "payment" &&
@@ -330,16 +331,18 @@ async function lookupUserByStripeCustomer(
 function tierFromPriceId(sub: Stripe.Subscription): string {
   const priceId = sub.items?.data?.[0]?.price?.id;
   const reversed = Object.entries(PRICE_IDS).find(([, v]) => v === priceId);
-  return reversed?.[0] ?? "argent";
+  return reversed?.[0] ?? "silver";
 }
 
 function normalizeTier(tier: string): string {
   const map: Record<string, string> = {
-    silver: "argent",
-    gold: "or",
+    // English names (canonical DB values)
+    silver: "silver",
+    gold: "gold",
     bronze: "bronze",
-    argent: "argent",
-    or: "or",
+    // Legacy French aliases → map to English
+    argent: "silver",
+    or: "gold",
   };
   return map[tier.toLowerCase()] ?? tier.toLowerCase();
 }

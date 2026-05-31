@@ -184,7 +184,7 @@ io.on("connection", (socket) => {
         username: username || "Anonyme",
         avatarUrl,
         text: text.slice(0, 200),
-        tier: tier || "free", // bronze/argent/or — used for coloured name
+        tier: tier || "free", // bronze/silver/gold — used for coloured name
         timestamp: Date.now(),
       };
       io.to(room).emit("live:message", message);
@@ -432,7 +432,10 @@ app.use((req, res, next) => {
             process.env.SUPABASE_SERVICE_ROLE_KEY || "",
           );
 
-          const TIER_CENNES: Record<string, number> = { argent: 100, or: 500 };
+          const TIER_CENNES: Record<string, number> = {
+            silver: 100,
+            gold: 500,
+          };
           const thirtyDaysAgo = new Date(
             Date.now() - 30 * 24 * 60 * 60 * 1000,
           ).toISOString();

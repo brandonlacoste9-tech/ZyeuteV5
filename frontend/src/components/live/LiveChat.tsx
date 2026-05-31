@@ -16,7 +16,7 @@ export interface LiveMessage {
   username: string;
   avatarUrl?: string;
   text: string;
-  tier: "free" | "bronze" | "argent" | "or";
+  tier: "free" | "bronze" | "silver" | "gold" | "argent" | "or";
   timestamp: number;
 }
 
@@ -44,6 +44,9 @@ interface LiveChatProps {
 const TIER_COLOURS: Record<string, string> = {
   free: "text-white",
   bronze: "text-orange-400",
+  silver: "text-gray-300",
+  gold: "text-yellow-400",
+  // Legacy French aliases
   argent: "text-gray-300",
   or: "text-yellow-400",
 };

@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { apiCall } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
-export type PremiumTier = "free" | "bronze" | "argent" | "or";
+export type PremiumTier = "free" | "bronze" | "silver" | "gold";
 
 export interface PremiumStatus {
   tier: PremiumTier;
@@ -43,7 +43,7 @@ const TIER_FEATURES: Record<PremiumTier, PremiumStatus["features"]> = {
     badge: "🥉",
     monthlyCennes: 0,
   },
-  argent: {
+  silver: {
     aiImagesPerMonth: 50,
     aiVideosPerMonth: 20,
     analytics: true,
@@ -52,7 +52,7 @@ const TIER_FEATURES: Record<PremiumTier, PremiumStatus["features"]> = {
     badge: "🥈",
     monthlyCennes: 100,
   },
-  or: {
+  gold: {
     aiImagesPerMonth: 999999,
     aiVideosPerMonth: 999999,
     analytics: true,
@@ -74,11 +74,13 @@ interface StripeStatusResponse {
 function normalizeTier(raw?: string): PremiumTier {
   if (!raw) return "free";
   const map: Record<string, PremiumTier> = {
+    // English names (canonical)
     bronze: "bronze",
-    argent: "argent",
-    silver: "argent",
-    or: "or",
-    gold: "or",
+    silver: "silver",
+    gold: "gold",
+    // Legacy French aliases
+    argent: "silver",
+    or: "gold",
   };
   return map[raw.toLowerCase()] ?? "free";
 }
@@ -165,11 +167,11 @@ export function usePremium() {
     refresh,
     isPremium: status.tier !== "free",
     isBronze: status.tier === "bronze",
-    isArgent: status.tier === "argent",
-    isOr: status.tier === "or",
-    // Legacy aliases
-    isSilver: status.tier === "argent",
-    isGold: status.tier === "or",
+    isSilver: status.tier === "silver",
+    isGold: status.tier === "gold",
+    // Legacy French aliases
+    isArgent: status.tier === "silver",
+    isOr: status.tier === "gold",
   };
 }
 
