@@ -9,8 +9,6 @@ import MuxPlayer from "@mux/mux-player-react";
 import { LiveChat } from "@/components/live/LiveChat";
 import { GiftPicker } from "@/components/features/GiftPicker";
 import { useHaptics } from "@/hooks/useHaptics";
-import { useAuth } from "@/contexts/AuthContext";
-import { getSessionWithTimeout } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
 const watchLogger = logger.withContext("WatchLive");
@@ -44,7 +42,6 @@ export default function WatchLive() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { tap } = useHaptics();
-  const { user } = useAuth();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -156,39 +153,6 @@ export default function WatchLive() {
       if (chatPollRef.current) clearInterval(chatPollRef.current);
     };
   }, [fetchStream, fetchLiveMeta, fetchChatMessages, signalViewerJoin]);
-
-  // Handle gift sending via API
-  const handleSendGift = useCallback(
-    async (giftName: string, giftAmount: number) => {
-      if (!id || !user) return;
-      try {
-        const { session } = await getSessionWithTimeout(3000);
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
-        }
-        await fetch(`${API_BASE}/api/live/${id}/gift`, {
-          method: "POST",
-          headers,
-          credentials: "include",
-          body: JSON.stringify({
-            giftName,
-            giftAmount,
-            username:
-              (user as any).user_metadata?.username || user.email || "Anonyme",
-            avatarUrl: (user as any).user_metadata?.avatar_url || null,
-          }),
-        });
-        // Refresh chat immediately after gift
-        fetchChatMessages();
-      } catch (err) {
-        watchLogger.error("Failed to send gift:", err);
-      }
-    },
-    [id, user, fetchChatMessages],
-  );
 
   // ─── Loading ─────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -454,9 +418,10 @@ export default function WatchLive() {
         <GiftPicker
           recipientId={stream.userId}
           recipientName={stream.username || "ce créateur"}
-          onClose={() => setShowGiftPicker(false)}
-          onGiftSent={(giftName: string, giftAmount: number) => {
-            handleSendGift(giftName, giftAmount);
+          onClose={() => {
+            setShowGiftPicker(false);
+            // Refresh chat after gift picker closes to pick up any new gift messages
+            fetchChatMessages();
           }}
         />
       )}
