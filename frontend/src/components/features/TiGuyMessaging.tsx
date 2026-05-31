@@ -143,6 +143,37 @@ function FleurDeLysLarge({ size = 72, gold }: { size?: number; gold: string }) {
   );
 }
 
+// ─── Envelope icon ─────────────────────────────────────────────────────────
+function EnvelopeIcon({ size = 26, gold }: { size?: number; gold: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect
+        x="2"
+        y="4"
+        width="20"
+        height="16"
+        rx="3"
+        fill={gold}
+        opacity="0.15"
+        stroke={gold}
+        strokeWidth="1.5"
+      />
+      <path
+        d="M2 7l10 7 10-7"
+        stroke={gold}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <circle cx="5" cy="6" r="0.8" fill={gold} opacity="0.6" />
+      <circle cx="7" cy="6" r="0.8" fill={gold} opacity="0.6" />
+      <circle cx="9" cy="6" r="0.8" fill={gold} opacity="0.6" />
+      <circle cx="15" cy="6" r="0.8" fill={gold} opacity="0.6" />
+      <circle cx="17" cy="6" r="0.8" fill={gold} opacity="0.6" />
+      <circle cx="19" cy="6" r="0.8" fill={gold} opacity="0.6" />
+    </svg>
+  );
+}
+
 // ─── Onça-Pintada — Brazil jaguar mascot ────────────────────────────────────
 function OncaPintada({
   size = 72,
