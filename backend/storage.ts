@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import dotenv from "dotenv";
 import path from "path";
 import {
   users,
@@ -72,10 +71,18 @@ export function getPool(): pg.Pool {
     delete process.env.PGPASSWORD;
     delete process.env.PGDATABASE;
 
-    // Explicitly load .env if not already loaded
-    dotenv.config();
-    const envPath = path.join(process.cwd(), ".env");
-    dotenv.config({ path: envPath });
+    // Explicitly load .env if not already loaded (local dev only — Render injects env vars directly)
+    if (process.env.NODE_ENV !== "production") {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const dotenv = require("dotenv") as typeof import("dotenv");
+        dotenv.config();
+        const envPath = path.join(process.cwd(), ".env");
+        dotenv.config({ path: envPath });
+      } catch {
+        // dotenv not available — env vars already injected by host
+      }
+    }
 
     if (!process.env.DATABASE_URL) {
       console.warn("⚠️ [STORAGE] DATABASE_URL is not defined in process.env!");
@@ -749,7 +756,9 @@ export class DatabaseStorage implements IStorage {
                   city: row.u_city,
                   regionId: row.u_region_id,
                   createdAt: new Date(row.u_created_at),
-                  updatedAt: row.u_updated_at ? new Date(row.u_updated_at) : null,
+                  updatedAt: row.u_updated_at
+                    ? new Date(row.u_updated_at)
+                    : null,
                   nectarPoints: Number(row.nectar_points) || 0,
                   currentStreak: Number(row.current_streak) || 0,
                   bio: null,
