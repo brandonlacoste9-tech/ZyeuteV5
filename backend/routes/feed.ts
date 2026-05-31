@@ -198,7 +198,8 @@ router.get(
           id,
           username,
           display_name,
-          avatar_url
+          avatar_url,
+          subscription_tier
         )
       `,
         )
@@ -242,19 +243,40 @@ router.get(
           .json({ error: "Database error", details: error.message });
       }
 
+      // ── Subscription boost: multiply viral_score by tier multiplier then re-sort ──
+      const BOOST: Record<string, number> = {
+        or: 5,
+        argent: 3,
+        bronze: 2,
+      };
+      const boostedPosts = (posts || []).map((p: any) => {
+        const tier: string = p.user?.subscription_tier?.toLowerCase() || "free";
+        const multiplier = BOOST[tier] ?? 1;
+        return {
+          ...p,
+          viral_score: (p.viral_score || 0) * multiplier,
+          _boost_tier: tier,
+        };
+      });
+      boostedPosts.sort(
+        (a: any, b: any) =>
+          b.viral_score - a.viral_score ||
+          b.reactions_count - a.reactions_count,
+      );
+
       let hasMore = false;
       let nextCursor = null;
 
-      if (posts && posts.length > limit) {
+      if (boostedPosts.length > limit) {
         hasMore = true;
-        posts.pop();
-        nextCursor = posts[posts.length - 1].created_at;
-      } else if (posts && posts.length > 0) {
-        nextCursor = posts[posts.length - 1].created_at;
+        boostedPosts.pop();
+        nextCursor = boostedPosts[boostedPosts.length - 1].created_at;
+      } else if (boostedPosts.length > 0) {
+        nextCursor = boostedPosts[boostedPosts.length - 1].created_at;
       }
 
       res.json({
-        posts,
+        posts: boostedPosts,
         hasMore,
         nextCursor,
         source: "supabase-http-v2",

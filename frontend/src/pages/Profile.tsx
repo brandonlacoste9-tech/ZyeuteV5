@@ -12,6 +12,7 @@ import { Avatar } from "@/components/Avatar";
 import { Image } from "@/components/Image";
 import { Button } from "@/components/Button";
 import { WalletBalance } from "@/components/features/WalletBalance";
+import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import {
   getCurrentUser,
   getUserProfile,
@@ -375,6 +376,7 @@ export const Profile: React.FC = () => {
                 Gardien
               </span>
             )}
+            <SubscriberBadge tier={(user as any).subscription_tier} size="sm" />
           </h1>
           <p className="text-sm text-gold-500/70">@{user.username}</p>
 
@@ -447,6 +449,16 @@ export const Profile: React.FC = () => {
           {/* Settings / Logout Section for own profile */}
           {isOwnProfile && (
             <div className="mt-4 space-y-3">
+              <button
+                onClick={() => navigate("/wallet")}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-gold-500/40 bg-gold-500/10 text-sm font-medium text-gold-200"
+              >
+                <span>💸 Portefeuille créateur</span>
+                <span className="text-xs text-gold-400/80">
+                  Cennes, retraits…
+                </span>
+              </button>
+
               <button
                 onClick={() => {
                   tap();

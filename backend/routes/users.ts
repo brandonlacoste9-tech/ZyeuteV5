@@ -20,20 +20,38 @@ const upload = multer({
  */
 async function enrichUserCounts(user: any): Promise<any> {
   try {
-    const [followersResult, followingResult, postsResult] = await Promise.all([
-      // Followers: rows in abonnements where followee_id = user.id
-      db
-        .select({ cnt: count() })
-        .from(follows)
-        .where(eq(follows.followingId, user.id)),
-      // Following: rows in abonnements where follower_id = user.id
-      db
-        .select({ cnt: count() })
-        .from(follows)
-        .where(eq(follows.followerId, user.id)),
-      // Posts: publications by this user
-      db.select({ cnt: count() }).from(posts).where(eq(posts.userId, user.id)),
-    ]);
+    const [followersResult, followingResult, postsResult, subResult] =
+      await Promise.all([
+        // Followers: rows in abonnements where followee_id = user.id
+        db
+          .select({ cnt: count() })
+          .from(follows)
+          .where(eq(follows.followingId, user.id)),
+        // Following: rows in abonnements where follower_id = user.id
+        db
+          .select({ cnt: count() })
+          .from(follows)
+          .where(eq(follows.followerId, user.id)),
+        // Posts: publications by this user
+        db
+          .select({ cnt: count() })
+          .from(posts)
+          .where(eq(posts.userId, user.id)),
+        // Active subscription tier
+        supabaseAdmin
+          ? supabaseAdmin
+              .from("subscription_tiers")
+              .select("tier_name")
+              .eq("user_id", user.id)
+              .eq("status", "active")
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+    const tierName =
+      (subResult as any)?.data?.tier_name || user.subscriptionTier || "free";
 
     return {
       ...user,
@@ -43,6 +61,8 @@ async function enrichUserCounts(user: any): Promise<any> {
       followingCount: followingResult[0]?.cnt ?? 0,
       posts_count: postsResult[0]?.cnt ?? 0,
       postsCount: postsResult[0]?.cnt ?? 0,
+      subscriptionTier: tierName,
+      subscription_tier: tierName,
     };
   } catch (err) {
     console.warn("[enrichUserCounts] Failed:", err);

@@ -33,6 +33,7 @@ import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
 import { GiftPicker } from "@/components/features/GiftPicker";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
+import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -842,6 +843,10 @@ export const Zyeute: React.FC = () => {
                         ✓
                       </span>
                     )}
+                    <SubscriberBadge
+                      tier={(post.user as any)?.subscription_tier}
+                      size="xs"
+                    />
                   </Link>
 
                   {/* Caption + signalement */}

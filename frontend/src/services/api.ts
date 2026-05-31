@@ -968,6 +968,11 @@ function mapBackendUser(user: Record<string, any>): User {
 
     // Gamification
     last_daily_bonus: user.last_daily_bonus || user.lastDailyBonus || null,
+    // Subscription
+    subscription_tier:
+      user.subscriptionTier || user.subscription_tier || "free",
+    cash_credits: user.cashCredits || user.cash_credits || 0,
+    stripe_connect_id: user.stripeConnectId || user.stripe_connect_id || null,
   } as User;
 }
 

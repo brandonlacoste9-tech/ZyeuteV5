@@ -32,6 +32,7 @@ const SettingsPage = lazy(() => import("@/pages/Settings"));
 const ProfilePage = lazy(() => import("@/pages/Profile"));
 const PremiumPage = lazy(() => import("@/pages/Premium"));
 const StorePage = lazy(() => import("@/pages/Store"));
+const WalletPage = lazy(() => import("@/pages/Wallet"));
 const ParentalDashboard = lazy(() => import("@/pages/ParentalDashboard"));
 const SignupPage = lazy(() => import("@/pages/Signup"));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPassword"));
@@ -222,6 +223,7 @@ export function AppRoutes() {
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/premium" element={<PremiumPage />} />
         <Route path="/store" element={<StorePage />} />
+        <Route path="/wallet" element={<WalletPage />} />
         <Route path="/legal/terms" element={<TermsOfService />} />
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
         <Route path="/legal/community" element={<CommunityGuidelines />} />

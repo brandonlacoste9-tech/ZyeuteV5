@@ -334,6 +334,11 @@ export const HamburgerMenu: React.FC = () => {
       to: "/store",
     },
     {
+      label: "Portefeuille",
+      icon: <span className="text-lg">💸</span>,
+      to: "/wallet",
+    },
+    {
       label: "Help & Support",
       icon: (
         <svg

@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  getPostComments,
-  addComment,
-} from "@/services/api";
+import { getPostComments, addComment } from "@/services/api";
 import type { Comment } from "@/types";
 import { toast } from "@/components/Toast";
+import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 
 type Props = {
   open: boolean;
@@ -26,10 +24,12 @@ export function FeedCommentsSheet({
 
   useEffect(() => {
     if (!open || !postId) return;
-    setLoading(true);
-    getPostComments(postId)
-      .then(setItems)
-      .finally(() => setLoading(false));
+    setTimeout(() => {
+      setLoading(true);
+      getPostComments(postId)
+        .then(setItems)
+        .finally(() => setLoading(false));
+    }, 0);
   }, [open, postId]);
 
   const send = async () => {
@@ -80,9 +80,15 @@ export function FeedCommentsSheet({
           ) : (
             items.map((c) => (
               <div key={c.id} className="text-sm">
-                <span className="text-gold-500 font-semibold">
-                  {(c as any).user?.username || "user"}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-gold-500 font-semibold">
+                    {(c as any).user?.username || "user"}
+                  </span>
+                  <SubscriberBadge
+                    tier={(c as any).user?.subscription_tier}
+                    size="xs"
+                  />
+                </div>
                 <p className="text-white/90 mt-0.5">
                   {c.content || c.text || ""}
                 </p>
