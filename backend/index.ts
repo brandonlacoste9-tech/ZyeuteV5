@@ -445,7 +445,7 @@ app.use((req, res, next) => {
             const { data: subs } = await supabase
               .from("subscription_tiers")
               .select("user_id, last_cenne_credit")
-              .eq("tier", tier)
+              .eq("tier_name", tier)
               .eq("status", "active");
 
             if (!subs?.length) continue;
@@ -477,7 +477,7 @@ app.use((req, res, next) => {
                   .from("subscription_tiers")
                   .update({ last_cenne_credit: new Date().toISOString() })
                   .eq("user_id", sub.user_id)
-                  .eq("tier", tier);
+                  .eq("tier_name", tier);
 
                 console.log(
                   `[Cennes] Credited ${amount}¢ to ${tier} subscriber ${sub.user_id}`,

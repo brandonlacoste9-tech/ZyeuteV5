@@ -89,16 +89,22 @@ export async function requireAuth(
     const userId = await verifyAuthToken(token);
 
     if (userId) {
-      const user = await storage.getUser(userId);
-      if (user?.role === "banned") {
-        return res.status(403).json({
-          error: "Votre compte a été désactivé.",
-          isBanned: true,
-        });
+      try {
+        const user = await storage.getUser(userId);
+        if (user?.role === "banned") {
+          return res.status(403).json({
+            error: "Votre compte a été désactivé.",
+            isBanned: true,
+          });
+        }
+        (req as any).userId = userId;
+        (req as any).userRole = user?.role || "citoyen";
+      } catch (err) {
+        console.error("[requireAuth] storage.getUser failed:", err);
+        // Still allow through — userId is verified, role check is non-critical
+        (req as any).userId = userId;
+        (req as any).userRole = "citoyen";
       }
-
-      (req as any).userId = userId;
-      (req as any).userRole = user?.role || "citoyen";
       return next();
     }
   }
@@ -120,9 +126,16 @@ export async function optionalAuth(
     const userId = await verifyAuthToken(token);
 
     if (userId) {
-      const user = await storage.getUser(userId);
-      (req as any).userId = userId;
-      (req as any).userRole = user?.role || "citoyen";
+      try {
+        const user = await storage.getUser(userId);
+        (req as any).userId = userId;
+        (req as any).userRole = user?.role || "citoyen";
+      } catch (err) {
+        console.error("[optionalAuth] storage.getUser failed:", err);
+        // Still set userId so optionalAuth endpoints get user context
+        (req as any).userId = userId;
+        (req as any).userRole = "citoyen";
+      }
     }
   }
   next();

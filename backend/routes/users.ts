@@ -120,7 +120,46 @@ router.get("/auth/me", optionalAuth, async (req: Request, res: Response) => {
       return res.json({ user: null });
     }
 
-    let user = await storage.getUser(req.userId);
+    let user: any = null;
+    // Try Drizzle first; fall back to supabaseAdmin if Drizzle has schema issues
+    try {
+      user = await storage.getUser(req.userId);
+    } catch (drizzleErr) {
+      console.error(
+        "[Auth] Drizzle getUser failed, trying supabaseAdmin fallback:",
+        drizzleErr,
+      );
+      if (supabaseAdmin) {
+        const { data } = await supabaseAdmin
+          .from("user_profiles")
+          .select("*")
+          .eq("id", req.userId)
+          .maybeSingle();
+        if (data) {
+          user = {
+            id: data.id,
+            username: data.username || "",
+            email: data.email || "",
+            displayName: data.display_name,
+            bio: data.bio,
+            avatarUrl: data.avatar_url,
+            region: data.region,
+            role: data.role || "citoyen",
+            isAdmin: data.is_admin || false,
+            isPremium: data.is_premium || false,
+            plan: data.plan || "free",
+            credits: data.credits || 0,
+            hiveId: data.hive_id || "quebec",
+            city: data.city,
+            regionId: data.region_id,
+            subscriptionTier: data.subscription_tier || "free",
+            createdAt: data.created_at,
+            updatedAt: data.updated_at,
+            raisonBannissement: data.raison_bannissement,
+          };
+        }
+      }
+    }
 
     // Auto-provision: If Supabase user exists but no DB row, create one
     if (!user) {

@@ -273,39 +273,135 @@ export interface IStorage {
   ): Promise<boolean>;
 }
 
+// Helper: map raw Supabase user_profiles row to Drizzle User type
+function mapSupabaseUser(data: any): User {
+  return {
+    id: data.id,
+    username: data.username || "",
+    email: data.email || null,
+    displayName: data.display_name || null,
+    bio: data.bio || null,
+    avatarUrl: data.avatar_url || null,
+    region: data.region || null,
+    role: data.role || "citoyen",
+    customPermissions: data.custom_permissions || {},
+    isAdmin: data.is_admin || false,
+    isPremium: data.is_premium || false,
+    plan: data.plan || "free",
+    credits: data.credits || 0,
+    piasseBalance: data.piasse_balance || 0,
+    totalKarma: data.total_karma || 0,
+    subscriptionTier: data.subscription_tier || "free",
+    location: data.location || null,
+    city: data.city || null,
+    regionId: data.region_id || null,
+    createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+    updatedAt: data.updated_at ? new Date(data.updated_at) : null,
+    tiGuyCommentsEnabled: data.ti_guy_comments_enabled !== false,
+    hiveId: data.hive_id || "quebec",
+    karmaCredits: data.karma_credits || 0,
+    cashCredits: data.cash_credits || 0,
+    totalGiftsSent: data.total_gifts_sent || 0,
+    totalGiftsReceived: data.total_gifts_received || 0,
+    legendaryBadges: data.legendary_badges || [],
+    taxId: data.tax_id || null,
+    beeAlias: data.bee_alias || null,
+    nectarPoints: data.nectar_points || 0,
+    currentStreak: data.current_streak || 0,
+    maxStreak: data.max_streak || 0,
+    lastDailyBonus: data.last_daily_bonus
+      ? new Date(data.last_daily_bonus)
+      : null,
+    unlockedHives: data.unlocked_hives || ["quebec"],
+    raisonBannissement: data.raison_bannissement || null,
+    parentId: data.parent_id || null,
+  } as User;
+}
+
+// Helper: get a Supabase client for REST fallback when Drizzle pool can't connect
+function getSupabaseFallback() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createClient } = require("@supabase/supabase-js");
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 export class DatabaseStorage implements IStorage {
   // Users
   async getUser(id: string): Promise<User | undefined> {
-    return traceDatabase("SELECT", "users", async (span) => {
-      span.setAttributes({ "db.user_id": id });
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      return result[0];
-    });
+    try {
+      return await traceDatabase("SELECT", "users", async (span) => {
+        span.setAttributes({ "db.user_id": id });
+        const result = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, id))
+          .limit(1);
+        return result[0];
+      });
+    } catch (err) {
+      console.error(
+        "[storage.getUser] Drizzle failed, using Supabase REST fallback:",
+        (err as Error).message,
+      );
+      const sb = getSupabaseFallback();
+      if (!sb) return undefined;
+      const { data } = await sb
+        .from("user_profiles")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      return data ? mapSupabaseUser(data) : undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return traceDatabase("SELECT", "users", async (span) => {
-      span.setAttributes({ "db.username": username });
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-      return result[0];
-    });
+    try {
+      return await traceDatabase("SELECT", "users", async (span) => {
+        span.setAttributes({ "db.username": username });
+        const result = await db
+          .select()
+          .from(users)
+          .where(eq(users.username, username))
+          .limit(1);
+        return result[0];
+      });
+    } catch (err) {
+      console.error(
+        "[storage.getUserByUsername] Drizzle failed, using Supabase REST fallback:",
+        (err as Error).message,
+      );
+      const sb = getSupabaseFallback();
+      if (!sb) return undefined;
+      const { data } = await sb
+        .from("user_profiles")
+        .select("*")
+        .eq("username", username)
+        .maybeSingle();
+      return data ? mapSupabaseUser(data) : undefined;
+    }
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-    return result[0];
+    try {
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      return result[0];
+    } catch (err) {
+      console.error(
+        "[storage.getUserByEmail] Drizzle failed:",
+        (err as Error).message,
+      );
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser & { id: string }): Promise<User> {
@@ -320,12 +416,54 @@ export class DatabaseStorage implements IStorage {
     id: string,
     updates: Partial<User>,
   ): Promise<User | undefined> {
-    const result = await db
-      .update(users)
-      .set({ ...updates, createdAt: undefined }) // Prevent updating createdAt
-      .where(eq(users.id, id))
-      .returning();
-    return result[0];
+    // Map camelCase Drizzle fields to snake_case for Supabase REST fallback
+    const snakeUpdates: Record<string, any> = {};
+    if (updates.displayName !== undefined)
+      snakeUpdates.display_name = updates.displayName;
+    if (updates.bio !== undefined) snakeUpdates.bio = updates.bio;
+    if (updates.avatarUrl !== undefined)
+      snakeUpdates.avatar_url = updates.avatarUrl;
+    if (updates.city !== undefined) snakeUpdates.city = updates.city;
+    if (updates.region !== undefined) snakeUpdates.region = updates.region;
+    if (updates.username !== undefined)
+      snakeUpdates.username = updates.username;
+    if (updates.tiGuyCommentsEnabled !== undefined)
+      snakeUpdates.ti_guy_comments_enabled = updates.tiGuyCommentsEnabled;
+    if (updates.hiveId !== undefined) snakeUpdates.hive_id = updates.hiveId;
+    if (updates.role !== undefined) snakeUpdates.role = updates.role;
+    if (updates.isPremium !== undefined)
+      snakeUpdates.is_premium = updates.isPremium;
+    if (updates.isAdmin !== undefined) snakeUpdates.is_admin = updates.isAdmin;
+    if (updates.plan !== undefined) snakeUpdates.plan = updates.plan;
+    if (updates.subscriptionTier !== undefined)
+      snakeUpdates.subscription_tier = updates.subscriptionTier;
+
+    try {
+      const result = await db
+        .update(users)
+        .set({ ...updates, createdAt: undefined }) // Prevent updating createdAt
+        .where(eq(users.id, id))
+        .returning();
+      return result[0];
+    } catch (err) {
+      console.error(
+        "[storage.updateUser] Drizzle failed, using Supabase REST fallback:",
+        (err as Error).message,
+      );
+      const sb = getSupabaseFallback();
+      if (!sb || Object.keys(snakeUpdates).length === 0) return undefined;
+      const { data, error } = await sb
+        .from("user_profiles")
+        .update({ ...snakeUpdates, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select("*")
+        .maybeSingle();
+      if (error) {
+        console.error("[storage.updateUser] Supabase fallback error:", error);
+        return undefined;
+      }
+      return data ? mapSupabaseUser(data) : undefined;
+    }
   }
 
   async updateUserCredits(
