@@ -303,27 +303,8 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
       avatarUrl: z.string().url().max(2048).optional(),
       avatar_url: z.string().url().max(2048).optional(),
       city: z.string().max(100).optional(),
-      region: z
-        .enum([
-          "montreal",
-          "quebec",
-          "gatineau",
-          "sherbrooke",
-          "trois-rivieres",
-          "saguenay",
-          "levis",
-          "terrebonne",
-          "laval",
-          "gaspesie",
-          "longueuil",
-          "charlevoix",
-          "estrie",
-          "laurentides",
-          "mauricie",
-          "abitibi",
-          "other",
-        ])
-        .optional(),
+      // region is plain text in DB (column was converted from enum to text)
+      region: z.string().max(100).optional(),
       tiGuyCommentsEnabled: z.boolean().optional(),
     });
 
