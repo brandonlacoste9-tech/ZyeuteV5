@@ -61,6 +61,9 @@ router.get("/conversations", requireAuth, async (req, res) => {
         c.participant_a === userId ? c.participant_b : c.participant_a;
       const unread =
         c.participant_a === userId ? c.unread_count_a : c.unread_count_b;
+      const rawLast = Array.isArray(c.last_message)
+        ? c.last_message[0] || null
+        : c.last_message || null;
       return {
         id: c.id,
         createdAt: c.created_at,
@@ -71,9 +74,14 @@ router.get("/conversations", requireAuth, async (req, res) => {
           id: otherId,
           username: "Utilisateur",
         },
-        lastMessage: Array.isArray(c.last_message)
-          ? c.last_message[0] || null
-          : c.last_message || null,
+        lastMessage: rawLast
+          ? {
+              id: rawLast.id,
+              content: rawLast.content_text,
+              createdAt: rawLast.created_at,
+              senderId: rawLast.sender_id,
+            }
+          : null,
       };
     });
 
@@ -88,11 +96,12 @@ router.get("/conversations", requireAuth, async (req, res) => {
 router.post("/conversations/direct", requireAuth, async (req, res) => {
   try {
     const userId = req.userId!;
-    const { recipientId } = req.body as { recipientId: string };
+    // Accept recipientId or userId (frontend sends userId)
+    const body = req.body as { recipientId?: string; userId?: string };
+    const targetId = body.recipientId || body.userId;
 
-    if (!recipientId)
-      return res.status(400).json({ error: "recipientId requis" });
-    if (recipientId === userId)
+    if (!targetId) return res.status(400).json({ error: "recipientId requis" });
+    if (targetId === userId)
       return res.status(400).json({ error: "Impossible de se DM soi-même" });
 
     // Check if conversation already exists
@@ -100,18 +109,22 @@ router.post("/conversations/direct", requireAuth, async (req, res) => {
       .from("conversations")
       .select("id")
       .or(
-        `and(participant_a.eq.${userId},participant_b.eq.${recipientId}),and(participant_a.eq.${recipientId},participant_b.eq.${userId})`,
+        `and(participant_a.eq.${userId},participant_b.eq.${targetId}),and(participant_a.eq.${targetId},participant_b.eq.${userId})`,
       )
       .maybeSingle();
 
     if (existing)
-      return res.json({ conversationId: existing.id, isNew: false });
+      return res.json({
+        conversation: { id: existing.id },
+        conversationId: existing.id,
+        isNew: false,
+      });
 
     // Verify recipient exists
     const { data: recipient } = await supabaseAdmin
       .from("user_profiles")
       .select("id, username")
-      .eq("id", recipientId)
+      .eq("id", targetId)
       .single();
 
     if (!recipient)
@@ -122,14 +135,18 @@ router.post("/conversations/direct", requireAuth, async (req, res) => {
       .from("conversations")
       .insert({
         participant_a: userId,
-        participant_b: recipientId,
+        participant_b: targetId,
       })
       .select("id")
       .single();
 
     if (error) throw error;
 
-    return res.json({ conversationId: conv.id, isNew: true });
+    return res.json({
+      conversation: { id: conv.id },
+      conversationId: conv.id,
+      isNew: true,
+    });
   } catch (err: any) {
     console.error("[Messaging] create direct error:", err);
     return res.status(500).json({ error: err.message });
@@ -171,7 +188,7 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
 
     if (before) query = query.lt("created_at", before);
 
-    const { data: messages, error } = await query;
+    const { data: rawMessages, error } = await query;
     if (error) throw error;
 
     // Mark messages as read
@@ -190,7 +207,29 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res) => {
       .update({ [field]: 0 })
       .eq("id", convId);
 
-    return res.json({ messages: (messages || []).reverse() });
+    // Normalize to camelCase for frontend
+    const messages = (rawMessages || []).reverse().map((m: any) => {
+      const senderRaw = Array.isArray(m.sender) ? m.sender[0] : m.sender;
+      return {
+        id: m.id,
+        content: m.content_text,
+        contentType: m.content_type,
+        contentUrl: m.content_url,
+        senderId: m.sender_id,
+        isRead: m.is_read,
+        createdAt: m.created_at,
+        sender: senderRaw
+          ? {
+              id: senderRaw.id,
+              username: senderRaw.username,
+              displayName: senderRaw.display_name,
+              avatarUrl: senderRaw.avatar_url,
+            }
+          : undefined,
+      };
+    });
+
+    return res.json({ messages });
   } catch (err: any) {
     console.error("[Messaging] get messages error:", err);
     return res.status(500).json({ error: err.message });
@@ -256,7 +295,16 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
       })
       .eq("id", convId);
 
-    return res.json({ message: msg });
+    return res.json({
+      message: {
+        id: msg.id,
+        content: msg.content_text,
+        contentType: msg.content_type,
+        senderId: msg.sender_id,
+        isRead: msg.is_read,
+        createdAt: msg.created_at,
+      },
+    });
   } catch (err: any) {
     console.error("[Messaging] send message error:", err);
     return res.status(500).json({ error: err.message });
