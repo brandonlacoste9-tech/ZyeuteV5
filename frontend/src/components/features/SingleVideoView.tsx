@@ -157,9 +157,12 @@ export function SingleVideoView({
         ) : post.muxPlaybackId ? (
           <MuxVideoPlayer
             playbackId={post.muxPlaybackId ?? ""}
-            thumbnailUrl={getProxiedMediaUrl(
-              post.thumbnailUrl || post.mediaUrl || undefined,
-            )}
+            thumbnailUrl={
+              post.thumbnailUrl ||
+              `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=2&width=400`
+            }
+            videoTitle={post.caption || post.content || undefined}
+            viewerUserId={user?.id || undefined}
             className="w-full h-full object-cover"
             style={filterStyle}
             autoPlay={isActive}

@@ -21,6 +21,10 @@ interface MuxVideoPlayerProps {
   loop?: boolean;
   muted?: boolean;
   style?: React.CSSProperties;
+  /** Real video title for Mux Data analytics */
+  videoTitle?: string;
+  /** Real viewer user ID for Mux Data analytics */
+  viewerUserId?: string;
   /** Called when Mux player errors (for diagnostics) */
   onError?: (error: Error) => void;
   /** Called when video freezes (buffer starvation) */
@@ -35,6 +39,8 @@ export function MuxVideoPlayer({
   loop = true,
   muted = true,
   style,
+  videoTitle,
+  viewerUserId,
   onError: onErrorProp,
   onFreeze,
 }: MuxVideoPlayerProps) {
@@ -47,11 +53,15 @@ export function MuxVideoPlayer({
   const lastTimeRef = useRef<number>(0);
 
   // Reset error state and loading when playbackId changes
+  // Use setTimeout(0) to avoid synchronous setState within effect (ESLint rule)
   useEffect(() => {
-    setHasError(false);
-    setErrorMessage(null);
-    setIsLoading(true);
-    setRetryKey(0);
+    const t = setTimeout(() => {
+      setHasError(false);
+      setErrorMessage(null);
+      setIsLoading(true);
+      setRetryKey(0);
+    }, 0);
+    return () => clearTimeout(t);
   }, [playbackId]);
 
   // Monitor for freezes (time not advancing despite playing)
@@ -172,8 +182,10 @@ export function MuxVideoPlayer({
         streamType="on-demand"
         metadata={{
           video_id: playbackId,
-          video_title: `Post ${playbackId}`,
-          viewer_user_id: "anonymous",
+          video_title: videoTitle || `Post ${playbackId}`,
+          viewer_user_id: viewerUserId || "anonymous",
+          player_name: "Zyeuté Player",
+          player_version: "5.0.0",
         }}
         maxResolution="1080p"
         primaryColor="#D4AF37"
