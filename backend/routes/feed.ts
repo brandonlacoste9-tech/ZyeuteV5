@@ -46,7 +46,7 @@ async function getPostsViaSupabase(
     .not("media_url", "is", null)
     // Only serve permanent video sources (Mux HLS, Supabase storage)
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%",
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
@@ -176,15 +176,21 @@ router.get(
       }
 
       // ── Exclude already-watched videos for authenticated users ──────────
+      // Only exclude videos watched in the last 7 days — beyond that, recycle is fine.
+      // This prevents the feed from running dry when the video pool is small.
       let excludedIds: string[] = [];
       if (viewerId) {
         try {
+          const sevenDaysAgo = new Date(
+            Date.now() - 7 * 24 * 60 * 60 * 1000,
+          ).toISOString();
           const { data: watched } = await supabase
             .from("video_views")
             .select("publication_id")
             .eq("user_id", viewerId)
+            .gte("watched_at", sevenDaysAgo)
             .order("watched_at", { ascending: false })
-            .limit(500); // last 500 watched — beyond that recycle is fine
+            .limit(100); // cap at 100 recent — never starve the feed
           if (watched?.length) {
             excludedIds = watched.map(
               (r: { publication_id: string }) => r.publication_id,
