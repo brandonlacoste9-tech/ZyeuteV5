@@ -75,7 +75,8 @@
     "test:accessibility": "playwright test tests/comprehensive/08-accessibility.spec.ts",
     "test:report": "playwright show-report",
     "prepare": "node -e \"if(process.env.CI==='true'||process.env.VERCEL){process.exit(0);}try{const fs=require('fs');const path=require('path');const {execSync}=require('child_process');const huskyPath=path.join(process.cwd(),'node_modules','.bin','husky');if(fs.existsSync(huskyPath)){execSync(huskyPath,{stdio:'inherit'});}}catch(e){if(e.code!=='ENOENT')throw e}\"",
-    "cleanup:publications": "tsx scripts/cleanup-junk-publications.ts"
+    "cleanup:publications": "tsx scripts/cleanup-junk-publications.ts",
+    "pexels:seed": "tsx scripts/pexels-seed.ts"
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.61",
