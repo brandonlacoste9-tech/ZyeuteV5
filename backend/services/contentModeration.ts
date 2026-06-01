@@ -53,7 +53,7 @@ export async function moderateText(text: string): Promise<ModerationResult> {
 
   try {
     const response = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       messages: [
         { role: "system", content: MODERATION_PROMPT },
         {

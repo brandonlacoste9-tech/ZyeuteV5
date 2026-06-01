@@ -58,7 +58,7 @@ export const deepseek = {
                 Authorization: `Bearer ${API_KEY}`,
               },
               body: JSON.stringify({
-                model: options.model || "deepseek-chat",
+                model: options.model || "deepseek-v4-flash",
                 messages: options.messages,
                 temperature: options.temperature ?? 0.7,
                 max_tokens: options.max_tokens,

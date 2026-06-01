@@ -220,9 +220,7 @@ router.post("/generate-video", requireAuth, async (req: any, res) => {
     const { imageUrl, prompt, duration = 5, modelHint: hint } = req.body;
     if (
       hint &&
-      ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2", "pollo"].includes(
-        hint,
-      )
+      ["kling", "wan", "hunyuan_video", "ltx2", "ltx-2", "pollo"].includes(hint)
     ) {
       modelHint = hint as any;
     }
@@ -295,7 +293,7 @@ router.post("/proxy/deepseek", async (req, res) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model || "deepseek-chat",
+        model: model || "deepseek-v4-flash",
         messages,
         temperature: temperature || 0.8,
         response_format,

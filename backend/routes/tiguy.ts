@@ -1,4 +1,5 @@
 import express from "express";
+import { createClient } from "@supabase/supabase-js";
 import { getSystemPromptForHive } from "../ai/orchestrator.js";
 import { getGeminiModel } from "../ai/google.js";
 import { readMemory, compactMemory } from "../ai/tiguy-memory.js";
@@ -8,11 +9,86 @@ const router = express.Router();
 const DEEPSEEK_CHAT_COMPLETIONS_URL =
   "https://api.deepseek.com/chat/completions";
 
+// Supabase client for user context enrichment
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  "";
+const db =
+  SUPABASE_URL && SUPABASE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
+
+// ── User context enrichment ───────────────────────────────────────────────────
+interface UserContext {
+  streak: number;
+  maxStreak: number;
+  totalPoints: number;
+  tier: string;
+  watchedPostIds: string[];
+}
+
+async function fetchUserContext(userId: string): Promise<UserContext | null> {
+  if (!db) return null;
+  try {
+    const [gamRes, watchRes] = await Promise.all([
+      db
+        .from("user_profiles")
+        .select("current_streak, max_streak, total_points, current_tier")
+        .eq("id", userId)
+        .single(),
+      db
+        .from("watch_events")
+        .select("post_id, watch_pct")
+        .eq("user_id", userId)
+        .order("watch_pct", { ascending: false })
+        .limit(3),
+    ]);
+
+    return {
+      streak: gamRes.data?.current_streak ?? 0,
+      maxStreak: gamRes.data?.max_streak ?? 0,
+      totalPoints: gamRes.data?.total_points ?? 0,
+      tier: gamRes.data?.current_tier ?? "novice",
+      watchedPostIds: (watchRes.data ?? []).map((e: any) => e.post_id),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildUserContextBlock(ctx: UserContext): string {
+  const tierLabels: Record<string, string> = {
+    novice: "Novice",
+    vrai: "Vrai",
+    pur_laine: "Pur Laine",
+    legende: "Légende",
+    icone: "Icône",
+  };
+  const tierLabel = tierLabels[ctx.tier] ?? ctx.tier;
+  const lines = [
+    `Profil gamification:`,
+    `  - Tier actuel: ${tierLabel}`,
+    `  - Points totaux: ${ctx.totalPoints}`,
+    `  - Streak actuel: ${ctx.streak} jour${ctx.streak !== 1 ? "s" : ""}`,
+    `  - Streak record: ${ctx.maxStreak} jour${ctx.maxStreak !== 1 ? "s" : ""}`,
+  ];
+  if (ctx.watchedPostIds.length > 0) {
+    lines.push(
+      `  - Vidéos récemment regardées (IDs): ${ctx.watchedPostIds.join(", ")}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+// ── Local fallback replies ────────────────────────────────────────────────────
 function buildLocalTiGuyReply(prompt: string) {
   const lower = prompt.toLowerCase();
 
   if (lower.includes("caption") || lower.includes("légende")) {
-    return "Ayoye, essaie ça mon chum: ‘Montréal brille fort à soir ⚜️✨ #MTL #Zyeute #Qc’";
+    return "Ayoye, essaie ça mon chum: 'Montréal brille fort à soir ⚜️✨ #MTL #Zyeute #Qc'";
   }
   if (lower.includes("image") || lower.includes("photo")) {
     return "J'vois le vibe que tu cherches! Donne-moi le mood, les couleurs, pis le style, pis j'te guide comme du monde. 🎨";
@@ -41,6 +117,7 @@ function buildLocalTiGuyReply(prompt: string) {
   return "Salut mon chum! Chu là, pis j'suis prêt à t'aider avec Zyeuté, tes captions, tes idées de vidéos, ou juste jaser un brin. 🦫";
 }
 
+// ── Main AI call ──────────────────────────────────────────────────────────────
 async function generateTiGuyReply(prompt: string, hive?: string) {
   const systemPrompt = getSystemPromptForHive(hive);
 
@@ -53,7 +130,7 @@ async function generateTiGuyReply(prompt: string, hive?: string) {
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: "deepseek-v4-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
@@ -74,7 +151,7 @@ async function generateTiGuyReply(prompt: string, hive?: string) {
       };
       const text = data.choices?.[0]?.message?.content?.trim();
       if (text) {
-        return { text, provider: "deepseek-v3" };
+        return { text, provider: "deepseek-v4-flash" };
       }
     } catch (error) {
       console.warn("[TI-GUY] DeepSeek failed, trying Gemini fallback:", error);
@@ -99,6 +176,7 @@ async function generateTiGuyReply(prompt: string, hive?: string) {
   };
 }
 
+// ── POST /chat ────────────────────────────────────────────────────────────────
 router.post("/chat", async (req, res) => {
   try {
     const { message, history, image, context } = req.body as {
@@ -109,7 +187,7 @@ router.post("/chat", async (req, res) => {
         userId?: string;
         username?: string;
         fileName?: string;
-        hive?: string; // "quebec" | "mexico"
+        hive?: string;
       };
     };
 
@@ -134,13 +212,18 @@ router.post("/chat", async (req, res) => {
           .join("\n")
       : "";
 
-    // ── Load persistent memory for this user ─────────────────────────────
     const userId = context?.userId;
-    const existingMemory = userId ? await readMemory(userId) : "";
+
+    // ── Fetch persistent memory + user context in parallel ────────────────
+    const [existingMemory, userCtx] = await Promise.all([
+      userId ? readMemory(userId) : Promise.resolve(""),
+      userId ? fetchUserContext(userId) : Promise.resolve(null),
+    ]);
 
     const promptParts = [
       context?.username ? `Nom de l'utilisateur: ${context.username}` : "",
       context?.userId ? `User ID: ${context.userId}` : "",
+      userCtx ? buildUserContextBlock(userCtx) : "",
       existingMemory
         ? `Mémoire persistante de cet utilisateur (ce que tu sais déjà sur lui):\n${existingMemory}`
         : "",
@@ -156,7 +239,7 @@ router.post("/chat", async (req, res) => {
 
     const aiResult = await generateTiGuyReply(promptParts, context?.hive);
 
-    // ── Compact memory async (fire-and-forget, never blocks the response) ─
+    // ── Compact memory async (fire-and-forget) ────────────────────────────
     if (userId && message) {
       compactMemory(userId, existingMemory, message, aiResult.text).catch(
         () => {},
@@ -172,12 +255,12 @@ router.post("/chat", async (req, res) => {
         model: aiResult.provider,
         historyCount: safeHistory.length,
         hasImage: !!image,
+        hasUserContext: !!userCtx,
       },
     });
   } catch (error: any) {
     console.error("TI-GUY AI error:", error);
 
-    // Detailed error logging for debugging
     if (error.response) {
       console.error("API Response:", error.response.data);
     }
@@ -189,10 +272,11 @@ router.post("/chat", async (req, res) => {
   }
 });
 
-router.get("/status", (req, res) => {
+// ── GET /status ───────────────────────────────────────────────────────────────
+router.get("/status", (_req, res) => {
   res.json({
     status: "online",
-    brain: "DeepSeek V3 (Trinity)",
+    brain: "DeepSeek V4 Flash",
     message: "TI-GUY est ben actif, mon chum!",
     timestamp: new Date().toISOString(),
   });

@@ -370,7 +370,7 @@ export const zyeuteBrainTools = [
 export const zyeuteBrainConfig = {
   systemPrompt: TIGUY_SYSTEM_PROMPT,
   tools: zyeuteBrainTools,
-  model: process.env.AI_MODEL || "deepseek-chat", // DeepSeek V3 or "gemini-2.0-flash"
+  model: process.env.AI_MODEL || "deepseek-v4-flash", // DeepSeek V3 or "gemini-2.0-flash"
   temperature: 0.7,
   maxTokens: 4096,
 };

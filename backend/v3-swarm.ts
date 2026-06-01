@@ -254,7 +254,7 @@ async function callV3(
     "POST",
     async (span) => {
       span.setAttributes({
-        "ai.model": "deepseek-chat",
+        "ai.model": "deepseek-v4-flash",
         "ai.system_prompt_length": systemPrompt.length,
         "ai.user_message_length": userMessage.length,
         "ai.parse_json": parseJson,
@@ -262,7 +262,7 @@ async function callV3(
 
       return withRetry(async () => {
         const completion = await deepseek.chat.completions.create({
-          model: "deepseek-chat",
+          model: "deepseek-v4-flash",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userMessage },
@@ -428,7 +428,7 @@ export async function v3TiGuyChat(
 
     // Call LLM
     const completion = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       messages,
       max_tokens: 512,
       temperature: 0.8,

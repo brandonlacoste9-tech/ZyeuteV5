@@ -92,7 +92,9 @@ async function callLocalOllama(
     return data.response;
   } catch (error) {
     console.error("❌ [OLLAMA LOCAL] Failed:", error);
-    throw new Error("All AI providers failed - Ollama unreachable");
+    throw new Error("All AI providers failed - Ollama unreachable", {
+      cause: error,
+    });
   }
 }
 
@@ -244,7 +246,7 @@ async function callDeepSeek(
 
   try {
     const response = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       messages: [
         ...(request.systemPrompt
           ? [{ role: "system" as const, content: request.systemPrompt }]
@@ -260,7 +262,7 @@ async function callDeepSeek(
     return {
       content,
       provider: "deepseek",
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       tokensUsed: response.usage?.total_tokens,
       latencyMs: Date.now() - startTime,
     };
@@ -303,7 +305,7 @@ export async function hiveMindChat(
       case "deepseek":
         response = await callDeepSeek(request);
         break;
-      case "ollama":
+      case "ollama": {
         const content = await callLocalOllama(
           request.prompt,
           request.systemPrompt,
@@ -315,6 +317,7 @@ export async function hiveMindChat(
           latencyMs: 0,
         };
         break;
+      }
     }
 
     // Cache the response

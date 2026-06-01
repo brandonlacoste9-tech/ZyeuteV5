@@ -65,7 +65,7 @@ Return ONLY a JSON object:
 `;
 
       const response = await deepseek.chat.completions.create({
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         messages: [{ role: "user", content: prompt.trim() }],
         temperature: 0,
         response_format: { type: "json_object" },

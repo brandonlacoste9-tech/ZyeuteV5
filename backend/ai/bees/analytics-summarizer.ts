@@ -21,7 +21,7 @@ export async function run(task: any) {
 
   try {
     const completion = await deepseek.chat.completions.create({
-      model: "deepseek-chat",
+      model: "deepseek-v4-flash",
       messages: [
         {
           role: "system",

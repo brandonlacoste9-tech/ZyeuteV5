@@ -75,7 +75,24 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     try {
       const comment = await addComment(postId, newComment.trim());
       if (comment) {
-        setComments((prev) => [...prev, comment]);
+        // Ensure user is populated for immediate display — backend may return
+        // null on a race condition; fall back to the auth context user.
+        const commentWithUser = (comment as any).user
+          ? comment
+          : {
+              ...comment,
+              user: currentUser
+                ? {
+                    id: currentUser.id,
+                    username: currentUser.username,
+                    display_name: currentUser.display_name,
+                    avatar_url: currentUser.avatar_url,
+                    username_color:
+                      (currentUser as any).username_color ?? "#FFFFFF",
+                  }
+                : null,
+            };
+        setComments((prev) => [...prev, commentWithUser as any]);
         setNewComment("");
         // Fire-and-forget badge check
         triggerBadgeCheck("comment_created").catch(() => {});

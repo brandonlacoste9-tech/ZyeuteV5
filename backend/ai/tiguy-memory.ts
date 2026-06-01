@@ -77,7 +77,7 @@ RÈGLES STRICTES:
           Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "deepseek-chat",
+          model: "deepseek-v4-flash",
           messages: [{ role: "user", content: compactPrompt }],
           temperature: 0.3,
           max_tokens: 300,

@@ -83,7 +83,7 @@ export class MemoryMinerBee {
       try {
         // 2. Extract facts using DeepSeek
         const completion = await deepseek.chat.completions.create({
-          model: "deepseek-chat",
+          model: "deepseek-v4-flash",
           messages: [
             {
               role: "system",

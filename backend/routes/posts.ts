@@ -677,11 +677,20 @@ router.post(
       }
 
       // Fetch user profile for response
-      const { data: userData } = await supabaseRest
+      const { data: userData, error: userFetchErr } = await supabaseRest
         .from("user_profiles")
         .select("id, username, display_name, avatar_url, username_color")
         .eq("id", req.userId!)
         .single();
+
+      if (userFetchErr) {
+        console.warn(
+          "[comments] user profile fetch error:",
+          userFetchErr.message,
+          "userId:",
+          req.userId,
+        );
+      }
 
       const comment = {
         id: commentData.id,
@@ -690,7 +699,15 @@ router.post(
         content: commentData.content,
         created_at: commentData.created_at,
       };
-      const user = userData;
+      // If user profile fetch failed, return a minimal stub so the frontend
+      // can at least display something instead of falling back to "Utilisateur".
+      const user = userData ?? {
+        id: req.userId,
+        username: null,
+        display_name: null,
+        avatar_url: null,
+        username_color: "#FFFFFF",
+      };
 
       // Fire-and-forget push notification for new comment
       try {
