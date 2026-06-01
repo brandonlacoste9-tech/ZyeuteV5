@@ -449,6 +449,8 @@ export class DatabaseStorage implements IStorage {
     if (updates.tiGuyCommentsEnabled !== undefined)
       snakeUpdates.ti_guy_comments_enabled = updates.tiGuyCommentsEnabled;
     if (updates.hiveId !== undefined) snakeUpdates.hive_id = updates.hiveId;
+    if (updates.regionId !== undefined)
+      snakeUpdates.region_id = updates.regionId;
     if (updates.role !== undefined) snakeUpdates.role = updates.role;
     if (updates.isPremium !== undefined)
       snakeUpdates.is_premium = updates.isPremium;

@@ -20,6 +20,11 @@ import { FlameEyeIcon } from "@/components/ui/Logo";
 import type { User, Story } from "@/types";
 import { logger } from "../lib/logger";
 import { useGuestMode } from "@/hooks/useGuestMode";
+import {
+  detectHiveFromBrowser,
+  detectLanguageFromBrowser,
+  detectRegionFromTimezone,
+} from "../lib/geoDetect";
 import { DailyGratteuxModal } from "@/components/gamification/DailyGratteuxModal";
 import { trackDailyInteract } from "@/services/gamificationService";
 import { OfflineBanner } from "@/components/ui/OfflineBanner";
@@ -114,6 +119,29 @@ export const Feed: React.FC = () => {
         setCurrentUser(user);
         // Track daily interact for streak (fire-and-forget — don't block UI)
         trackDailyInteract().catch(() => {});
+
+        // Auto-detect hive/language if not already set
+        const storedHive = localStorage.getItem("zyeute_hive_id");
+        if (!user.hiveId || !storedHive) {
+          const detectedHive = detectHiveFromBrowser();
+          const detectedLang = detectLanguageFromBrowser();
+          const detectedRegion = detectRegionFromTimezone(detectedHive);
+
+          localStorage.setItem("zyeute_hive_id", detectedHive);
+          localStorage.setItem("zyeute_language", detectedLang);
+
+          // Persist to backend — fire-and-forget, never block UI
+          fetch("/api/users/me", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              hive_id: detectedHive,
+              preferred_language: detectedLang,
+              region_id: detectedRegion,
+            }),
+          }).catch(() => {});
+        }
       }
     };
 

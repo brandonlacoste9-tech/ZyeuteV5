@@ -439,6 +439,10 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
       // region is plain text in DB (column was converted from enum to text)
       region: z.string().max(100).optional(),
       tiGuyCommentsEnabled: z.boolean().optional(),
+      // Geo/language auto-detect fields
+      hive_id: z.string().max(50).optional(),
+      preferred_language: z.string().max(10).optional(),
+      region_id: z.string().max(100).optional(),
     });
 
     const parsed = updateUserSchema.safeParse(req.body);
@@ -476,8 +480,24 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
     if (rawData.region !== undefined) normalized.region = rawData.region;
     if (rawData.tiGuyCommentsEnabled !== undefined)
       normalized.tiGuyCommentsEnabled = rawData.tiGuyCommentsEnabled;
+    if (rawData.hive_id !== undefined) normalized.hiveId = rawData.hive_id;
+    if (rawData.region_id !== undefined)
+      normalized.regionId = rawData.region_id;
 
     const updated = await storage.updateUser(req.userId!, normalized);
+
+    // preferred_language is not in the Drizzle schema yet — persist via supabaseAdmin REST
+    if (rawData.preferred_language !== undefined) {
+      supabaseAdmin
+        .from("user_profiles")
+        .update({
+          preferred_language: rawData.preferred_language,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", req.userId!)
+        .then(() => {}) // fire-and-forget
+        .catch(() => {});
+    }
 
     if (!updated) {
       return res.status(404).json({ error: "User not found" });

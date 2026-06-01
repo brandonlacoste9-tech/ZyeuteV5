@@ -64,8 +64,8 @@ import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 const feedLogger = logger.withContext("ContinuousFeed");
-// HARDCODED: Always use Quebec hive to prevent switching loops
-const HIVE_ID = "quebec";
+// Use hive from localStorage (set by geo-detection) or fall back to "quebec"
+const HIVE_ID: string = localStorage.getItem("zyeute_hive_id") || "quebec";
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
 // Added in FE-06 for offline support

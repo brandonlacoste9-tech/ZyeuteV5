@@ -21,6 +21,7 @@ import {
   HiveId,
   detectHiveFromLocale,
 } from "@/contexts/HiveContext";
+import { detectLanguageFromBrowser } from "@/lib/geoDetect";
 
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
@@ -81,6 +82,10 @@ export const Signup: React.FC = () => {
       // Apply selected hive
       switchHive(selectedHive);
       localStorage.setItem("zyeute_hive_id", selectedHive);
+
+      // Detect and persist language (fire-and-forget)
+      const detectedLang = detectLanguageFromBrowser();
+      localStorage.setItem("zyeute_language", detectedLang);
 
       // Clear guest mode on successful signup
       localStorage.removeItem(GUEST_MODE_KEY);
