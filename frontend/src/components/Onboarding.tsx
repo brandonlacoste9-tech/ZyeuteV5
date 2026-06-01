@@ -32,7 +32,18 @@ const LANGUAGES = [
 
 // ─── Step 0: FOMO Splash ─────────────────────────────────────────────────────
 
-const FOMOSplash: React.FC<{ onNext: () => void }> = ({ onNext }) => {
+const FOMO_IMAGES: Record<string, string> = {
+  quebec: "/ad_story_fomo.jpg",
+  mexico: "/ad_story_fomo_mexico.png",
+  brazil: "/ad_story_fomo_brazil.png",
+  argentina: "/ad_story_fomo_argentina.png",
+};
+
+const FOMOSplash: React.FC<{ hive: string | null; onNext: () => void }> = ({
+  hive,
+  onNext,
+}) => {
+  const imgSrc = FOMO_IMAGES[hive ?? "quebec"] ?? FOMO_IMAGES.quebec;
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -61,7 +72,7 @@ const FOMOSplash: React.FC<{ onNext: () => void }> = ({ onNext }) => {
     >
       {/* Full-screen image */}
       <img
-        src="/ad_story_fomo.jpg"
+        src={imgSrc}
         alt="Rejoins la scène"
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -409,7 +420,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   return (
     <>
-      {step === "fomo" && <FOMOSplash onNext={handleFOMONext} />}
+      {step === "fomo" && (
+        <FOMOSplash hive={selectedHive} onNext={handleFOMONext} />
+      )}
       {step !== "fomo" && (
         <OverlayBackdrop>
           {step === "hive" && (
