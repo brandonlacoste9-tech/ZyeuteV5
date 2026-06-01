@@ -11,7 +11,7 @@
  *   3. Welcome + CTA (sign up or continue as guest)
  */
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { HIVES, type HiveId } from "@/contexts/HiveContext";
 
@@ -21,7 +21,7 @@ interface OnboardingProps {
   onComplete: (hive?: HiveId, language?: string) => void;
 }
 
-type Step = "hive" | "language" | "welcome";
+type Step = "fomo" | "hive" | "language" | "welcome";
 
 const LANGUAGES = [
   { code: "fr", label: "Français", flag: "🇨🇦" },
@@ -29,6 +29,67 @@ const LANGUAGES = [
   { code: "pt", label: "Português", flag: "🇧🇷" },
   { code: "en", label: "English", flag: "🌐" },
 ];
+
+// ─── Step 0: FOMO Splash ─────────────────────────────────────────────────────
+
+const FOMOSplash: React.FC<{ onNext: () => void }> = ({ onNext }) => {
+  const [visible, setVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Fade in
+    const fadeIn = setTimeout(() => setVisible(true), 50);
+    // Auto-advance after 3.5 seconds
+    timerRef.current = setTimeout(() => onNext(), 3500);
+    return () => {
+      clearTimeout(fadeIn);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [onNext]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 cursor-pointer"
+      onClick={() => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        onNext();
+      }}
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 0.4s ease",
+      }}
+    >
+      {/* Full-screen image */}
+      <img
+        src="/ad_story_fomo.jpg"
+        alt="Rejoins la scène"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      {/* Subtle vignette */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.5) 100%)",
+        }}
+      />
+      {/* Tap to continue hint */}
+      <div
+        className="absolute bottom-10 left-0 right-0 flex flex-col items-center gap-2"
+        style={{ animation: "pulse 2s infinite" }}
+      >
+        <div className="w-8 h-8 rounded-full border-2 border-white/60 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white/80">
+            <path d="M12 16l-6-6h12z" />
+          </svg>
+        </div>
+        <span className="text-white/60 text-xs tracking-widest uppercase">
+          Appuyer pour continuer
+        </span>
+      </div>
+    </div>
+  );
+};
 
 // ─── Overlay background (videos visible + blurred behind) ────────────────────
 
@@ -318,7 +379,7 @@ const WelcomeStep: React.FC<{
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<Step>("hive");
+  const [step, setStep] = useState<Step>("fomo");
   const [selectedHive, setSelectedHive] = useState<HiveId | null>(() => {
     const stored = localStorage.getItem("zyeute_hive_id") as HiveId | null;
     return stored && Object.keys(HIVES).includes(stored) ? stored : null;
@@ -344,32 +405,39 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     [selectedHive, selectedLanguage, onComplete, navigate],
   );
 
+  const handleFOMONext = useCallback(() => setStep("hive"), []);
+
   return (
-    <OverlayBackdrop>
-      {step === "hive" && (
-        <HiveStep
-          selected={selectedHive}
-          onSelect={setSelectedHive}
-          onNext={() => setStep("language")}
-        />
+    <>
+      {step === "fomo" && <FOMOSplash onNext={handleFOMONext} />}
+      {step !== "fomo" && (
+        <OverlayBackdrop>
+          {step === "hive" && (
+            <HiveStep
+              selected={selectedHive}
+              onSelect={setSelectedHive}
+              onNext={() => setStep("language")}
+            />
+          )}
+          {step === "language" && (
+            <LanguageStep
+              selected={selectedLanguage}
+              onSelect={setSelectedLanguage}
+              onNext={() => setStep("welcome")}
+              onBack={() => setStep("hive")}
+            />
+          )}
+          {step === "welcome" && (
+            <WelcomeStep
+              hive={selectedHive}
+              onSignUp={() => handleComplete(true)}
+              onGuest={() => handleComplete(false)}
+              onBack={() => setStep("language")}
+            />
+          )}
+        </OverlayBackdrop>
       )}
-      {step === "language" && (
-        <LanguageStep
-          selected={selectedLanguage}
-          onSelect={setSelectedLanguage}
-          onNext={() => setStep("welcome")}
-          onBack={() => setStep("hive")}
-        />
-      )}
-      {step === "welcome" && (
-        <WelcomeStep
-          hive={selectedHive}
-          onSignUp={() => handleComplete(true)}
-          onGuest={() => handleComplete(false)}
-          onBack={() => setStep("language")}
-        />
-      )}
-    </OverlayBackdrop>
+    </>
   );
 };
 
