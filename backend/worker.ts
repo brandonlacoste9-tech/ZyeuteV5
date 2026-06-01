@@ -13,8 +13,36 @@ import {
   autoRemoveContent,
 } from "./services/contentModeration.js";
 
+const QUOTA_MSG = "max requests limit exceeded";
+
+/** Shut down a BullMQ worker cleanly when Upstash quota is exceeded */
+function makeQuotaHandler(
+  workerRef: { instance: Worker | null },
+  name: string,
+) {
+  return (err: Error) => {
+    if (err.message.includes(QUOTA_MSG)) {
+      console.warn(
+        `[${name}] 🚫 Redis quota exceeded — shutting down worker permanently`,
+      );
+      const w = workerRef.instance;
+      if (w) {
+        workerRef.instance = null;
+        w.close().catch(() => {
+          /* ignore */
+        });
+      }
+      return;
+    }
+    console.error(`[${name}] Redis connection error:`, err.message);
+  };
+}
+
 const connection = getBullMQConnection();
 
+const videoWorkerRef: { instance: Worker<VideoProcessingJob> | null } = {
+  instance: null,
+};
 let videoWorker: Worker<VideoProcessingJob>;
 
 try {
@@ -36,6 +64,7 @@ try {
       },
     },
   );
+  videoWorkerRef.instance = videoWorker;
 
   videoWorker.on("completed", (job) => {
     console.log(`[Worker] Job ${job.id} completed!`);
@@ -45,10 +74,10 @@ try {
     console.log(`[Worker] Job ${job?.id} failed with ${err.message}`);
   });
 
-  videoWorker.on("error", (err) => {
-    // Don't crash on connection lost, just log
-    console.error("[Worker] Redis connection error:", err.message);
-  });
+  videoWorker.on(
+    "error",
+    makeQuotaHandler(videoWorkerRef as any, "VideoWorker"),
+  );
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Video Worker:", e.message);
@@ -65,6 +94,7 @@ try {
 export { videoWorker, hlsVideoWorker };
 
 // --- MEMORY MINER WORKER ---
+const memoryWorkerRef: { instance: Worker | null } = { instance: null };
 let memoryWorker: Worker;
 try {
   if (!connection) {
@@ -112,6 +142,7 @@ try {
       },
     },
   );
+  memoryWorkerRef.instance = memoryWorker;
 
   memoryWorker.on("completed", (job) => {
     console.log(`[MemoryWorker] Job ${job.id} completed!`);
@@ -121,9 +152,10 @@ try {
     console.log(`[MemoryWorker] Job ${job?.id} failed with ${err.message}`);
   });
 
-  memoryWorker.on("error", (err) => {
-    console.error("[MemoryWorker] Redis connection error:", err.message);
-  });
+  memoryWorker.on(
+    "error",
+    makeQuotaHandler(memoryWorkerRef as any, "MemoryWorker"),
+  );
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Memory Worker:", e.message);
@@ -137,6 +169,7 @@ try {
 export { memoryWorker };
 
 // --- PRIVACY AUDITOR WORKER ---
+const privacyWorkerRef: { instance: Worker | null } = { instance: null };
 let privacyWorker: Worker;
 try {
   if (!connection) {
@@ -161,10 +194,12 @@ try {
       concurrency: 1,
     },
   );
+  privacyWorkerRef.instance = privacyWorker;
 
-  privacyWorker.on("error", (err) => {
-    console.error("[PrivacyWorker] Redis connection error:", err.message);
-  });
+  privacyWorker.on(
+    "error",
+    makeQuotaHandler(privacyWorkerRef as any, "PrivacyWorker"),
+  );
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Privacy Worker:", e.message);
@@ -189,6 +224,9 @@ export interface ModerationJob {
   reportReason?: string;
 }
 
+const moderationWorkerRef: { instance: Worker<ModerationJob> | null } = {
+  instance: null,
+};
 let moderationWorker: Worker<ModerationJob>;
 try {
   if (!connection) {
@@ -271,6 +309,8 @@ try {
     },
   );
 
+  moderationWorkerRef.instance = moderationWorker;
+
   moderationWorker.on("completed", (job) => {
     console.log(`[ModerationWorker] ✅ Job ${job.id} done`);
   });
@@ -279,9 +319,10 @@ try {
       `[ModerationWorker] ❌ Job ${job?.id} failed: ${err.message}`,
     );
   });
-  moderationWorker.on("error", (err) => {
-    console.error("[ModerationWorker] Redis error:", err.message);
-  });
+  moderationWorker.on(
+    "error",
+    makeQuotaHandler(moderationWorkerRef as any, "ModerationWorker"),
+  );
 } catch (e: any) {
   if (e.message !== "Redis connection not configured") {
     console.error("Failed to initialize Moderation Worker:", e.message);

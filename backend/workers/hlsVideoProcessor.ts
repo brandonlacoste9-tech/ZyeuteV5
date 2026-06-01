@@ -20,6 +20,11 @@ export interface HLSVideoJob {
 
 const connection = getBullMQConnection();
 
+const QUOTA_MSG = "max requests limit exceeded";
+const hlsWorkerRef: { instance: Worker<HLSVideoJob> | null } = {
+  instance: null,
+};
+
 let worker: Worker<HLSVideoJob>;
 
 if (!connection) {
@@ -84,11 +89,26 @@ if (!connection) {
     },
   );
 
+  hlsWorkerRef.instance = worker;
+
   worker.on("failed", (job, err) => {
     console.error(`[HLS Worker] Job ${job?.id} failed:`, err.message);
   });
 
   worker.on("error", (err) => {
+    if (err.message.includes(QUOTA_MSG)) {
+      console.warn(
+        "[HLS Worker] 🚫 Redis quota exceeded — shutting down HLS worker permanently",
+      );
+      const w = hlsWorkerRef.instance;
+      if (w) {
+        hlsWorkerRef.instance = null;
+        w.close().catch(() => {
+          /* ignore */
+        });
+      }
+      return;
+    }
     console.error("[HLS Worker] Redis error:", err.message);
   });
 }

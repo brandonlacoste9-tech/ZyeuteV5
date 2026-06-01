@@ -22,7 +22,10 @@ function parseRedisUrl(url: string) {
 
     // Robustness: Handle common copy-paste error where env var includes "REDIS_URL=" prefix
     if (fullUrl.startsWith("REDIS_URL=")) {
-      fullUrl = fullUrl.replace("REDIS_URL=", "").trim().replace(/^["']+|["']+$/g, "");
+      fullUrl = fullUrl
+        .replace("REDIS_URL=", "")
+        .trim()
+        .replace(/^["']+|["']+$/g, "");
     }
 
     if (!fullUrl.startsWith("redis://") && !fullUrl.startsWith("rediss://")) {
@@ -60,6 +63,10 @@ if (redisUrl) {
       ...parsed,
       maxRetriesPerRequest: null, // Required for BullMQ compatibility
       retryStrategy: (times: number) => {
+        // Never retry if quota is exceeded — stop immediately
+        if (redisQuotaExceeded) {
+          return null;
+        }
         if (times > 3) {
           logger.error(
             "[Redis] Max retries reached, stopping reconnection attempts",
@@ -85,6 +92,7 @@ if (redisUrl) {
         tls: process.env.REDIS_TLS === "true" ? {} : undefined,
         maxRetriesPerRequest: null,
         retryStrategy: (times: number) => {
+          if (redisQuotaExceeded) return null;
           if (times > 3) return null;
           return Math.min(times * 50, 2000);
         },
@@ -103,6 +111,7 @@ if (redisUrl) {
     tls: process.env.REDIS_TLS === "true" ? {} : undefined,
     maxRetriesPerRequest: null, // Required for BullMQ compatibility
     retryStrategy: (times: number) => {
+      if (redisQuotaExceeded) return null;
       if (times > 3) {
         logger.error(
           "[Redis] Max retries reached, stopping reconnection attempts",
@@ -128,9 +137,55 @@ let redisConnectionStatus: "connected" | "disconnected" | "not_configured" =
 let redisLastError: string | null = null;
 
 /**
+ * Quota-exceeded flag — set permanently when Upstash free tier limit is hit.
+ * Once true, all Redis operations are skipped and retries are stopped.
+ */
+let redisQuotaExceeded = false;
+
+/**
+ * Returns true if the error message indicates Upstash quota exhaustion.
+ */
+function isQuotaError(message: string): boolean {
+  return (
+    message.includes("max requests limit exceeded") ||
+    message.includes("ERR max daily requests")
+  );
+}
+
+/**
+ * Permanently disable Redis — called when quota is exceeded.
+ * Disconnects the ioredis client, nullifies it, and sets the quota flag
+ * so retryStrategy immediately returns null for any future connection attempts.
+ */
+function disableRedis(reason: string): void {
+  if (redisQuotaExceeded) return; // already disabled
+  redisQuotaExceeded = true;
+  redisConnectionStatus = "not_configured";
+  logger.warn(
+    `[Redis] 🚫 QUOTA EXCEEDED — permanently disabling Redis. Reason: ${reason}`,
+  );
+  logger.warn(
+    "[Redis] App will continue in degraded mode (no queues, no cache). Workers will not start.",
+  );
+  if (redisClient) {
+    try {
+      redisClient.disconnect();
+    } catch {
+      // best-effort
+    }
+    redisClient = null;
+  }
+}
+
+/**
  * Initialize Redis client with proper error handling and logging
  */
 export function initializeRedis(): Redis | null {
+  // Don't init if quota is exceeded
+  if (redisQuotaExceeded) {
+    return null;
+  }
+
   // Return existing client if already initialized
   if (redisClient) {
     return redisClient;
@@ -182,22 +237,35 @@ export function initializeRedis(): Redis | null {
     });
 
     redisClient.on("error", (err: any) => {
+      // Detect Upstash quota exhaustion — permanently disable Redis
+      if (isQuotaError(err.message)) {
+        disableRedis(err.message);
+        return;
+      }
       logger.error(`[Redis] ❌ Connection error: ${err.message}`);
       redisConnectionStatus = "disconnected";
       redisLastError = err.message;
     });
 
     redisClient.on("close", () => {
-      logger.warn("[Redis] Connection closed");
-      redisConnectionStatus = "disconnected";
+      if (!redisQuotaExceeded) {
+        logger.warn("[Redis] Connection closed");
+        redisConnectionStatus = "disconnected";
+      }
     });
 
     redisClient.on("reconnecting", (delay: number) => {
-      logger.info(`[Redis] Reconnecting in ${delay}ms...`);
+      if (!redisQuotaExceeded) {
+        logger.info(`[Redis] Reconnecting in ${delay}ms...`);
+      }
     });
 
     return redisClient;
   } catch (error: any) {
+    if (isQuotaError(error.message)) {
+      disableRedis(error.message);
+      return null;
+    }
     logger.error(`[Redis] Failed to initialize: ${error.message}`);
     redisConnectionStatus = "disconnected";
     redisLastError = error.message;
@@ -207,9 +275,12 @@ export function initializeRedis(): Redis | null {
 
 /**
  * Get the shared Redis client instance
- * Returns null if Redis is not configured or connection failed
+ * Returns null if Redis is not configured, connection failed, or quota exceeded
  */
 export function getRedisClient(): Redis | null {
+  if (redisQuotaExceeded) {
+    return null;
+  }
   if (!redisClient) {
     return initializeRedis();
   }
@@ -225,6 +296,15 @@ export async function checkRedisHealth(): Promise<{
   error?: string;
   latency?: number;
 }> {
+  // Quota exceeded — report as not_configured (degraded mode, not an error)
+  if (redisQuotaExceeded) {
+    return {
+      status: "not_configured",
+      message:
+        "Redis disabled — Upstash free tier quota exceeded. App running in degraded mode (no queues).",
+    };
+  }
+
   // Not configured - graceful degradation
   if (!process.env.REDIS_URL && !process.env.REDIS_HOST) {
     return {
@@ -256,6 +336,14 @@ export async function checkRedisHealth(): Promise<{
       latency,
     };
   } catch (error: any) {
+    if (isQuotaError(error.message)) {
+      disableRedis(error.message);
+      return {
+        status: "not_configured",
+        message: "Redis quota exceeded — disabled",
+        error: error.message,
+      };
+    }
     return {
       status: "disconnected",
       message: "Redis ping failed",
@@ -265,10 +353,13 @@ export async function checkRedisHealth(): Promise<{
 }
 
 /**
- * Get BullMQ-compatible connection configuration
- * Returns the same config object for connection pooling
+ * Get BullMQ-compatible connection configuration.
+ * Returns null if quota is exceeded so workers skip initialization entirely.
  */
 export function getBullMQConnection() {
+  if (redisQuotaExceeded) {
+    return null;
+  }
   return redisConfig;
 }
 

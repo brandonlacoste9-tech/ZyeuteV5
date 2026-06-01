@@ -121,11 +121,44 @@ const io = new SocketIOServer(httpServer, {
   if (redisUrl) {
     try {
       const { createAdapter } = await import("@socket.io/redis-adapter");
-      const { createClient } = await import("ioredis").then((m) => ({
-        createClient: (url: string) => new m.default(url),
-      }));
-      const pubClient = createClient(redisUrl);
-      const subClient = createClient(redisUrl);
+      const ioredis = await import("ioredis");
+      const QUOTA_MSG = "max requests limit exceeded";
+
+      const pubClient = new ioredis.default(redisUrl, {
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => {
+          // Stop immediately on quota errors
+          if ((pubClient as any)._quotaExceeded) return null;
+          if (times > 3) return null;
+          return Math.min(times * 50, 2000);
+        },
+      });
+      const subClient = new ioredis.default(redisUrl, {
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => {
+          if ((subClient as any)._quotaExceeded) return null;
+          if (times > 3) return null;
+          return Math.min(times * 50, 2000);
+        },
+      });
+
+      // Detect quota error and permanently stop both clients
+      const handleQuota = (client: any, name: string) => (err: Error) => {
+        if (err.message.includes(QUOTA_MSG)) {
+          client._quotaExceeded = true;
+          console.warn(
+            `[Socket.IO Redis ${name}] 🚫 Quota exceeded — disabling adapter`,
+          );
+          try {
+            client.disconnect();
+          } catch {
+            /* ignore */
+          }
+        }
+      };
+      pubClient.on("error", handleQuota(pubClient, "pub"));
+      subClient.on("error", handleQuota(subClient, "sub"));
+
       io.adapter(createAdapter(pubClient as any, subClient as any));
       console.log(
         "✅ Socket.IO Redis adapter connected (multi-instance ready)",
