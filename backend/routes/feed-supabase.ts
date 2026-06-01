@@ -51,7 +51,11 @@ router.get("/feed/supabase", async (req, res) => {
         )
       `;
 
-    const baseFilters = (q: ReturnType<typeof supabase.from>) =>
+    const baseFilters = (
+      q:
+        | ReturnType<typeof supabase.from>
+        | ReturnType<ReturnType<typeof supabase.from>["select"]>,
+    ) =>
       (q as any)
         .eq("visibility", "public")
         .eq("est_masque", false)

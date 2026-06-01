@@ -487,16 +487,14 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
     const updated = await storage.updateUser(req.userId!, normalized);
 
     // preferred_language is not in the Drizzle schema yet — persist via supabaseAdmin REST
-    if (rawData.preferred_language !== undefined) {
-      supabaseAdmin
+    if (rawData.preferred_language !== undefined && supabaseAdmin) {
+      void supabaseAdmin
         .from("user_profiles")
         .update({
           preferred_language: rawData.preferred_language,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", req.userId!)
-        .then(() => {}) // fire-and-forget
-        .catch(() => {});
+        .eq("id", req.userId!);
     }
 
     if (!updated) {
