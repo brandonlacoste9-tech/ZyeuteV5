@@ -721,29 +721,27 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // Initial fetch - fetch if no saved state OR if saved state has no posts
   useEffect(() => {
     let callbackId: any = null;
+    let cancelled = false;
 
     if (!savedState || !savedState.posts?.length || posts.length === 0) {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
 
-      if ("requestIdleCallback" in window) {
-        callbackId = (window as any).requestIdleCallback(() =>
-          fetchVideoFeed(),
-        );
-      } else {
-        callbackId = setTimeout(() => fetchVideoFeed(), 1);
-      }
+      // Use a plain timeout instead of requestIdleCallback to avoid
+      // StrictMode cancellation racing with the idle scheduler.
+      callbackId = setTimeout(() => {
+        if (!cancelled) fetchVideoFeed();
+      }, 50);
     } else {
       setIsLoading(false);
     }
 
     return () => {
+      cancelled = true;
+      // Reset so the second StrictMode mount can re-initialize
+      hasInitializedRef.current = false;
       if (callbackId !== null) {
-        if ("cancelIdleCallback" in window) {
-          (window as any).cancelIdleCallback(callbackId);
-        } else {
-          clearTimeout(callbackId);
-        }
+        clearTimeout(callbackId);
       }
     };
   }, [fetchVideoFeed, savedState, posts.length]);
