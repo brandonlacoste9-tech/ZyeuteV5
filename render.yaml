@@ -32,11 +32,11 @@ services:
 
       # ── Mux Video ─────────────────────────────────────────────────────────
       - key: MUX_TOKEN_ID
-        value: f6fab3e6-f183-4b26-9c2a-eae624b3f618
+        sync: false
       - key: MUX_TOKEN_SECRET
         sync: false   # from .env.render
       - key: MUX_WEBHOOK_SECRET
-        value: jd5147g8hk2512bhiu4tjj70nncr4ose
+        sync: false
       - key: FRONTEND_URL
         value: https://zyeute.vercel.app
 
@@ -64,7 +64,7 @@ services:
 
       # ── TikTok Feed ───────────────────────────────────────────────────────
       - key: TIKAPI_KEY
-        value: yXLCoviSdnsjASe0N2aso6kmdnGPeZt8Ud9vJlRIPKKVtfUf
+        sync: false
       - key: PEXELS_API_KEY
         sync: false
 
@@ -110,11 +110,11 @@ services:
 
       # ── Mux (HLS video ingestion) ─────────────────────────────────────────
       - key: MUX_TOKEN_ID
-        value: f6fab3e6-f183-4b26-9c2a-eae624b3f618
+        sync: false
       - key: MUX_TOKEN_SECRET
         sync: false
       - key: MUX_WEBHOOK_SECRET
-        value: jd5147g8hk2512bhiu4tjj70nncr4ose
+        sync: false
 
       # ── AI Scouting (Gemini) ──────────────────────────────────────────────
       - key: GEMINI_API_KEY

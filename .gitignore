@@ -88,3 +88,4 @@ video-diag-output.txt
 /Home.tsx
 /QUICK_START_CLAUDE_CODE.txt
 /.empty-commit-placeholder
+.env.render

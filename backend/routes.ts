@@ -161,7 +161,10 @@ export async function registerRoutes(
   // [HIVE] Incoming events from Colony OS / n8n
   app.post("/api/hive/event", async (req, res) => {
     const secret = req.headers["x-hive-secret"];
-    const expected = process.env.HIVE_SECRET_KEY || "zyeute-hive-secret-2026";
+    const expected = process.env.HIVE_SECRET_KEY;
+    if (!expected) {
+      return res.status(500).json({ error: "HIVE_SECRET_KEY not configured" });
+    }
 
     if (secret !== expected) {
       return res.status(401).json({ error: "Hive Secret Invalid" });
@@ -343,7 +346,7 @@ export async function registerRoutes(
   // ============ MODERATION & PRESENCE ============
   app.use("/api/creator", requireAuth, creatorRevenueRoutes);
   app.use("/api/moderation", requireAuth, moderationRoutes);
-  app.use("/api/admin/flagging", flaggingRoutes);
+  app.use("/api/admin/flagging", attachBearerUserId, flaggingRoutes);
   app.use("/api/remix", remixRoutes);
   app.use("/api/sounds", soundRoutes);
   app.use("/api", attachBearerUserId, watchEventsRoutes);
