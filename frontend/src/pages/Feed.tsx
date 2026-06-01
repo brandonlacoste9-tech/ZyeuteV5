@@ -89,7 +89,8 @@ export const Feed: React.FC = () => {
   const hasFetchedUser = React.useRef(false);
   const hasFetchedStories = React.useRef(false);
 
-  const { showOnboarding, isChecked, completeOnboarding } = useOnboarding();
+  const { showOnboarding, isChecked, completeOnboarding, notifyVideoScrolled } =
+    useOnboarding();
   const { incrementViews } = useGuestMode();
 
   // Gift modal state
@@ -340,7 +341,7 @@ export const Feed: React.FC = () => {
         <ErrorBoundary
           fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
         >
-          <ContinuousFeed />
+          <ContinuousFeed onVideoChange={() => notifyVideoScrolled()} />
         </ErrorBoundary>
       </div>
 
