@@ -236,7 +236,7 @@ router.get("/explore/supabase", async (req, res) => {
     const hiveId = req.query.hive as string | undefined;
     const region = req.query.region as string | undefined;
 
-    let query = supabase
+    const query = supabase
       .from("publications")
       .select(
         `
@@ -256,14 +256,8 @@ router.get("/explore/supabase", async (req, res) => {
         "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
       )
       .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (hiveId) {
-      query = query.eq("hive_id", hiveId);
-    }
-    if (region) {
-      query = query.eq("region_id", region);
-    }
+      // Over-fetch so JS hive filter still returns `limit` results
+      .limit(limit * 8);
 
     const { data: posts, error } = await query;
 
@@ -274,8 +268,15 @@ router.get("/explore/supabase", async (req, res) => {
       });
     }
 
+    // Filter by hive/region in JS — PostgREST .eq() silently ignores enum columns
+    const filtered = (posts || []).filter((p: any) => {
+      if (hiveId && String(p.hive_id) !== hiveId) return false;
+      if (region && p.region_id !== region) return false;
+      return true;
+    });
+
     res.json({
-      posts: posts || [],
+      posts: filtered.slice(0, limit),
       hiveId: hiveId || "all",
     });
   } catch (error: any) {
