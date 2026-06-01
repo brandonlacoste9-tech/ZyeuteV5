@@ -276,13 +276,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [src, isHlsSrc, autoPlay, hlsReloadNonce]);
 
-  // Pause HLS when not autoPlay
+  // Pause/play on autoPlay change — covers ALL source types (HLS + MP4 + MSE)
+  // This is the critical fix for audio rollover when swiping between feed videos.
   useEffect(() => {
-    if (!isHlsSrc || !videoRef.current) return;
-    if (!autoPlay) {
+    if (!videoRef.current) return;
+    if (autoPlay) {
+      videoRef.current.play().catch(() => {});
+    } else {
       videoRef.current.pause();
+      videoRef.current.currentTime = 0; // reset to start for next time
     }
-  }, [isHlsSrc, autoPlay]);
+  }, [autoPlay]);
 
   // Metrics
   const metricsRef = useRef({

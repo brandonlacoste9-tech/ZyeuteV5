@@ -64,6 +64,19 @@ export function MuxVideoPlayer({
     return () => clearTimeout(t);
   }, [playbackId]);
 
+  // Imperatively pause/play when autoPlay (isActive) changes.
+  // This is the critical fix for audio rollover between feed videos.
+  useEffect(() => {
+    const video = playerRef.current?.media as HTMLVideoElement | null;
+    if (!video) return;
+    if (autoPlay) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+      video.currentTime = 0; // reset so next time it starts from beginning
+    }
+  }, [autoPlay]);
+
   // Monitor for freezes (time not advancing despite playing)
   useEffect(() => {
     if (!autoPlay) return;
