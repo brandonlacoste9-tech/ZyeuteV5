@@ -98,6 +98,7 @@ interface Message {
   senderId: string;
   createdAt: string;
   deletedAt?: string | null;
+  isRead?: boolean;
   sender?: { username: string; avatarUrl?: string };
 }
 interface SearchUser {

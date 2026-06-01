@@ -123,7 +123,7 @@ export const Feed: React.FC = () => {
 
         // Auto-detect hive/language if not already set
         const storedHive = localStorage.getItem("zyeute_hive_id");
-        if (!user.hiveId || !storedHive) {
+        if (!(user as any).hiveId || !storedHive) {
           const detectedHive = detectHiveFromBrowser();
           const detectedLang = detectLanguageFromBrowser();
           const detectedRegion = detectRegionFromTimezone(detectedHive);

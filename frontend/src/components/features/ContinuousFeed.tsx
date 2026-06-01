@@ -590,7 +590,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     try {
       // Fetch first page with Hive filtering
-      const data = await getExplorePosts(0, 10, HIVE_ID);
+      const data = await getExplorePosts(0, 10, undefined, HIVE_ID);
       console.log(
         "[ContinuousFeed] API returned:",
         data?.length || 0,
@@ -620,7 +620,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             const seedData = await seedRes.json();
             if (seedData.posts?.length > 0) {
               feedLogger.info("Auto-seed successful, re-fetching feed...");
-              const reseeded = await getExplorePosts(0, 10, HIVE_ID);
+              const reseeded = await getExplorePosts(0, 10, undefined, HIVE_ID);
               if (reseeded && reseeded.length > 0) {
                 const valid = reseeded.filter((p: any) => {
                   if (!p || !p.user) return false;
@@ -680,7 +680,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     try {
       const nextPage = page + 1;
       // Fetch next page with Hive filtering
-      const data = await getExplorePosts(nextPage, 10, HIVE_ID);
+      const data = await getExplorePosts(nextPage, 10, undefined, HIVE_ID);
 
       if (data && data.length > 0) {
         const validPosts = data.filter((p) => {

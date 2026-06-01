@@ -233,8 +233,10 @@ router.get("/explore/supabase", async (req, res) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
+    const hiveId = req.query.hive as string | undefined;
+    const region = req.query.region as string | undefined;
 
-    const { data: posts, error } = await supabase
+    let query = supabase
       .from("publications")
       .select(
         `
@@ -256,6 +258,15 @@ router.get("/explore/supabase", async (req, res) => {
       .order("created_at", { ascending: false })
       .limit(limit);
 
+    if (hiveId) {
+      query = query.eq("hive_id", hiveId);
+    }
+    if (region) {
+      query = query.eq("region_id", region);
+    }
+
+    const { data: posts, error } = await query;
+
     if (error) {
       return res.status(500).json({
         error: "Database error",
@@ -265,7 +276,7 @@ router.get("/explore/supabase", async (req, res) => {
 
     res.json({
       posts: posts || [],
-      hiveId: "quebec",
+      hiveId: hiveId || "all",
     });
   } catch (error: any) {
     console.error("Explore error:", error);
