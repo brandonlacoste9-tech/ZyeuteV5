@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/refs */
 /**
  * VideoPlayer - Advanced video player with TikTok-style controls
  */
@@ -48,6 +47,8 @@ export interface VideoPlayerProps {
   onPause?: () => void;
   /** Called when playback reaches 70% (for prefetching next videos) */
   onProgress?: (progress: number) => void;
+  /** Called when playback crosses 25/50/75/100% — for watch event tracking */
+  onWatchThreshold?: (pct: number, currentTimeMs: number) => void;
   style?: React.CSSProperties;
   videoStyle?: React.CSSProperties;
   priority?: boolean;
@@ -71,6 +72,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPlay,
   onPause,
   onProgress,
+  onWatchThreshold,
   style,
   videoStyle,
   priority = false,
@@ -97,6 +99,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const MAX_RETRIES = 3;
   const stallTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progress70FiredRef = useRef(false);
+  const watchThresholdsFiredRef = useRef<Set<number>>(new Set());
   const [bufferProgress, setBufferProgress] = useState(0);
 
   // TikTok-style speed controls
@@ -386,9 +389,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const vs = latestVideoSourceRef.current;
         if (vs?.type !== "partial-chunks") return;
 
-        const mimeType = vs.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+        const mimeType =
+          vs.mimeType || 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
         if (!MediaSource.isTypeSupported(mimeType)) {
-          videoPlayerLogger.warn(`MSE Type not supported: ${mimeType}. Falling back to URL.`);
+          videoPlayerLogger.warn(
+            `MSE Type not supported: ${mimeType}. Falling back to URL.`,
+          );
           setMseUrl(null);
           return;
         }
@@ -596,6 +602,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleManualRetry = useCallback(() => {
     retryCountRef.current = 0;
     progress70FiredRef.current = false;
+    watchThresholdsFiredRef.current = new Set();
     setBufferProgress(0);
     setReadiness("loading");
 
@@ -874,11 +881,24 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
-      if (onProgress && video.duration > 0 && !progress70FiredRef.current) {
+      if (video.duration > 0) {
         const progress = video.currentTime / video.duration;
-        if (progress >= 0.7) {
+        if (onProgress && !progress70FiredRef.current && progress >= 0.7) {
           progress70FiredRef.current = true;
           onProgress(progress);
+        }
+        // Fire watch threshold callbacks at 25/50/75/100%
+        if (onWatchThreshold) {
+          const thresholds = [25, 50, 75, 100] as const;
+          for (const t of thresholds) {
+            if (
+              !watchThresholdsFiredRef.current.has(t) &&
+              progress >= t / 100
+            ) {
+              watchThresholdsFiredRef.current.add(t);
+              onWatchThreshold(t, Math.floor(video.currentTime * 1000));
+            }
+          }
         }
       }
     };
@@ -908,6 +928,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("ended", handleEnded);
       progress70FiredRef.current = false;
+      watchThresholdsFiredRef.current = new Set();
 
       // Log Metrics on unmount
       if (metrics.startTime) {
@@ -926,7 +947,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         stallTimerRef.current = null;
       }
     };
-  }, [onEnded, onProgress, src, mseUrl, videoSource]);
+  }, [onEnded, onProgress, onWatchThreshold, src, mseUrl, videoSource]);
 
   // Hard cleanup to stop buffering/decoding immediately on unmount or src change
   useEffect(() => {
@@ -1198,9 +1219,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
       {/* Play/Pause Overlay */}
-      {!isPlaying &&
-        readiness !== "loading" &&
-        readiness !== "error" && (
+      {!isPlaying && readiness !== "loading" && readiness !== "error" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <button
             onClick={(e) => {

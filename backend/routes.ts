@@ -29,6 +29,7 @@ import { presenceRouter } from "./routes/presence.js";
 import flaggingRoutes from "./routes/user-flagging.js";
 import remixRoutes from "./routes/remix.js";
 import soundRoutes from "./routes/sounds.js";
+import watchEventsRoutes from "./routes/watchEvents.js";
 import studioRoutes from "./routes/studio.js";
 import muxRoutes from "./routes/mux.js";
 import liveRoutes from "./routes/live.js";
@@ -345,6 +346,7 @@ export async function registerRoutes(
   app.use("/api/admin/flagging", flaggingRoutes);
   app.use("/api/remix", remixRoutes);
   app.use("/api/sounds", soundRoutes);
+  app.use("/api", attachBearerUserId, watchEventsRoutes);
   app.use("/api/presence", presenceRouter);
 
   // [DEPRECATED] Manual Vertex AI routes replaced by centralized aiRoutes

@@ -61,12 +61,30 @@ export async function getSmartRecommendationsV3(
         ((p.quebec_score + 1) * (LN(COALESCE(p.reactions_count, 0) * 1 + COALESCE(p.shares_count, 0) * 3 + COALESCE(p.piasse_count, 0) * 5 + 1) + 1))
         / 
         POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at))/3600 + 2, 1.8)
-      ) as momentum_score
+      ) as momentum_score,
+      (
+        COALESCE(p.reactions_count, 0) * 3 +
+        COALESCE(p.comments_count, 0) * 5 +
+        COALESCE(p.view_count, 0) * 1 +
+        COALESCE(avg_watch.avg_pct, 0) * 2
+      ) as engagement_score
     FROM publications p
     JOIN user_profiles u ON p.user_id = u.id
+    LEFT JOIN (
+      SELECT post_id, AVG(watch_pct) as avg_pct
+      FROM watch_events
+      GROUP BY post_id
+    ) avg_watch ON avg_watch.post_id = p.id
     WHERE p.hive_id = ${hiveId}
       AND (p.is_moderated = false OR p.moderation_approved = true)
-    ORDER BY momentum_score DESC
+    ORDER BY (
+      (
+        COALESCE(p.reactions_count, 0) * 3 +
+        COALESCE(p.comments_count, 0) * 5 +
+        COALESCE(p.view_count, 0) * 1 +
+        COALESCE(avg_watch.avg_pct, 0) * 2
+      ) * 0.7 + EXTRACT(EPOCH FROM (NOW() - p.created_at)) / -86400.0 * 30
+    ) DESC
     LIMIT ${limit}
   `);
 

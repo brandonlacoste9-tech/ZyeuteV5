@@ -3,7 +3,7 @@
  * Optimized for Zyeuté V5 with advanced prefetching and hardware acceleration
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   MessageCircle,
   Share2,
@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { DoubleTapHeart } from "./DoubleTapHeart";
 import { CommentBottomSheet } from "./CommentBottomSheet";
+import { apiCall } from "@/services/api";
 
 interface SingleVideoViewProps {
   post: Post & { user?: User };
@@ -76,6 +77,30 @@ export function SingleVideoView({
     if (!post.visualFilter || post.visualFilter === "none") return {};
     return { filter: post.visualFilter };
   }, [post.visualFilter]);
+
+  // Watch tracking: fire-and-forget POST to /api/watch at 25/50/75/100% thresholds
+  const watchPostIdRef = useRef<string | null>(null);
+  // Reset tracked post when post changes
+  useEffect(() => {
+    watchPostIdRef.current = post.id;
+  }, [post.id]);
+
+  const handleWatchThreshold = useCallback(
+    (pct: number, currentTimeMs: number) => {
+      if (!currentUser) return;
+      // Fire-and-forget: no await, no error handling
+      apiCall("/watch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          post_id: watchPostIdRef.current || post.id,
+          watch_pct: pct,
+          watch_ms: currentTimeMs,
+        }),
+      });
+    },
+    [currentUser, post.id],
+  );
 
   const handleLike = useCallback(
     (e?: React.MouseEvent) => {
@@ -158,6 +183,7 @@ export function SingleVideoView({
             videoSource={videoSource}
             debug={debug}
             onProgress={isActive ? onVideoProgress : undefined}
+            onWatchThreshold={isActive ? handleWatchThreshold : undefined}
             onEnded={onVideoEnd}
           />
         )}
