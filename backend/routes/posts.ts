@@ -350,6 +350,17 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
       ? new Date(Date.now() + 24 * 60 * 60 * 1000)
       : undefined;
 
+    const langMap: Record<string, string> = {
+      quebec: "fr",
+      mexico: "es",
+      argentina: "es",
+      brazil: "pt",
+    };
+    const language =
+      body.language ||
+      langMap[body.hive_id || parsed.data.hiveId || ""] ||
+      "fr";
+
     const validatedType =
       body.videoType === "mux"
         ? "video"
@@ -388,6 +399,7 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
           max_views: maxViews || null,
           expires_at: expiresAt || null,
           video_source: body.videoType || "upload",
+          language,
         })
         .select()
         .single();

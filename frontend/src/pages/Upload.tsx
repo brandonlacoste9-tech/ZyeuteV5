@@ -219,6 +219,7 @@ export const Upload: React.FC = () => {
           videoType: "mux",
           muxData,
           caption,
+          language: localStorage.getItem("zyeute_language") || "fr",
         });
         if (!post) throw new Error("Erreur création post MUX");
         toast.success("Vidéo publiée! En cours de traitement... 🔥");
@@ -240,6 +241,7 @@ export const Upload: React.FC = () => {
           caption: caption || "Généré avec l'IA Studio Comète ☄️",
           soundId: selectedSound?.id,
           hive: "quebec", // Default to quebec for AI generation
+          language: localStorage.getItem("zyeute_language") || "fr",
         });
 
         if (post) {

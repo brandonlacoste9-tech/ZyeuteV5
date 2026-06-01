@@ -342,6 +342,7 @@ export async function createPost(postData: {
   isEphemeral?: boolean;
   soundId?: string;
   hive?: string;
+  language?: string;
   /** MUX direct upload - create post from MUX asset */
   videoType?: "mux";
   muxData?: { assetId: string; playbackId: string; uploadId: string };
@@ -896,10 +897,17 @@ export async function surgicalUpload(
     const formData = new FormData();
     formData.append("video", file);
     if (caption) formData.append("caption", caption);
-    formData.append(
-      "hiveId",
-      localStorage.getItem("zyeute_hive_id") || "quebec",
-    );
+    const hiveId = localStorage.getItem("zyeute_hive_id") || "quebec";
+    formData.append("hiveId", hiveId);
+    const langMap: Record<string, string> = {
+      quebec: "fr",
+      mexico: "es",
+      argentina: "es",
+      brazil: "pt",
+    };
+    const language =
+      localStorage.getItem("zyeute_language") || langMap[hiveId] || "fr";
+    formData.append("language", language);
 
     // Get auth token for the upload
     const {

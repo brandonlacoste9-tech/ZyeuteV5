@@ -26,12 +26,22 @@ router.get("/feed/supabase", async (req, res) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
+    const userId = (req as any).userId as string | undefined;
 
-    // Get posts with user data using Supabase
-    const { data: posts, error } = await supabase
-      .from("publications")
-      .select(
-        `
+    // Determine user's preferred language if logged in
+    let preferredLanguage: string | null = null;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("preferred_language")
+        .eq("user_id", userId)
+        .single();
+      if (profile?.preferred_language) {
+        preferredLanguage = profile.preferred_language;
+      }
+    }
+
+    const selectFields = `
         *,
         user:user_id (
           id,
@@ -39,34 +49,79 @@ router.get("/feed/supabase", async (req, res) => {
           display_name,
           avatar_url
         )
-      `,
-      )
-      .eq("visibility", "public")
-      .eq("est_masque", false)
-      .is("deleted_at", null)
-      .or(
-        "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
-      )
-      .order("created_at", { ascending: false })
-      .limit(limit);
+      `;
 
-    if (error) {
-      return res.status(500).json({
-        error: "Database error",
-        details: error.message,
-      });
-    }
+    const baseFilters = (q: ReturnType<typeof supabase.from>) =>
+      (q as any)
+        .eq("visibility", "public")
+        .eq("est_masque", false)
+        .is("deleted_at", null)
+        .or(
+          "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+        )
+        .order("created_at", { ascending: false });
 
-    // Format posts to match expected structure
-    const formattedPosts =
-      posts?.map((post: any) => ({
+    let formattedPosts: any[];
+
+    if (preferredLanguage) {
+      // Two-query language boost: same-language posts first
+      const [
+        { data: sameLang, error: err1 },
+        { data: otherLang, error: err2 },
+      ] = await Promise.all([
+        baseFilters(
+          supabase
+            .from("publications")
+            .select(selectFields)
+            .eq("language", preferredLanguage),
+        ).limit(15),
+        baseFilters(
+          supabase
+            .from("publications")
+            .select(selectFields)
+            .neq("language", preferredLanguage),
+        ).limit(5),
+      ]);
+
+      if (err1 || err2) {
+        return res.status(500).json({
+          error: "Database error",
+          details: (err1 || err2)?.message,
+        });
+      }
+
+      const merged = [...(sameLang || []), ...(otherLang || [])];
+      formattedPosts = merged.map((post: any) => ({
         ...post,
         user: post.user || {
           id: post.user_id,
           username: "unknown",
           display_name: "Unknown User",
         },
-      })) || [];
+      }));
+    } else {
+      // Default: no language boost
+      const { data: posts, error } = await baseFilters(
+        supabase.from("publications").select(selectFields),
+      ).limit(limit);
+
+      if (error) {
+        return res.status(500).json({
+          error: "Database error",
+          details: error.message,
+        });
+      }
+
+      formattedPosts =
+        posts?.map((post: any) => ({
+          ...post,
+          user: post.user || {
+            id: post.user_id,
+            username: "unknown",
+            display_name: "Unknown User",
+          },
+        })) || [];
+    }
 
     res.json({
       posts: formattedPosts,
