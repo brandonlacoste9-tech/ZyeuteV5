@@ -8,8 +8,10 @@ const PROXY_DOMAINS = [
   "assets.mixkit.co",
   "unsplash.com",
   "images.unsplash.com",
-  "videos.pexels.com",
-  "images.pexels.com",
+  // Note: videos.pexels.com and images.pexels.com are intentionally excluded —
+  // Pexels enforces hotlink protection on server-side requests (returns 403 via
+  // /api/media-proxy) but allows direct browser playback. Pexels URLs must be
+  // returned as-is so the browser <video> tag fetches them directly.
   // Note: stream.mux.com is intentionally excluded — MuxVideoPlayer handles
   // its own HLS streaming natively and must never go through this proxy.
   // Note: supabase.co is excluded — direct Supabase storage URLs work without
