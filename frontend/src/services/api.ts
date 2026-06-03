@@ -634,6 +634,14 @@ export async function getFollowing(userId: string): Promise<User[]> {
   return (data.following || []).map(mapBackendUser);
 }
 
+export async function getFriends(userId: string): Promise<User[]> {
+  const { data, error } = await apiCall<{ friends: User[] }>(
+    `/users/${userId}/friends`,
+  );
+  if (error || !data) return [];
+  return (data.friends || []).map(mapBackendUser);
+}
+
 // ============ STORIES FUNCTIONS ============
 
 export async function getStories(

@@ -1,32 +1,27 @@
-import { config } from "dotenv";
-import { join } from "path";
 import { createClient } from "@supabase/supabase-js";
+import * as dotenv from "dotenv";
+import { join } from "path";
 
-config({ path: join(process.cwd(), ".env") });
+dotenv.config({ path: join(process.cwd(), ".env.local") });
 
-async function main() {
-  const url = process.env.VITE_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
+async function testREST() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  console.log("URL:", supabaseUrl);
+  console.log("Key:", supabaseKey?.substring(0, 10) + "...");
+
+  const supabase = createClient(supabaseUrl!, supabaseKey!);
   
-  console.log("Testing Supabase REST Client...");
-  console.log("URL:", url);
-  
-  const supabase = createClient(url, key);
-  
-  try {
-    const { data, error } = await supabase.from('user_profiles').select('count', { count: 'exact', head: true });
-    
-    if (error) {
-      console.error("❌ REST Error:", error.message);
-      if (error.details) console.error("Details:", error.details);
-      if (error.hint) console.error("Hint:", error.hint);
-    } else {
-      console.log("✅ REST Success!");
-      console.log("User profiles count:", data);
-    }
-  } catch (err: any) {
-    console.error("❌ Unexpected Error:", err.message);
+  const { data, error } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .limit(1);
+
+  if (error) {
+    console.error("REST API Error:", error.message);
+  } else {
+    console.log("REST API Success! Users:", data);
   }
 }
 
-main();
+testREST();

@@ -584,6 +584,23 @@ router.get("/users/:id/following", async (req: Request, res: Response) => {
   }
 });
 
+// Get friends (mutual followers)
+router.get("/users/:id/friends", async (req: Request, res: Response) => {
+  try {
+    const followers = await storage.getFollowers(req.params.id as string);
+    const following = await storage.getFollowing(req.params.id as string);
+    
+    // Find mutuals
+    const followerIds = new Set(followers.map(f => f.id));
+    const friends = following.filter(f => followerIds.has(f.id));
+    
+    res.json({ friends });
+  } catch (error) {
+    console.error("Get friends error:", error);
+    res.status(500).json({ error: "Failed to get friends" });
+  }
+});
+
 // ============ AVATAR UPLOAD ROUTE ============
 // POST /api/users/me/avatar — upload avatar image to Supabase Storage via service key
 router.post(

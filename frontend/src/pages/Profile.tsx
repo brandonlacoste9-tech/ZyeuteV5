@@ -38,7 +38,6 @@ import {
   getTierMeta,
   type GamificationProfile,
 } from "@/services/gamificationService";
-import { FollowersModal } from "@/components/features/FollowersModal";
 
 const profileLogger = logger.withContext("Profile");
 
@@ -83,8 +82,6 @@ export const Profile: React.FC = () => {
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [isBlocked, setIsBlocked] = React.useState(false);
   const [isBlocking, setIsBlocking] = React.useState(false);
-  const [showFollowersModal, setShowFollowersModal] = React.useState(false);
-  const [modalType, setModalType] = React.useState<"followers" | "following">("followers");
 
   const handleBlock = async () => {
     if (!currentUser || !user || isBlocking) return;
@@ -562,8 +559,7 @@ export const Profile: React.FC = () => {
               value={formatNumber(user.followers_count || 0)}
               label="Abonnés"
               onClick={() => {
-                setModalType("followers");
-                setShowFollowersModal(true);
+                navigate(`/profile/${user.username}/network?tab=abonnes`);
               }}
             />
             <div
@@ -574,8 +570,7 @@ export const Profile: React.FC = () => {
               value={formatNumber(user.following_count || 0)}
               label="Abonnements"
               onClick={() => {
-                setModalType("following");
-                setShowFollowersModal(true);
+                navigate(`/profile/${user.username}/network?tab=abonnements`);
               }}
             />
             <div
@@ -1066,13 +1061,7 @@ export const Profile: React.FC = () => {
           <span className="text-gold-500">⚜️</span>
         </p>
       </div>
-  
-      <FollowersModal
-        isOpen={showFollowersModal}
-        onClose={() => setShowFollowersModal(false)}
-        userId={user.id}
-        type={modalType}
-      />
+
       <BottomNav />
     </div>
   );

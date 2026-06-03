@@ -54,6 +54,7 @@ const LiveDiscoverPage = lazy(() => import("@/pages/LiveDiscover"));
 const EmailPreferencesPage = lazy(() => import("@/pages/EmailPreferences"));
 const AnalyticsPage = lazy(() => import("@/pages/Analytics"));
 const CreatorRevenuePage = lazy(() => import("@/pages/CreatorRevenue"));
+const NetworkPage = lazy(() => import("@/pages/Network"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -234,6 +235,7 @@ export function AppRoutes() {
         <Route path="/search" element={<ExplorePage />} />
         <Route path="/p/:id" element={<PostDetailPage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/profile/:username/network" element={<NetworkPage />} />
         <Route path="/premium" element={<PremiumPage />} />
         <Route path="/store" element={<StorePage />} />
         <Route path="/wallet" element={<WalletPage />} />
