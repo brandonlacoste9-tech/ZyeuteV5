@@ -13,10 +13,15 @@ const log = logger.withContext("TikTokFeedJob");
 
 const DEFAULT_QUERIES = [
   "quebec",
+  "viral",
   "montreal",
+  "funny",
   "quebecois",
+  "trending",
   "mtl",
+  "foryou",
   "poutine",
+  "dance",
   "vieuxquebec",
 ];
 
