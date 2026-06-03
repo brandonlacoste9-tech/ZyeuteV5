@@ -223,6 +223,10 @@ export async function importTikTokVideoToFeed(
       hiveId,
       processingStatus: muxAssetId ? "processing" : "completed",
       fireCount: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
+      commentCount: typeof video.stats?.comments === "number" ? video.stats.comments : 0,
+      sharesCount: typeof video.stats?.shares === "number" ? video.stats.shares : 0,
+      viewCount: typeof video.stats?.plays === "number" ? video.stats.plays : 0,
+      viralScore: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
       mediaMetadata: {
         tiktok_id: videoId,
         author: authorHandle,
