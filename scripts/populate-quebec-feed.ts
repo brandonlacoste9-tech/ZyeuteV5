@@ -7,6 +7,7 @@
 
 import { config } from "dotenv";
 import { fileURLToPath } from "url";
+import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
@@ -173,11 +174,16 @@ async function populateFeed() {
   }
   console.log(`✅ Using user: ${userId}\n`);
 
-  // Step 2: Try FAL AI generation (if key available), otherwise skip gracefully
   const falKey = process.env.FAL_API_KEY || process.env.FAL_KEY;
+  let imageGeneratorBee: any = null;
+  let generateVideo: any = null;
+
   if (falKey) {
-    console.log("🤖 FAL_KEY detected — AI video generation is available.");
-    console.log("   (AI generation is skipped in this seed script; use generate-quebec-videos.ts for AI)\n");
+    console.log("🤖 FAL_KEY detected — AI video generation is ENABLED.");
+    const imgBeeModule = await import("../backend/ai/bees/image-generator.js");
+    imageGeneratorBee = new imgBeeModule.ImageGeneratorBee();
+    const vidEngineModule = await import("../backend/ai/media/video-engine.js");
+    generateVideo = vidEngineModule.generateVideo;
   } else {
     console.log("ℹ️  No FAL_KEY found — using Google CDN & Pexels fallback videos.\n");
   }
@@ -205,8 +211,39 @@ async function populateFeed() {
       continue;
     }
 
-    const videoUrl = GOOGLE_CDN_VIDEOS[i % GOOGLE_CDN_VIDEOS.length];
-    const thumbnailUrl = SAMPLE_THUMBNAILS[i % SAMPLE_THUMBNAILS.length];
+    let videoUrl = GOOGLE_CDN_VIDEOS[i % GOOGLE_CDN_VIDEOS.length];
+    let thumbnailUrl = SAMPLE_THUMBNAILS[i % SAMPLE_THUMBNAILS.length];
+    let aiGenerated = false;
+
+    if (falKey && imageGeneratorBee && generateVideo) {
+      console.log(`  🤖 Generating AI video for: ${post.caption.slice(0, 30)}...`);
+      try {
+        const imageResult = await imageGeneratorBee.generate({
+          prompt: post.content,
+          size: "portrait",
+          enhancePrompt: true,
+        });
+
+        if (imageResult.success && imageResult.imageUrl) {
+          const videoResult = await generateVideo({
+            prompt: post.content,
+            imageUrl: imageResult.imageUrl,
+            duration: 5,
+          });
+
+          if (videoResult && videoResult.url && videoResult.model !== "placeholder") {
+            videoUrl = videoResult.url;
+            thumbnailUrl = imageResult.imageUrl;
+            aiGenerated = true;
+            console.log(`  ✅ AI Video generated successfully!`);
+          } else {
+            console.log(`  ⚠️ AI Video generation returned placeholder. Using fallback.`);
+          }
+        }
+      } catch (err: any) {
+        console.log(`  ❌ AI Generation failed: ${err.message}. Using fallback.`);
+      }
+    }
 
     const { error } = await supabase.from("publications").insert([{
       id: randomUUID(),
@@ -223,7 +260,7 @@ async function populateFeed() {
       est_masque: false,                 // ✅ Required for feed filters
       moderation_approved: true,         // ✅ Required for moderation checks
       processing_status: "completed",    // ✅ Required for feed to show it
-      ai_generated: false,
+      ai_generated: aiGenerated,
       reactions_count: post.reactions,
       comments_count: Math.floor(post.reactions * 0.08),
       shares_count: Math.floor(post.reactions * 0.03),
