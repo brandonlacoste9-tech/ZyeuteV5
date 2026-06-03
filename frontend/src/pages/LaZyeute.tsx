@@ -756,7 +756,7 @@ export const Zyeute: React.FC = () => {
 
             return (
               <div
-                key={post.id}
+                key={`${post.id}-${index}`}
                 className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center"
                 data-testid={`post-slide-${post.id}`}
               >
@@ -1005,30 +1005,6 @@ export const Zyeute: React.FC = () => {
                 <p className="text-white/60 text-sm">
                   Encore plus de contenu d'icitte! ⚜️
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* End of Feed Message */}
-          {!hasNextPage && posts.length > 0 && (
-            <div className="h-[100dvh] snap-start snap-always flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="text-6xl mb-4">⚜️</div>
-                <h2 className="text-gold-400 text-xl font-bold mb-2">
-                  C'est tout pour le moment!
-                </h2>
-                <p className="text-white/60 mb-6">
-                  Revenez plus tard pour plus de contenu
-                </p>
-                <button
-                  onClick={() => {
-                    tap();
-                    window.location.reload();
-                  }}
-                  className="bg-gold-500 text-black px-6 py-3 rounded-xl font-bold press-scale"
-                >
-                  Recharger le fil
-                </button>
               </div>
             </div>
           )}

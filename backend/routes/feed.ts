@@ -217,49 +217,61 @@ router.get(
         }
       }
 
-      let query = supabase
-        .from("publications")
-        .select(
-          `
-        *,
-        user:user_id (
-          id,
-          username,
-          display_name,
-          avatar_url,
-          subscription_tier
-        )
-      `,
-        )
-        .eq("visibility", "public")
-        .eq("est_masque", false)
-        .is("deleted_at", null)
-        .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
-        .eq("processing_status", "completed")
-        .not("media_url", "is", null)
-        // Drop obvious QA / inject rows and stuck pipeline posts (blank players)
-        .not("caption", "ilike", "%DIAGNOSTIC%")
-        .not("content", "ilike", "%DIAGNOSTIC%")
-        .not("caption", "ilike", "%TEST VIDEO%")
-        .not("content", "ilike", "%TEST VIDEO%")
-        .not("media_url", "ilike", "%fal.media%")
-        .not("media_url", "ilike", "%.fal.run%")
-        .order("viral_score", { ascending: false })
-        .order("reactions_count", { ascending: false })
-        .order("created_at", { ascending: false })
-        // Use range-based offset pagination — consistent with viral_score sort
-        .range(pageOffset, pageOffset + limit - 1);
+      const buildQuery = (offset: number, ignoreExclusions: boolean) => {
+        let q = supabase
+          .from("publications")
+          .select(
+            `
+          *,
+          user:user_id (
+            id,
+            username,
+            display_name,
+            avatar_url,
+            subscription_tier
+          )
+        `,
+          )
+          .eq("visibility", "public")
+          .eq("est_masque", false)
+          .is("deleted_at", null)
+          .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
+          .eq("processing_status", "completed")
+          .not("media_url", "is", null)
+          // Drop obvious QA / inject rows and stuck pipeline posts (blank players)
+          .not("caption", "ilike", "%DIAGNOSTIC%")
+          .not("content", "ilike", "%DIAGNOSTIC%")
+          .not("caption", "ilike", "%TEST VIDEO%")
+          .not("content", "ilike", "%TEST VIDEO%")
+          .not("media_url", "ilike", "%fal.media%")
+          .not("media_url", "ilike", "%.fal.run%")
+          .order("viral_score", { ascending: false })
+          .order("reactions_count", { ascending: false })
+          .order("created_at", { ascending: false })
+          // Use range-based offset pagination — consistent with viral_score sort
+          .range(offset, offset + limit - 1);
 
-      // Exclude watched posts for this user
-      if (excludedIds.length > 0) {
-        query = query.not("id", "in", `(${excludedIds.join(",")})`);
+        if (!ignoreExclusions && excludedIds.length > 0) {
+          q = q.not("id", "in", `(${excludedIds.join(",")})`);
+        }
+
+        if (authorIds && authorIds.length > 0) {
+          q = q.in("user_id", authorIds);
+        }
+
+        return q;
+      };
+
+      let { data: posts, error } = await buildQuery(pageOffset, false);
+
+      // If we ran out of unseen posts, wrap around to offset 0 and IGNORE exclusions to recycle videos endlessly
+      let didWrap = false;
+      if (!error && (!posts || posts.length === 0)) {
+        const { data: recycledPosts, error: recycledErr } = await buildQuery(0, true);
+        posts = recycledPosts;
+        error = recycledErr;
+        didWrap = true;
       }
-
-      if (authorIds && authorIds.length > 0) {
-        query = query.in("user_id", authorIds);
-      }
-
-      const { data: posts, error } = await query;
 
       console.log("[FeedInfinite] Supabase result", {
         postsCount: posts?.length,
@@ -298,11 +310,13 @@ router.get(
       );
 
       // Offset-based pagination: if we got a full page there are likely more
-      const hasMore = boostedPosts.length === limit;
+      // If we wrapped, the new offset is 0
+      const activeOffset = didWrap ? 0 : pageOffset;
+      const hasMore = true; // ALWAYS return true for infinite feed
       const nextCursor =
         boostedPosts.length > 0
-          ? String(pageOffset + boostedPosts.length)
-          : null;
+          ? String(activeOffset + boostedPosts.length)
+          : "0";
 
       res.json({
         posts: boostedPosts,
