@@ -1,39 +1,26 @@
-#!/usr/bin/env tsx
-/**
- * ⚜️ Populate Quebec Feed — TikTok-Style Video Seeder
- * Seeds the Zyeuté feed with diverse Quebec-themed videos.
- * Uses Google CDN & Pexels MP4s — CORS-safe, no domain blocks.
- */
-
-import { config } from "dotenv";
+import pg from "pg";
+import { randomUUID } from "crypto";
+import * as dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { createClient } from "@supabase/supabase-js";
-import { randomUUID } from "crypto";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load .env FIRST
-config({ path: join(__dirname, "../.env") });
-config({ path: join(__dirname, "../.env.local"), override: true });
+dotenv.config({ path: join(__dirname, "../.env.local") });
 
-const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL ||
-  process.env.SUPABASE_URL ||
-  "https://vuanulvyqkfefmjcikfk.supabase.co";
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const connectionString = process.env.DATABASE_URL;
 
-if (!SERVICE_ROLE_KEY) {
-  console.error("❌ SUPABASE_SERVICE_ROLE_KEY is not set!");
-  console.error("   Fill it in at .env → SUPABASE_SERVICE_ROLE_KEY");
+if (!connectionString) {
+  console.error("No DATABASE_URL found!");
   process.exit(1);
 }
 
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+const pool = new pg.Pool({
+  connectionString,
+  ssl: { rejectUnauthorized: false }
+});
 
-// ── Stable CORS-safe video sources ────────────────────────────────
-// Google CDN sample videos — publicly served with proper CORS headers
 const GOOGLE_CDN_VIDEOS = [
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
   "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
@@ -139,121 +126,68 @@ const QUEBEC_POSTS = [
   },
 ];
 
-function randomCreatedAt(): string {
-  const now = Date.now();
-  const fourteenDaysAgo = now - 14 * 24 * 60 * 60 * 1000;
-  return new Date(fourteenDaysAgo + Math.random() * (now - fourteenDaysAgo)).toISOString();
-}
+async function run() {
+  const client = await pool.connect();
+  try {
+    console.log("Connected to DB directly!");
 
-async function populateFeed() {
-  console.log("⚜️  Starting Quebec feed population...\n");
-
-  // Step 1: Find a user
-  console.log("👤 Step 1: Finding a valid user...");
-  const { data: adminUser } = await supabase
-    .from("user_profiles")
-    .select("id")
-    .eq("role", "admin")
-    .limit(1)
-    .single();
-
-  let userId = adminUser?.id;
-  if (!userId) {
-    const { data: anyUser } = await supabase
-      .from("user_profiles")
-      .select("id")
-      .limit(1)
-      .single();
-    userId = anyUser?.id;
-  }
-
-  if (!userId) {
-    console.error("❌ No users found. Register a user in the app first, then re-run.");
-    process.exit(1);
-  }
-  console.log(`✅ Using user: ${userId}\n`);
-
-  // Step 2: Try FAL AI generation (if key available), otherwise skip gracefully
-  const falKey = process.env.FAL_API_KEY || process.env.FAL_KEY;
-  if (falKey) {
-    console.log("🤖 FAL_KEY detected — AI video generation is available.");
-    console.log("   (AI generation is skipped in this seed script; use generate-quebec-videos.ts for AI)\n");
-  } else {
-    console.log("ℹ️  No FAL_KEY found — using Google CDN & Pexels fallback videos.\n");
-  }
-
-  // Step 3: Check existing posts
-  const { data: existingPosts } = await supabase
-    .from("publications")
-    .select("caption")
-    .eq("hive_id", "quebec")
-    .not("caption", "is", null);
-
-  const existingCaptions = new Set((existingPosts || []).map((p) => p.caption));
-  console.log(`📊 Found ${existingCaptions.size} existing Quebec posts in DB.\n`);
-
-  // Step 4: Insert posts
-  let inserted = 0;
-  let skipped = 0;
-
-  for (let i = 0; i < QUEBEC_POSTS.length; i++) {
-    const post = QUEBEC_POSTS[i];
-
-    if (existingCaptions.has(post.caption)) {
-      console.log(`  ⏭️  Skipping existing: ${post.caption.slice(0, 50)}...`);
-      skipped++;
-      continue;
-    }
-
-    const videoUrl = GOOGLE_CDN_VIDEOS[i % GOOGLE_CDN_VIDEOS.length];
-    const thumbnailUrl = SAMPLE_THUMBNAILS[i % SAMPLE_THUMBNAILS.length];
-
-    const { error } = await supabase.from("publications").insert([{
-      id: randomUUID(),
-      user_id: userId,
-      type: "video",                     // ✅ Required for check-videos.ts & type filters
-      media_url: videoUrl,
-      original_url: videoUrl,
-      thumbnail_url: thumbnailUrl,
-      content: post.content,
-      caption: post.caption,
-      hashtags: post.hashtags,
-      hive_id: "quebec",
-      visibility: "public",              // ✅ Required for feed filters
-      est_masque: false,                 // ✅ Required for feed filters
-      moderation_approved: true,         // ✅ Required for moderation checks
-      processing_status: "completed",    // ✅ Required for feed to show it
-      ai_generated: false,
-      reactions_count: post.reactions,
-      comments_count: Math.floor(post.reactions * 0.08),
-      shares_count: Math.floor(post.reactions * 0.03),
-      view_count: post.reactions * 12,
-      viral_score: post.reactions / 100, // ✅ Used for feed ranking
-      created_at: randomCreatedAt(),
-    }]);
-
-    if (error) {
-      console.error(`  ❌ Failed to insert "${post.caption.slice(0, 40)}": ${error.message}`);
+    // 1. Get or create system user
+    let res = await client.query(`SELECT id FROM user_profiles WHERE username = 'zyeute_ai' LIMIT 1`);
+    let userId;
+    
+    if (res.rows.length === 0) {
+      const newId = randomUUID();
+      await client.query(`
+        INSERT INTO user_profiles (id, username, email, display_name, role, hive_id)
+        VALUES ($1, 'zyeute_ai', 'ai@zyeute.com', 'Zyeuté AI 🤖', 'admin', 'quebec')
+      `, [newId]);
+      userId = newId;
+      console.log("Created zyeute_ai user:", userId);
     } else {
-      console.log(`  ✅ Inserted: ${post.caption.slice(0, 55)}...`);
-      inserted++;
+      userId = res.rows[0].id;
+      console.log("Found existing user:", userId);
     }
+
+    // 2. Insert posts
+    let inserted = 0;
+    for (let i = 0; i < QUEBEC_POSTS.length; i++) {
+      const post = QUEBEC_POSTS[i];
+      const existRes = await client.query(`SELECT id FROM publications WHERE caption = $1 LIMIT 1`, [post.caption]);
+      
+      if (existRes.rows.length > 0) {
+        console.log(`Skipping: ${post.caption.slice(0, 30)}...`);
+        continue;
+      }
+
+      const videoUrl = GOOGLE_CDN_VIDEOS[i % GOOGLE_CDN_VIDEOS.length];
+      const thumbnailUrl = SAMPLE_THUMBNAILS[i % SAMPLE_THUMBNAILS.length];
+
+      await client.query(`
+        INSERT INTO publications (
+          id, user_id, type, media_url, original_url, thumbnail_url,
+          content, caption, hashtags, hive_id, visibility, est_masque,
+          moderation_approved, processing_status, ai_generated,
+          reactions_count, view_count, viral_score
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+        )
+      `, [
+        randomUUID(), userId, 'video', videoUrl, videoUrl, thumbnailUrl,
+        post.content, post.caption, JSON.stringify(post.hashtags), 'quebec', 'public', false,
+        true, 'completed', false,
+        post.reactions, post.reactions * 12, post.reactions / 100
+      ]);
+      inserted++;
+      console.log(`Inserted: ${post.caption.slice(0, 40)}...`);
+    }
+
+    console.log(`Successfully seeded ${inserted} posts directly to DB!`);
+  } catch (err) {
+    console.error("DB Error:", err);
+  } finally {
+    client.release();
+    pool.end();
   }
-
-  console.log(`\n🎉 Done! Inserted ${inserted} new posts, skipped ${skipped} existing.`);
-
-  // Step 5: Verify final count
-  const { count } = await supabase
-    .from("publications")
-    .select("*", { count: "exact", head: true })
-    .eq("hive_id", "quebec")
-    .eq("type", "video")
-    .eq("processing_status", "completed");
-
-  console.log(`📊 Quebec feed now has ${count ?? 0} completed videos ready to display.`);
 }
 
-populateFeed().catch((err) => {
-  console.error("💥 Fatal error:", err.message || err);
-  process.exit(1);
-});
+run();

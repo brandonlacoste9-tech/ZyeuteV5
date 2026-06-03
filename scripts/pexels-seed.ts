@@ -230,8 +230,10 @@ async function main() {
           const tags = hiveDef.tagsFn();
           const daysAgo = Math.floor(Math.random() * 30);
 
+          const reactionsCount = Math.floor(Math.random() * 400) + 5;
           rows.push({
             user_id: SEED_USER_ID,
+            type: "video",                   // ✅ required by check-videos & feed type filters
             content: caption,
             media_url: mediaUrl,
             caption,
@@ -239,8 +241,13 @@ async function main() {
             hive_id: hive,
             region_id: region,
             language: hiveDef.language,
+            visibility: "public",            // ✅ required by feed route
+            est_masque: false,               // ✅ required by feed route
+            moderation_approved: true,       // ✅ required by moderation checks
+            processing_status: "completed",  // ✅ required by feed route
             view_count: Math.floor(Math.random() * 9000) + 100,
-            reactions_count: Math.floor(Math.random() * 400) + 5,
+            reactions_count: reactionsCount,
+            viral_score: reactionsCount / 100, // ✅ used for feed ranking
             created_at: new Date(
               Date.now() - daysAgo * 86400000 - Math.random() * 86400000,
             ).toISOString(),

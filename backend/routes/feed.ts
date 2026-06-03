@@ -44,9 +44,9 @@ async function getPostsViaSupabase(
     .is("deleted_at", null)
     .eq("processing_status", "completed")
     .not("media_url", "is", null)
-    // Only serve permanent video sources (Mux HLS, Supabase storage)
+    // Only serve permanent video sources (Mux HLS, Supabase storage, reliable CDNs)
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%",
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })

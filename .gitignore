@@ -89,3 +89,6 @@ video-diag-output.txt
 /QUICK_START_CLAUDE_CODE.txt
 /.empty-commit-placeholder
 .env.render
+
+.vercel
+.env*

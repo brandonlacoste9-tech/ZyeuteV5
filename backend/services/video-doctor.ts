@@ -340,22 +340,27 @@ async function fix403Error(postId: string): Promise<VideoDoctorFix> {
  */
 async function fixDeadSource(postId: string): Promise<VideoDoctorFix> {
   logger.info(`[VideoDoctor] Fixing dead source for ${postId}`);
-  
-  const w3schoolsVids = [
-    "https://www.w3schools.com/html/mov_bbb.mp4",
-    "https://www.w3schools.com/html/movie.mp4"
+
+  // Google Cloud Storage sample videos — CORS-safe, reliable CDN, no CORS blocks
+  const googleCdnVideos = [
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
   ];
-  const newUrl = w3schoolsVids[Math.floor(Math.random() * w3schoolsVids.length)];
-  
+  const newUrl = googleCdnVideos[Math.floor(Math.random() * googleCdnVideos.length)];
+
   await pool.query(
     `UPDATE publications SET media_url = $1, original_url = $1 WHERE id = $2`,
-    [newUrl, postId]
+    [newUrl, postId],
   );
-  
+
   return {
     success: true,
     action: "replace_source",
-    message: "Replaced permanently dead source with stable fallback",
+    message: "Replaced permanently dead source with Google CDN stable fallback",
     newUrl: newUrl,
   };
 }
@@ -476,7 +481,7 @@ async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
     return { success: false, action: "thumbnail", message: "Video not found" };
   }
 
-  const { media_url, thumbnail_url } = result.rows[0];
+  const { media_url, thumbnail_url, mux_playback_id } = result.rows[0];
 
   if (thumbnail_url) {
     return {
@@ -486,9 +491,22 @@ async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
     };
   }
 
-  // Use video URL as thumbnail fallback (some players can extract frame)
-  // Or generate from first frame using a service
-  const fallbackThumbnail = media_url.replace(/\.[^.]+$/, ".jpg");
+  let fallbackThumbnail: string;
+
+  if (mux_playback_id) {
+    // Use Mux image API for reliable thumbnail
+    fallbackThumbnail = `https://image.mux.com/${mux_playback_id}/thumbnail.jpg?width=720&height=1280&fit_mode=smartcrop&time=0`;
+  } else if (media_url?.includes("commondatastorage.googleapis.com")) {
+    // Google CDN videos — use a known static Unsplash placeholder
+    fallbackThumbnail = `https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=720&h=1280&fit=crop`;
+  } else {
+    // Last resort: attempt .jpg extension swap (may produce broken image)
+    fallbackThumbnail = media_url?.replace(/\.[^.]+$/, ".jpg") ?? "";
+  }
+
+  if (!fallbackThumbnail) {
+    return { success: false, action: "thumbnail", message: "Could not determine thumbnail URL" };
+  }
 
   await pool.query(
     `UPDATE publications SET thumbnail_url = $1 WHERE id = $2`,
@@ -498,7 +516,7 @@ async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
   return {
     success: true,
     action: "thumbnail",
-    message: "Set fallback thumbnail URL",
+    message: mux_playback_id ? "Set Mux image API thumbnail" : "Set fallback thumbnail URL",
     newUrl: fallbackThumbnail,
   };
 }
@@ -639,11 +657,12 @@ export async function autoFixVideos(
     `
     SELECT id FROM publications
     WHERE type = 'video'
-      AND (processing_status = 'failed'
-           OR processing_status = 'pending'
-           OR media_url LIKE '%403%'
-           OR media_url LIKE '%mixkit.co%'
-           OR thumbnail_url IS NULL)
+      AND (
+        processing_status = 'failed'
+        OR processing_status = 'pending'
+        OR media_url LIKE '%mixkit.co%'
+        OR thumbnail_url IS NULL
+      )
     ORDER BY created_at DESC
     LIMIT $1
   `,
