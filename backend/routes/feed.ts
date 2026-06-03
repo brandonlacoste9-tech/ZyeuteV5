@@ -315,8 +315,8 @@ router.get(
       const hasMore = true; // ALWAYS return true for infinite feed
       const nextCursor =
         boostedPosts.length > 0
-          ? String(activeOffset + boostedPosts.length)
-          : "0";
+          ? String(activeOffset + boostedPosts.length) + "-" + Date.now()
+          : "0-" + Date.now();
 
       res.json({
         posts: boostedPosts,
