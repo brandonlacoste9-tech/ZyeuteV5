@@ -47,33 +47,34 @@ export const TikApiService = {
       }
       console.log(`[TikAPI] Fetching trending videos for region: ${region}`);
 
-      const response: any = await tikapi.public.explore({
-        country: region,
-        count: count,
+      const response: any = await tikapi.public.search({
+        category: "videos",
+        query: "foryoupage"
       });
 
-      if (!response?.item_list) {
+      if (!response?.json?.item_list) {
         return [];
       }
 
-      return response.item_list.map((item: any) => ({
-        id: item.id,
+      return response.json.item_list.slice(0, count).map((item: any) => ({
+        id: item.id || item.aweme_id,
         video_url:
+          item.video?.playAddr ||
           item.video?.play_addr?.url_list?.[0] ||
           item.video?.download_addr?.url_list?.[0],
-        cover_url: item.video?.cover?.url_list?.[0],
+        cover_url: item.video?.cover || item.video?.cover?.url_list?.[0],
         description: item.desc,
         author: {
           id: item.author?.id,
-          unique_id: item.author?.unique_id,
+          unique_id: item.author?.uniqueId || item.author?.unique_id,
           nickname: item.author?.nickname,
-          avatar: item.author?.avatar_thumb?.url_list?.[0],
+          avatar: item.author?.avatarThumb || item.author?.avatar_thumb?.url_list?.[0],
         },
         statistics: {
-          play_count: item.statistics?.play_count || 0,
-          digg_count: item.statistics?.digg_count || 0,
-          comment_count: item.statistics?.comment_count || 0,
-          share_count: item.statistics?.share_count || 0,
+          play_count: item.stats?.playCount || item.statistics?.play_count || 0,
+          digg_count: item.stats?.diggCount || item.statistics?.digg_count || 0,
+          comment_count: item.stats?.commentCount || item.statistics?.comment_count || 0,
+          share_count: item.stats?.shareCount || item.statistics?.share_count || 0,
         },
       })) as TikVideo[];
     } catch (error: any) {
@@ -95,12 +96,12 @@ export const TikApiService = {
         return [];
       }
       const cleanTag = hashtag.replace("#", "");
-      const response: any = await tikapi.public.hashtag({
-        name: cleanTag,
-        count: count,
+      const response: any = await tikapi.public.search({
+        category: "videos",
+        query: cleanTag
       });
 
-      return response?.item_list || [];
+      return response?.json?.item_list?.slice(0, count) || [];
     } catch (error) {
       console.error(`[TikAPI] Error searching hashtag #${hashtag}:`, error);
       return [];
