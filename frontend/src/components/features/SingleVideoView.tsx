@@ -161,8 +161,8 @@ export function SingleVideoView({
               post.thumbnailUrl ||
               `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=2&width=400`
             }
-            videoTitle={post.caption || post.content || undefined}
-            viewerUserId={user?.id || undefined}
+            videoTitle={post.caption || undefined}
+            viewerUserId={currentUser?.id || undefined}
             className="w-full h-full object-cover"
             style={filterStyle}
             autoPlay={isActive}
