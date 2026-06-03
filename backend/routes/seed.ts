@@ -353,4 +353,54 @@ router.post("/mexico", async (req, res) => {
   }
 });
 
+router.post("/custom", async (req, res) => {
+  try {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: "Missing Supabase configuration" });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const videos = req.body.videos;
+    
+    if (!Array.isArray(videos)) {
+      return res.status(400).json({ error: "Expected videos array in request body" });
+    }
+
+    // Insert videos
+    const insertedPosts = [];
+    for (const video of videos) {
+      const { data, error } = await supabase
+        .from("publications")
+        .insert({
+          ...video,
+          type: "video",
+          visibility: "public",
+          est_masque: false,
+          moderation_approved: true,
+          processing_status: "completed"
+        })
+        .select("id, caption, media_url")
+        .single();
+
+      if (error) {
+        console.error("Custom Seed Insert error:", error);
+        continue;
+      }
+      insertedPosts.push(data);
+    }
+
+    res.json({
+      success: true,
+      message: `Seeded ${insertedPosts.length} custom videos to the feed`,
+      posts: insertedPosts,
+    });
+  } catch (error: any) {
+    console.error("Custom Seed error:", error);
+    res.status(500).json({ error: "Custom Seed failed", details: error.message });
+  }
+});
+
 export default router;
