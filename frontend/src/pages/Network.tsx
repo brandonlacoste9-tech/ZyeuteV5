@@ -155,7 +155,6 @@ export const Network: React.FC = () => {
       <Header
         title={targetUser?.username || "Réseau"}
         showBack={true}
-        onBack={() => navigate(-1)}
       />
 
       {/* Tabs */}
