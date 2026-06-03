@@ -38,15 +38,21 @@ import {
   getTierMeta,
   type GamificationProfile,
 } from "@/services/gamificationService";
+import { FollowersModal } from "@/components/features/FollowersModal";
 
 const profileLogger = logger.withContext("Profile");
 
 // Helper component for the Stats bar
-const ProfileStat: React.FC<{ value: number | string; label: string }> = ({
+const ProfileStat: React.FC<{ value: number | string; label: string; onClick?: () => void }> = ({
   value,
   label,
+  onClick,
 }) => (
-  <div className="flex flex-col items-center gap-0.5 px-2">
+  <button 
+    onClick={onClick}
+    disabled={!onClick}
+    className={`flex flex-col items-center gap-0.5 px-2 ${onClick ? "active:scale-95 transition-transform cursor-pointer" : ""}`}
+  >
     <span className="text-lg font-black" style={{ color: "#FFFFFF" }}>
       {value}
     </span>
@@ -56,7 +62,7 @@ const ProfileStat: React.FC<{ value: number | string; label: string }> = ({
     >
       {label}
     </span>
-  </div>
+  </button>
 );
 
 export const Profile: React.FC = () => {
@@ -77,6 +83,8 @@ export const Profile: React.FC = () => {
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [isBlocked, setIsBlocked] = React.useState(false);
   const [isBlocking, setIsBlocking] = React.useState(false);
+  const [showFollowersModal, setShowFollowersModal] = React.useState(false);
+  const [modalType, setModalType] = React.useState<"followers" | "following">("followers");
 
   const handleBlock = async () => {
     if (!currentUser || !user || isBlocking) return;
@@ -542,7 +550,7 @@ export const Profile: React.FC = () => {
 
           {/* Stats Bar — gold premium style */}
           <div
-            className="flex justify-between items-center p-3 mt-4 rounded-xl"
+            className="flex justify-between items-center p-3 mt-4 rounded-xl overflow-x-auto hide-scrollbar"
             style={{
               background: "rgba(0,0,0,0.6)",
               border: "1px solid rgba(212,175,55,0.25)",
@@ -551,19 +559,35 @@ export const Profile: React.FC = () => {
             }}
           >
             <ProfileStat
+              value={formatNumber(user.followers_count || 0)}
+              label="Abonnés"
+              onClick={() => {
+                setModalType("followers");
+                setShowFollowersModal(true);
+              }}
+            />
+            <div
+              className="h-8 w-px mx-1 shrink-0"
+              style={{ background: "rgba(212,175,55,0.2)" }}
+            />
+            <ProfileStat
+              value={formatNumber(user.following_count || 0)}
+              label="Abonnements"
+              onClick={() => {
+                setModalType("following");
+                setShowFollowersModal(true);
+              }}
+            />
+            <div
+              className="h-8 w-px mx-1 shrink-0"
+              style={{ background: "rgba(212,175,55,0.2)" }}
+            />
+            <ProfileStat
               value={formatNumber(user.posts_count || 0)}
               label="Vidéos"
             />
             <div
-              className="h-8 w-px"
-              style={{ background: "rgba(212,175,55,0.2)" }}
-            />
-            <ProfileStat
-              value={formatNumber(user.followers_count || 0)}
-              label="Abonnés"
-            />
-            <div
-              className="h-8 w-px"
+              className="h-8 w-px mx-1 shrink-0"
               style={{ background: "rgba(212,175,55,0.2)" }}
             />
             <ProfileStat
@@ -1042,7 +1066,13 @@ export const Profile: React.FC = () => {
           <span className="text-gold-500">⚜️</span>
         </p>
       </div>
-
+  
+      <FollowersModal
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        userId={user.id}
+        type={modalType}
+      />
       <BottomNav />
     </div>
   );
