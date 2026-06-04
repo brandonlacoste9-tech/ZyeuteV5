@@ -1,0 +1,41 @@
+# Top up the production video feed on a schedule (TikAPI + optional Pexels fallback).
+# Requires on Render: TIKAPI_KEY, SUPABASE_SERVICE_ROLE_KEY (and deploy with POST /api/seed/tikapi).
+name: Feed replenish (scheduled)
+
+on:
+  schedule:
+    # Every 6 hours UTC
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  replenish:
+    name: Call production seed API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: TikAPI replenish (force)
+        env:
+          API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
+        run: |
+          set -e
+          echo "POST $API_BASE/api/seed/tikapi?force=1&limit=30"
+          code=$(curl -sS -o /tmp/tikapi.json -w "%{http_code}" \
+            -X POST "$API_BASE/api/seed/tikapi?force=1&limit=30" \
+            -H "Content-Type: application/json" || echo "000")
+          echo "HTTP $code"
+          cat /tmp/tikapi.json || true
+          if [ "$code" = "503" ]; then
+            echo "::warning::TikAPI seed skipped (check TIKAPI_KEY / Supabase on Render)"
+            exit 0
+          fi
+          if [ "$code" -ge 400 ] 2>/dev/null; then
+            echo "::warning::TikAPI seed returned $code"
+            exit 0
+          fi
+
+      - name: Pool stats (debug)
+        env:
+          API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
+        run: |
+          curl -sS "$API_BASE/api/feed/pool-stats" || true
