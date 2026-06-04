@@ -63,11 +63,16 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     queryFn: async ({ pageParam }) => {
+      const cursorStr = pageParam ? String(pageParam) : "";
+      const cursorOffset = cursorStr
+        ? parseInt(cursorStr.split("-")[0], 10) || 0
+        : 0;
+
       const params = new URLSearchParams({
-        limit: "20",
+        limit: "30",
         type: feedType,
         hive: getStoredHive(),
-        ...(pageParam ? { cursor: pageParam as string } : {}),
+        ...(cursorOffset > 0 ? { cursor: String(cursorOffset) } : {}),
       });
 
       const headers = await getAuthHeaders();
@@ -115,9 +120,23 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
             : null,
         });
       }
-      return { ...data, posts };
+      const nextRaw = data.nextCursor;
+      const next =
+        nextRaw != null && String(nextRaw).length > 0
+          ? String(nextRaw).split("-")[0]
+          : null;
+      return {
+        ...data,
+        posts,
+        nextCursor: next,
+        // Keep paginating while API returns rows (client filter may drop many)
+        hasMore:
+          data.hasMore !== false &&
+          (rawCount > 0 || (data.nextCursor != null && posts.length > 0)),
+      };
     },
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
     initialPageParam: null,
   });
 
@@ -134,6 +153,20 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // If client filter left a thin first page, keep fetching until pool grows
+  useEffect(() => {
+    const total = data?.pages.flatMap((p) => p.posts).length ?? 0;
+    if (
+      !isLoading &&
+      !isFetchingNextPage &&
+      hasNextPage &&
+      total > 0 &&
+      total < 18
+    ) {
+      fetchNextPage();
+    }
+  }, [data?.pages, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+
   // Flatten pages into single array of posts
   const posts = useMemo(
     () => data?.pages.flatMap((page) => page.posts) ?? [],
@@ -143,6 +176,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
   return {
     posts,
     loadMoreRef: ref,
+    fetchNextPage,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
@@ -167,11 +201,16 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
   } = useInfiniteQuery<FeedResponse>({
     queryKey: ["feed-infinite-manual", feedType, getStoredHive()],
     queryFn: async ({ pageParam }) => {
+      const cursorStr = pageParam ? String(pageParam) : "";
+      const cursorOffset = cursorStr
+        ? parseInt(cursorStr.split("-")[0], 10) || 0
+        : 0;
+
       const params = new URLSearchParams({
-        limit: "20",
+        limit: "30",
         type: feedType,
         hive: getStoredHive(),
-        ...(pageParam ? { cursor: pageParam as string } : {}),
+        ...(cursorOffset > 0 ? { cursor: String(cursorOffset) } : {}),
       });
 
       const headers = await getAuthHeaders();

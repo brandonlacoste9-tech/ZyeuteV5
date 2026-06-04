@@ -195,11 +195,10 @@ router.get(
         void viewerProfile;
       }
 
-      // ── Exclude already-watched videos for authenticated users ──────────
-      // Only exclude videos watched in the last 7 days — beyond that, recycle is fine.
-      // This prevents the feed from running dry when the video pool is small.
+      // ── Exclude already-watched videos (following feed only) ─────────────
+      // Explore / Pour toi must not starve — heavy watchers otherwise hit a ~10 video wall.
       let excludedIds: string[] = [];
-      if (viewerId) {
+      if (viewerId && feedType === "feed") {
         try {
           const sevenDaysAgo = new Date(
             Date.now() - 7 * 24 * 60 * 60 * 1000,
@@ -256,7 +255,9 @@ router.get(
           .eq("est_masque", false)
           .is("deleted_at", null)
           .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
-          .eq("processing_status", "completed")
+          .or(
+            "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+          )
           .not("media_url", "is", null)
           // Drop obvious QA / inject rows and stuck pipeline posts (blank players)
           .not("caption", "ilike", "%DIAGNOSTIC%")

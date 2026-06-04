@@ -736,6 +736,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [page, loadingMore, hasMore]);
 
+  // Pre-load when user is near the end (don't wait for Virtuoso alone)
+  useEffect(() => {
+    if (
+      posts.length > 0 &&
+      currentIndex >= Math.max(0, posts.length - 4) &&
+      hasMore &&
+      !loadingMore
+    ) {
+      loadMoreVideos();
+    }
+  }, [currentIndex, posts.length, hasMore, loadingMore, loadMoreVideos]);
+
   // [SURGICAL] Momentum Check: Show content within 2 seconds max
   useEffect(() => {
     if (!isLoading || posts.length > 0) return;

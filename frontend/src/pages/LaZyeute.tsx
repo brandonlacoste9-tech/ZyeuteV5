@@ -300,6 +300,7 @@ export const Zyeute: React.FC = () => {
   const {
     posts: apiPosts,
     loadMoreRef,
+    fetchNextPage,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
@@ -380,18 +381,23 @@ export const Zyeute: React.FC = () => {
     prevIndexRef.current = currentIndex;
   }, [currentIndex, posts]);
 
-  // Pre-fetch next page when user is 3 videos from the end
+  // Pre-fetch next page when user is near the end (don't wait for loader slide)
   useEffect(() => {
     if (
       posts.length > 0 &&
-      currentIndex >= posts.length - 3 &&
+      currentIndex >= Math.max(0, posts.length - 4) &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
-      // Trigger will load more automatically via Intersection Observer
-      console.log("Near end of feed, pre-fetching...");
+      fetchNextPage();
     }
-  }, [currentIndex, posts.length, hasNextPage, isFetchingNextPage]);
+  }, [
+    currentIndex,
+    posts.length,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  ]);
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
