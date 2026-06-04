@@ -11,8 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { collectFeedSeedCandidates } from "../backend/services/tikapi-hashtag.js";
 import type { FeedSeedCandidate } from "../backend/services/tikapi-hashtag.js";
 
-const API_BASE =
-  process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
+const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
 const SUPABASE_ANON =
@@ -85,9 +84,9 @@ async function main() {
 
   console.log("📡 Collecting TikAPI candidates...");
   const candidates = await collectFeedSeedCandidates({
-    regionalPerTag: 5,
-    viralPerTag: 8,
-    trendingCount: 15,
+    regionalPerTag: 6,
+    viralPerTag: 6,
+    trendingCount: 12,
     minPlays: 0,
   });
   console.log(`   ${candidates.length} candidates`);
@@ -113,16 +112,23 @@ async function main() {
     });
     const text = await res.text();
     if (!res.ok) {
-      console.error(`❌ Batch ${i / batchSize + 1} failed (${res.status}):`, text.slice(0, 300));
+      console.error(
+        `❌ Batch ${i / batchSize + 1} failed (${res.status}):`,
+        text.slice(0, 300),
+      );
       continue;
     }
     const json = JSON.parse(text) as { posts?: unknown[]; message?: string };
     const n = json.posts?.length ?? 0;
     totalInserted += n;
-    console.log(`✅ Batch ${i / batchSize + 1}: ${n} inserted — ${json.message || ""}`);
+    console.log(
+      `✅ Batch ${i / batchSize + 1}: ${n} inserted — ${json.message || ""}`,
+    );
   }
 
-  console.log(`\n📊 Total inserted via Render: ${totalInserted}/${videos.length}`);
+  console.log(
+    `\n📊 Total inserted via Render: ${totalInserted}/${videos.length}`,
+  );
   if (totalInserted === 0) process.exit(1);
 }
 

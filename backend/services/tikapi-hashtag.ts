@@ -61,9 +61,7 @@ export async function resolveHashtagId(name: string): Promise<string | null> {
     const res = await (
       api as {
         public: {
-          hashtag: (p: {
-            name: string;
-          }) => Promise<{
+          hashtag: (p: { name: string }) => Promise<{
             json?: { challengeInfo?: { challenge?: { id?: string } } };
           }>;
         };
@@ -85,10 +83,7 @@ export async function fetchHashtagVideos(
     const res = await (
       api as {
         public: {
-          hashtag: (p: {
-            id: string;
-            count: number;
-          }) => Promise<{
+          hashtag: (p: { id: string; count: number }) => Promise<{
             json?: { itemList?: unknown[]; item_list?: unknown[] };
           }>;
         };
@@ -127,29 +122,7 @@ async function collectFromHashtagList(
   const localSeen = new Set<string>();
 
   for (const tag of tags) {
-    if (process.env.TIKAPI_KEY) {
-      try {
-        const raw = await TikApiService.searchByHashtag(tag.name, perTag);
-        const list = Array.isArray(raw) ? raw : [];
-        for (const item of list) {
-          const mapped = mapTikApiRawItemToVideo(
-            item as Record<string, unknown>,
-          );
-          if (!mapped) continue;
-          pushVideo(
-            out,
-            localSeen,
-            mapped,
-            tag,
-            `${sourcePrefix}:search:${tag.name}`,
-            minPlays,
-          );
-        }
-      } catch {
-        // try hashtag API below
-      }
-    }
-
+    // Prefer hashtag-by-id (1 call/tag). Search is fallback only when no id — saves rate limit.
     if (getTikApiClient()) {
       const id = tag.id ?? (await resolveHashtagId(tag.name));
       if (id) {
@@ -166,10 +139,31 @@ async function collectFromHashtagList(
             minPlays,
           );
         }
+      } else if (process.env.TIKAPI_KEY) {
+        try {
+          const raw = await TikApiService.searchByHashtag(tag.name, perTag);
+          const list = Array.isArray(raw) ? raw : [];
+          for (const item of list) {
+            const mapped = mapTikApiRawItemToVideo(
+              item as Record<string, unknown>,
+            );
+            if (!mapped) continue;
+            pushVideo(
+              out,
+              localSeen,
+              mapped,
+              tag,
+              `${sourcePrefix}:search:${tag.name}`,
+              minPlays,
+            );
+          }
+        } catch {
+          // skip tag
+        }
       }
     }
 
-    await new Promise((r) => setTimeout(r, 450));
+    await new Promise((r) => setTimeout(r, 600));
   }
 
   return out;

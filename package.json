@@ -81,6 +81,7 @@
     "tikapi:seed": "tsx scripts/seed-tikapi-videos.ts",
     "feed:replenish": "tsx scripts/feed-replenish-once.ts",
     "seed:render": "tsx scripts/seed-tikapi-via-render.ts",
+    "seed:minimal": "tsx scripts/seed-tikapi-minimal.ts",
     "seed:render:pexels": "node -e \"fetch('https://zyeutev5-1.onrender.com/api/seed/feed',{method:'POST'}).then(r=>r.json()).then(console.log)\""
   },
   "dependencies": {
