@@ -46,7 +46,7 @@ async function getPostsViaSupabase(
     .not("media_url", "is", null)
     // Only serve permanent video sources (Mux HLS, Supabase storage, reliable CDNs) and TikTok
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%tiktok%,media_url.ilike.%tiktokv.com%,media_url.ilike.%tikcdn%,media_url.ilike.%byteoversea%,media_url.ilike.%muscdn%,media_url.ilike.%v16-webapp%,media_url.ilike.%v19-webapp%,media_url.ilike.%googleapis.com%",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%tiktok%,media_url.ilike.%tiktokv.com%,media_url.ilike.%tiktokcdn%,media_url.ilike.%tikcdn%,media_url.ilike.%byteoversea%,media_url.ilike.%muscdn%,media_url.ilike.%v16-webapp%,media_url.ilike.%v19-webapp%,media_url.ilike.%googleapis.com%",
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
@@ -287,7 +287,10 @@ router.get(
       // If we ran out of unseen posts, wrap around to offset 0 and IGNORE exclusions to recycle videos endlessly
       let didWrap = false;
       if (!error && (!posts || posts.length === 0)) {
-        const { data: recycledPosts, error: recycledErr } = await buildQuery(0, true);
+        const { data: recycledPosts, error: recycledErr } = await buildQuery(
+          0,
+          true,
+        );
         posts = recycledPosts;
         error = recycledErr;
         didWrap = true;
