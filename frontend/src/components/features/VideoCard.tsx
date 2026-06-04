@@ -36,6 +36,9 @@ export function VideoCard({
   const [isReporting, setIsReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const muxPlaybackId = post.muxPlaybackId || post.mux_playback_id;
+  const thumbnailUrl = post.thumbnailUrl || post.thumbnail_url || "";
+  const fallbackMediaUrl = post.mediaUrl || post.media_url || "";
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -60,11 +63,17 @@ export function VideoCard({
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
-    const rawUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || "";
+    const rawUrl =
+      post.hlsUrl ||
+      post.hls_url ||
+      post.enhancedUrl ||
+      post.enhanced_url ||
+      fallbackMediaUrl ||
+      "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
-  }, [post]);
+  }, [post, fallbackMediaUrl]);
 
-  const isMux = !!post.muxPlaybackId;
+  const isMux = !!muxPlaybackId;
 
   const handleReport = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,7 +129,7 @@ export function VideoCard({
     >
       {/* Background Image (Poster) */}
       <img
-        src={post.thumbnailUrl || ""}
+        src={thumbnailUrl}
         alt=""
         className={cn(
           "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
@@ -134,9 +143,9 @@ export function VideoCard({
         <VideoErrorBoundary>
           {isMux ? (
             <MuxVideoPlayer
-              playbackId={post.muxPlaybackId ?? ""}
+              playbackId={muxPlaybackId ?? ""}
               thumbnailUrl={getProxiedMediaUrl(
-                post.thumbnailUrl || post.mediaUrl,
+                thumbnailUrl || fallbackMediaUrl,
               )}
               className="w-full h-full object-cover"
               autoPlay={autoPlay || isHovered}
@@ -147,7 +156,7 @@ export function VideoCard({
           ) : (
             <VideoPlayer
               src={videoSrc}
-              poster={getProxiedMediaUrl(post.thumbnailUrl || post.mediaUrl)}
+              poster={getProxiedMediaUrl(thumbnailUrl || fallbackMediaUrl)}
               autoPlay={autoPlay || isHovered}
               muted={muted}
               loop

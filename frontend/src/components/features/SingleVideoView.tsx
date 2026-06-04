@@ -60,12 +60,21 @@ export function SingleVideoView({
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const muxPlaybackId = post.muxPlaybackId || post.mux_playback_id;
+  const thumbnailUrl = post.thumbnailUrl || post.thumbnail_url || "";
+  const fallbackMediaUrl = post.mediaUrl || post.media_url || "";
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
-    const rawUrl = post.hlsUrl || post.enhancedUrl || post.mediaUrl || "";
+    const rawUrl =
+      post.hlsUrl ||
+      post.hls_url ||
+      post.enhancedUrl ||
+      post.enhanced_url ||
+      fallbackMediaUrl ||
+      "";
     return getProxiedMediaUrl(rawUrl) || rawUrl;
-  }, [post]);
+  }, [post, fallbackMediaUrl]);
 
   // Video Activation & Prefetching
   const { source: videoSource, debug } = usePrefetchVideo(
@@ -127,7 +136,7 @@ export function SingleVideoView({
       <div
         className="absolute inset-0 bg-cover bg-center blur-3xl opacity-30 scale-110 pointer-events-none"
         style={{
-          backgroundImage: `url(${post.thumbnailUrl})`,
+          backgroundImage: `url(${thumbnailUrl})`,
         }}
       />
 
@@ -137,10 +146,10 @@ export function SingleVideoView({
           <VideoPlaybackDiagnostic
             postId={post.id}
             postType={post.type ?? undefined}
-            muxPlaybackId={post.muxPlaybackId}
+            muxPlaybackId={muxPlaybackId}
             mediaUrl={videoSrc}
             videoSrc={videoSrc}
-            playerPath={post.muxPlaybackId ? "mux" : "native"}
+            playerPath={muxPlaybackId ? "mux" : "native"}
             isActive={isActive}
             error={videoError}
           />
@@ -149,17 +158,17 @@ export function SingleVideoView({
         {/* Video Player Selection */}
         {!isActive && !priority ? (
           <img
-            src={post.thumbnailUrl || ""}
+            src={thumbnailUrl}
             alt=""
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        ) : post.muxPlaybackId ? (
+        ) : muxPlaybackId ? (
           <MuxVideoPlayer
-            playbackId={post.muxPlaybackId ?? ""}
+            playbackId={muxPlaybackId}
             thumbnailUrl={
-              post.thumbnailUrl ||
-              `https://image.mux.com/${post.muxPlaybackId}/thumbnail.jpg?time=2&width=400`
+              thumbnailUrl ||
+              `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg?time=2&width=400`
             }
             videoTitle={post.caption || undefined}
             viewerUserId={currentUser?.id || undefined}
@@ -174,7 +183,7 @@ export function SingleVideoView({
           <VideoPlayer
             src={videoSrc}
             poster={getProxiedMediaUrl(
-              post.thumbnailUrl || post.mediaUrl || undefined,
+              thumbnailUrl || fallbackMediaUrl || undefined,
             )}
             autoPlay={isActive}
             muted={isMuted}
