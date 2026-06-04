@@ -66,6 +66,36 @@ import { cn } from "../../lib/utils";
 const feedLogger = logger.withContext("ContinuousFeed");
 // Use hive from localStorage (set by geo-detection) or fall back to "quebec"
 const HIVE_ID: string = localStorage.getItem("zyeute_hive_id") || "quebec";
+const FEED_PAGE_SIZE = 15;
+
+type FeedPost = Post & { user: User; _feedSlot?: string };
+
+function filterPlayablePosts(items: Post[]): FeedPost[] {
+  return items.filter((p) => {
+    if (!p || !(p as Post & { user?: User }).user) return false;
+    if (p.burned_at) return false;
+    if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
+    if (postLooksLikeTestInject(p)) return false;
+    if (!postHasPlayableMedia(p)) return false;
+    return true;
+  }) as FeedPost[];
+}
+
+/** Append new page; when the pool is small, recycle so vertical scroll never stops. */
+function mergeFeedPages(prev: FeedPost[], incoming: FeedPost[]): FeedPost[] {
+  const seen = new Set(prev.map((p) => p.id));
+  const unique = incoming.filter((p) => !seen.has(p.id));
+  if (unique.length > 0) return [...prev, ...unique];
+  if (incoming.length === 0) return prev;
+  const base = prev.length;
+  return [
+    ...prev,
+    ...incoming.map((p, i) => ({
+      ...p,
+      _feedSlot: `${p.id}-cycle-${base + i}`,
+    })),
+  ];
+}
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
 // Added in FE-06 for offline support
@@ -158,7 +188,7 @@ const FeedRow = memo(
         className="w-full h-full video-stabilized"
       >
         <UnifiedMediaCard
-          key={post.id}
+          key={(post as FeedPost)._feedSlot ?? `${post.id}-${index}`}
           post={post}
           user={post.user}
           isActive={shouldPlay && isPageVisible}
@@ -589,26 +619,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     let validPosts: Array<Post & { user: User }> = [];
 
     try {
-      // Fetch first page with Hive filtering
-      const data = await getExplorePosts(0, 10, undefined, HIVE_ID);
+      const { posts: data, hasMore: apiHasMore } = await getExplorePosts(
+        0,
+        FEED_PAGE_SIZE,
+        undefined,
+        HIVE_ID,
+      );
       console.log(
         "[ContinuousFeed] API returned:",
         data?.length || 0,
         "posts",
-        data,
+        { hasMore: apiHasMore },
       );
 
-      if (data && Array.isArray(data)) {
-        validPosts = data.filter((p) => {
-          // [SURGICAL FIX] Ensure post and user exist to prevent crashes
-          if (!p || !p.user) return false;
-          // Filter out burned or expired posts (Client-side safety net)
-          if (p.burned_at) return false;
-          if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
-          if (postLooksLikeTestInject(p)) return false;
-          if (!postHasPlayableMedia(p)) return false;
-          return true;
-        }) as Array<Post & { user: User }>;
+      if (data?.length) {
+        validPosts = filterPlayablePosts(data);
       }
 
       // If API has no posts, try to auto-seed DB first
@@ -620,17 +645,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             const seedData = await seedRes.json();
             if (seedData.posts?.length > 0) {
               feedLogger.info("Auto-seed successful, re-fetching feed...");
-              const reseeded = await getExplorePosts(0, 10, undefined, HIVE_ID);
-              if (reseeded && reseeded.length > 0) {
-                const valid = reseeded.filter((p: any) => {
-                  if (!p || !p.user) return false;
-                  if (postLooksLikeTestInject(p)) return false;
-                  if (!postHasPlayableMedia(p)) return false;
-                  return true;
-                }) as Array<Post & { user: User }>;
+              const reseeded = await getExplorePosts(
+                0,
+                FEED_PAGE_SIZE,
+                undefined,
+                HIVE_ID,
+              );
+              if (reseeded.posts.length > 0) {
+                const valid = filterPlayablePosts(reseeded.posts);
                 if (valid.length > 0) {
                   setPosts(valid);
-                  setHasMore(valid.length === 10);
+                  setHasMore(reseeded.hasMore);
                   setPage(0);
                   return;
                 }
@@ -655,7 +680,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         return;
       } else {
         setPosts(validPosts);
-        setHasMore(data.length === 10);
+        setHasMore(apiHasMore);
       }
 
       setPage(0);
@@ -679,21 +704,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      // Fetch next page with Hive filtering
-      const data = await getExplorePosts(nextPage, 10, undefined, HIVE_ID);
+      const { posts: data, hasMore: apiHasMore } = await getExplorePosts(
+        nextPage,
+        FEED_PAGE_SIZE,
+        undefined,
+        HIVE_ID,
+      );
 
-      if (data && data.length > 0) {
-        const validPosts = data.filter((p) => {
-          if (!p.user) return false;
-          if (p.burned_at) return false;
-          if (p.expires_at && new Date(p.expires_at) < new Date()) return false;
-          if (postLooksLikeTestInject(p)) return false;
-          if (!postHasPlayableMedia(p)) return false;
-          return true;
-        }) as Array<Post & { user: User }>;
-        setPosts((prev) => [...prev, ...validPosts]);
-        setHasMore(data.length === 10);
-        setPage(nextPage);
+      if (data.length > 0) {
+        const validPosts = filterPlayablePosts(data);
+        if (validPosts.length > 0) {
+          setPosts((prev) => mergeFeedPages(prev, validPosts));
+          setHasMore(apiHasMore);
+          setPage(nextPage);
+        } else {
+          setHasMore(false);
+        }
       } else {
         setHasMore(false);
       }

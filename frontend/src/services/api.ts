@@ -263,12 +263,14 @@ export async function getFeedPosts(
   }
 }
 
+export type ExplorePostsResult = { posts: Post[]; hasMore: boolean };
+
 export async function getExplorePosts(
   page: number = 0,
   limit: number = 20,
   region?: string,
   hiveId?: string,
-): Promise<Post[]> {
+): Promise<ExplorePostsResult> {
   const query = new URLSearchParams({
     limit: limit.toString(),
     page: page.toString(),
@@ -276,13 +278,19 @@ export async function getExplorePosts(
   if (region) query.append("region", region);
   if (hiveId) query.append("hive", hiveId);
 
-  // Use Supabase HTTP API endpoint (works without DATABASE_URL)
   const url = `/explore/supabase?${query.toString()}`;
   console.log("[Feed] Fetching:", url);
-  const { data, error } = await apiCall<{ posts: Post[] }>(url);
-  console.log("[Feed] Response:", { posts: data?.posts?.length || 0, error });
-  if (error || !data) return [];
-  return (data.posts || [])
+  const { data, error } = await apiCall<{
+    posts: Post[];
+    hasMore?: boolean;
+  }>(url);
+  console.log("[Feed] Response:", {
+    posts: data?.posts?.length || 0,
+    hasMore: data?.hasMore,
+    error,
+  });
+  if (error || !data) return { posts: [], hasMore: false };
+  const posts = (data.posts || [])
     .map(mapBackendPost)
     .filter(
       (post: Post | null): post is Post =>
@@ -290,6 +298,10 @@ export async function getExplorePosts(
         !!post.id &&
         !!(post.media_url || post.hls_url || post.mux_playback_id),
     );
+  return {
+    posts,
+    hasMore: data.hasMore ?? posts.length > 0,
+  };
 }
 
 export async function getPostById(postId: string): Promise<Post | null> {

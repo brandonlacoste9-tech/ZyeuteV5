@@ -167,7 +167,7 @@ export const Explore: React.FC = () => {
     setIsLoading(true);
     try {
       // Use the dedicated explore endpoint for better performance/discovery
-      const explorePosts = await getExplorePosts(
+      const { posts: explorePosts } = await getExplorePosts(
         0,
         50,
         selectedRegion,

@@ -215,7 +215,7 @@ router.get("/feed/infinite/supabase", async (req, res) => {
 });
 
 /**
- * GET /api/explore/supabase - Explore feed using Supabase
+ * GET /api/explore/supabase - Explore feed using Supabase (offset pagination + wrap)
  */
 router.get("/explore/supabase", async (req, res) => {
   try {
@@ -232,14 +232,15 @@ router.get("/explore/supabase", async (req, res) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const limit = parseInt(req.query.limit as string) || 20;
-    const hiveId = req.query.hive as string | undefined;
+    const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit as string, 10) || 20),
+    );
+    const hiveId = (req.query.hive as string) || "quebec";
     const region = req.query.region as string | undefined;
 
-    const query = supabase
-      .from("publications")
-      .select(
-        `
+    const selectFields = `
         *,
         user:user_id (
           id,
@@ -247,19 +248,41 @@ router.get("/explore/supabase", async (req, res) => {
           display_name,
           avatar_url
         )
-      `,
-      )
-      .eq("visibility", "public")
-      .eq("est_masque", false)
-      .is("deleted_at", null)
-      .or(
-        "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
-      )
-      .order("created_at", { ascending: false })
-      // Over-fetch so JS hive filter still returns `limit` results
-      .limit(limit * 8);
+      `;
 
-    const { data: posts, error } = await query;
+    const buildQuery = (from: number, to: number) => {
+      let q = supabase
+        .from("publications")
+        .select(selectFields)
+        .eq("visibility", "public")
+        .eq("est_masque", false)
+        .is("deleted_at", null)
+        .eq("hive_id", hiveId)
+        .or(
+          "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (region) {
+        q = q.eq("region_id", region);
+      }
+      return q;
+    };
+
+    const from = page * limit;
+    const to = from + limit - 1;
+
+    let { data: posts, error } = await buildQuery(from, to);
+    let didWrap = false;
+
+    // Small pool: offset past end — recycle from start so scroll never dead-ends
+    if (!error && (!posts || posts.length === 0) && page > 0) {
+      const recycled = await buildQuery(0, limit - 1);
+      posts = recycled.data;
+      error = recycled.error;
+      didWrap = true;
+    }
 
     if (error) {
       return res.status(500).json({
@@ -268,16 +291,22 @@ router.get("/explore/supabase", async (req, res) => {
       });
     }
 
-    // Filter by hive/region in JS — PostgREST .eq() silently ignores enum columns
-    const filtered = (posts || []).filter((p: any) => {
-      if (hiveId && String(p.hive_id) !== hiveId) return false;
-      if (region && p.region_id !== region) return false;
-      return true;
-    });
+    const formattedPosts =
+      posts?.map((post: any) => ({
+        ...post,
+        user: post.user || {
+          id: post.user_id,
+          username: "unknown",
+          display_name: "Unknown User",
+        },
+      })) || [];
 
     res.json({
-      posts: filtered.slice(0, limit),
-      hiveId: hiveId || "all",
+      posts: formattedPosts,
+      hasMore: formattedPosts.length > 0,
+      page,
+      didWrap,
+      hiveId,
     });
   } catch (error: any) {
     console.error("Explore error:", error);

@@ -353,9 +353,58 @@ router.post("/mexico", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed/tikapi — Import TikToks via TikAPI (uses TIKAPI_KEY + Supabase on server).
+ * Query: ?force=1&limit=40
+ */
+router.post("/tikapi", async (req, res) => {
+  try {
+    const { replenishFeedTikApiIfLow } =
+      await import("../services/feed-replenish-tikapi.js");
+    const force =
+      req.query.force === "1" ||
+      req.query.force === "true" ||
+      req.body?.force === true;
+    const limitRaw = req.query.limit ?? req.body?.limit;
+    const maxImport =
+      limitRaw != null ? parseInt(String(limitRaw), 10) : undefined;
+
+    const result = await replenishFeedTikApiIfLow({
+      force: force || true,
+      maxImport:
+        Number.isFinite(maxImport) && maxImport! > 0 ? maxImport : undefined,
+      hiveId: (req.query.hive as string) || "quebec",
+    });
+
+    if (!result.triggered && result.imported === 0) {
+      const hint = !process.env.TIKAPI_KEY?.trim()
+        ? "Set TIKAPI_KEY on the server"
+        : !process.env.SUPABASE_SERVICE_ROLE_KEY
+          ? "Set SUPABASE_SERVICE_ROLE_KEY on the server"
+          : "Feed may already be above threshold; use ?force=1";
+      return res.status(503).json({
+        success: false,
+        message: hint,
+        ...result,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `TikAPI replenish: ${result.imported} imported`,
+      ...result,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("TikAPI seed error:", error);
+    res.status(500).json({ error: "TikAPI seed failed", details: message });
+  }
+});
+
 router.post("/custom", async (req, res) => {
   try {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
@@ -364,9 +413,11 @@ router.post("/custom", async (req, res) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const videos = req.body.videos;
-    
+
     if (!Array.isArray(videos)) {
-      return res.status(400).json({ error: "Expected videos array in request body" });
+      return res
+        .status(400)
+        .json({ error: "Expected videos array in request body" });
     }
 
     // Insert videos
@@ -380,7 +431,7 @@ router.post("/custom", async (req, res) => {
           visibility: "public",
           est_masque: false,
           moderation_approved: true,
-          processing_status: "completed"
+          processing_status: "completed",
         })
         .select("id, caption, media_url")
         .single();
@@ -399,7 +450,9 @@ router.post("/custom", async (req, res) => {
     });
   } catch (error: any) {
     console.error("Custom Seed error:", error);
-    res.status(500).json({ error: "Custom Seed failed", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Custom Seed failed", details: error.message });
   }
 });
 
