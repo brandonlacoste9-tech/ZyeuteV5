@@ -50,14 +50,14 @@ export function FeedCommentsSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex flex-col justify-end bg-black/70">
+    <div className="fixed inset-0 z-[150] flex flex-col md:flex-row justify-end bg-black/70">
       <button
         type="button"
         className="flex-1 cursor-default"
         aria-label="Fermer"
         onClick={onClose}
       />
-      <div className="max-h-[70vh] flex flex-col rounded-t-2xl bg-zinc-950 border-t border-gold-500/30">
+      <div className="w-full max-h-[70vh] md:max-h-full md:h-full md:w-[400px] flex flex-col rounded-t-2xl md:rounded-t-none md:rounded-l-2xl bg-zinc-950 border-t md:border-t-0 md:border-l border-gold-500/30 shadow-2xl transition-transform">
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <span className="text-gold-400 font-bold text-sm">Commentaires</span>
           <button

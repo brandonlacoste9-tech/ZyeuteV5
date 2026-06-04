@@ -52,7 +52,23 @@ export const Explore: React.FC = () => {
   const [selectedHashtag, setSelectedHashtag] = React.useState(
     savedState?.filters?.selectedHashtag || "",
   );
+  const [selectedCategory, setSelectedCategory] = React.useState(
+    (savedState?.filters as any)?.selectedCategory || "Tout",
+  );
   const { tap } = useHaptics();
+
+  const CATEGORIES = [
+    "Tout",
+    "Humour",
+    "Musique",
+    "Jeux vidéo",
+    "Sports",
+    "Actualités",
+    "Nourriture",
+    "Mode",
+    "Animaux",
+    "Éducation"
+  ];
 
   // Dynamic trending hashtags from API
   const [trendingFromApi, setTrendingFromApi] = React.useState<
@@ -112,11 +128,12 @@ export const Explore: React.FC = () => {
     searchQuery,
     selectedRegion,
     selectedHashtag,
+    selectedCategory,
   });
 
   React.useEffect(() => {
-    stateRef.current = { posts, searchQuery, selectedRegion, selectedHashtag };
-  }, [posts, searchQuery, selectedRegion, selectedHashtag]);
+    stateRef.current = { posts, searchQuery, selectedRegion, selectedHashtag, selectedCategory };
+  }, [posts, searchQuery, selectedRegion, selectedHashtag, selectedCategory]);
 
   /** Deep link from captions: /explore?tag=Montreal */
   React.useEffect(() => {
@@ -141,7 +158,8 @@ export const Explore: React.FC = () => {
           searchQuery: stateRef.current.searchQuery,
           selectedRegion: stateRef.current.selectedRegion,
           selectedHashtag: stateRef.current.selectedHashtag,
-        },
+          selectedCategory: stateRef.current.selectedCategory,
+        } as any,
       });
     };
   }, []); // Only run on mount/unmount
@@ -159,7 +177,8 @@ export const Explore: React.FC = () => {
       savedState?.posts?.length &&
       searchQuery === savedState.filters?.searchQuery &&
       selectedRegion === savedState.filters?.selectedRegion &&
-      selectedHashtag === savedState.filters?.selectedHashtag
+      selectedHashtag === savedState.filters?.selectedHashtag &&
+      selectedCategory === (savedState.filters as any)?.selectedCategory
     ) {
       return;
     }
@@ -198,6 +217,29 @@ export const Explore: React.FC = () => {
         );
       }
 
+      if (selectedCategory && selectedCategory !== "Tout") {
+        // Map categories to simple keyword checks since we don't have hardcoded post categories yet
+        const categoryMap: Record<string, string[]> = {
+          "Humour": ["drôle", "humour", "blague", "joke", "lol"],
+          "Musique": ["musique", "chanson", "music", "cover", "chanteur"],
+          "Jeux vidéo": ["gaming", "jeu", "twitch", "gamer", "playstation"],
+          "Sports": ["sport", "hockey", "soccer", "gym", "workout", "fitness"],
+          "Actualités": ["nouvelles", "news", "politique", "actu"],
+          "Nourriture": ["recette", "food", "cuisine", "manger", "restaurant"],
+          "Mode": ["mode", "fashion", "ootd", "style", "vêtement"],
+          "Animaux": ["chien", "chat", "dog", "cat", "animal"],
+          "Éducation": ["apprendre", "tuto", "comment", "savoir", "education"]
+        };
+        
+        const keywords = categoryMap[selectedCategory] || [];
+        filtered = filtered.filter((p) => {
+          const cap = (p.caption || "").toLowerCase();
+          const tags = (p.hashtags || []).join(" ").toLowerCase();
+          const text = `${cap} ${tags}`;
+          return keywords.some(kw => text.includes(kw));
+        });
+      }
+
       // Sort by fire_count for "Trending" feel
       filtered.sort((a, b) => (b.fire_count || 0) - (a.fire_count || 0));
 
@@ -213,6 +255,7 @@ export const Explore: React.FC = () => {
     selectedRegion,
     selectedHashtag,
     searchQuery,
+    selectedCategory,
     savedState,
     currentHive.id,
   ]);
@@ -245,6 +288,29 @@ export const Explore: React.FC = () => {
           </Link>
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
+      </div>
+
+
+      {/* TikTok-style Category Chips (Sticky) */}
+      <div className="sticky top-[60px] z-20 bg-black/90 backdrop-blur-md border-b border-white/5 py-3 px-4 shadow-sm">
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar snap-x max-w-7xl mx-auto">
+          {CATEGORIES.map((category) => (
+            <button
+              key={category}
+              onClick={() => {
+                tap();
+                setSelectedCategory(category);
+              }}
+              className={`flex-shrink-0 snap-start px-5 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                selectedCategory === category
+                  ? "bg-white text-black"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -523,76 +589,67 @@ export const Explore: React.FC = () => {
           <ErrorBoundary
             fallback={<ErrorFallback onRetry={() => fetchPosts()} />}
           >
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 md:gap-4">
               {posts.map((post) => (
-                <Link
-                  key={post.id}
-                  to={`/p/${post.id}`}
-                  className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
-                >
-                  <img
-                    src={post.thumbnail_url || post.media_url}
-                    alt={post.caption || "Post"}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    onError={(e) => {
-                      // Fallback to a default Quebec-themed placeholder if image fails
-                      e.currentTarget.src =
-                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%231a1a1a' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='60' fill='%23D4AF37'%3E⚜️%3C/text%3E%3C/svg%3E";
-                    }}
-                  />
+                <div key={post.id} className="flex flex-col gap-2">
+                  <Link
+                    to={`/p/${post.id}`}
+                    className="relative aspect-[9/16] leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                  >
+                    <img
+                      src={post.thumbnail_url || post.media_url}
+                      alt={post.caption || "Post"}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Crect fill='%231a1a1a' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='60' fill='%23D4AF37'%3E⚜️%3C/text%3E%3C/svg%3E";
+                      }}
+                    />
 
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-3 space-y-2">
-                      {/* Stats */}
-                      <div className="flex items-center gap-3 text-white text-sm">
-                        <div className="flex items-center gap-1">
-                          <svg
-                            className="w-4 h-4 text-orange-400"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                          </svg>
-                          <span className="font-bold">
-                            {formatNumber(post.fire_count)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <svg
-                            className="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          <span className="font-bold">
-                            {formatNumber(post.comment_count)}
-                          </span>
-                        </div>
+                    {/* TikTok-style persistent play count overlay */}
+                    {post.type === "video" && (
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white z-10 font-semibold text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                        <svg className="w-3 h-3 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        <span>{formatNumber(post.view_count || post.fire_count * 5)}</span>
                       </div>
+                    )}
 
-                      {/* User */}
-                      {post.user && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gold-500 flex items-center justify-center text-xs font-bold">
-                            {post.user.username?.[0]?.toUpperCase()}
+                    {/* Gradient at bottom for text readability */}
+                    <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+
+                    {/* Gold corner accent */}
+                    <div
+                      className="absolute top-0 right-0 w-6 h-6 bg-gold-gradient opacity-30"
+                      style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
+                    />
+                  </Link>
+
+                  {/* Creator Context (TikTok style, below thumbnail) */}
+                  {post.user && (
+                    <div className="flex items-center gap-2 px-1 pb-1">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden border border-leather-600 bg-leather-800">
+                        {post.user?.avatar_url ? (
+                          <img src={post.user.avatar_url} alt={post.user.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gold-500">
+                            {post.user?.username?.[0]?.toUpperCase()}
                           </div>
-                          <span className="text-white text-xs font-semibold truncate">
-                            @{post.user.username}
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-white text-xs font-bold truncate hover:underline cursor-pointer" onClick={(e) => { e.preventDefault(); navigate(`/profile/${post.user?.username}`); }}>
+                          {post.user?.display_name || post.user?.username}
+                        </span>
+                        <span className="text-leather-300 text-[10px] truncate">
+                          @{post.user?.username}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Gold corner accent */}
-                  <div
-                    className="absolute top-0 right-0 w-6 h-6 bg-gold-gradient opacity-30"
-                    style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
-                  />
-                </Link>
+                  )}
+                </div>
               ))}
             </div>
           </ErrorBoundary>

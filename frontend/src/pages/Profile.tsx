@@ -50,14 +50,14 @@ const ProfileStat: React.FC<{ value: number | string; label: string; onClick?: (
   <button 
     onClick={onClick}
     disabled={!onClick}
-    className={`flex flex-col items-center gap-0.5 px-2 ${onClick ? "active:scale-95 transition-transform cursor-pointer" : ""}`}
+    className={`flex items-baseline gap-1.5 px-2 ${onClick ? "active:scale-95 hover:bg-white/5 rounded-md py-1 transition-all cursor-pointer" : ""}`}
   >
-    <span className="text-lg font-black" style={{ color: "#FFFFFF" }}>
+    <span className="text-base font-black" style={{ color: "#FFFFFF" }}>
       {value}
     </span>
     <span
-      className="text-[10px] font-semibold uppercase tracking-wider"
-      style={{ color: "rgba(212,175,55,0.8)" }}
+      className="text-sm font-medium"
+      style={{ color: "rgba(255,255,255,0.7)" }}
     >
       {label}
     </span>
@@ -973,7 +973,7 @@ export const Profile: React.FC = () => {
                 }
               />
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1 md:gap-2">
                 {gridPosts.map((post, index) => {
                   const isProcessing =
                     post.processing_status === "pending" ||
@@ -1012,38 +1012,50 @@ export const Profile: React.FC = () => {
                         fetchPriority={index < 6 ? "high" : "auto"}
                         loading={index < 6 ? "eager" : "lazy"}
                       />
+                      {/* TikTok-style persistent overlays */}
+                      {post.type === "video" && (
+                        <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-1 text-white z-10 font-semibold text-xs md:text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                          <svg className="w-3 h-3 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                          </svg>
+                          <span>{formatNumber(post.view_count || post.fire_count * 5)}</span>
+                        </div>
+                      )}
+                      {(post as any).is_pinned && (
+                        <div className="absolute top-1 left-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10">
+                          Pinned
+                        </div>
+                      )}
+
                       {/* Overlay on hover */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-20">
                         <div className="flex items-center gap-1 text-white">
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4 md:w-5 md:h-5"
                             fill="currentColor"
                             viewBox="0 0 24 24"
                           >
                             <path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
                           </svg>
-                          <span className="font-bold">
+                          <span className="font-bold text-sm md:text-base">
                             {formatNumber(post.fire_count)}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 text-white">
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4 md:w-5 md:h-5"
                             fill="currentColor"
                             viewBox="0 0 24 24"
                           >
                             <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
-                          <span className="font-bold">
+                          <span className="font-bold text-sm md:text-base">
                             {formatNumber(post.comment_count)}
                           </span>
                         </div>
                       </div>
-                      {/* Gold corner accent */}
-                      <div
-                        className="absolute top-0 right-0 w-8 h-8 bg-gold-gradient opacity-20"
-                        style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
-                      />
+                      {/* Gradient at bottom for text readability */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                     </Link>
                   );
                 })}
