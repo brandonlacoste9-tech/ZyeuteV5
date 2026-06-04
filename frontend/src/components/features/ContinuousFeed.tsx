@@ -602,12 +602,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       return;
     }
 
-    // If we already have posts (restored state), don't fetch initial
-    if (savedState?.posts?.length) {
+    // Restore scroll position from saved state, but refetch if cache is a tiny stale slice
+    const savedCount = savedState?.posts?.length ?? 0;
+    if (savedCount >= FEED_PAGE_SIZE * 2) {
       feedLogger.debug(
-        `Skipping fetch, found ${savedState.posts.length} posts in savedState`,
+        `Skipping fetch, using ${savedCount} posts from savedState`,
       );
       return;
+    }
+    if (savedCount > 0) {
+      feedLogger.info(
+        `Saved feed has only ${savedCount} posts — refreshing from API`,
+      );
     }
 
     isFetchingRef.current = true;
@@ -749,12 +755,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     let callbackId: any = null;
     let cancelled = false;
 
-    if (!savedState || !savedState.posts?.length || posts.length === 0) {
+    const savedCount = savedState?.posts?.length ?? 0;
+    const shouldFetchFresh =
+      !savedState ||
+      savedCount === 0 ||
+      posts.length === 0 ||
+      savedCount < FEED_PAGE_SIZE * 2;
+
+    if (shouldFetchFresh) {
       if (hasInitializedRef.current) return;
       hasInitializedRef.current = true;
 
-      // Use a plain timeout instead of requestIdleCallback to avoid
-      // StrictMode cancellation racing with the idle scheduler.
       callbackId = setTimeout(() => {
         if (!cancelled) fetchVideoFeed();
       }, 50);
