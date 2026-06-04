@@ -354,6 +354,116 @@ router.post("/mexico", async (req, res) => {
 });
 
 /**
+ * POST /api/seed/providers — Pixabay + Pexels + Apify (stable stock + TikTok via Apify).
+ * Query: ?pexels=1&pixabay=1&apify=1&limit=15
+ */
+router.post("/providers", async (req, res) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({
+        error: "Missing Supabase configuration",
+        details: "SUPABASE_SERVICE_ROLE_KEY required",
+      });
+    }
+
+    const q = req.query;
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(String(q.limit ?? req.body?.limit ?? 15), 10) || 15),
+    );
+    const flag = (name: string) =>
+      q[name] === "1" ||
+      q[name] === "true" ||
+      req.body?.[name] === true ||
+      req.body?.[name] === "1";
+
+    const anySet =
+      flag("pexels") || flag("pixabay") || flag("apify") || flag("apify_only");
+    const { seedFeedProviders } =
+      await import("../services/feed-seed-providers.js");
+
+    const stats = await seedFeedProviders({
+      supabaseUrl,
+      supabaseServiceKey: supabaseKey,
+      limitPerProvider: limit,
+      hiveId: (q.hive as string) || "quebec",
+      regionId: (q.region as string) || "montreal",
+      pexels: !anySet || flag("pexels"),
+      pixabay: !anySet || flag("pixabay"),
+      apify: !anySet || flag("apify") || flag("apify_only"),
+    });
+
+    const total = stats.pexels + stats.pixabay + stats.apify;
+    res.json({
+      success: total > 0 || stats.errors.length === 0,
+      message: `Providers seed: pexels=${stats.pexels} pixabay=${stats.pixabay} apify=${stats.apify}`,
+      total,
+      ...stats,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Providers seed error:", error);
+    res.status(500).json({ error: "Providers seed failed", details: message });
+  }
+});
+
+/**
+ * POST /api/seed/tikwm — Import TikToks via TikWM (no TikAPI key; uses challenge/hashtag IDs).
+ */
+router.post("/tikwm", async (req, res) => {
+  try {
+    const { collectTikwmFeedSeedCandidates } =
+      await import("../services/tikwm-feed.js");
+    const { importFeedSeedCandidates } =
+      await import("../services/tikapi-feed-insert.js");
+
+    const limitRaw = req.query.limit ?? req.body?.limit;
+    const maxImport = limitRaw != null ? parseInt(String(limitRaw), 10) : 40;
+
+    const candidates = await collectTikwmFeedSeedCandidates({
+      regionalPerTag: 10,
+      viralPerTag: 6,
+    });
+
+    if (!candidates.length) {
+      return res.status(503).json({
+        success: false,
+        message: "TikWM returned no importable videos",
+        candidates: 0,
+      });
+    }
+
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const databaseUrl = process.env.DATABASE_URL?.trim();
+
+    const stats = await importFeedSeedCandidates({
+      candidates,
+      maxImport: Number.isFinite(maxImport) && maxImport > 0 ? maxImport : 40,
+      databaseUrl,
+      supabaseUrl,
+      supabaseServiceKey: supabaseKey,
+    });
+
+    res.json({
+      success: true,
+      message: `TikWM seed: ${stats.imported} imported`,
+      candidates: candidates.length,
+      ...stats,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("TikWM seed error:", error);
+    res.status(500).json({ error: "TikWM seed failed", details: message });
+  }
+});
+
+/**
  * POST /api/seed/tikapi — Import TikToks via TikAPI (uses TIKAPI_KEY + Supabase on server).
  * Query: ?force=1&limit=40
  */

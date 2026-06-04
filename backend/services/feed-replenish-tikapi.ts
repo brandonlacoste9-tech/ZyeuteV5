@@ -89,7 +89,15 @@ export async function replenishFeedTikApiIfLow(options?: {
   const need = Math.max(0, targetPosts - feedCountBefore);
   const maxImport =
     options?.maxImport ??
-    (force ? defaultBatch : Math.min(defaultBatch, Math.max(need, minPosts > feedCountBefore ? minPosts - feedCountBefore : 0)));
+    (force
+      ? defaultBatch
+      : Math.min(
+          defaultBatch,
+          Math.max(
+            need,
+            minPosts > feedCountBefore ? minPosts - feedCountBefore : 0,
+          ),
+        ));
 
   if (!force && feedCountBefore >= minPosts) {
     log.info(`Feed OK (${feedCountBefore} >= ${minPosts}), no replenish`);
@@ -110,6 +118,28 @@ export async function replenishFeedTikApiIfLow(options?: {
     trendingCount: 25,
     minPlays: 0,
   });
+
+  if (candidates.length < 5) {
+    log.warn(
+      `TikAPI returned ${candidates.length} candidates — trying TikWM fallback`,
+    );
+    const { collectTikwmFeedSeedCandidates } = await import("./tikwm-feed.js");
+    const tikwm = await collectTikwmFeedSeedCandidates({
+      regionalPerTag: 10,
+      viralPerTag: 6,
+    });
+    if (tikwm.length > 0) {
+      const seen = new Set(candidates.map((c) => c.video.video_id));
+      for (const c of tikwm) {
+        if (seen.has(c.video.video_id)) continue;
+        seen.add(c.video.video_id);
+        candidates.push(c);
+      }
+      log.info(
+        `TikWM added ${tikwm.length} candidates (merged ${candidates.length})`,
+      );
+    }
+  }
 
   const stats = await importFeedSeedCandidates({
     candidates,
@@ -150,7 +180,9 @@ export function startFeedReplenishJob(): () => void {
     });
   };
 
-  log.info(`Starting (every ${intervalMs}ms, min posts ${envInt("FEED_MIN_PLAYABLE_POSTS", 40)})`);
+  log.info(
+    `Starting (every ${intervalMs}ms, min posts ${envInt("FEED_MIN_PLAYABLE_POSTS", 40)})`,
+  );
   tick();
   intervalHandle = setInterval(tick, intervalMs);
 
