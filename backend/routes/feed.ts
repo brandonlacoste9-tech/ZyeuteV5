@@ -264,8 +264,6 @@ router.get(
           .not("content", "ilike", "%DIAGNOSTIC%")
           .not("caption", "ilike", "%TEST VIDEO%")
           .not("content", "ilike", "%TEST VIDEO%")
-          .not("media_url", "ilike", "%fal.media%")
-          .not("media_url", "ilike", "%.fal.run%")
           .order("viral_score", { ascending: false })
           .order("reactions_count", { ascending: false })
           .order("created_at", { ascending: false })

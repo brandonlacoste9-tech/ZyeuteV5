@@ -264,8 +264,8 @@ async function populateFeed() {
       reactions_count: post.reactions,
       comments_count: Math.floor(post.reactions * 0.08),
       shares_count: Math.floor(post.reactions * 0.03),
-      view_count: post.reactions * 12,
-      viral_score: post.reactions / 100, // ✅ Used for feed ranking
+      view_count: Math.floor(post.reactions * 12),
+      viral_score: Math.floor(post.reactions / 100), // ✅ Used for feed ranking
       created_at: randomCreatedAt(),
     }]);
 
