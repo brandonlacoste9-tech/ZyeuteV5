@@ -7,7 +7,6 @@
 
 import { config } from "dotenv";
 import { fileURLToPath } from "url";
-import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "crypto";
