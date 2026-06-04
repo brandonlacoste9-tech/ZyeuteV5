@@ -7,6 +7,22 @@ import { captureReferralFromUrl } from "./lib/referralCapture";
 
 captureReferralFromUrl();
 
+const APP_VERSION = "20260604-1";
+try {
+  const storedVersion = localStorage.getItem("zyeute_app_version");
+  if (storedVersion !== APP_VERSION) {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith("sb-") || key.startsWith("supabase."))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    localStorage.setItem("zyeute_app_version", APP_VERSION);
+  }
+} catch {}
+
 // Safety wrapper: prevent Object.values crash when called with null/undefined
 // (e.g. from dependencies calling Object.values on an unexpected nullish value)
 const _origObjectValues = Object.values;
