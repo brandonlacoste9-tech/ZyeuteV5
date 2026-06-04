@@ -3,6 +3,7 @@ import * as dotenv from "dotenv";
 import axios from "axios";
 
 dotenv.config();
+dotenv.config({ path: ".env.local", override: true });
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -22,10 +23,7 @@ async function autoFixVideosAPI() {
     .from("publications")
     .select("id, media_url, thumbnail_url, processing_status")
     .eq("type", "video")
-    .or(
-      "processing_status.eq.failed,thumbnail_url.is.null,processing_status.eq.pending",
-    )
-    .limit(50);
+    .limit(200);
 
   if (error) {
     console.error("❌ Error fetching videos:", error.message);

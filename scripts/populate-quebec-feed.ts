@@ -138,6 +138,30 @@ const QUEBEC_POSTS = [
     hashtags: ["biere", "microbrasserie", "craft", "quebec", "sante"],
     reactions: 1450,
   },
+  {
+    caption: "🚗 Roadtrip sur la route 132 en Gaspésie, paysages à couper le souffle! 🌊",
+    content: "Une voiture roule sur une route côtière pittoresque de la Gaspésie, avec la mer et des falaises au coucher du soleil",
+    hashtags: ["gaspesie", "roadtrip", "voyage", "quebec", "route132"],
+    reactions: 1050,
+  },
+  {
+    caption: "🧀 Une bonne poutine bien chaude de chez nous! 😍",
+    content: "Une délicieuse poutine québécoise fumante, fromage en grains frais, frites croustillantes, sauce brune",
+    hashtags: ["poutine", "food", "quebec", "fromage"],
+    reactions: 2300,
+  },
+  {
+    caption: "🦌 Un orignal aperçu dans la brume matinale... Wow! 🌲",
+    content: "Un majestueux orignal avec d'immenses bois se tient dans une forêt brumeuse au lever du soleil",
+    hashtags: ["orignal", "nature", "faune", "quebec", "forêt"],
+    reactions: 4500,
+  },
+  {
+    caption: "🎆 L'International des Feux Loto-Québec illumine le pont Jacques-Cartier! 🎇",
+    content: "Spectacle pyrotechnique éclatant au-dessus du fleuve Saint-Laurent et du pont Jacques-Cartier la nuit",
+    hashtags: ["feux", "montreal", "spectacle", "nuit", "lotoquebec"],
+    reactions: 3200,
+  }
 ];
 
 function randomCreatedAt(): string {

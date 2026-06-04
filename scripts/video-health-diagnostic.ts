@@ -1,8 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 import axios from "axios";
+import { join } from "path";
 
-dotenv.config();
+dotenv.config({ path: join(process.cwd(), ".env.local"), override: true });
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
