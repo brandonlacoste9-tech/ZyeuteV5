@@ -20,6 +20,7 @@ import adminRoutes from "./routes/admin.js";
 import tiktokRoutes from "./routes/tiktok.js";
 import moderationRoutes from "./routes/moderation.js";
 import healthRoutes from "./routes/health.js";
+import seedRoutes from "./routes/seed.js";
 import genaiBuilderRoutes from "./routes/genai-builder.routes.js";
 import genaiSearchRoutes from "./routes/genai-search.routes.js";
 import enhanceRoutes from "./routes/enhance.js";
@@ -142,6 +143,9 @@ export async function registerRoutes(
 
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
+
+  // Feed seeding (public — no auth; must be before requireAuth catch-alls)
+  app.use("/api/seed", seedRoutes);
 
   // Video processing webhook (called by HLS worker for cache invalidation)
   app.post("/api/webhook/video-processed", (req, res) => {

@@ -1,0 +1,35 @@
+# Run feed seed using repo secrets (copy from Vercel → GitHub Secrets if needed).
+# Vercel env vars do NOT reach Render — this job writes directly to Supabase.
+name: Seed feed (Pixabay + Pexels + Apify)
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Max videos per provider
+        required: false
+        default: "15"
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Seed providers
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          APIFY_API_KEY: ${{ secrets.APIFY_API_KEY }}
+        run: npx tsx scripts/seed-feed-providers.ts --limit=${{ inputs.limit }}
