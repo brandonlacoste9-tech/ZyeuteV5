@@ -24,8 +24,8 @@ async function main() {
     process.exit(1);
   }
 
-  const target = parseArg("target", 300);
-  const maxApify = parseArg("apify", 80);
+  const target = parseArg("target", 500);
+  const maxApify = parseArg("apify", 100);
 
   console.log(
     `🎯 Target pool size: ${target} (Apify batch up to ${maxApify})\n`,

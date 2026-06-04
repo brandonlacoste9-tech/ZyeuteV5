@@ -28,8 +28,8 @@ async function main() {
 
   const limitArg = process.argv.find((x) => x.startsWith("--limit="));
   const limit = limitArg
-    ? Math.min(50, Math.max(1, parseInt(limitArg.split("=")[1], 10) || 15))
-    : 15;
+    ? Math.min(100, Math.max(1, parseInt(limitArg.split("=")[1], 10) || 25))
+    : 25;
 
   const onlyApify = hasFlag("apify");
   const onlyPexels = hasFlag("pexels");
