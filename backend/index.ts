@@ -574,6 +574,9 @@ app.use((req, res, next) => {
       const { startTikTokFeedPopulatorJob } =
         await import("./services/tiktok-feed-populator-job.js");
       startTikTokFeedPopulatorJob();
+      const { startFeedReplenishJob } =
+        await import("./services/feed-replenish-tikapi.js");
+      startFeedReplenishJob();
     } catch (jobErr: unknown) {
       const msg = jobErr instanceof Error ? jobErr.message : String(jobErr);
       console.warn("⚠️ [Startup] TikTok feed job not started:", msg);

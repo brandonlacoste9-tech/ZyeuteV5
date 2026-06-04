@@ -77,7 +77,11 @@
     "prepare": "node -e \"if(process.env.CI==='true'||process.env.VERCEL){process.exit(0);}try{const fs=require('fs');const path=require('path');const {execSync}=require('child_process');const huskyPath=path.join(process.cwd(),'node_modules','.bin','husky');if(fs.existsSync(huskyPath)){execSync(huskyPath,{stdio:'inherit'});}}catch(e){if(e.code!=='ENOENT')throw e}\"",
     "cleanup:publications": "tsx scripts/cleanup-junk-publications.ts",
     "pexels:seed": "tsx scripts/pexels-seed.ts",
-    "tiktok:seed": "tsx scripts/nightly-tiktok-seed.ts"
+    "tiktok:seed": "tsx scripts/nightly-tiktok-seed.ts",
+    "tikapi:seed": "tsx scripts/seed-tikapi-videos.ts",
+    "feed:replenish": "tsx scripts/feed-replenish-once.ts",
+    "seed:render": "tsx scripts/seed-tikapi-via-render.ts",
+    "seed:render:pexels": "node -e \"fetch('https://zyeutev5-1.onrender.com/api/seed/feed',{method:'POST'}).then(r=>r.json()).then(console.log)\""
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.61",

@@ -4,48 +4,16 @@
  */
 import { logger } from "../utils/logger.js";
 import {
-  TikTokScraperService,
   missingTikTokProviderErrorMessage,
 } from "./tiktok-scraper-service.js";
-import { importTikTokVideoToFeed } from "./tiktok-feed-import.js";
+import { replenishFeedTikApiIfLow } from "./feed-replenish-tikapi.js";
 
 const log = logger.withContext("TikTokFeedJob");
-
-const DEFAULT_QUERIES = [
-  "quebec",
-  "viral",
-  "montreal",
-  "funny",
-  "quebecois",
-  "trending",
-  "mtl",
-  "foryou",
-  "poutine",
-  "dance",
-  "vieuxquebec",
-];
 
 function envInt(name: string, fallback: number): number {
   const v = parseInt(process.env[name] || "", 10);
   return Number.isFinite(v) && v > 0 ? v : fallback;
 }
-
-function parseQueries(): string[] {
-  const raw = process.env.TIKTOK_FEED_JOB_QUERIES?.trim();
-  if (!raw) return DEFAULT_QUERIES;
-  const list = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  return list.length > 0 ? list : DEFAULT_QUERIES;
-}
-
-function shuffleInPlace<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-let runIndex = 0;
 
 export type TikTokFeedJobRunStats = {
   imported: number;
@@ -61,59 +29,20 @@ export type TikTokFeedJobRunStats = {
  * Single job pass: trending first; if no videos, hashtag search with rotating query.
  */
 export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStats> {
-  const stats: TikTokFeedJobRunStats = {
-    imported: 0,
-    attempted: 0,
-    duplicate: 0,
+  const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 20);
+
+  const result = await replenishFeedTikApiIfLow({
+    maxImport: maxPerRun,
+  });
+
+  return {
+    imported: result.imported,
+    attempted: result.candidates,
+    duplicate: result.duplicate,
     moderation: 0,
-    other: 0,
+    other: result.failed + result.skipped,
     source: "trending",
   };
-
-  const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 5);
-  const fetchBatch = Math.min(30, Math.max(maxPerRun * 4, 15));
-
-  let videos = await TikTokScraperService.getTrending(fetchBatch);
-  if (!videos.length) {
-    const queries = parseQueries();
-    const q = queries[runIndex % queries.length];
-    runIndex++;
-    stats.source = "search";
-    stats.query = q;
-    videos = await TikTokScraperService.search(q, fetchBatch);
-  } else {
-    runIndex++;
-  }
-
-  shuffleInPlace(videos);
-
-  for (const video of videos) {
-    if (stats.imported >= maxPerRun) break;
-
-    stats.attempted++;
-    const result = await importTikTokVideoToFeed(video, {
-      metadataSource: "tiktok-feed-job",
-    });
-
-    if (result.ok) {
-      stats.imported++;
-      log.info(`Imported TikTok ${video.video_id} → post ${result.postId}`);
-      continue;
-    }
-
-    switch (result.reason) {
-      case "duplicate":
-        stats.duplicate++;
-        break;
-      case "moderation":
-        stats.moderation++;
-        break;
-      default:
-        stats.other++;
-    }
-  }
-
-  return stats;
 }
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -127,8 +56,14 @@ export function startTikTokFeedPopulatorJob(): () => void {
     return () => {};
   }
 
-  if (!process.env.DATABASE_URL) {
-    log.warn("DATABASE_URL missing — TikTok feed job not started.");
+  const hasDb =
+    !!process.env.DATABASE_URL ||
+    (!!process.env.VITE_SUPABASE_URL &&
+      !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!hasDb) {
+    log.warn(
+      "DATABASE_URL or Supabase service key missing — TikTok feed job not started.",
+    );
     return () => {};
   }
 
@@ -152,7 +87,7 @@ export function startTikTokFeedPopulatorJob(): () => void {
   };
 
   log.info(
-    `Starting (every ${intervalMs}ms, max ${envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 5)} imports/run).`,
+    `Starting (every ${intervalMs}ms, max ${envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 20)} imports/run).`,
   );
   tick();
   intervalHandle = setInterval(tick, intervalMs);

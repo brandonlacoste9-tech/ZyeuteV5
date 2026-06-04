@@ -9,10 +9,10 @@
 import axios from "axios";
 import TikAPI from "tikapi";
 
-const TIKAPI_KEY = process.env.TIKAPI_KEY ?? "";
-
-/** TikAPI client; null when TIKAPI_KEY is unset (callers must check). */
-const tikapi = TIKAPI_KEY ? TikAPI(TIKAPI_KEY) : null;
+function getTikApiClient(): ReturnType<typeof TikAPI> | null {
+  const key = process.env.TIKAPI_KEY?.trim();
+  return key ? TikAPI(key) : null;
+}
 
 const POLLO_API_KEY = process.env.POLLO_API_KEY ?? "";
 
@@ -41,6 +41,7 @@ export const TikApiService = {
    */
   async getTrendingVideos(region: string = "CA", count: number = 10) {
     try {
+      const tikapi = getTikApiClient();
       if (!tikapi) {
         console.warn("[TikAPI] TIKAPI_KEY missing; skip trending.");
         return [];
@@ -91,6 +92,7 @@ export const TikApiService = {
    */
   async searchByHashtag(hashtag: string, count: number = 10) {
     try {
+      const tikapi = getTikApiClient();
       if (!tikapi) {
         console.warn("[TikAPI] TIKAPI_KEY missing; skip hashtag search.");
         return [];

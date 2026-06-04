@@ -117,7 +117,7 @@ async function main() {
       const tiktokUrl = `https://www.tiktok.com/@${author.uniqueId || author.nickname || "user"}/video/${tiktokId}`;
 
       const plays = stats.playCount || stats.play_count || 0;
-      if (plays < 5000) continue;
+      void plays;
 
       seenIds.add(tiktokId);
       allVideos.push({

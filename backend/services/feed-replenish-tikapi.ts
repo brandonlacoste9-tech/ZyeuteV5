@@ -1,0 +1,163 @@
+/**
+ * When the public feed pool is low, pull more TikToks (regional + viral + trending).
+ */
+import { logger } from "../utils/logger.js";
+import {
+  collectFeedSeedCandidates,
+  isTikApiConfigured,
+} from "./tikapi-hashtag.js";
+import {
+  countPublicFeedPostsPg,
+  countPublicFeedPostsSupabase,
+  importFeedSeedCandidates,
+  type TikApiInsertStats,
+} from "./tikapi-feed-insert.js";
+import { createClient } from "@supabase/supabase-js";
+
+const log = logger.withContext("FeedReplenish");
+
+function envInt(name: string, fallback: number): number {
+  const v = parseInt(process.env[name] || "", 10);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+}
+
+export type ReplenishResult = TikApiInsertStats & {
+  feedCountBefore: number;
+  candidates: number;
+  triggered: boolean;
+};
+
+function dbConfig() {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  return { databaseUrl, supabaseUrl, supabaseServiceKey };
+}
+
+export async function countPublicFeedPosts(hiveId = "quebec"): Promise<number> {
+  const { databaseUrl, supabaseUrl, supabaseServiceKey } = dbConfig();
+
+  if (databaseUrl) {
+    return countPublicFeedPostsPg(databaseUrl, hiveId);
+  }
+  if (supabaseUrl && supabaseServiceKey) {
+    return countPublicFeedPostsSupabase(
+      createClient(supabaseUrl, supabaseServiceKey),
+      hiveId,
+    );
+  }
+  return 0;
+}
+
+/**
+ * Import TikToks when feed count is below minimum (or when force=true).
+ */
+export async function replenishFeedTikApiIfLow(options?: {
+  force?: boolean;
+  maxImport?: number;
+  hiveId?: string;
+}): Promise<ReplenishResult> {
+  const hiveId = options?.hiveId ?? "quebec";
+  const minPosts = envInt("FEED_MIN_PLAYABLE_POSTS", 40);
+  const targetPosts = envInt("FEED_REPLENISH_TARGET", 80);
+  const defaultBatch = envInt("FEED_REPLENISH_BATCH", 35);
+  const force = options?.force === true;
+
+  const empty: ReplenishResult = {
+    imported: 0,
+    skipped: 0,
+    duplicate: 0,
+    failed: 0,
+    feedCountBefore: 0,
+    candidates: 0,
+    triggered: false,
+  };
+
+  if (!isTikApiConfigured()) {
+    log.warn("TIKAPI_KEY missing — skip replenish");
+    return empty;
+  }
+
+  const { databaseUrl, supabaseUrl, supabaseServiceKey } = dbConfig();
+  if (!databaseUrl && !(supabaseUrl && supabaseServiceKey)) {
+    log.warn("No DATABASE_URL or Supabase service key — skip replenish");
+    return empty;
+  }
+
+  const feedCountBefore = await countPublicFeedPosts(hiveId);
+  const need = Math.max(0, targetPosts - feedCountBefore);
+  const maxImport =
+    options?.maxImport ??
+    (force ? defaultBatch : Math.min(defaultBatch, Math.max(need, minPosts > feedCountBefore ? minPosts - feedCountBefore : 0)));
+
+  if (!force && feedCountBefore >= minPosts) {
+    log.info(`Feed OK (${feedCountBefore} >= ${minPosts}), no replenish`);
+    return { ...empty, feedCountBefore, triggered: false };
+  }
+
+  if (!force && maxImport <= 0) {
+    return { ...empty, feedCountBefore, triggered: false };
+  }
+
+  log.info(
+    `Replenishing feed (${feedCountBefore} posts, importing up to ${maxImport})`,
+  );
+
+  const candidates = await collectFeedSeedCandidates({
+    regionalPerTag: 6,
+    viralPerTag: 10,
+    trendingCount: 25,
+    minPlays: 0,
+  });
+
+  const stats = await importFeedSeedCandidates({
+    candidates,
+    maxImport: force ? maxImport : Math.max(maxImport, 10),
+    databaseUrl,
+    supabaseUrl,
+    supabaseServiceKey,
+  });
+
+  const result: ReplenishResult = {
+    ...stats,
+    feedCountBefore,
+    candidates: candidates.length,
+    triggered: true,
+  };
+
+  log.info(
+    `Replenish done: +${result.imported} dup=${result.duplicate} fail=${result.failed} (pool was ${feedCountBefore})`,
+  );
+
+  return result;
+}
+
+let intervalHandle: ReturnType<typeof setInterval> | null = null;
+
+/** Periodic low-feed check (opt-in: FEED_REPLENISH_ENABLED=true). */
+export function startFeedReplenishJob(): () => void {
+  if (process.env.FEED_REPLENISH_ENABLED !== "true") {
+    log.info("Disabled (FEED_REPLENISH_ENABLED=true to enable).");
+    return () => {};
+  }
+
+  const intervalMs = envInt("FEED_REPLENISH_INTERVAL_MS", 4 * 60 * 60 * 1000);
+
+  const tick = () => {
+    replenishFeedTikApiIfLow().catch((e: unknown) => {
+      log.error(e instanceof Error ? e.message : String(e));
+    });
+  };
+
+  log.info(`Starting (every ${intervalMs}ms, min posts ${envInt("FEED_MIN_PLAYABLE_POSTS", 40)})`);
+  tick();
+  intervalHandle = setInterval(tick, intervalMs);
+
+  return () => {
+    if (intervalHandle) {
+      clearInterval(intervalHandle);
+      intervalHandle = null;
+    }
+  };
+}

@@ -50,6 +50,17 @@ function queryToHashtag(query: string): string {
   return first.replace(/[^a-zA-Z0-9_]/g, "") || "quebec";
 }
 
+function urlFromTikApiMediaField(
+  field: unknown,
+): string | undefined {
+  if (typeof field === "string" && field.startsWith("http")) return field;
+  if (!field || typeof field !== "object") return undefined;
+  const list =
+    (field as { url_list?: string[] }).url_list ??
+    (field as { urlList?: string[] }).urlList;
+  return list?.[0];
+}
+
 export function mapTikApiRawItemToVideo(
   item: Record<string, unknown> | null | undefined,
 ): TikTokVideo | null {
@@ -57,16 +68,31 @@ export function mapTikApiRawItemToVideo(
   const videoId = item.id as string | undefined;
   if (!videoId) return null;
   const v = item.video as Record<string, unknown> | undefined;
-  const playAddr = v?.play_addr as { url_list?: string[] } | undefined;
-  const downloadAddr = v?.download_addr as { url_list?: string[] } | undefined;
-  const videoUrl = playAddr?.url_list?.[0] || downloadAddr?.url_list?.[0];
-  if (!videoUrl || typeof videoUrl !== "string") return null;
-  const cover = v?.cover as { url_list?: string[] } | undefined;
+  const videoUrl =
+    urlFromTikApiMediaField(v?.play_addr) ||
+    urlFromTikApiMediaField(v?.playAddr) ||
+    urlFromTikApiMediaField(v?.download_addr) ||
+    urlFromTikApiMediaField(v?.downloadAddr);
+  if (!videoUrl) return null;
+  const coverUrl =
+    urlFromTikApiMediaField(v?.cover) ||
+    urlFromTikApiMediaField(v?.dynamicCover) ||
+    urlFromTikApiMediaField(v?.originCover);
   const author = item.author as Record<string, unknown> | undefined;
   const avatarThumb = author?.avatar_thumb as
     | { url_list?: string[] }
     | undefined;
-  const stats = item.statistics as Record<string, number> | undefined;
+  const statsRaw = (item.statistics ?? item.stats) as
+    | Record<string, number>
+    | undefined;
+  const stats = statsRaw
+    ? {
+        digg_count: statsRaw.digg_count ?? statsRaw.diggCount,
+        play_count: statsRaw.play_count ?? statsRaw.playCount,
+        share_count: statsRaw.share_count ?? statsRaw.shareCount,
+        comment_count: statsRaw.comment_count ?? statsRaw.commentCount,
+      }
+    : undefined;
   const handle =
     (author?.unique_id as string) || (author?.nickname as string) || "unknown";
   const nickname = (author?.nickname as string) || handle;
@@ -80,10 +106,12 @@ export function mapTikApiRawItemToVideo(
     },
     media: {
       video_url: videoUrl,
-      hd_video_url: downloadAddr?.url_list?.[0],
+      hd_video_url:
+        urlFromTikApiMediaField(v?.download_addr) ||
+        urlFromTikApiMediaField(v?.downloadAddr),
     },
     thumbnails: {
-      cover_url: cover?.url_list?.[0] || "",
+      cover_url: coverUrl || "",
     },
     stats: {
       likes: stats?.digg_count ?? 0,
@@ -228,7 +256,7 @@ async function runApifyTikTokActor(
   }
 }
 
-function mapTikApiServiceVideoToScraper(t: TikVideo): TikTokVideo {
+export function mapTikApiServiceVideoToScraper(t: TikVideo): TikTokVideo {
   const handle = t.author.unique_id || t.author.nickname || "unknown";
   return {
     video_id: t.id,

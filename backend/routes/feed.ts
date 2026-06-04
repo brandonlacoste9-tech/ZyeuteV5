@@ -46,7 +46,7 @@ async function getPostsViaSupabase(
     .not("media_url", "is", null)
     // Only serve permanent video sources (Mux HLS, Supabase storage, reliable CDNs) and TikTok
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%tiktok%,media_url.ilike.%tikcdn%",
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%tiktok%,media_url.ilike.%tiktokv.com%,media_url.ilike.%tikcdn%,media_url.ilike.%byteoversea%,media_url.ilike.%muscdn%,media_url.ilike.%v16-webapp%,media_url.ilike.%v19-webapp%,media_url.ilike.%googleapis.com%",
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
@@ -57,6 +57,26 @@ async function getPostsViaSupabase(
 }
 
 const router = Router();
+
+/** GET /api/feed/pool-stats — how many public videos are in the DB (debug) */
+router.get("/pool-stats", async (_req, res) => {
+  try {
+    const { countPublicFeedPosts } =
+      await import("../services/feed-replenish-tikapi.js");
+    const count = await countPublicFeedPosts("quebec");
+    const minPosts = parseInt(process.env.FEED_MIN_PLAYABLE_POSTS || "40", 10);
+    res.json({
+      hive: "quebec",
+      publicVideoCount: count,
+      minThreshold: minPosts,
+      needsReplenish: count < minPosts,
+    });
+  } catch (e: unknown) {
+    res.status(500).json({
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
 
 // Get feed posts — uses Supabase HTTP API (no DATABASE_URL dependency)
 router.get("/", optionalAuth, async (req: Request, res: Response) => {
