@@ -59,9 +59,9 @@ export async function replenishFeedTikApiIfLow(options?: {
   hiveId?: string;
 }): Promise<ReplenishResult> {
   const hiveId = options?.hiveId ?? "quebec";
-  const minPosts = envInt("FEED_MIN_PLAYABLE_POSTS", 40);
-  const targetPosts = envInt("FEED_REPLENISH_TARGET", 80);
-  const defaultBatch = envInt("FEED_REPLENISH_BATCH", 35);
+  const minPosts = envInt("FEED_MIN_PLAYABLE_POSTS", 150);
+  const targetPosts = envInt("FEED_REPLENISH_TARGET", 350);
+  const defaultBatch = envInt("FEED_REPLENISH_BATCH", 50);
   const force = options?.force === true;
 
   const empty: ReplenishResult = {
@@ -175,13 +175,36 @@ export function startFeedReplenishJob(): () => void {
   const intervalMs = envInt("FEED_REPLENISH_INTERVAL_MS", 4 * 60 * 60 * 1000);
 
   const tick = () => {
-    replenishFeedTikApiIfLow().catch((e: unknown) => {
-      log.error(e instanceof Error ? e.message : String(e));
-    });
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+    if (
+      process.env.APIFY_API_KEY?.trim() &&
+      supabaseUrl &&
+      supabaseServiceKey
+    ) {
+      import("./feed-seed-providers.js")
+        .then(({ replenishQuebecFeedPool }) =>
+          replenishQuebecFeedPool({ supabaseUrl, supabaseServiceKey }),
+        )
+        .then((r) =>
+          log.info(
+            `Pool ${r.feedCountBefore}→${r.feedCountAfter} (+${r.apify} apify, +${r.pexels} pexels)`,
+          ),
+        )
+        .catch((e: unknown) =>
+          log.error(e instanceof Error ? e.message : String(e)),
+        );
+    } else {
+      replenishFeedTikApiIfLow().catch((e: unknown) => {
+        log.error(e instanceof Error ? e.message : String(e));
+      });
+    }
   };
 
   log.info(
-    `Starting (every ${intervalMs}ms, min posts ${envInt("FEED_MIN_PLAYABLE_POSTS", 40)})`,
+    `Starting (every ${intervalMs}ms, min posts ${envInt("FEED_MIN_PLAYABLE_POSTS", 150)})`,
   );
   tick();
   intervalHandle = setInterval(tick, intervalMs);

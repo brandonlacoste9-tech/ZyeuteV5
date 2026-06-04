@@ -78,6 +78,7 @@
     "cleanup:publications": "tsx scripts/cleanup-junk-publications.ts",
     "pexels:seed": "tsx scripts/pexels-seed.ts",
     "seed:providers": "tsx scripts/seed-feed-providers.ts",
+    "seed:bulk": "tsx scripts/seed-bulk-quebec.ts",
     "seed:pexels": "tsx scripts/seed-feed-providers.ts --pexels",
     "seed:pixabay": "tsx scripts/seed-feed-providers.ts --pixabay",
     "seed:apify": "tsx scripts/seed-feed-providers.ts --apify",

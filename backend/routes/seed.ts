@@ -372,8 +372,8 @@ router.post("/providers", async (req, res) => {
 
     const q = req.query;
     const limit = Math.min(
-      50,
-      Math.max(1, parseInt(String(q.limit ?? req.body?.limit ?? 15), 10) || 15),
+      120,
+      Math.max(1, parseInt(String(q.limit ?? req.body?.limit ?? 40), 10) || 40),
     );
     const flag = (name: string) =>
       q[name] === "1" ||
@@ -383,8 +383,28 @@ router.post("/providers", async (req, res) => {
 
     const anySet =
       flag("pexels") || flag("pixabay") || flag("apify") || flag("apify_only");
-    const { seedFeedProviders } =
+    const force =
+      q.force === "1" || q.force === "true" || req.body?.force === true;
+    const { replenishQuebecFeedPool, seedFeedProviders } =
       await import("../services/feed-seed-providers.js");
+
+    if (force || q.target) {
+      const result = await replenishQuebecFeedPool({
+        supabaseUrl,
+        supabaseServiceKey: supabaseKey,
+        force: true,
+        maxApify: flag("apify_only") || !anySet ? limit : 0,
+        maxPexels: flag("pexels") || !anySet ? Math.min(30, limit) : 0,
+        targetCount: q.target ? parseInt(String(q.target), 10) : undefined,
+      });
+      const total = result.apify + result.pexels + result.pixabay;
+      return res.json({
+        success: total > 0,
+        message: `Pool ${result.feedCountBefore}→${result.feedCountAfter}`,
+        total,
+        ...result,
+      });
+    }
 
     const stats = await seedFeedProviders({
       supabaseUrl,

@@ -1,12 +1,8 @@
 /**
- * Periodic TikTok → feed imports (opt-in via TIKTOK_FEED_JOB_ENABLED).
- * Fetches trending (CA) and/or rotates Québec-themed hashtag searches, imports up to N new videos per run.
+ * Periodic Québec TikTok feed imports via Apify (TIKTOK_FEED_JOB_ENABLED=true).
  */
 import { logger } from "../utils/logger.js";
-import {
-  missingTikTokProviderErrorMessage,
-} from "./tiktok-scraper-service.js";
-import { replenishFeedTikApiIfLow } from "./feed-replenish-tikapi.js";
+import { replenishQuebecFeedPool } from "./feed-seed-providers.js";
 
 const log = logger.withContext("TikTokFeedJob");
 
@@ -17,77 +13,71 @@ function envInt(name: string, fallback: number): number {
 
 export type TikTokFeedJobRunStats = {
   imported: number;
-  attempted: number;
-  duplicate: number;
-  moderation: number;
-  other: number;
-  source: "trending" | "search";
-  query?: string;
+  apify: number;
+  pexels: number;
+  feedCountBefore: number;
+  feedCountAfter: number;
+  errors: string[];
 };
 
-/**
- * Single job pass: trending first; if no videos, hashtag search with rotating query.
- */
 export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStats> {
-  const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 20);
+  const supabaseUrl =
+    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-  const result = await replenishFeedTikApiIfLow({
-    maxImport: maxPerRun,
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 45);
+
+  const result = await replenishQuebecFeedPool({
+    supabaseUrl,
+    supabaseServiceKey,
+    maxApify: maxPerRun,
+    maxPexels: 10,
+    force: false,
   });
 
   return {
-    imported: result.imported,
-    attempted: result.candidates,
-    duplicate: result.duplicate,
-    moderation: 0,
-    other: result.failed + result.skipped,
-    source: "trending",
+    imported: result.apify + result.pexels + result.pixabay,
+    apify: result.apify,
+    pexels: result.pexels,
+    feedCountBefore: result.feedCountBefore,
+    feedCountAfter: result.feedCountAfter,
+    errors: result.errors,
   };
 }
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
-/**
- * Start interval worker. No-op when TIKTOK_FEED_JOB_ENABLED is not exactly "true".
- */
 export function startTikTokFeedPopulatorJob(): () => void {
   if (process.env.TIKTOK_FEED_JOB_ENABLED !== "true") {
     log.info("Disabled (set TIKTOK_FEED_JOB_ENABLED=true to enable).");
     return () => {};
   }
 
-  const hasDb =
-    !!process.env.DATABASE_URL ||
-    (!!process.env.VITE_SUPABASE_URL &&
-      !!process.env.SUPABASE_SERVICE_ROLE_KEY);
-  if (!hasDb) {
-    log.warn(
-      "DATABASE_URL or Supabase service key missing — TikTok feed job not started.",
-    );
+  if (!process.env.APIFY_API_KEY?.trim()) {
+    log.warn("APIFY_API_KEY missing — TikTok feed job not started.");
     return () => {};
   }
 
-  const intervalMs = envInt("TIKTOK_FEED_JOB_INTERVAL_MS", 6 * 60 * 60 * 1000);
+  const intervalMs = envInt("TIKTOK_FEED_JOB_INTERVAL_MS", 4 * 60 * 60 * 1000);
 
   const tick = () => {
     runTikTokFeedPopulatorOnce()
       .then((s) => {
         log.info(
-          `Run complete: imported=${s.imported} attempted=${s.attempted} dup=${s.duplicate} mod=${s.moderation} other=${s.other} (${s.source}${s.query ? ` q=${s.query}` : ""})`,
+          `Run: apify=${s.apify} pexels=${s.pexels} pool ${s.feedCountBefore}→${s.feedCountAfter}`,
         );
       })
       .catch((e: unknown) => {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg === missingTikTokProviderErrorMessage()) {
-          log.warn(`Skipped: ${msg}`);
-        } else {
-          log.error(`Run failed: ${msg}`);
-        }
+        log.error(e instanceof Error ? e.message : String(e));
       });
   };
 
   log.info(
-    `Starting (every ${intervalMs}ms, max ${envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 20)} imports/run).`,
+    `Starting Apify replenish every ${intervalMs}ms, up to ${envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 45)}/run`,
   );
   tick();
   intervalHandle = setInterval(tick, intervalMs);
@@ -97,6 +87,5 @@ export function startTikTokFeedPopulatorJob(): () => void {
       clearInterval(intervalHandle);
       intervalHandle = null;
     }
-    log.info("Stopped.");
   };
 }

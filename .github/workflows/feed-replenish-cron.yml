@@ -16,9 +16,9 @@ jobs:
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
-          echo "POST $API_BASE/api/seed/providers?limit=12"
+          echo "POST $API_BASE/api/seed/providers?force=1&target=350&limit=50"
           code=$(curl -sS -o /tmp/providers.json -w "%{http_code}" \
-            -X POST "$API_BASE/api/seed/providers?pexels=1&pixabay=1&apify=1&limit=12" \
+            -X POST "$API_BASE/api/seed/providers?force=1&target=350&limit=50&apify=1" \
             -H "Content-Type: application/json" || echo "000")
           echo "HTTP $code"
           cat /tmp/providers.json || true

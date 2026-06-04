@@ -30,13 +30,43 @@ export type SeedProviderOptions = {
   supabaseServiceKey: string;
 };
 
-const QUEBEC_QUERIES = [
+const PEXELS_QUERIES = [
   "montreal city",
   "quebec winter",
   "canada nature",
   "street food canada",
   "hockey canada",
+  "quebec festival",
+  "old port montreal",
 ];
+
+/** TikTok search terms — from TIKTOK_FEED_JOB_QUERIES or Québec defaults. */
+export function getQuebecTikTokQueries(): string[] {
+  const raw = process.env.TIKTOK_FEED_JOB_QUERIES?.trim();
+  const fromEnv = raw
+    ? raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
+  const defaults = [
+    "quebec",
+    "montreal",
+    "quebecois",
+    "mtl",
+    "hiver",
+    "poutine",
+    "vieuxquebec",
+    "laval",
+    "gatineau",
+    "#quebec",
+    "#montreal",
+    "#mtl",
+    "quebec viral",
+    "montreal nightlife",
+  ];
+  return [...new Set([...fromEnv, ...defaults])];
+}
 
 function bestPexelsFile(
   files: { link: string; width: number; height: number; quality?: string }[],
@@ -87,7 +117,7 @@ export async function seedFromPexels(
   let imported = 0;
   const seen = new Set<string>();
 
-  for (const query of QUEBEC_QUERIES) {
+  for (const query of PEXELS_QUERIES) {
     if (imported >= opts.limit) break;
     const data = await PexelsService.searchVideos(
       query,
@@ -133,7 +163,7 @@ export async function seedFromPixabay(
   let imported = 0;
   const seen = new Set<string>();
 
-  for (const query of QUEBEC_QUERIES) {
+  for (const query of PEXELS_QUERIES) {
     if (imported >= opts.limit) break;
     const hits = await searchPixabayVideos(
       query,
@@ -172,14 +202,11 @@ export async function seedFromPixabay(
   return imported;
 }
 
-export async function seedFromApify(
-  supabase: SupabaseClient,
-  userId: string,
-  opts: { limit: number; hiveId: string; regionId: string },
-): Promise<number> {
-  const apiKey = process.env.APIFY_API_KEY?.trim();
-  if (!apiKey) throw new Error("APIFY_API_KEY missing");
-
+async function runApifySearch(
+  apiKey: string,
+  searchQueries: string[],
+  resultsPerPage: number,
+): Promise<Record<string, unknown>[]> {
   const actorId =
     process.env.APIFY_TIKTOK_ACTOR_ID || "clockworks/free-tiktok-scraper";
   const actorPath = actorId.replace("/", "~");
@@ -189,9 +216,9 @@ export async function seedFromApify(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      searchQueries: ["quebec", "montreal", "#mtl"],
-      resultsPerPage: Math.min(10, opts.limit),
-      maxProfilesPerQuery: 1,
+      searchQueries,
+      resultsPerPage,
+      maxProfilesPerQuery: 2,
       shouldDownloadVideos: true,
       shouldDownloadCovers: false,
       commentsPerPost: 0,
@@ -205,75 +232,196 @@ export async function seedFromApify(
     );
   }
 
-  const items = (await response.json()) as Record<string, unknown>[];
+  return (await response.json()) as Record<string, unknown>[];
+}
+
+export async function seedFromApify(
+  supabase: SupabaseClient,
+  userId: string,
+  opts: { limit: number; hiveId: string; regionId: string },
+): Promise<number> {
+  const apiKey = process.env.APIFY_API_KEY?.trim();
+  if (!apiKey) throw new Error("APIFY_API_KEY missing");
+
+  const queries = getQuebecTikTokQueries();
+  const perQuery = Math.min(
+    20,
+    Math.max(8, Math.ceil(opts.limit / Math.min(queries.length, 8))),
+  );
+  const seen = new Set<string>();
   let imported = 0;
 
-  for (const item of items) {
-    if (imported >= opts.limit) break;
-    const videoId = String(item.id ?? "");
-    const desc = String(item.text ?? "").slice(0, 500);
-    const authorMeta = (item.authorMeta ?? {}) as Record<string, unknown>;
-    const videoMeta = (item.videoMeta ?? {}) as Record<string, unknown>;
-    const handle = String(authorMeta.name ?? authorMeta.nickName ?? "unknown");
-    const rawMp4 =
-      String(videoMeta.downloadAddr ?? "") ||
-      String((item.mediaUrls as string[] | undefined)?.[0] ?? "");
-    if (!rawMp4.startsWith("http")) continue;
-
-    let mediaUrl = rawMp4;
+  // Batch queries (4 per Apify run) until we hit limit or exhaust list
+  for (let i = 0; i < queries.length && imported < opts.limit; i += 4) {
+    const batch = queries.slice(i, i + 4);
+    let items: Record<string, unknown>[];
     try {
-      const vidResp = await fetch(`${rawMp4}?token=${apiKey}`);
-      if (vidResp.ok) {
-        const buffer = Buffer.from(await vidResp.arrayBuffer());
-        const fileName = `apify/${videoId}-${randomUUID()}.mp4`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("zyeute-videos")
-          .upload(fileName, buffer, {
-            contentType: "video/mp4",
-            upsert: true,
-          });
-        if (!uploadError && uploadData) {
-          const { data: pub } = supabase.storage
-            .from("zyeute-videos")
-            .getPublicUrl(fileName);
-          mediaUrl = pub.publicUrl;
-        }
-      }
-    } catch {
-      // keep Apify URL if upload fails
+      items = await runApifySearch(apiKey, batch, perQuery);
+    } catch (e: unknown) {
+      console.warn(
+        `[Apify] batch ${batch.join(",")} failed:`,
+        e instanceof Error ? e.message : String(e),
+      );
+      continue;
     }
 
-    const webVideoUrl = String(
-      item.webVideoUrl ?? `https://www.tiktok.com/@${handle}/video/${videoId}`,
-    );
-    const status = await insertPublication(supabase, {
-      id: randomUUID(),
-      user_id: userId,
-      media_url: mediaUrl,
-      original_url: webVideoUrl,
-      tiktok_url: webVideoUrl,
-      thumbnail_url: String(videoMeta.coverUrl ?? ""),
-      caption: desc || `#${handle}`,
-      content: desc || `#${handle}`,
-      type: "video",
-      hive_id: opts.hiveId,
-      region_id: opts.regionId,
-      visibility: "public",
-      processing_status: "completed",
-      moderation_approved: true,
-      video_source: "tiktok",
-      reactions_count: Number(item.diggCount ?? 0),
-      view_count: Number(item.playCount ?? 0),
-      media_metadata: {
-        source: "apify-scrape",
-        tiktok_id: videoId,
-        author: handle,
-      },
-    });
-    if (status === "ok") imported++;
+    for (const item of items) {
+      if (imported >= opts.limit) break;
+      const videoId = String(item.id ?? "");
+      if (!videoId || seen.has(videoId)) continue;
+      const desc = String(item.text ?? "").slice(0, 500);
+      const authorMeta = (item.authorMeta ?? {}) as Record<string, unknown>;
+      const videoMeta = (item.videoMeta ?? {}) as Record<string, unknown>;
+      const handle = String(
+        authorMeta.name ?? authorMeta.nickName ?? "unknown",
+      );
+      const rawMp4 =
+        String(videoMeta.downloadAddr ?? "") ||
+        String((item.mediaUrls as string[] | undefined)?.[0] ?? "");
+      if (!rawMp4.startsWith("http")) continue;
+
+      let mediaUrl = rawMp4;
+      try {
+        const vidResp = await fetch(`${rawMp4}?token=${apiKey}`);
+        if (vidResp.ok) {
+          const buffer = Buffer.from(await vidResp.arrayBuffer());
+          const fileName = `apify/${videoId}-${randomUUID()}.mp4`;
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from("zyeute-videos")
+              .upload(fileName, buffer, {
+                contentType: "video/mp4",
+                upsert: true,
+              });
+          if (!uploadError && uploadData) {
+            const { data: pub } = supabase.storage
+              .from("zyeute-videos")
+              .getPublicUrl(fileName);
+            mediaUrl = pub.publicUrl;
+          }
+        }
+      } catch {
+        // keep Apify URL if upload fails
+      }
+
+      const webVideoUrl = String(
+        item.webVideoUrl ??
+          `https://www.tiktok.com/@${handle}/video/${videoId}`,
+      );
+      const status = await insertPublication(supabase, {
+        id: randomUUID(),
+        user_id: userId,
+        media_url: mediaUrl,
+        original_url: webVideoUrl,
+        tiktok_url: webVideoUrl,
+        thumbnail_url: String(videoMeta.coverUrl ?? ""),
+        caption: desc || `#${handle}`,
+        content: desc || `#${handle}`,
+        type: "video",
+        hive_id: opts.hiveId,
+        region_id: opts.regionId,
+        visibility: "public",
+        processing_status: "completed",
+        moderation_approved: true,
+        video_source: "tiktok",
+        reactions_count: Number(item.diggCount ?? 0),
+        view_count: Number(item.playCount ?? 0),
+        media_metadata: {
+          source: "apify-scrape",
+          tiktok_id: videoId,
+          author: handle,
+        },
+      });
+      if (status === "ok") {
+        seen.add(videoId);
+        imported++;
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 2000));
   }
 
   return imported;
+}
+
+/** Top up pool toward target using Apify (primary) + optional Pexels filler. */
+export async function replenishQuebecFeedPool(options?: {
+  force?: boolean;
+  targetCount?: number;
+  minCount?: number;
+  maxApify?: number;
+  maxPexels?: number;
+  supabaseUrl: string;
+  supabaseServiceKey: string;
+  hiveId?: string;
+}): Promise<
+  ProviderSeedStats & { feedCountBefore: number; feedCountAfter: number }
+> {
+  const { countPublicFeedPostsSupabase } =
+    await import("./tikapi-feed-insert.js");
+  const supabase = createClient(
+    options!.supabaseUrl,
+    options!.supabaseServiceKey,
+  );
+  const hiveId = options?.hiveId ?? "quebec";
+  const minCount =
+    options?.minCount ??
+    parseInt(process.env.FEED_MIN_PLAYABLE_POSTS || "150", 10);
+  const targetCount =
+    options?.targetCount ??
+    parseInt(process.env.FEED_REPLENISH_TARGET || "350", 10);
+
+  const feedCountBefore = await countPublicFeedPostsSupabase(supabase, hiveId);
+  const need = Math.max(0, targetCount - feedCountBefore);
+  const force = options?.force === true;
+
+  if (!force && feedCountBefore >= minCount) {
+    return {
+      pexels: 0,
+      pixabay: 0,
+      apify: 0,
+      skipped: 0,
+      errors: [],
+      feedCountBefore,
+      feedCountAfter: feedCountBefore,
+    };
+  }
+
+  const maxApify =
+    options?.maxApify ?? parseInt(process.env.FEED_REPLENISH_BATCH || "50", 10);
+  const maxPexels = options?.maxPexels ?? Math.min(20, Math.max(0, need));
+
+  const apifyLimit = Math.min(
+    maxApify,
+    force ? maxApify : Math.max(maxApify, need),
+  );
+
+  const stats = await seedFeedProviders({
+    supabaseUrl: options!.supabaseUrl,
+    supabaseServiceKey: options!.supabaseServiceKey,
+    hiveId,
+    pexels: false,
+    pixabay: false,
+    apify: !!process.env.APIFY_API_KEY?.trim(),
+    limitPerProvider: apifyLimit,
+  });
+
+  if (maxPexels > 0 && stats.apify < need / 2) {
+    const extra = await seedFeedProviders({
+      supabaseUrl: options!.supabaseUrl,
+      supabaseServiceKey: options!.supabaseServiceKey,
+      hiveId,
+      pexels: true,
+      pixabay: false,
+      apify: false,
+      limitPerProvider: maxPexels,
+    });
+    stats.pexels += extra.pexels;
+    stats.errors.push(...extra.errors);
+  }
+
+  const feedCountAfter = await countPublicFeedPostsSupabase(supabase, hiveId);
+  return { ...stats, feedCountBefore, feedCountAfter };
 }
 
 export async function seedFeedProviders(
