@@ -29,6 +29,8 @@ interface MuxVideoPlayerProps {
   onError?: (error: Error) => void;
   /** Called when video freezes (buffer starvation) */
   onFreeze?: () => void;
+  /** Called on timeupdate — provides currentTime and duration */
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
 }
 
 export function MuxVideoPlayer({
@@ -43,6 +45,7 @@ export function MuxVideoPlayer({
   viewerUserId,
   onError: onErrorProp,
   onFreeze,
+  onTimeUpdate,
 }: MuxVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -103,6 +106,18 @@ export function MuxVideoPlayer({
       if (freezeCheckRef.current) clearInterval(freezeCheckRef.current);
     };
   }, [autoPlay, onFreeze]);
+
+  // Relay timeupdate events to parent for progress bar
+  useEffect(() => {
+    if (!onTimeUpdate) return;
+    const video = playerRef.current?.media as HTMLVideoElement | null;
+    if (!video) return;
+    const handler = () => {
+      onTimeUpdate(video.currentTime, video.duration || 0);
+    };
+    video.addEventListener("timeupdate", handler);
+    return () => video.removeEventListener("timeupdate", handler);
+  }, [onTimeUpdate]);
 
   const handleLoadStart = useCallback(() => {
     setIsLoading(true);

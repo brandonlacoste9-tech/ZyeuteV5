@@ -360,6 +360,15 @@ export const Zyeute: React.FC = () => {
     key: number;
   } | null>(null);
 
+  // Progress bar tracking (TikTok-style)
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+
+  const handleTimeUpdate = useCallback((postId: string, currentTime: number, duration: number) => {
+    if (duration > 0) {
+      setVideoProgress((prev) => ({ ...prev, [postId]: currentTime / duration }));
+    }
+  }, []);
+
   const touchStartY = useRef<number>(0);
   const touchEndY = useRef<number>(0);
 
@@ -771,8 +780,8 @@ export const Zyeute: React.FC = () => {
         >
           {emptyFeedContent}
           {posts.map((post, index) => {
-            /** Only mount real players for current ±1 — avoids N× HLS/Mux competing and hitting VideoPlayer timeouts. */
-            const nearActive = Math.abs(index - currentIndex) <= 1;
+            /** TikTok pattern: only mount real players for current + next (max 2 video elements). Previous slides get poster images. */
+            const nearActive = index === currentIndex || index === currentIndex + 1;
             const muxId = (post as Post).mux_playback_id;
             const slidePoster =
               getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
@@ -820,6 +829,7 @@ export const Zyeute: React.FC = () => {
                           autoPlay={index === currentIndex && isPlaying}
                           muted={isMuted}
                           loop
+                          onTimeUpdate={(ct, dur) => handleTimeUpdate(post.id, ct, dur)}
                         />
                       ) : (
                         <VideoPlayer
@@ -875,6 +885,20 @@ export const Zyeute: React.FC = () => {
                   style={{ background: "transparent" }}
                   onClick={() => handleVideoTap(post.id)}
                 />
+
+                {/* TikTok-style progress bar at bottom of video */}
+                {post.type === "video" && index === currentIndex && (
+                  <div className="absolute bottom-0 left-0 right-0 z-30 h-[3px] bg-white/10">
+                    <div
+                      className="h-full rounded-r-full transition-[width] duration-200 ease-linear"
+                      style={{
+                        width: `${(videoProgress[post.id] || 0) * 100}%`,
+                        background: 'linear-gradient(90deg, #D4AF37, #FFD700)',
+                        boxShadow: '0 0 6px rgba(212,175,55,0.5)',
+                      }}
+                    />
+                  </div>
+                )}
 
                 {/* Heart burst animation on double-tap fire */}
                 {heartBurst?.postId === post.id && (
