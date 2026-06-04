@@ -309,6 +309,16 @@ router.get(
           .json({ error: "Database error", details: error.message });
       }
 
+      // Following feed empty → fall back to explore so the app never shows zero slides
+      if (feedType === "feed" && (!posts || posts.length === 0)) {
+        const savedAuthors = authorIds;
+        authorIds = null;
+        const fallback = await buildQuery(pageOffset, true);
+        authorIds = savedAuthors;
+        posts = fallback.data;
+        error = fallback.error;
+      }
+
       // ── Subscription boost: multiply viral_score by tier multiplier then re-sort ──
       const BOOST: Record<string, number> = {
         gold: 5,

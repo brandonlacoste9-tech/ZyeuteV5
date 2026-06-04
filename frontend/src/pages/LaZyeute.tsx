@@ -318,6 +318,13 @@ export const Zyeute: React.FC = () => {
     return [];
   }, [apiPosts, isLoading, demoFeed]);
 
+  // Recover from empty API after deploy/cache glitches
+  useEffect(() => {
+    if (isLoading || apiPosts.length > 0 || feedSource !== "explore") return;
+    const t = setTimeout(() => refetch(), 800);
+    return () => clearTimeout(t);
+  }, [isLoading, apiPosts.length, feedSource, refetch]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMuted] = useState(false);
@@ -381,16 +388,16 @@ export const Zyeute: React.FC = () => {
     prevIndexRef.current = currentIndex;
   }, [currentIndex, posts]);
 
-  // Pre-fetch next page when user is near the end (don't wait for loader slide)
+  // Pre-fetch only on the last slide (avoids fetch storms that blank the feed)
+  const lastPrefetchRef = useRef(0);
   useEffect(() => {
-    if (
-      posts.length > 0 &&
-      currentIndex >= Math.max(0, posts.length - 4) &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
-    }
+    const atEnd =
+      posts.length > 0 && currentIndex >= posts.length - 1 && hasNextPage;
+    if (!atEnd || isFetchingNextPage) return;
+    const now = Date.now();
+    if (now - lastPrefetchRef.current < 2000) return;
+    lastPrefetchRef.current = now;
+    fetchNextPage();
   }, [
     currentIndex,
     posts.length,
@@ -660,6 +667,13 @@ export const Zyeute: React.FC = () => {
           Sois le premier à publier du contenu québécois!
         </p>
         <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="flex-1 border border-gold-500/50 text-gold-400 px-4 py-2 rounded-xl font-bold text-sm"
+          >
+            Réessayer
+          </button>
           <Link
             to="/create"
             className="flex-1 bg-gold-500 text-black px-4 py-2 rounded-xl font-bold text-center text-sm"
@@ -716,9 +730,9 @@ export const Zyeute: React.FC = () => {
                 Pour toi
               </button>
               <button
-                onClick={() => setFeedSource("explore")}
+                onClick={() => setFeedSource("feed")}
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
-                  feedSource === "explore"
+                  feedSource === "feed"
                     ? "bg-gold-500 text-black"
                     : "text-white/60 hover:text-white"
                 }`}

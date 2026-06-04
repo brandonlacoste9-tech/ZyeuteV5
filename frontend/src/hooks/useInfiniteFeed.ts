@@ -11,11 +11,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useEffect, useMemo } from "react";
 import type { Post } from "@/types";
-import {
-  normalizePostForFeed,
-  postHasPlayableMedia,
-  postLooksLikeTestInject,
-} from "@/services/api";
+import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
 
 /** Read current hive from localStorage — mirrors HiveContext default */
@@ -92,10 +88,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         .map((p: any) => normalizePostForFeed(p))
         .filter(
           (p: Post | null): p is Post =>
-            p != null &&
-            !!p.id &&
-            postHasPlayableMedia(p) &&
-            !postLooksLikeTestInject(p),
+            p != null && !!p.id && postHasPlayableMedia(p),
         );
       // Debug: log feed structure when ?debug=1
       if (
@@ -121,22 +114,24 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         });
       }
       const nextRaw = data.nextCursor;
-      const next =
+      const nextOffset =
         nextRaw != null && String(nextRaw).length > 0
-          ? String(nextRaw).split("-")[0]
-          : null;
+          ? parseInt(String(nextRaw).split("-")[0], 10) || 0
+          : 0;
       return {
         ...data,
         posts,
-        nextCursor: next,
-        // Keep paginating while API returns rows (client filter may drop many)
-        hasMore:
-          data.hasMore !== false &&
-          (rawCount > 0 || (data.nextCursor != null && posts.length > 0)),
+        nextCursor: nextOffset > 0 ? String(nextOffset) : null,
+        hasMore: data.hasMore !== false && rawCount > 0,
       };
     },
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore && lastPage.nextCursor ? lastPage.nextCursor : undefined,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.hasMore === false) return undefined;
+      const c = lastPage.nextCursor;
+      if (!c) return undefined;
+      const off = parseInt(String(c), 10);
+      return off > 0 ? String(off) : undefined;
+    },
     initialPageParam: null,
   });
 
@@ -153,16 +148,14 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // If client filter left a thin first page, keep fetching until pool grows
+  // API returned rows but filter emptied the page — advance cursor (max 8 tries)
   useEffect(() => {
-    const total = data?.pages.flatMap((p) => p.posts).length ?? 0;
-    if (
-      !isLoading &&
-      !isFetchingNextPage &&
-      hasNextPage &&
-      total > 0 &&
-      total < 18
-    ) {
+    const pages = data?.pages ?? [];
+    if (isLoading || isFetchingNextPage || !hasNextPage || pages.length === 0)
+      return;
+    const total = pages.flatMap((p) => p.posts).length;
+    const last = pages[pages.length - 1];
+    if (total === 0 && pages.length < 8 && last?.hasMore !== false) {
       fetchNextPage();
     }
   }, [data?.pages, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
