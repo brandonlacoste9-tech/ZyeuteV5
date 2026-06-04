@@ -118,14 +118,30 @@ export function MuxVideoPlayer({
   const handleError = useCallback(
     (e?: any) => {
       console.error("[MuxVideoPlayer] Error Event:", e);
-      setIsLoading(false);
-      setHasError(true);
 
-      // Extract detailed error information if available
+      // Check if this is an autoplay policy error — don't show error UI, just retry muted
       const muxError = e?.detail;
       const msg =
         muxError?.message || e?.target?.error?.message || "Mux playback failed";
+      const isAutoplayBlocked =
+        msg.includes("NotAllowedError") ||
+        msg.includes("play()") ||
+        msg.includes("user didn't interact") ||
+        (e?.name === "NotAllowedError");
 
+      if (isAutoplayBlocked) {
+        console.warn("[MuxVideoPlayer] Autoplay blocked, retrying muted...");
+        const video = playerRef.current?.media as HTMLVideoElement | null;
+        if (video) {
+          video.muted = true;
+          video.play().catch(() => {});
+        }
+        setIsLoading(false);
+        return; // Don't show error UI
+      }
+
+      setIsLoading(false);
+      setHasError(true);
       setErrorMessage(msg);
       onErrorProp?.(new Error(msg));
     },

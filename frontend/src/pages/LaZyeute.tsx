@@ -327,8 +327,9 @@ export const Zyeute: React.FC = () => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [showUnmuteHint, setShowUnmuteHint] = useState(true);
   const [forceEnter, setForceEnter] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -540,13 +541,18 @@ export const Zyeute: React.FC = () => {
         handleFireToggle(postId, true);
       } else {
         lastTapRef.current = { postId, time: now };
-        // Single tap → toggle UI visibility (immersive mode)
+        // Single tap → unmute if still muted, otherwise toggle play/pause
         tap();
-        setUiVisible((v) => !v);
+        if (isMuted) {
+          setIsMuted(false);
+          setShowUnmuteHint(false);
+        } else {
+          setIsPlaying((p) => !p);
+        }
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uid, posts, firedMap, fireCountMap],
+    [uid, posts, firedMap, fireCountMap, isMuted],
   );
 
   const openShare = (postId: string) => {
@@ -1255,6 +1261,27 @@ export const Zyeute: React.FC = () => {
               </span>
             </button>
           </div>
+        )}
+
+        {/* Tap-to-unmute hint */}
+        {posts.length > 0 && isMuted && showUnmuteHint && (
+          <button
+            type="button"
+            onClick={() => {
+              tap();
+              setIsMuted(false);
+              setShowUnmuteHint(false);
+            }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold-500/60 bg-black/70 backdrop-blur-md text-gold-400 text-sm font-bold shadow-lg animate-pulse hover:bg-black/90 transition-all"
+            style={{ boxShadow: '0 0 20px rgba(212,175,55,0.3)' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <line x1="23" y1="9" x2="17" y2="15" />
+              <line x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+            Appuie pour le son 🔊
+          </button>
         )}
 
         {/* Swipe Hint (shows briefly on first load) - Hidden when feed is empty */}
