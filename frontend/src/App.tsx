@@ -46,6 +46,14 @@ function AppShell() {
   const isFeedPage = location.pathname === "/feed" || location.pathname === "/";
   const isMessagesPage = location.pathname === "/messages";
 
+  // Hard cap: never show loading screen for more than 3.5s
+  const [forceReady, setForceReady] = useState(false);
+  useEffect(() => {
+    if (!isLoading) return;
+    const t = setTimeout(() => setForceReady(true), 3500);
+    return () => clearTimeout(t);
+  }, [isLoading]);
+
   // Show onboarding overlay for new users after 3s on the feed
   const [showOnboarding, setShowOnboarding] = useState(false);
   useEffect(() => {
@@ -53,7 +61,6 @@ function AppShell() {
     const createdAt = user.created_at ? new Date(user.created_at).getTime() : 0;
     const isNewUser = Date.now() - createdAt < 30 * 60 * 1000; // 30 min window
     if (!isNewUser) {
-      // Existing user who never completed onboarding — mark as done silently
       localStorage.setItem("zyeute_onboarded", "true");
       return;
     }
@@ -61,7 +68,7 @@ function AppShell() {
     return () => clearTimeout(t);
   }, [user]);
 
-  if (isLoading) {
+  if (isLoading && !forceReady) {
     return <LoadingScreen message="Chargement..." />;
   }
 

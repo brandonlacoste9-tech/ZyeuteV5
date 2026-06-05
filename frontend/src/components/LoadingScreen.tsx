@@ -32,15 +32,15 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
   const [showFailsafe, setShowFailsafe] = useState(false);
 
   useEffect(() => {
-    // Show spinner after 1 second (logo-only intro)
+    // Show spinner after 800ms (logo-only intro)
     const timer = setTimeout(() => {
       setShowSpinner(true);
-    }, 1000);
+    }, 800);
 
-    // Emergency failsafe: if stuck for 15s, show override
+    // Emergency failsafe: if stuck for 8s, show override button
     const failsafe = setTimeout(() => {
       setShowFailsafe(true);
-    }, 15000);
+    }, 8000);
 
     return () => {
       clearTimeout(timer);
@@ -81,7 +81,7 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         <LogoFull />
       </div>
 
-      {/* Loading message and spinner - fade in after 1 second */}
+      {/* Loading message and spinner - fade in after delay */}
       <div
         className={`relative z-10 mt-8 flex flex-col items-center gap-4 transition-all duration-500 ${
           showSpinner ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"

@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const hasInitialized = useRef(false);
 
   // Check guest mode validity
   const checkGuestMode = (): boolean => {
@@ -59,17 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   };
 
-  // Performance tracking helper
-  const trackPerformance = (operation: string, startTime: number) => {
-    const duration = Date.now() - startTime;
-    return duration;
-  };
-
   const enhanceUser = async (sessionUser: any) => {
     if (!sessionUser) return null;
     try {
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error("Profile fetch timeout")), 5000)
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 4000)
       );
       const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
       if (fullProfile) return fullProfile;
@@ -80,13 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionUser.user_metadata?.username ||
           sessionUser.email?.split("@")[0],
         email: sessionUser.email,
-        role: "citoyen", // Default
-        created_at: new Date().toISOString(),
+        role: "citoyen",
+        created_at: sessionUser.created_at || new Date().toISOString(),
       } as unknown as User;
     } catch (e) {
       console.warn(
-        "⚠️ [Auth Resilience] Profile fetch failed - Using fallback to prevent redirect loop:",
-        e,
+        "⚠️ [Auth Resilience] Profile fetch failed - Using fallback:",
+        e instanceof Error ? e.message : e,
       );
       return {
         id: sessionUser.id,
@@ -94,57 +87,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionUser.user_metadata?.username ||
           sessionUser.email?.split("@")[0],
         email: sessionUser.email,
-        role: "citoyen", // Default safe role
-        created_at: new Date().toISOString(),
+        role: "citoyen",
+        created_at: sessionUser.created_at || new Date().toISOString(),
       } as unknown as User;
     }
   };
 
   useEffect(() => {
-    // GUARD: Prevent duplicate initialization (fix for StrictMode remount hang)
-    if (hasInitialized.current) {
-      console.log("🕯️ [Auth] Already initialized, skipping");
-      setIsLoading(false);
-      return;
-    }
-    hasInitialized.current = true;
-
-    const startTime = Date.now();
-    console.log("🕯️ [Auth] Starting initialization...");
     let mounted = true;
     const initStart = Date.now();
+    console.log("🕯️ [Auth] Starting initialization...");
 
-    // EMERGENCY FAILSAFE: Force loading to complete after 4s
-    // 1.5s was too aggressive for slow mobile connections in rural Quebec
+    // EMERGENCY FAILSAFE: Force loading to complete after 3s
+    // Prevents infinite spinner when backend is cold-starting or unreachable
     const emergencyTimeout = setTimeout(() => {
       if (mounted) {
-        console.warn("⚠️ EMERGENCY: Forcing UI render after 4s");
+        const elapsed = Date.now() - initStart;
+        console.warn(`⚠️ EMERGENCY: Forcing UI render after ${elapsed}ms`);
         setIsLoading(false);
       }
-    }, 4000);
+    }, 3000);
 
     const initializeAuth = async () => {
       try {
-        const sessionStart = Date.now();
-        const { data: { session: initialSession } } = await getSessionWithTimeout(5000);
+        const { data: { session: initialSession } } = await getSessionWithTimeout(2500);
 
-        trackPerformance("Supabase getSession", sessionStart);
+        if (!mounted) return;
 
-        if (mounted) {
-          if ((initialSession as any)?.user) {
-            setSession(initialSession as any);
-            const profile = await enhanceUser((initialSession as any).user);
-            if (mounted && profile) {
+        if ((initialSession as any)?.user) {
+          setSession(initialSession as any);
+          // Start profile enhancement but don't block on it
+          enhanceUser((initialSession as any).user).then((profile) => {
+            if (!mounted) return;
+            if (profile) {
               setUser(profile);
-              setIsAdmin(
-                profile.role === "founder" ||
-                profile.role === "moderator" ||
-                (await checkIsAdmin((initialSession as any).user)),
-              );
+              // Admin check is non-blocking
+              checkIsAdmin((initialSession as any).user).then((admin) => {
+                if (mounted) {
+                  setIsAdmin(
+                    profile.role === "founder" ||
+                    profile.role === "moderator" ||
+                    admin,
+                  );
+                }
+              }).catch(() => {});
             }
-          } else {
-            const validGuest = checkGuestMode();
-            if (mounted) setIsGuest(validGuest);
+            setIsLoading(false);
+            clearTimeout(emergencyTimeout);
+          }).catch(() => {
+            if (mounted) {
+              setIsLoading(false);
+              clearTimeout(emergencyTimeout);
+            }
+          });
+        } else {
+          // No session — check guest mode and resolve immediately
+          const validGuest = checkGuestMode();
+          if (mounted) {
+            setIsGuest(validGuest);
+            setIsLoading(false);
+            clearTimeout(emergencyTimeout);
           }
         }
       } catch (error) {
@@ -152,12 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           const validGuest = checkGuestMode();
           setIsGuest(validGuest);
-        }
-      } finally {
-        if (mounted) {
           setIsLoading(false);
           clearTimeout(emergencyTimeout);
-          trackPerformance("Total auth initialization", initStart);
         }
       }
     };
@@ -173,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (newSession?.user) {
           setIsGuest(false);
+          // Defer profile fetch to avoid Supabase deadlock on simultaneous calls
           setTimeout(() => {
             if (!mounted) return;
             enhanceUser(newSession.user)
