@@ -1026,6 +1026,12 @@ export const Profile: React.FC = () => {
                           Pinned
                         </div>
                       )}
+                      {!isOwnProfile && isFollowing && activeTab === "posts" && (
+                        <div className="absolute top-1 right-1 bg-gold-500/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 flex items-center gap-0.5 border border-gold-400">
+                          <span>Abonné</span>
+                          <span className="text-[8px]">✓</span>
+                        </div>
+                      )}
 
                       {/* Overlay on hover */}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-20">

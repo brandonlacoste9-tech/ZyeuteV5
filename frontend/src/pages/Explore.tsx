@@ -319,8 +319,12 @@ export const Explore: React.FC = () => {
           <div className="relative">
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              defaultValue={searchQuery}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.currentTarget.value) {
+                  navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
+                }
+              }}
               placeholder="Recherche des posts, users, hashtags..."
               className="input-premium pl-14 pr-4"
               style={{ paddingLeft: "3.5rem" }}

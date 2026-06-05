@@ -477,8 +477,13 @@ export function SingleVideoView({
 
             {/* ── Animated Sound Pill (TikTok-style) ── */}
             <div
-              className="flex items-center gap-2 mt-0.5 overflow-hidden"
+              className="flex items-center gap-2 mt-0.5 overflow-hidden cursor-pointer pointer-events-auto relative z-50"
               style={{ maxWidth: "calc(100% - 4px)" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                tap();
+                navigate(`/sound/${encodeURIComponent(soundTitle)}`);
+              }}
             >
               {/* Spinning vinyl disc */}
               <div

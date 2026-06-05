@@ -33,7 +33,7 @@ router.get("/", async (req: Request, res: Response) => {
         .limit(10),
       supabase
         .from("publications")
-        .select("id, media_url, thumbnail_url, caption, type, mux_playback_id")
+        .select("id, media_url, thumbnail_url, caption, type, mux_playback_id, view_count, fire_count, created_at, user:users(*)")
         .or(`caption.ilike.${pattern},content.ilike.${pattern}`)
         .eq("visibility", "public")
         .eq("processing_status", "completed")

@@ -39,7 +39,7 @@ export const DesktopHeader: React.FC = () => {
             className="w-full bg-leather-900/50 hover:bg-leather-900 focus:bg-leather-900 border border-transparent focus:border-leather-700 text-white rounded-full py-2.5 pl-5 pr-12 outline-none transition-all placeholder:text-leather-400"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value) {
-                navigate(`/explore?q=${encodeURIComponent(e.currentTarget.value)}`);
+                navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
               }
             }}
           />

@@ -56,6 +56,8 @@ const AnalyticsPage = lazy(() => import("@/pages/Analytics"));
 const CreatorRevenuePage = lazy(() => import("@/pages/CreatorRevenue"));
 const NetworkPage = lazy(() => import("@/pages/Network"));
 const HashtagDetail = lazy(() => import("@/pages/HashtagDetail"));
+const SearchResults = lazy(() => import("@/pages/SearchResults"));
+const SoundDetail = lazy(() => import("@/pages/SoundDetail"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -233,8 +235,9 @@ export function AppRoutes() {
         />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/feed/grid" element={<FeedGrid />} />
-        <Route path="/search" element={<ExplorePage />} />
+        <Route path="/search" element={<SearchResults />} />
         <Route path="/hashtag/:tag" element={<HashtagDetail />} />
+        <Route path="/sound/:id" element={<SoundDetail />} />
         <Route path="/p/:id" element={<PostDetailPage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/profile/:username/network" element={<NetworkPage />} />
