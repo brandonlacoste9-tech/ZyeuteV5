@@ -3,9 +3,12 @@
  * Matches App Store screenshot design
  */
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { cn } from "../../lib/utils";
+import { getUnreadNotificationCount } from "../../services/api";
+import { useAuth } from "../../hooks/useAuth";
+
 
 interface NavItem {
   to: string;
@@ -166,9 +169,18 @@ const navItems: NavItem[] = [
 ];
 
 export const BottomNav: React.FC = () => {
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      getUnreadNotificationCount().then((count) => setUnreadCount(count));
+    }
+  }, [user]);
+
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 safe-bottom"
+      className="fixed bottom-0 left-0 right-0 z-50 safe-bottom lg:hidden"
       style={{
         background: "rgba(0,0,0,0.95)",
         backdropFilter: "blur(20px)",
@@ -222,14 +234,22 @@ export const BottomNav: React.FC = () => {
                   {/* Icon */}
                   <div
                     className={cn(
-                      "transition-all duration-200",
+                      "transition-all duration-200 relative",
                       isActive &&
                         !item.isCreate &&
                         "drop-shadow-[0_0_6px_rgba(255,215,0,0.7)]",
                     )}
                   >
                     {isActive ? item.activeIcon : item.icon}
+                    
+                    {/* Unread badge on the Activity tab */}
+                    {item.to === "/notifications" && unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] flex items-center justify-center">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </div>
+
 
                   {/* Label — hidden for create */}
                   {!item.isCreate && (

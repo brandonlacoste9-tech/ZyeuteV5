@@ -33,10 +33,10 @@ const feedLogger = logger.withContext("Feed");
 
 // Gift emoji lookup moved outside to avoid re-creation on every render
 /** Découverte / Abonnements tab bar — matches App Store screenshot */
-const FeedTabBar: React.FC = () => {
-  const [active, setActive] = React.useState<"decouverte" | "abonnements">(
-    "decouverte",
-  );
+const FeedTabBar: React.FC<{
+  active: "decouverte" | "abonnements";
+  onChange: (tab: "decouverte" | "abonnements") => void;
+}> = ({ active, onChange }) => {
   return (
     <div className="flex items-center gap-6 mt-2 pb-0">
       {(["decouverte", "abonnements"] as const).map((tab) => {
@@ -45,7 +45,7 @@ const FeedTabBar: React.FC = () => {
         return (
           <button
             key={tab}
-            onClick={() => setActive(tab)}
+            onClick={() => onChange(tab)}
             className="relative pb-2.5 text-sm font-semibold transition-colors"
             style={{ color: isActive ? "#FFD700" : "rgba(255,255,255,0.45)" }}
           >
@@ -77,6 +77,7 @@ const GIFT_EMOJIS: Record<string, string> = {
 
 export const Feed: React.FC = () => {
   const location = useLocation();
+  const [activeTab, setActiveTab] = React.useState<"decouverte" | "abonnements">("decouverte");
 
   // State for stories and user (restored)
   const [stories, setStories] = React.useState<
@@ -295,7 +296,7 @@ export const Feed: React.FC = () => {
           </div>
 
           {/* Découverte / Abonnements tab bar */}
-          <FeedTabBar />
+          <FeedTabBar active={activeTab} onChange={setActiveTab} />
         </div>
 
         {/* Stories Section (Integrated into Header area) */}
@@ -341,7 +342,10 @@ export const Feed: React.FC = () => {
         <ErrorBoundary
           fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
         >
-          <ContinuousFeed onVideoChange={() => notifyVideoScrolled()} />
+          <ContinuousFeed
+            feedType={activeTab}
+            onVideoChange={() => notifyVideoScrolled()}
+          />
         </ErrorBoundary>
       </div>
 

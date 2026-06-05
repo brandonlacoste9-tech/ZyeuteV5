@@ -91,6 +91,24 @@ router.patch("/:id/read", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/notifications/unread-count
+router.get("/unread-count", requireAuth, async (req, res) => {
+  if (!supabaseAdmin)
+    return res.status(503).json({ error: "DB not configured" });
+  try {
+    const { count, error } = await supabaseAdmin
+      .from("notifications")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", req.userId!)
+      .eq("lu", false);
+    if (error) throw error;
+    return res.json({ unreadCount: count || 0 });
+  } catch (error) {
+    console.error("Get unread count error:", error);
+    return res.status(500).json({ error: "Failed to get unread count" });
+  }
+});
+
 // POST /api/notifications/read-all
 router.post("/read-all", requireAuth, async (req, res) => {
   if (!supabaseAdmin)

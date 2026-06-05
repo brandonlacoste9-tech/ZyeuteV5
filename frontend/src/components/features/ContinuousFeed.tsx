@@ -45,6 +45,7 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
 import {
   getExplorePosts,
+  getFeedPosts,
   togglePostFire,
   getCurrentUser,
   postHasPlayableMedia,
@@ -118,6 +119,8 @@ interface ContinuousFeedProps {
   className?: string;
   onVideoChange?: (index: number, post: Post) => void;
   stateKey?: string;
+  /** 'decouverte' = explore/FYP (default), 'abonnements' = following feed */
+  feedType?: "decouverte" | "abonnements";
 }
 
 const FeedRow = memo(
@@ -264,6 +267,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   className,
   onVideoChange,
   stateKey = "feed",
+  feedType = "decouverte",
 }) => {
   // ... existing hooks ...
 
@@ -624,37 +628,50 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     setFetchError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
+    let apiHasMore = false;
 
     try {
-      const { posts: data, hasMore: apiHasMore } = await getExplorePosts(
-        0,
-        FEED_PAGE_SIZE,
-        undefined,
-        HIVE_ID,
-      );
-      console.log(
-        "[ContinuousFeed] API returned:",
-        data?.length || 0,
-        "posts",
-        { hasMore: apiHasMore },
-      );
-
-      if (data?.length) {
-        validPosts = filterPlayablePosts(data);
-
-        // ── Pour Toi: re-rank based on watch history ─────────────────────
-        try {
-          const me = await getCurrentUser();
-          if (me?.id) {
-            const watchHistory = await fetchWatchHistory(me.id);
-            if (watchHistory.length > 0) {
-              validPosts = pourToiRank(validPosts, watchHistory) as Array<Post & { user: User }>;
-              feedLogger.info(`[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`);
-            }
-          }
-        } catch (rankErr) {
-          feedLogger.warn("[PourToi] Ranking skipped:", rankErr);
+      if (feedType === "abonnements") {
+        // Following feed — uses /api/feed which filters to followed creators
+        const followingPosts = await getFeedPosts(0, FEED_PAGE_SIZE);
+        validPosts = filterPlayablePosts(followingPosts);
+        if (validPosts.length === 0) {
+          // Fallback: show explore if not following anyone yet
+          feedLogger.info("[Abonnements] No following posts, falling back to explore");
+          const { posts: data, hasMore } = await getExplorePosts(0, FEED_PAGE_SIZE, undefined, HIVE_ID);
+          validPosts = filterPlayablePosts(data);
+          apiHasMore = hasMore;
+        } else {
+          apiHasMore = followingPosts.length === FEED_PAGE_SIZE;
         }
+      } else {
+        const { posts: data, hasMore } = await getExplorePosts(
+          0,
+          FEED_PAGE_SIZE,
+          undefined,
+          HIVE_ID,
+        );
+        apiHasMore = hasMore;
+        feedLogger.info("[ContinuousFeed] API returned:", data?.length || 0, "posts");
+
+        if (data?.length) {
+          validPosts = filterPlayablePosts(data);
+
+          // ── Pour Toi: re-rank based on watch history ─────────────────────
+          try {
+            const me = await getCurrentUser();
+            if (me?.id) {
+              const watchHistory = await fetchWatchHistory(me.id);
+              if (watchHistory.length > 0) {
+                validPosts = pourToiRank(validPosts, watchHistory) as Array<Post & { user: User }>;
+                feedLogger.info(`[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`);
+              }
+            }
+          } catch (rankErr) {
+            feedLogger.warn("[PourToi] Ranking skipped:", rankErr);
+          }
+        }
+        setHasMore(apiHasMore);
       }
 
       // If API has no posts, try to auto-seed DB first
@@ -716,7 +733,19 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [savedState]);
+  }, [savedState, feedType]);
+
+  // Reset feed when tab changes (Découverte ↔ Abonnements)
+  useEffect(() => {
+    setPosts([]);
+    setPage(0);
+    setCurrentIndex(0);
+    setHasMore(true);
+    setFetchError(false);
+    isFetchingRef.current = false;
+    hasInitializedRef.current = false;
+    // fetchVideoFeed will be triggered by the initial-fetch effect reacting to posts.length === 0
+  }, [feedType]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {

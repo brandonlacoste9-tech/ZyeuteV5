@@ -726,6 +726,14 @@ export async function getNotifications(): Promise<Notification[]> {
   return data.notifications || [];
 }
 
+export async function getUnreadNotificationCount(): Promise<number> {
+  const { data, error } = await apiCall<{ unreadCount: number }>(
+    "/notifications/unread-count",
+  );
+  if (error || !data) return 0;
+  return data.unreadCount || 0;
+}
+
 export async function markNotificationRead(
   notificationId: string,
 ): Promise<boolean> {

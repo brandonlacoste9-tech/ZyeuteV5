@@ -31,7 +31,7 @@ import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnos
 import { DoubleTapHeart } from "./DoubleTapHeart";
 import { CommentBottomSheet } from "./CommentBottomSheet";
 import { RemixModal } from "./RemixModal";
-import { apiCall } from "@/services/api";
+import { apiCall, togglePostFire, followUser } from "@/services/api";
 
 interface SingleVideoViewProps {
   post: Post & { user?: User };
@@ -61,8 +61,11 @@ export function SingleVideoView({
   const { toast } = useToast();
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isLiked, setIsLiked] = useState(false);
+  const [localFireCount, setLocalFireCount] = useState<number>(post.fireCount || 0);
+  const [isFollowing, setIsFollowing] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showRemix, setShowRemix] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0); // 0–1
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
@@ -108,18 +111,60 @@ export function SingleVideoView({
   const handleLike = useCallback(
     (e?: React.MouseEvent) => {
       e?.stopPropagation();
+      if (!currentUser) {
+        toast({ title: "Connecte-toi pour aimer! 🔥" });
+        return;
+      }
       impact();
-      setIsLiked(true);
-      // Like logic — fire toggle would go here
+      // Optimistic update
+      const wasLiked = isLiked;
+      setIsLiked(!wasLiked);
+      setLocalFireCount((n) => n + (wasLiked ? -1 : 1));
+      // Persist to DB (fire-and-forget)
+      togglePostFire(post.id, currentUser.id).then((ok) => {
+        if (!ok) {
+          // Rollback on failure
+          setIsLiked(wasLiked);
+          setLocalFireCount((n) => n + (wasLiked ? 1 : -1));
+        }
+      });
     },
-    [impact],
+    [impact, isLiked, currentUser, post.id, toast],
   );
 
   const handleDoubleTapLike = useCallback(() => {
+    if (!currentUser) return;
     impact();
-    setIsLiked(true);
-    // Like logic — fire toggle would go here
-  }, [impact]);
+    if (!isLiked) {
+      setIsLiked(true);
+      setLocalFireCount((n) => n + 1);
+      togglePostFire(post.id, currentUser.id).catch(() => {
+        setIsLiked(false);
+        setLocalFireCount((n) => n - 1);
+      });
+    }
+  }, [impact, isLiked, currentUser, post.id]);
+
+  const handleFollowFromFeed = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUser || !post.user) return;
+    if (currentUser.id === post.user.id) return; // can't follow yourself
+    tap();
+    setIsFollowing((prev) => !prev);
+    const ok = await followUser(post.user.id);
+    if (!ok) {
+      setIsFollowing((prev) => !prev); // rollback
+      toast({ title: "Erreur lors de l'abonnement", variant: "destructive" });
+    } else {
+      toast({ title: isFollowing ? `Désabonné de @${post.user.username}` : `Abonné à @${post.user.username} ✅` });
+    }
+  }, [currentUser, post.user, isFollowing, tap, toast]);
+
+  // Track video progress for the progress bar
+  const handleVideoProgressInternal = useCallback((progress: number) => {
+    setVideoProgress(progress);
+    onVideoProgress?.(progress);
+  }, [onVideoProgress]);
 
   const handleShareClick = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -216,10 +261,27 @@ export function SingleVideoView({
             preload={isActive ? "auto" : "metadata"}
             videoSource={videoSource}
             debug={debug}
-            onProgress={isActive ? onVideoProgress : undefined}
+            onProgress={isActive ? handleVideoProgressInternal : undefined}
             onWatchThreshold={isActive ? handleWatchThreshold : undefined}
             onEnded={onVideoEnd}
           />
+        )}
+
+        {/* TikTok-style video progress bar */}
+        {isActive && (
+          <div
+            className="absolute bottom-0 left-0 right-0 h-0.5 z-40 pointer-events-none"
+            style={{ background: "rgba(255,255,255,0.15)" }}
+          >
+            <div
+              className="h-full transition-none"
+              style={{
+                width: `${Math.round(videoProgress * 100)}%`,
+                background: "linear-gradient(90deg, #FFD700, #FFF)",
+                boxShadow: "0 0 4px rgba(255,215,0,0.8)",
+              }}
+            />
+          </div>
         )}
 
         {/* Right Action Bar (TikTok Style) */}
@@ -236,12 +298,19 @@ export function SingleVideoView({
               className="border-2 shadow-lg border-amber-400"
               userId={post.user?.id}
             />
-            <Button
-              size="sm"
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 min-w-5 min-h-5 rounded-full bg-gold-500 hover:bg-gold-400 text-black p-0 border-2 border-black"
+            <button
+              onClick={handleFollowFromFeed}
+              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-5 h-5 min-w-5 min-h-5 rounded-full flex items-center justify-center border-2 border-black transition-colors"
+              style={{
+                background: isFollowing ? "#22c55e" : "#FFD700",
+              }}
             >
-              <UserPlus size={12} />
-            </Button>
+              {isFollowing ? (
+                <span className="text-white text-[8px] font-black">✓</span>
+              ) : (
+                <UserPlus size={10} className="text-black" />
+              )}
+            </button>
           </div>
 
           {/* Fire / Like Action */}
@@ -273,7 +342,7 @@ export function SingleVideoView({
                 textShadow: "0 1px 4px rgba(0,0,0,0.8)",
               }}
             >
-              {post.fireCount || 0}
+              {localFireCount}
             </span>
           </div>
 
