@@ -764,4 +764,89 @@ router.delete("/me/saved/:postId", requireAuth, async (req, res) => {
   res.json({ saved: false });
 });
 
+/**
+ * DELETE /api/users/me
+ * Permanently deletes the authenticated user's account and all associated data.
+ * Crucial for Apple App Store compliance (Guideline 5.1.1(v) - Account Deletion).
+ */
+router.delete("/me", requireAuth, async (req: Request, res: Response) => {
+  const userId = req.userId!;
+  
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: "Le service d'administration de la base de données n'est pas configuré." });
+  }
+
+  try {
+    console.log(`[Account Deletion] Starting deletion for user ${userId}`);
+
+    // 1. Delete notifications
+    const { error: notifErr } = await supabaseAdmin
+      .from("notifications")
+      .delete()
+      .or(`user_id.eq.${userId},actor_id.eq.${userId}`);
+    if (notifErr) {
+      console.warn("[Account Deletion] Error deleting notifications:", notifErr.message);
+    }
+
+    // 2. Delete comments/commentaires
+    const { error: commentErr } = await supabaseAdmin
+      .from("commentaires")
+      .delete()
+      .eq("user_id", userId);
+    if (commentErr) {
+      console.warn("[Account Deletion] Error deleting comments:", commentErr.message);
+    }
+
+    // 3. Delete abonnements (follows where follower or followee is this user)
+    const { error: followErr } = await supabaseAdmin
+      .from("abonnements")
+      .delete()
+      .or(`follower_id.eq.${userId},followee_id.eq.${userId}`);
+    if (followErr) {
+      console.warn("[Account Deletion] Error deleting abonnements:", followErr.message);
+    }
+
+    // 4. Delete saved_posts
+    const { error: savedErr } = await supabaseAdmin
+      .from("saved_posts")
+      .delete()
+      .eq("user_id", userId);
+    if (savedErr) {
+      console.warn("[Account Deletion] Error deleting saved_posts:", savedErr.message);
+    }
+
+    // 5. Delete publications / posts
+    const { error: postErr } = await supabaseAdmin
+      .from("publications")
+      .delete()
+      .eq("user_id", userId);
+    if (postErr) {
+      console.warn("[Account Deletion] Error deleting publications:", postErr.message);
+    }
+
+    // 6. Delete user profile
+    const { error: profileErr } = await supabaseAdmin
+      .from("user_profiles")
+      .delete()
+      .eq("id", userId);
+
+    if (profileErr) {
+      console.error("[Account Deletion] Error deleting user profile:", profileErr.message);
+      return res.status(500).json({ error: "Impossible de supprimer le profil utilisateur." });
+    }
+
+    // 7. Delete Auth User from Supabase Auth
+    const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (authErr) {
+      console.error("[Account Deletion] Error deleting auth user:", authErr.message);
+    }
+
+    console.log(`[Account Deletion] Successfully deleted user ${userId}`);
+    return res.json({ success: true, message: "Compte supprimé avec succès." });
+  } catch (error) {
+    console.error("[Account Deletion] Unexpected error:", error);
+    return res.status(500).json({ error: "Une erreur inattendue est survenue." });
+  }
+});
+
 export default router;

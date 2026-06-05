@@ -9,6 +9,7 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useTranslation } from "@/i18n";
 import { cn } from "../lib/utils";
 import { useMessaging } from "@/contexts/MessagingContext";
+import { getUnreadNotificationCount } from "@/services/api";
 
 interface NavItem {
   to: string;
@@ -163,6 +164,24 @@ export const BottomNav: React.FC = () => {
   const { tap } = useHaptics();
   const { t } = useTranslation();
   const { dmUnread } = useMessaging();
+  const [notifUnread, setNotifUnread] = React.useState(0);
+
+  React.useEffect(() => {
+    const checkUnread = async () => {
+      const guestMode = localStorage.getItem("zyeute_guest_mode") === "true";
+      if (guestMode) return;
+      try {
+        const count = await getUnreadNotificationCount();
+        setNotifUnread(count);
+      } catch (err) {
+        // fail silently
+      }
+    };
+    checkUnread();
+
+    const interval = setInterval(checkUnread, 30000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   // Helper to check if a path is active (handles profile routes)
   const isActivePath = (path: string): boolean => {
@@ -288,6 +307,19 @@ export const BottomNav: React.FC = () => {
                               }}
                             >
                               {dmUnread > 9 ? "9+" : dmUnread}
+                            </span>
+                          )}
+                          {/* Notifications unread badge */}
+                          {item.to === "/notifications" && notifUnread > 0 && (
+                            <span
+                              className="absolute -top-1 -right-1 text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 animate-pulse"
+                              style={{
+                                background: "#FF4444",
+                                color: "#FFF",
+                                boxShadow: "0 0 6px rgba(255,68,68,0.8)",
+                              }}
+                            >
+                              {notifUnread > 9 ? "9+" : notifUnread}
                             </span>
                           )}
                         </div>

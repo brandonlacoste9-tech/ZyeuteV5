@@ -247,6 +247,7 @@ export function AppRoutes() {
         <Route path="/legal/terms" element={<TermsOfService />} />
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
         <Route path="/legal/community" element={<CommunityGuidelines />} />
+        <Route path="/legal/community-guidelines" element={<CommunityGuidelines />} />
         <Route path="/manus" element={<ManusPage />} />
         <Route path="/gravityclaw" element={<GravityClawPage />} />
         <Route path="/nullclaw" element={<NullClawPage />} />

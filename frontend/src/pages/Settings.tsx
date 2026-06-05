@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
-import { getCurrentUser, logout } from "@/services/api";
+import { getCurrentUser, logout, apiCall } from "@/services/api";
 import { toast } from "@/components/Toast";
 import { generateId } from "@/lib/utils";
 import { QUEBEC_REGIONS } from "@/lib/quebecFeatures";
@@ -118,6 +118,41 @@ export const Settings: React.FC = () => {
     await authLogout();
     toast.success("À la prochaine! 👋");
     setTimeout(() => navigate("/login"), 500);
+  };
+
+  // Delete account
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "⚠️ DANGER : Es-tu sûr de vouloir supprimer définitivement ton compte ? Cette action est irréversible et effacera toutes tes vidéos, tes commentaires, tes abonnements et tes points de karma.",
+    );
+    if (!confirmed) return;
+
+    const finalConfirm = window.prompt(
+      "Pour confirmer la suppression, écris 'SUPPRIMER' ci-dessous :",
+    );
+    if (finalConfirm !== "SUPPRIMER") {
+      toast.info("Suppression annulée. ouf! 🦫");
+      return;
+    }
+
+    toast.info("Suppression du compte en cours...");
+    
+    try {
+      const { error } = await apiCall("/users/me", {
+        method: "DELETE",
+      });
+
+      if (error) {
+        toast.error(`Erreur : ${error}`);
+        return;
+      }
+
+      toast.success("Ton compte a été supprimé avec succès. Au revoir! ⚜️");
+      await authLogout();
+      setTimeout(() => navigate("/login"), 1500);
+    } catch (err) {
+      toast.error("Une erreur est survenue lors de la suppression.");
+    }
   };
 
   // Handle border color change
@@ -1020,8 +1055,8 @@ export const Settings: React.FC = () => {
           ))}
         </div>
 
-        {/* Sign Out Button */}
-        <div className="leather-card rounded-2xl p-4 mb-6 stitched">
+        {/* Sign Out & Delete Account Buttons */}
+        <div className="leather-card rounded-2xl p-4 mb-6 stitched space-y-2">
           <button
             onClick={() => {
               impact();
@@ -1031,6 +1066,17 @@ export const Settings: React.FC = () => {
           >
             {isGuest ? "Quitter le mode invité" : "Se déconnecter"}
           </button>
+          {!isGuest && (
+            <button
+              onClick={() => {
+                impact();
+                handleDeleteAccount();
+              }}
+              className="w-full text-center py-3 text-red-600 font-bold hover:text-red-500 transition-colors border-t border-leather-700/30 pt-4"
+            >
+              Supprimer mon compte
+            </button>
+          )}
         </div>
 
         {/* App Info */}
