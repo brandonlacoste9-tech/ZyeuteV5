@@ -12,6 +12,7 @@ import {
   Music,
   UserPlus,
   Flame,
+  Scissors,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -29,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 import { DoubleTapHeart } from "./DoubleTapHeart";
 import { CommentBottomSheet } from "./CommentBottomSheet";
+import { RemixModal } from "./RemixModal";
 import { apiCall } from "@/services/api";
 
 interface SingleVideoViewProps {
@@ -60,6 +62,7 @@ export function SingleVideoView({
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showRemix, setShowRemix] = useState(false);
 
   // Dynamic Video Source Resolution
   const videoSrc = useMemo(() => {
@@ -117,6 +120,34 @@ export function SingleVideoView({
     setIsLiked(true);
     // Like logic — fire toggle would go here
   }, [impact]);
+
+  const handleShareClick = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    tap();
+    const url = `${window.location.origin}/p/${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: (post as any).caption || "Vidéo Zyeuté",
+          text: `@${post.user?.username || "anonyme"} sur Zyeuté ⚜️`,
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Lien copié! 📋", description: url });
+      }
+    } catch {
+      // user cancelled or clipboard blocked — silently ignore
+    }
+    onShareClick?.();
+  }, [post, tap, toast, onShareClick]);
+
+  // Sound info derived from post
+  const soundTitle = useMemo(() => {
+    const title = (post as any).sound_title || (post as any).soundTitle;
+    if (title) return title;
+    return `Son original · @${post.user?.username || "anonyme"}`;
+  }, [post]);
 
   return (
     <DoubleTapHeart
@@ -269,7 +300,7 @@ export function SingleVideoView({
           {/* Share Action */}
           <div className="flex flex-col items-center">
             <button
-              onClick={onShareClick}
+              onClick={handleShareClick}
               className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
               style={{
                 background: "rgba(255,255,255,0.12)",
@@ -283,6 +314,31 @@ export function SingleVideoView({
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
             >
               {(post as any).sharesCount || (post as any).shares_count || 0}
+            </span>
+          </div>
+
+          {/* Remix Action (Duet/Stitch) */}
+          <div className="flex flex-col items-center">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                tap();
+                setShowRemix(true);
+              }}
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                backdropFilter: "blur(8px)",
+              }}
+              title="Remix"
+            >
+              <Scissors size={22} />
+            </button>
+            <span
+              className="text-white text-xs font-bold mt-1"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
+            >
+              {(post as any).remixCount || (post as any).remix_count || 0}
             </span>
           </div>
         </div>
@@ -319,13 +375,44 @@ export function SingleVideoView({
               {(post as any).caption || (post as any).content || ""}
             </p>
 
-            {/* Music/Sound Info */}
-            <div className="flex items-center gap-2 text-white/70 text-xs mt-0.5 overflow-hidden">
-              <Music size={12} className="flex-shrink-0 text-gold-400" />
-              <div className="overflow-hidden">
-                <span className="truncate block">
-                  Son original · @{post.user?.username || "anonyme"}
-                </span>
+            {/* ── Animated Sound Pill (TikTok-style) ── */}
+            <div
+              className="flex items-center gap-2 mt-0.5 overflow-hidden"
+              style={{ maxWidth: "calc(100% - 4px)" }}
+            >
+              {/* Spinning vinyl disc */}
+              <div
+                className="flex-shrink-0 w-5 h-5 rounded-full border border-gold-400/60 flex items-center justify-center"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 50%, #2a2a2a 30%, #1a1a1a 60%, #3a3a2a 100%)",
+                  animation: isActive ? "spin 4s linear infinite" : "none",
+                }}
+              >
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: "#FFD700" }}
+                />
+              </div>
+
+              {/* Scrolling sound name */}
+              <div className="flex-1 overflow-hidden">
+                <div
+                  className="text-white/80 text-xs font-medium whitespace-nowrap"
+                  style={{
+                    animation: isActive
+                      ? "marquee 8s linear infinite"
+                      : "none",
+                  }}
+                >
+                  <Music
+                    size={10}
+                    className="inline mr-1 text-gold-400 align-middle"
+                  />
+                  {soundTitle}
+                  <span className="mx-4 opacity-40">•</span>
+                  {soundTitle}
+                </div>
               </div>
             </div>
           </div>
@@ -352,6 +439,26 @@ export function SingleVideoView({
         onClose={() => setShowComments(false)}
         commentCount={post.commentCount || 0}
       />
+
+      {/* Remix Modal */}
+      <RemixModal
+        postId={post.id}
+        postMediaUrl={videoSrc}
+        isOpen={showRemix}
+        onClose={() => setShowRemix(false)}
+      />
+
+      {/* Marquee + Vinyl spin keyframes */}
+      <style>{`
+        @keyframes marquee {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+      `}</style>
     </DoubleTapHeart>
   );
 }

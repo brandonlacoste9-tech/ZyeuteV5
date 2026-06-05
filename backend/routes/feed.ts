@@ -368,6 +368,65 @@ router.get(
   },
 );
 
+// ── Pour Toi: fetch watch history for personalization ───────────────────────
+// GET /api/feed/watch-history?userId=...&limit=50
+router.get("/watch-history", async (req: Request, res: Response) => {
+  const { userId, limit: limitRaw } = req.query as {
+    userId?: string;
+    limit?: string;
+  };
+
+  if (!userId) return res.status(400).json({ error: "userId required" });
+
+  const limit = Math.min(parseInt(limitRaw || "50", 10), 100);
+
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.json({ posts: [] });
+    }
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch recent watch events + join publication captions/hashtags
+    const { data: views, error } = await supabase
+      .from("video_views")
+      .select(
+        `
+        watched_at,
+        publication:publication_id (
+          id,
+          caption,
+          content,
+          hashtags
+        )
+      `,
+      )
+      .eq("user_id", userId)
+      .order("watched_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !views) {
+      return res.json({ posts: [] });
+    }
+
+    const posts = views
+      .map((v: any) => v.publication)
+      .filter(Boolean);
+
+    res.json({ posts });
+  } catch {
+    res.json({ posts: [] });
+  }
+});
+
 // ── Record a watched video ──────────────────────────────────────────────────
 // POST /api/feed/watched  { publicationId, watchDurationMs? }
 router.post(

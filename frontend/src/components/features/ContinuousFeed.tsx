@@ -51,6 +51,7 @@ import {
   postLooksLikeTestInject,
 } from "@/services/api";
 import { triggerBadgeCheck } from "@/services/gamificationService";
+import { pourToiRank, fetchWatchHistory } from "@/lib/pourToiRanker";
 
 function allowDemoVideos(): boolean {
   return (
@@ -640,6 +641,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       if (data?.length) {
         validPosts = filterPlayablePosts(data);
+
+        // ── Pour Toi: re-rank based on watch history ─────────────────────
+        try {
+          const me = await getCurrentUser();
+          if (me?.id) {
+            const watchHistory = await fetchWatchHistory(me.id);
+            if (watchHistory.length > 0) {
+              validPosts = pourToiRank(validPosts, watchHistory) as Array<Post & { user: User }>;
+              feedLogger.info(`[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`);
+            }
+          }
+        } catch (rankErr) {
+          feedLogger.warn("[PourToi] Ranking skipped:", rankErr);
+        }
       }
 
       // If API has no posts, try to auto-seed DB first
