@@ -360,7 +360,7 @@ export const HamburgerMenu: React.FC = () => {
   ];
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative lg:hidden" ref={menuRef}>
       {/* Hamburger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

@@ -708,7 +708,10 @@ export const Zyeute: React.FC = () => {
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
-      <div className="fixed inset-0 leather-dark overflow-hidden">
+      <div className="fixed inset-0 lg:absolute lg:inset-0 leather-dark overflow-hidden flex justify-center">
+        {/* Desktop Container Wrapper */}
+        <div className="w-full h-full lg:max-w-[450px] lg:mx-auto relative">
+          
         {/* Dynamic Edge Lighting (React-optimized) */}
         <div
           className="fixed inset-0 pointer-events-none z-10 transition-opacity duration-1000"
@@ -722,7 +725,7 @@ export const Zyeute: React.FC = () => {
 
         {/* Header */}
         <div
-          className={`fixed top-0 left-0 right-0 z-50 px-4 flex items-end justify-center transition-opacity duration-300 ${
+          className={`absolute top-0 left-0 right-0 z-50 px-4 flex items-end justify-center transition-opacity duration-300 ${
             uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
           style={{
@@ -1063,7 +1066,7 @@ export const Zyeute: React.FC = () => {
         {/* Right Side Actions - Leather style matching bottom nav */}
         {posts.length > 0 && currentPost && (
           <div
-            className={`fixed right-3 bottom-24 flex flex-col items-center gap-3 z-30 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            className={`absolute right-4 lg:-right-16 bottom-24 lg:bottom-32 flex flex-col items-center gap-6 z-40 pb-safe pb-4 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
           >
             {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
             <Link
@@ -1641,6 +1644,7 @@ export const Zyeute: React.FC = () => {
             onClose={() => setGiftOpen(false)}
           />
         )}
+        </div> {/* End Desktop Container Wrapper */}
       </div>
     </FeedErrorBoundary>
   );

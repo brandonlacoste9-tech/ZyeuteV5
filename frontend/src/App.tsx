@@ -19,6 +19,8 @@ import { HiveProvider } from "@/contexts/HiveContext";
 import { AppRoutes } from "@/routes/AppRoutes";
 import { ApiHealthBanner } from "@/components/system/ApiHealthBanner";
 import { AgeGateModal } from "@/components/system/AgeGateModal";
+import { DesktopHeader } from "@/components/layout/DesktopHeader";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { Analytics } from "@vercel/analytics/react";
 
 // Lazy-load TIGuyFullScreen to keep it out of the main index chunk.
@@ -67,7 +69,17 @@ function AppShell() {
     <>
       <ApiHealthBanner />
       <AgeGateModal />
-      <AppRoutes />
+      
+      {/* Global Desktop Layout Wrapper */}
+      <div className="flex flex-col min-h-screen w-full">
+        <DesktopHeader />
+        <div className="flex flex-1 pt-0 lg:pt-16">
+          <DesktopSidebar />
+          <main className="flex-1 lg:ml-[240px] relative w-full min-h-[calc(100vh-64px)] overflow-x-hidden">
+            <AppRoutes />
+          </main>
+        </div>
+      </div>
       {user ? (
         <>
           {!isOpen && !isFeedPage && !isMessagesPage && (

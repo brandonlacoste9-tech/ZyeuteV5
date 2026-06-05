@@ -36,7 +36,7 @@ export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStat
     supabaseServiceKey,
     maxApify: maxPerRun,
     maxPexels: 10,
-    force: false,
+    force: true, // Forced for testing TikTok imports
   });
 
   return {

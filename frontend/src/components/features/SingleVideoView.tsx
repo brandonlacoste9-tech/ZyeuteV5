@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useHaptics } from "@/hooks/useHaptics";
 import { usePrefetchVideo } from "@/hooks/usePrefetchVideo";
+import { useNavigate } from "react-router-dom";
 import { VideoPlayer } from "./VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
@@ -58,6 +59,7 @@ export function SingleVideoView({
 }: SingleVideoViewProps) {
   const { user: currentUser } = useAuth();
   const { impact, tap } = useHaptics();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -193,6 +195,35 @@ export function SingleVideoView({
     if (title) return title;
     return `Son original · @${post.user?.username || "anonyme"}`;
   }, [post]);
+
+  // Render caption with clickable hashtags
+  const renderCaption = useCallback(() => {
+    const text = (post as any).caption || (post as any).content || "";
+    if (!text) return null;
+
+    // Split by #hashtag but keep the hashtag using regex capture
+    const parts = text.split(/(#[\w\u00C0-\u017F]+)/g);
+    
+    return parts.map((part: string, i: number) => {
+      if (part.startsWith("#")) {
+        const tag = part.substring(1);
+        return (
+          <span
+            key={i}
+            className="text-[#FFD700] hover:underline cursor-pointer font-semibold relative z-50 pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              tap();
+              navigate(`/hashtag/${tag}`);
+            }}
+          >
+            {part}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }, [post, navigate, tap]);
 
   return (
     <DoubleTapHeart
@@ -440,8 +471,8 @@ export function SingleVideoView({
                 </span>
               )}
             </div>
-            <p className="text-white/90 text-sm line-clamp-2 leading-relaxed">
-              {(post as any).caption || (post as any).content || ""}
+            <p className="text-white/90 text-sm line-clamp-2 leading-relaxed pointer-events-auto relative z-50">
+              {renderCaption()}
             </p>
 
             {/* ── Animated Sound Pill (TikTok-style) ── */}

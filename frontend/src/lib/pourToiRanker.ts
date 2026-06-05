@@ -24,6 +24,7 @@ interface WatchHistoryItem {
   caption?: string;
   content?: string;
   hashtags?: string[];
+  completionRate?: number;
 }
 
 /** Normalize a string into cleaned keywords. */
@@ -48,8 +49,11 @@ function buildInterestVector(
       ...(item.hashtags || []),
     ].join(" ");
 
+    // Base weight is 1. Boost keywords if video was watched longer.
+    const weight = 1 + (item.completionRate || 0);
+
     for (const token of tokenize(text)) {
-      tf.set(token, (tf.get(token) ?? 0) + 1);
+      tf.set(token, (tf.get(token) ?? 0) + weight);
     }
   }
 
@@ -172,6 +176,7 @@ export async function fetchWatchHistory(
     const items: WatchHistoryItem[] = (data.posts || []).map((p: any) => ({
       caption: p.caption || p.content || "",
       hashtags: p.hashtags || [],
+      completionRate: p.completion_rate || 0,
     }));
 
     // Cache result

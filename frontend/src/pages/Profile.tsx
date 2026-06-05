@@ -983,7 +983,7 @@ export const Profile: React.FC = () => {
                     return (
                       <div
                         key={post.id}
-                        className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle flex flex-col items-center justify-center gap-2"
+                        className="relative aspect-[3/4] leather-card rounded-xl overflow-hidden stitched-subtle flex flex-col items-center justify-center gap-2"
                       >
                         {/* Animated shimmer background */}
                         <div className="absolute inset-0 bg-leather-900 animate-pulse" />
@@ -1003,7 +1003,7 @@ export const Profile: React.FC = () => {
                     <Link
                       key={post.id}
                       to={`/p/${post.id}`}
-                      className="relative aspect-square leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
+                      className="relative aspect-[3/4] leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
                     >
                       <Image
                         src={post.media_url}

@@ -397,11 +397,12 @@ router.get("/watch-history", async (req: Request, res: Response) => {
 
     // Fetch recent watch events + join publication captions/hashtags
     const { data: views, error } = await supabase
-      .from("video_views")
+      .from("watch_events")
       .select(
         `
-        watched_at,
-        publication:publication_id (
+        updated_at,
+        watch_pct,
+        publication:post_id (
           id,
           caption,
           content,
@@ -410,7 +411,7 @@ router.get("/watch-history", async (req: Request, res: Response) => {
       `,
       )
       .eq("user_id", userId)
-      .order("watched_at", { ascending: false })
+      .order("updated_at", { ascending: false })
       .limit(limit);
 
     if (error || !views) {
@@ -418,8 +419,11 @@ router.get("/watch-history", async (req: Request, res: Response) => {
     }
 
     const posts = views
-      .map((v: any) => v.publication)
-      .filter(Boolean);
+      .filter((v: any) => v.publication)
+      .map((v: any) => ({
+        ...v.publication,
+        completion_rate: (v.watch_pct || 0) / 100 // Normalize to 0-1
+      }));
 
     res.json({ posts });
   } catch {
@@ -436,9 +440,10 @@ router.post(
     const viewerId = (req as any).userId as string | undefined;
     if (!viewerId) return res.status(401).json({ error: "Not authenticated" });
 
-    const { publicationId, watchDurationMs } = req.body as {
+    const { publicationId, watchDurationMs, completionRate } = req.body as {
       publicationId: string;
       watchDurationMs?: number;
+      completionRate?: number;
     };
     if (!publicationId)
       return res.status(400).json({ error: "publicationId required" });
@@ -459,6 +464,7 @@ router.post(
           publication_id: publicationId,
           watched_at: new Date().toISOString(),
           watch_duration_ms: watchDurationMs ?? null,
+          completion_rate: completionRate ?? null,
         },
         { onConflict: "user_id,publication_id", ignoreDuplicates: false },
       );
