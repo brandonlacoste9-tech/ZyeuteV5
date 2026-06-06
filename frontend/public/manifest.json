@@ -26,16 +26,24 @@
   "screenshots": [
     {
       "src": "/zyeute_og_image.png",
-      "sizes": "1920x1080",
+      "sizes": "1672x941",
       "type": "image/png",
-      "label": "Zyeute — La scène québécoise"
+      "label": "Zyeute — La scène québécoise",
+      "form_factor": "wide"
     },
     {
       "src": "/zyeute_splash.png",
-      "sizes": "1080x1920",
+      "sizes": "864x1821",
       "type": "image/png",
       "label": "Zyeute splash",
       "form_factor": "narrow"
+    },
+    {
+      "src": "/zyeute_tablet_1920x1080.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "label": "Zyeute — Vue tablette",
+      "form_factor": "wide"
     }
   ]
 }
