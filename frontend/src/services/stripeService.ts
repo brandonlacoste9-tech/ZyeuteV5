@@ -208,18 +208,24 @@ async function simulateSubscriptionActivation(
   userId: string,
   tier: string,
 ): Promise<void> {
-  // In production, this happens in webhook after successful payment
+  // In production, this happens in webhook after successful payment.
+  // Must write to `subscription_tiers` — the same table GET /api/stripe/status reads from.
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  const { error } = await supabase.from("user_subscriptions").upsert({
-    user_id: userId,
-    tier,
-    status: "active",
-    current_period_start: new Date().toISOString(),
-    current_period_end: new Date(
-      Date.now() + 30 * 24 * 60 * 60 * 1000,
-    ).toISOString(),
-  });
+  const { error } = await supabase.from("subscription_tiers").upsert(
+    {
+      user_id: userId,
+      tier_name: tier,
+      status: "active",
+      stripe_subscription_id: `demo_${userId}_${Date.now()}`,
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(
+        Date.now() + 30 * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "stripe_subscription_id" },
+  );
 
   if (!error) {
     toast.success(`Abonnement ${tier.toUpperCase()} activé! 🎉`);

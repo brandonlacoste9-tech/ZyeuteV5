@@ -138,14 +138,17 @@ router.post("/create-checkout", requireAuth, async (req, res) => {
 });
 
 // ─── GET /status ──────────────────────────────────────────────────────────────
+// Reads from the same `subscription_tiers` table that the webhook upserts into.
+// NOTE: despite the name, this table stores per-user Stripe subscription records
+//       (user_id, stripe_subscription_id, tier_name, status, period dates).
 router.get("/status", requireAuth, async (req, res) => {
   try {
     const { data: sub, error } = await supabaseAdmin
       .from("subscription_tiers")
-      .select("*")
+      .select("tier_name, status, current_period_end, stripe_subscription_id")
       .eq("user_id", req.userId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
+      .in("status", ["active", "trialing"])
+      .order("current_period_end", { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -353,13 +356,23 @@ async function upsertSubscription(
 async function lookupUserByStripeCustomer(
   customerId: string,
 ): Promise<string | null> {
-  const { data } = await supabaseAdmin
+  // First try: look up via stripe_customer_id column (if it exists)
+  const { data: byCustomer } = await supabaseAdmin
     .from("subscription_tiers")
     .select("user_id")
-    .contains("stripe_subscription_id", customerId)
+    .eq("stripe_customer_id", customerId)
     .limit(1)
     .maybeSingle();
-  return data?.user_id ?? null;
+  if (byCustomer?.user_id) return byCustomer.user_id;
+
+  // Fallback: look up via user_profiles table where stripe_customer_id may be stored
+  const { data: byProfile } = await supabaseAdmin
+    .from("user_profiles")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .limit(1)
+    .maybeSingle();
+  return byProfile?.id ?? null;
 }
 
 function tierFromPriceId(sub: Stripe.Subscription): string {
