@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
+import { HiveProvider } from "../../contexts/HiveContext";
 import Login from "../../pages/Login";
 import Signup from "../../pages/Signup";
 import ForgotPassword from "../../pages/ForgotPassword";
@@ -18,7 +19,16 @@ vi.mock("../../lib/supabase", () => ({
   supabase: {
     auth: {
       getSession: vi.fn(() =>
-        Promise.resolve({ data: { session: null }, error: null }),
+        Promise.resolve({
+          data: { session: { user: { id: "test-user" } } },
+          error: null,
+        }),
+      ),
+      getSessionWithTimeout: vi.fn(() =>
+        Promise.resolve({
+          data: { session: { user: { id: "test-user" } } },
+          error: null,
+        }),
       ),
       getUser: vi.fn(() =>
         Promise.resolve({ data: { user: null }, error: null }),
@@ -92,7 +102,9 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <FactoryThemeProvider>
       <BrowserRouter>
-        <AuthProvider>{component}</AuthProvider>
+        <HiveProvider>
+          <AuthProvider>{component}</AuthProvider>
+        </HiveProvider>
       </BrowserRouter>
     </FactoryThemeProvider>,
   );
@@ -262,13 +274,19 @@ describe("Password Management", () => {
       await waitFor(() => {
         expect(
           screen.getByText(
-            "Le mot de passe doit contenir au moins 6 caractères",
+            "Le mot de passe doit contenir au moins 8 caractères",
           ),
         ).toBeInTheDocument();
       });
     });
 
     it("should show error for invalid token", async () => {
+      const { supabase } = await import("../../lib/supabase");
+      vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
+      });
+
       window.history.pushState({}, "", "/reset-password?token=invalid");
 
       renderWithProviders(<ResetPassword />);

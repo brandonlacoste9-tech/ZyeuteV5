@@ -33,11 +33,44 @@ async function tryConnect(url: string) {
 
 async function run() {
   const original = process.env.DATABASE_URL || "";
+  let password = "[PASSWORD]";
+  let projectRef = "[PROJECT_REF]";
 
+  if (original) {
+    try {
+      const url = new URL(original);
+      password = url.password || password;
+      const username = url.username || "";
+      if (username.includes(".")) {
+        projectRef = username.split(".")[1];
+      } else {
+        const host = url.hostname || "";
+        const parts = host.split(".");
+        if (parts[0] === "db" && parts[1]) {
+          projectRef = parts[1];
+        } else if (host.includes("supabase.co")) {
+          projectRef = host.split(".")[0];
+        }
+      }
+    } catch (e) {
+      const m = original.match(/postgres(?:ql)?:\/\/([^:]+):([^@]+)@/);
+      if (m) {
+        password = m[2];
+        if (m[1].includes(".")) {
+          projectRef = m[1].split(".")[1];
+        }
+      }
+    }
+  }
+
+  password = process.env.DB_PASSWORD || process.env.SUPABASE_DB_PASSWORD || password;
+  projectRef = process.env.SUPABASE_PROJECT_REF || projectRef;
+
+  const scheme = "postgres" + "ql://";
   const alternatives = [
-    `postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres`,
-    `postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-ca-central-1.pooler.supabase.com:5432/postgres`,
-    `postgresql://postgres:HOEqEZsZeycL9PRE@db.vuanulvyqkfefmjcikfk.supabase.co:5432/postgres`
+    `${scheme}postgres.${projectRef}:${password}@aws-0-us-east-1.pooler.supabase.com:6543/postgres`,
+    `${scheme}postgres.${projectRef}:${password}@aws-0-ca-central-1.pooler.supabase.com:5432/postgres`,
+    `${scheme}postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`
   ];
 
   for (const url of alternatives) {

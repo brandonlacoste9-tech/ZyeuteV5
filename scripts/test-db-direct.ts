@@ -7,8 +7,14 @@ config({ path: join(process.cwd(), ".env") });
 async function main() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-  // Try direct connection instead of pooler
-  const directUrl = "postgresql://postgres:HOEqEZsZeycL9PRE@db.vuanulvyqkfefmjcikfk.supabase.co:5432/postgres";
+  let directUrl = process.env.DATABASE_URL || "";
+  if (directUrl.includes(":6543")) {
+    directUrl = directUrl.replace(":6543", ":5432");
+  }
+  if (!directUrl) {
+    console.error("DATABASE_URL is not set. Please set it in .env or .env.local.");
+    process.exit(1);
+  }
   console.log("Testing direct connection...");
 
   const pool = new pg.Pool({

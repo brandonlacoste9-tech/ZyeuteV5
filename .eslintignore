@@ -1,7 +1,7 @@
 node_modules
 dist
 build
-.archive
+_archive
 temp_hive
 .replit
 .openhands
