@@ -236,7 +236,7 @@ router.get(
         }
       }
 
-      const buildQuery = (offset: number, ignoreExclusions: boolean) => {
+      const buildQuery = (offset: number, ignoreExclusions: boolean, fetchLimit: number) => {
         let q = supabase
           .from("publications")
           .select(
@@ -268,7 +268,7 @@ router.get(
           .order("reactions_count", { ascending: false })
           .order("created_at", { ascending: false })
           // Use range-based offset pagination — consistent with viral_score sort
-          .range(offset, offset + limit - 1);
+          .range(offset, offset + fetchLimit - 1);
 
         if (!ignoreExclusions && excludedIds.length > 0) {
           q = q.not("id", "in", `(${excludedIds.join(",")})`);
@@ -281,7 +281,37 @@ router.get(
         return q;
       };
 
-      let { data: posts, error } = await buildQuery(pageOffset, false);
+      // ── Pool-and-shuffle for feed variety ─────────────────────────────────
+      // On page 0: fetch a larger candidate pool and shuffle it so every app
+      // open shows a different order. On subsequent pages, use normal offset
+      // pagination to preserve scroll continuity.
+      const isFirstPage = pageOffset === 0;
+      const poolMultiplier = isFirstPage ? 3 : 1;
+      const fetchLimit = Math.min(limit * poolMultiplier, 90);
+
+      /** Seeded pseudo-random number generator (mulberry32). */
+      function seededRandom(seed: number) {
+        return function () {
+          seed |= 0;
+          seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      /** Fisher-Yates shuffle with a deterministic seed. */
+      function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
+        const a = [...arr];
+        const rand = seededRandom(seed);
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(rand() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      }
+
+      let { data: posts, error } = await buildQuery(pageOffset, false, fetchLimit);
 
       // If we ran out of unseen posts, wrap around to offset 0 and IGNORE exclusions to recycle videos endlessly
       let didWrap = false;
@@ -289,6 +319,7 @@ router.get(
         const { data: recycledPosts, error: recycledErr } = await buildQuery(
           0,
           true,
+          fetchLimit,
         );
         posts = recycledPosts;
         error = recycledErr;
@@ -311,7 +342,7 @@ router.get(
       if (feedType === "feed" && (!posts || posts.length === 0)) {
         const savedAuthors = authorIds;
         authorIds = null;
-        const fallback = await buildQuery(pageOffset, true);
+        const fallback = await buildQuery(pageOffset, true, fetchLimit);
         authorIds = savedAuthors;
         posts = fallback.data;
         error = fallback.error;
@@ -341,17 +372,31 @@ router.get(
           b.reactions_count - a.reactions_count,
       );
 
+      // ── Shuffle first page for feed variety (different videos each app open) ──
+      // Seed = 30-minute bucket × userId hash so each user+session gets a unique order.
+      // Pages > 0 are NOT shuffled to keep scroll position stable.
+      let finalPosts = boostedPosts;
+      if (isFirstPage && finalPosts.length > limit) {
+        const userSeed = viewerId
+          ? viewerId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+          : 0;
+        // Changes every 30 min → fresh order each session without DB involvement
+        const timeBucket = Math.floor(Date.now() / (30 * 60 * 1000));
+        const seed = (userSeed * 2654435761 + timeBucket) >>> 0;
+        finalPosts = shuffleWithSeed(finalPosts, seed).slice(0, limit);
+      }
+
       // Offset-based pagination: if we got a full page there are likely more
       // If we wrapped, the new offset is 0
       const activeOffset = didWrap ? 0 : pageOffset;
       const hasMore = true; // ALWAYS return true for infinite feed
       const nextCursor =
-        boostedPosts.length > 0
-          ? String(activeOffset + boostedPosts.length) + "-" + Date.now()
+        finalPosts.length > 0
+          ? String(activeOffset + finalPosts.length) + "-" + Date.now()
           : "0-" + Date.now();
 
       res.json({
-        posts: boostedPosts,
+        posts: finalPosts,
         hasMore,
         nextCursor,
         source: "supabase-http-v2",
