@@ -288,8 +288,10 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
       });
     }
 
+    const isMuxUpload = body.videoType === "mux";
     let videoModerationApproved = true;
-    if (parsed.data.mediaUrl) {
+    // Mux HLS URLs are playlists, not fetchable MP4 — skip Gemini video mod (also avoids 15s+ timeouts).
+    if (parsed.data.mediaUrl && !isMuxUpload) {
       const validatedType = validatePostType(
         parsed.data.mediaUrl,
         (parsed.data as any).type || "photo",
@@ -350,17 +352,6 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
       ? new Date(Date.now() + 24 * 60 * 60 * 1000)
       : undefined;
 
-    const langMap: Record<string, string> = {
-      quebec: "fr",
-      mexico: "es",
-      argentina: "es",
-      brazil: "pt",
-    };
-    const language =
-      body.language ||
-      langMap[body.hive_id || parsed.data.hiveId || ""] ||
-      "fr";
-
     const validatedType =
       body.videoType === "mux"
         ? "video"
@@ -372,13 +363,17 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
     // Use Supabase REST to create post (no DATABASE_URL dependency)
     let post: any;
     if (supabaseRest) {
+      const regionId =
+        (parsed.data as any).regionId ||
+        (parsed.data as any).region ||
+        "montreal";
       const { data: postData, error: postErr } = await supabaseRest
         .from("publications")
         .insert({
           user_id: parsed.data.userId,
-          content: parsed.data.content || parsed.data.caption,
+          content: parsed.data.content || parsed.data.caption || "",
           caption: parsed.data.caption,
-          media_url: parsed.data.mediaUrl,
+          media_url: parsed.data.mediaUrl || null,
           hls_url: (parsed.data as any).hlsUrl || null,
           thumbnail_url: (parsed.data as any).thumbnailUrl || null,
           type: validatedType,
@@ -389,17 +384,15 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
           est_masque:
             modResult.status !== "approved" || !videoModerationApproved,
           hive_id: parsed.data.hiveId || "quebec",
-          region: (parsed.data as any).region || "montreal",
+          region_id: regionId,
           visibility: (parsed.data as any).visibility || "public",
-          visibilite: (parsed.data as any).visibility || "public",
           mux_asset_id: (parsed.data as any).muxAssetId || null,
           mux_upload_id: (parsed.data as any).muxUploadId || null,
           mux_playback_id: (parsed.data as any).muxPlaybackId || null,
           is_ephemeral: isEphemeral,
           max_views: maxViews || null,
-          expires_at: expiresAt || null,
-          video_source: body.videoType || "upload",
-          language,
+          expires_at: expiresAt?.toISOString() ?? null,
+          video_source: isMuxUpload ? "mux" : "upload",
         })
         .select()
         .single();
@@ -477,7 +470,9 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Create post error:", error);
-    res.status(500).json({ error: "Failed to create post" });
+    const message =
+      error instanceof Error ? error.message : "Failed to create post";
+    res.status(500).json({ error: message });
   }
 });
 

@@ -97,10 +97,13 @@ export async function apiCall<T>(
       const apiUrl = `${API_BASE_URL}/api${endpoint}`;
 
       const controller = new AbortController();
+      const isPostCreate =
+        endpoint === "/posts" &&
+        (options.method === "POST" || options.method === "post");
       const timeoutId = setTimeout(
         () => controller.abort(),
-        endpoint.includes("generate") ? 120000 : 15000,
-      ); // 2min for AI, 15s otherwise
+        endpoint.includes("generate") ? 120000 : isPostCreate ? 60000 : 15000,
+      ); // 2min for AI, 60s for publish, 15s otherwise
 
       const response = await fetch(apiUrl, {
         ...options,
@@ -367,7 +370,9 @@ export async function createPost(postData: {
     }),
   });
 
-  if (error || !data) return null;
+  if (error || !data?.post) {
+    throw new Error(error || "Erreur création du post");
+  }
   return mapBackendPost(data.post);
 }
 

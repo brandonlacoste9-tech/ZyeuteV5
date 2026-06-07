@@ -259,7 +259,7 @@ export async function registerRoutes(
   // Apply general rate limiting to all other API routes
   app.use("/api", generalRateLimiter);
 
-  app.use("/api/mux", muxRoutes);
+  app.use("/api/mux", attachBearerUserId, muxRoutes);
   app.use("/api/live", attachBearerUserId, liveRoutes);
   app.use("/api/video-doctor", videoDoctorRoutes);
 
