@@ -150,7 +150,14 @@ router.post(
   requireAdmin,
   async (req: any, res: any) => {
     try {
-      const { count = 1 } = req.body;
+      const { z } = await import("zod");
+      const schema = z.object({
+        count: z.number().int().min(1).max(50).optional().default(1),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success)
+        return res.status(400).json({ error: parsed.error.issues[0].message });
+      const { count } = parsed.data;
       const result = await feedAutoGenerator.generateNow(count);
       res.json(result);
     } catch (error: any) {

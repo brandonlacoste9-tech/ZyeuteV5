@@ -13,6 +13,7 @@
  */
 
 import express from "express";
+import { z } from "zod";
 import multer from "multer";
 import { requireAuth } from "../supabase-auth.js";
 import { supabaseAdmin } from "../supabase-auth.js";
@@ -98,13 +99,20 @@ router.get("/conversations", requireAuth, async (req, res) => {
 });
 
 // ─── POST /conversations/direct ──────────────────────────────────────────────
+const DirectConvSchema = z.object({
+  recipientId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+});
+
 router.post("/conversations/direct", requireAuth, async (req, res) => {
   if (!supabaseAdmin)
     return res.status(503).json({ error: "DB not configured" });
   try {
     const userId = req.userId!;
-    // Accept recipientId or userId (frontend sends userId)
-    const body = req.body as { recipientId?: string; userId?: string };
+    const parsed = DirectConvSchema.safeParse(req.body);
+    if (!parsed.success)
+      return res.status(400).json({ error: parsed.error.issues[0].message });
+    const body = parsed.data;
     const targetId = body.recipientId || body.userId;
 
     if (!targetId) return res.status(400).json({ error: "recipientId requis" });
@@ -252,18 +260,18 @@ router.post("/conversations/:id/messages", requireAuth, async (req, res) => {
   try {
     const userId = req.userId!;
     const convId = req.params.id;
-    const {
-      content,
-      contentType = "text",
-      contentUrl,
-    } = req.body as {
-      content: string;
-      contentType?: string;
-      contentUrl?: string;
-    };
-
-    if (!content?.trim())
-      return res.status(400).json({ error: "Message vide" });
+    const SendMessageSchema = z.object({
+      content: z.string().min(1).max(5000),
+      contentType: z
+        .enum(["text", "image", "file", "audio"])
+        .optional()
+        .default("text"),
+      contentUrl: z.string().url().optional(),
+    });
+    const parsed = SendMessageSchema.safeParse(req.body);
+    if (!parsed.success)
+      return res.status(400).json({ error: parsed.error.issues[0].message });
+    const { content, contentType = "text", contentUrl } = parsed.data;
 
     // Verify participant
     const { data: conv } = await supabaseAdmin

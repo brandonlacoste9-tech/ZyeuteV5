@@ -11,7 +11,10 @@ import { importFeedSeedCandidates } from "../backend/services/tikapi-feed-insert
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// NOTE: TLS validation only disabled in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 function parseArg(name: string, fallback: number): number {
   const arg = process.argv.find((x) => x.startsWith(`--${name}=`));
@@ -21,8 +24,7 @@ function parseArg(name: string, fallback: number): number {
 
 async function main() {
   const limit = parseArg("limit", 80);
-  const url =
-    process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
   if (!process.env.TIKAPI_KEY) {

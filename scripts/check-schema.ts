@@ -1,7 +1,10 @@
 #!/usr/bin/env tsx
 // Check what columns actually exist in the publications and user_profiles tables
 import "dotenv/config";
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// NOTE: TLS validation only disabled in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 import { Pool } from "pg";
 
 async function checkSchema() {

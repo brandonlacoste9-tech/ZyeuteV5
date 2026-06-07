@@ -5,7 +5,10 @@ import pg from "pg";
 config({ path: join(process.cwd(), ".env") });
 
 async function main() {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  // NOTE: TLS validation only disabled in non-production environments
+  if (process.env.NODE_ENV !== "production") {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  }
 
   const host = "aws-0-us-east-1.pooler.supabase.com";
   const PASS = "[PASSWORD]";
@@ -13,12 +16,12 @@ async function main() {
   
   // Try with DB name as postgres.REF
   const connectionString = `postgresql://postgres:${PASS}@${host}:6543/postgres.${REF}?sslmode=require`;
-  
+
   console.log("Testing connection with DB Name as postgres.REF...");
 
   const pool = new pg.Pool({
     connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
   });
 
   try {

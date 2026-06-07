@@ -9,7 +9,7 @@ vite.config.ts.*
 !.env.example
 !.env.production.template
 !.env.vercel.example
-!frontend/.env.production
+frontend/.env.production
 
 # Duplicate/backup project directories
 ZyeuteV5-*/

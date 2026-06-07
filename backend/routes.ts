@@ -10,7 +10,6 @@ declare global {
     }
   }
 }
-import rateLimit from "express-rate-limit";
 import { storage } from "./storage.js";
 // [NEW] Import the JWT verifier + Supabase admin client (for auto-provisioning)
 import { verifyAuthToken } from "./supabase-auth.js";
@@ -69,15 +68,6 @@ import videoDoctorRoutes from "./routes/video-doctor.routes.js";
 import creatorRevenueRoutes from "./routes/creator-revenue.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
 import { banCheck } from "./middleware/banCheck.js";
-
-// Rate limiters for different endpoint types
-const generalRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // 300 requests per 15 minutes per IP (social feed needs headroom)
-  message: { error: "Trop de requêtes. Réessaie bientôt!" },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Stripe configuration - only initialize if API key is present
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -260,9 +250,6 @@ export async function registerRoutes(
     res.json(diag);
   });
   app.use("/api/tiktok", requireAuth, tiktokRoutes);
-
-  // Apply general rate limiting to all other API routes
-  app.use("/api", generalRateLimiter);
 
   app.use("/api/mux", attachBearerUserId, muxRoutes);
   app.use("/api/live", attachBearerUserId, liveRoutes);

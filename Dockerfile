@@ -45,8 +45,10 @@ COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 # Ensure startup script is executable
 RUN chmod +x scripts/railway-startup.sh
 
-# Expose port (Railway sets PORT env var automatically)
-EXPOSE 3000
+# Run as non-root user for security
+RUN chown -R node:node /app
+USER node
+
 # Expose port (Railway sets PORT env var automatically)
 EXPOSE 3000
 

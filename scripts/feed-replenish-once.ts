@@ -8,7 +8,10 @@ import { replenishFeedTikApiIfLow } from "../backend/services/feed-replenish-tik
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// NOTE: TLS validation only disabled in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 async function main() {
   const result = await replenishFeedTikApiIfLow({ force: false });

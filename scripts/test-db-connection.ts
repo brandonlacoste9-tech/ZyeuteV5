@@ -2,6 +2,10 @@ import { config } from "dotenv";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+// NOTE: TLS validation only disabled in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 const { Pool } = pg;
 
@@ -69,7 +73,6 @@ async function run() {
   const scheme = "postgres" + "ql://";
   const alternatives = [
     `${scheme}postgres.${projectRef}:${password}@aws-0-ca-central-1.pooler.supabase.com:5432/postgres`,
-    `${scheme}postgres.${projectRef}:${password}@aws-0-us-east-1.pooler.supabase.com:5432/postgres`,
     `${scheme}postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`,
   ];
 

@@ -7,7 +7,10 @@ dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
 dotenv.config({ path: ".env.render", override: false });
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// NOTE: TLS validation only disabled in non-production environments
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;

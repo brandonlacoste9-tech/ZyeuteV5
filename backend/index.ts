@@ -13,6 +13,7 @@ if (
 }
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
@@ -62,10 +63,7 @@ app.use(
     origin: function (origin, callback) {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
-      if (
-        allowedOrigins.indexOf(origin) !== -1 ||
-        origin.endsWith(".vercel.app")
-      ) {
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
         console.log(`[CORS] Blocked origin: ${origin}`);
@@ -107,6 +105,21 @@ app.use(
 );
 
 app.use(express.json());
+
+// Global rate limiter — applied before any route registration so no route bypasses it.
+// Health checks and webhooks are exempt; all other /api/* routes are covered.
+const globalRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  message: { error: "Trop de requêtes. Réessaie bientôt!" },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Exempt health checks from rate limiting
+    return req.path.startsWith("/api/health");
+  },
+});
+app.use("/api", globalRateLimiter);
 
 const httpServer = createServer(app);
 

@@ -5,31 +5,34 @@ import pg from "pg";
 config({ path: join(process.cwd(), ".env") });
 
 async function main() {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  // NOTE: TLS validation only disabled in non-production environments
+  if (process.env.NODE_ENV !== "production") {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  }
 
   // Use the IP address we found from nslookup for the pooler
-  const POOLER_IP = "52.45.94.125"; 
+  const POOLER_IP = "52.45.94.125";
   const PORT = 6543;
   const USER = "postgres.[REF]";
   const PASS = "[PASSWORD]";
   const DB = "postgres";
 
   const connectionString = `postgresql://${USER}:${PASS}@${POOLER_IP}:${PORT}/${DB}?sslmode=require`;
-  
+
   console.log("Testing connection to IP:", POOLER_IP);
 
   const pool = new pg.Pool({
     connectionString: connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
   });
 
   try {
     const client = await pool.connect();
     console.log("✅ Connected via IP!");
-    
-    const res = await client.query('SELECT now()');
+
+    const res = await client.query("SELECT now()");
     console.log("Time from DB:", res.rows[0].now);
-    
+
     client.release();
   } catch (err: any) {
     console.error("❌ IP Connection Error:", err.message);
