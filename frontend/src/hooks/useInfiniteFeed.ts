@@ -137,14 +137,15 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // API returned rows but filter emptied the page — advance cursor (max 8 tries)
+  // API returned rows but filter emptied the page — advance cursor (max 15 tries)
   useEffect(() => {
     const pages = data?.pages ?? [];
     if (isLoading || isFetchingNextPage || !hasNextPage || pages.length === 0)
       return;
     const total = pages.flatMap((p) => p.posts).length;
     const last = pages[pages.length - 1];
-    if (total === 0 && pages.length < 8 && last?.hasMore !== false) {
+    const lastPageEmpty = last && last.posts.length === 0;
+    if ((total === 0 || lastPageEmpty) && pages.length < 15 && last?.hasMore !== false) {
       fetchNextPage();
     }
   }, [data?.pages, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
