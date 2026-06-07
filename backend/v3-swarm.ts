@@ -454,12 +454,27 @@ export async function v3TiGuyChat(
 
 // V3-MOD: Content moderation
 export async function v3Mod(content: string): Promise<V3ModResult> {
-  const message = `Content to moderate:\n${content}`;
-  const result = (await callV3(V3_PROMPTS.MOD, message)) as Record<
-    string,
-    unknown
-  >;
-  return result as unknown as V3ModResult;
+  if (!process.env.DEEPSEEK_API_KEY?.trim()) {
+    console.warn(
+      "[v3Mod] DEEPSEEK_API_KEY missing — approving content (fail-open)",
+    );
+    return { status: "approved", reason: "moderation_unavailable" };
+  }
+
+  try {
+    const message = `Content to moderate:\n${content}`;
+    const result = (await callV3(V3_PROMPTS.MOD, message)) as Record<
+      string,
+      unknown
+    >;
+    return result as unknown as V3ModResult;
+  } catch (error) {
+    console.error(
+      "[v3Mod] Moderation failed — approving content (fail-open):",
+      error,
+    );
+    return { status: "approved", reason: "moderation_error" };
+  }
 }
 
 // V3-MEM: User preference snapshot
