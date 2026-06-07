@@ -39,7 +39,14 @@ export async function countPublicFeedPosts(hiveId = "quebec"): Promise<number> {
   const { databaseUrl, supabaseUrl, supabaseServiceKey } = dbConfig();
 
   if (databaseUrl) {
-    return countPublicFeedPostsPg(databaseUrl, hiveId);
+    try {
+      return await countPublicFeedPostsPg(databaseUrl, hiveId);
+    } catch (err) {
+      log.warn(
+        "DATABASE_URL count failed — falling back to Supabase HTTP",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
   }
   if (supabaseUrl && supabaseServiceKey) {
     return countPublicFeedPostsSupabase(

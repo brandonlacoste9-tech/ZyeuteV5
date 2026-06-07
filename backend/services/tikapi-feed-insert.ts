@@ -223,41 +223,43 @@ export async function importFeedSeedCandidates(options: {
   const serviceKey = options.supabaseServiceKey?.trim();
 
   if (dbUrl) {
-    const pool = new Pool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false },
-    });
-    const client = await pool.connect();
     try {
-      const userId = await resolveAuthorPg(client);
-      if (!userId) throw new Error("no_system_user");
+      const pool = new Pool({
+        connectionString: dbUrl,
+        ssl: { rejectUnauthorized: false },
+      });
+      const client = await pool.connect();
+      try {
+        const userId = await resolveAuthorPg(client);
+        if (!userId) throw new Error("no_system_user");
 
-      for (const c of options.candidates) {
-        if (stats.imported >= options.maxImport) break;
-        if (await isDuplicatePg(client, c.video.video_id)) {
-          stats.duplicate++;
-          continue;
+        for (const c of options.candidates) {
+          if (stats.imported >= options.maxImport) break;
+          if (await isDuplicatePg(client, c.video.video_id)) {
+            stats.duplicate++;
+            continue;
+          }
+          try {
+            await insertPg(client, userId, c.video, c.region, c.source);
+            stats.imported++;
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (msg === "no_media") stats.skipped++;
+            else stats.failed++;
+          }
         }
-        try {
-          await insertPg(
-            client,
-            userId,
-            c.video,
-            c.region,
-            c.source,
-          );
-          stats.imported++;
-        } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : String(e);
-          if (msg === "no_media") stats.skipped++;
-          else stats.failed++;
-        }
+      } finally {
+        client.release();
+        await pool.end();
       }
-    } finally {
-      client.release();
-      await pool.end();
+      return stats;
+    } catch (err) {
+      if (!(supabaseUrl && serviceKey)) throw err;
+      console.warn(
+        "[TikAPI insert] DATABASE_URL failed, using Supabase HTTP:",
+        err instanceof Error ? err.message : String(err),
+      );
     }
-    return stats;
   }
 
   if (supabaseUrl && serviceKey) {
