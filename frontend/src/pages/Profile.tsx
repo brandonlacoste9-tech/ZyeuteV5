@@ -21,10 +21,16 @@ import {
   toggleFollow,
   logout,
   deletePost,
+  moderatorDeletePost,
+  getModerationStats,
 } from "@/services/api";
 import { formatNumber } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
-import { IoShareOutline, IoTrashOutline } from "react-icons/io5";
+import {
+  IoShareOutline,
+  IoTrashOutline,
+  IoShieldOutline,
+} from "react-icons/io5";
 import type { User, Post } from "@/types";
 import { logger } from "@/lib/logger";
 import { useSEO } from "@/hooks/useSEO";
@@ -69,7 +75,12 @@ export const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { tap, impact } = useHaptics();
-  const { user: authUser, isLoading: authLoading, isGuest } = useAuth();
+  const {
+    user: authUser,
+    isLoading: authLoading,
+    isGuest,
+    isAdmin,
+  } = useAuth();
   const { tier: subTier, isPremium } = usePremium();
 
   const [user, setUser] = React.useState<User | null>(null);
@@ -84,6 +95,9 @@ export const Profile: React.FC = () => {
   const [isBlocked, setIsBlocked] = React.useState(false);
   const [isBlocking, setIsBlocking] = React.useState(false);
   const [deletingPostId, setDeletingPostId] = React.useState<string | null>(
+    null,
+  );
+  const [modStatsPending, setModStatsPending] = React.useState<number | null>(
     null,
   );
 
@@ -113,6 +127,32 @@ export const Profile: React.FC = () => {
       }
     } catch (err) {
       profileLogger.error("Delete post failed:", err);
+      toast.error("Impossible de supprimer la publication");
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
+
+  const handleModeratorDeletePost = async (post: Post) => {
+    if (
+      !window.confirm(
+        "Supprimer définitivement cette publication du fil? Cette action est irréversible.",
+      )
+    ) {
+      return;
+    }
+    setDeletingPostId(post.id);
+    try {
+      const ok = await moderatorDeletePost(post.id);
+      if (ok) {
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+        toast.success("Publication retirée par modération");
+        impact();
+      } else {
+        toast.error("Impossible de supprimer (droits modérateur requis)");
+      }
+    } catch (err) {
+      profileLogger.error("Moderator delete failed:", err);
       toast.error("Impossible de supprimer la publication");
     } finally {
       setDeletingPostId(null);
@@ -172,26 +212,59 @@ export const Profile: React.FC = () => {
   const isOwnProfile = username === "me" || user?.id === currentUser?.id;
 
   const showOwnPostDelete = isOwnProfile && activeTab === "posts";
+  const showModPostDelete = !isOwnProfile && isAdmin && activeTab === "posts";
 
-  const renderOwnPostDeleteButton = (post: Post) => {
-    if (!showOwnPostDelete) return null;
-    const isPhoto = post.type === "photo";
-    return (
-      <button
-        type="button"
-        aria-label={isPhoto ? "Supprimer la photo" : "Supprimer la vidéo"}
-        disabled={deletingPostId === post.id}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          void handleDeleteOwnPost(post);
-        }}
-        className="absolute top-1 right-1 z-30 p-2 rounded-full bg-black/80 text-red-400 border border-red-500/50 hover:bg-red-950/90 hover:text-red-300 transition-colors disabled:opacity-50 touch-manipulation"
-      >
-        <IoTrashOutline className="w-4 h-4" />
-      </button>
-    );
+  const renderPostDeleteButton = (post: Post) => {
+    if (showOwnPostDelete) {
+      const isPhoto = post.type === "photo";
+      return (
+        <button
+          type="button"
+          aria-label={isPhoto ? "Supprimer la photo" : "Supprimer la vidéo"}
+          disabled={deletingPostId === post.id}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void handleDeleteOwnPost(post);
+          }}
+          className="absolute top-1 right-1 z-30 p-2 rounded-full bg-black/80 text-red-400 border border-red-500/50 hover:bg-red-950/90 hover:text-red-300 transition-colors disabled:opacity-50 touch-manipulation"
+        >
+          <IoTrashOutline className="w-4 h-4" />
+        </button>
+      );
+    }
+
+    if (showModPostDelete) {
+      return (
+        <button
+          type="button"
+          aria-label="Supprimer en tant que modérateur"
+          disabled={deletingPostId === post.id}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            void handleModeratorDeletePost(post);
+          }}
+          className="absolute top-1 right-1 z-30 p-2 rounded-full bg-orange-950/90 text-orange-300 border border-orange-500/60 hover:bg-red-950/90 hover:text-red-300 transition-colors disabled:opacity-50 touch-manipulation"
+        >
+          <IoShieldOutline className="w-4 h-4" />
+        </button>
+      );
+    }
+
+    return null;
   };
+
+  React.useEffect(() => {
+    if (!isOwnProfile || !isAdmin) return;
+    let cancelled = false;
+    void getModerationStats().then((stats) => {
+      if (!cancelled && stats) setModStatsPending(stats.pending);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOwnProfile, isAdmin]);
 
   useSEO(
     user
@@ -768,6 +841,30 @@ export const Profile: React.FC = () => {
             )}
           </div>
 
+          {/* Gardien / moderation shortcuts — own profile, admin only */}
+          {isOwnProfile && isAdmin && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  tap();
+                  navigate("/moderation");
+                }}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-orange-500/50 bg-orange-950/30 text-sm font-medium text-orange-100"
+              >
+                <span className="flex items-center gap-2">
+                  <IoShieldOutline className="w-4 h-4" />
+                  File de modération
+                </span>
+                <span className="text-xs text-orange-300/80">
+                  {modStatsPending != null && modStatsPending > 0
+                    ? `${modStatsPending} en attente`
+                    : "Gardien"}
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* Settings / Logout Section for own profile */}
           {isOwnProfile && (
             <div className="mt-4 space-y-3">
@@ -1046,7 +1143,7 @@ export const Profile: React.FC = () => {
                         {/* Animated shimmer background */}
                         <div className="absolute inset-0 bg-leather-900 animate-pulse" />
                         <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
-                        {renderOwnPostDeleteButton(post)}
+                        {renderPostDeleteButton(post)}
                         {/* Spinner + label */}
                         <div className="relative z-10 flex flex-col items-center gap-2">
                           <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
@@ -1076,7 +1173,7 @@ export const Profile: React.FC = () => {
                         loading={index < 6 ? "eager" : "lazy"}
                         className="w-full h-full"
                       />
-                      {renderOwnPostDeleteButton(post)}
+                      {renderPostDeleteButton(post)}
                       {/* TikTok-style persistent overlays */}
                       {post.type === "video" && (
                         <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-1 text-white z-10 font-semibold text-xs md:text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">

@@ -6,6 +6,8 @@
 import { Router } from "express";
 import { supabaseAdmin } from "../supabase-auth.js";
 import { getModerationQueue } from "../queue.js";
+import { storage } from "../storage.js";
+import { requireModerator } from "../middleware/require-moderator.js";
 
 const router = Router();
 
@@ -147,7 +149,7 @@ router.post("/block-user", async (req: any, res) => {
  * GET /api/moderation/queue
  * Admin: get moderation queue
  */
-router.get("/queue", async (req: any, res) => {
+router.get("/queue", requireModerator, async (req: any, res) => {
   if (!supabaseAdmin)
     return res.status(503).json({ error: "Service indisponible" });
 
@@ -186,7 +188,7 @@ router.get("/queue", async (req: any, res) => {
  * GET /api/moderation/stats
  * Admin: get moderation statistics
  */
-router.get("/stats", async (req: any, res) => {
+router.get("/stats", requireModerator, async (req: any, res) => {
   if (!supabaseAdmin)
     return res.status(503).json({ error: "Service indisponible" });
 
@@ -234,7 +236,7 @@ router.get("/stats", async (req: any, res) => {
  * POST /api/moderation/approve/:logId
  * Admin: approve content
  */
-router.post("/approve/:logId", async (req: any, res) => {
+router.post("/approve/:logId", requireModerator, async (req: any, res) => {
   const reviewerId = req.userId;
   if (!reviewerId || !supabaseAdmin)
     return res.status(401).json({ error: "Non authentifié" });
@@ -262,7 +264,7 @@ router.post("/approve/:logId", async (req: any, res) => {
  * POST /api/moderation/remove/:logId
  * Admin: remove content + update log
  */
-router.post("/remove/:logId", async (req: any, res) => {
+router.post("/remove/:logId", requireModerator, async (req: any, res) => {
   const reviewerId = req.userId;
   if (!reviewerId || !supabaseAdmin)
     return res.status(401).json({ error: "Non authentifié" });
@@ -318,7 +320,7 @@ router.post("/remove/:logId", async (req: any, res) => {
  * POST /api/moderation/ban/:userId
  * Admin: ban a user (temp or permanent)
  */
-router.post("/ban/:userId", async (req: any, res) => {
+router.post("/ban/:userId", requireModerator, async (req: any, res) => {
   const reviewerId = req.userId;
   if (!reviewerId || !supabaseAdmin)
     return res.status(401).json({ error: "Non authentifié" });
@@ -365,6 +367,53 @@ router.post("/ban/:userId", async (req: any, res) => {
     });
   } catch (error: any) {
     res.status(500).json({ error: "Erreur bannissement" });
+  }
+});
+
+/**
+ * DELETE /api/moderation/posts/:postId
+ * Moderator: hard-delete any publication + audit log
+ */
+router.delete("/posts/:postId", requireModerator, async (req: any, res) => {
+  const reviewerId = req.userId;
+  const postId = req.params.postId as string;
+
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: "Service indisponible" });
+  }
+
+  try {
+    const post = await storage.getPost(postId);
+    if (!post) {
+      return res.status(404).json({ error: "Publication introuvable" });
+    }
+
+    const deleted = await storage.deletePost(postId);
+    if (!deleted) {
+      return res.status(500).json({ error: "Échec de la suppression" });
+    }
+
+    await supabaseAdmin.from("moderation_logs").insert({
+      content_type: "post",
+      content_id: postId,
+      user_id: post.userId,
+      reporter_id: reviewerId,
+      human_reviewer_id: reviewerId,
+      ai_severity: "medium",
+      ai_categories: ["moderator_action"],
+      ai_confidence: 100,
+      ai_reason: "Suppression manuelle par modérateur (profil)",
+      ai_action: "remove",
+      status: "removed",
+      human_reviewed: true,
+      human_decision: "remove",
+      reviewed_at: new Date().toISOString(),
+    });
+
+    res.json({ success: true });
+  } catch (error: unknown) {
+    console.error("[ModerationRoute] Mod delete post error:", error);
+    res.status(500).json({ error: "Erreur suppression modération" });
   }
 });
 

@@ -381,6 +381,30 @@ export async function deletePost(postId: string): Promise<boolean> {
   return !error;
 }
 
+/** Hard-delete any post (moderator/founder/is_admin only). */
+export async function moderatorDeletePost(postId: string): Promise<boolean> {
+  const { error } = await apiCall(`/moderation/posts/${postId}`, {
+    method: "DELETE",
+  });
+  return !error;
+}
+
+export async function getModerationStats(): Promise<{
+  pending: number;
+  reviewed_today: number;
+  removed_today: number;
+  active_bans: number;
+} | null> {
+  const { data, error } = await apiCall<{
+    pending: number;
+    reviewed_today: number;
+    removed_today: number;
+    active_bans: number;
+  }>("/moderation/stats");
+  if (error || !data) return null;
+  return data;
+}
+
 // ============ REACTIONS FUNCTIONS ============
 
 export async function togglePostFire(

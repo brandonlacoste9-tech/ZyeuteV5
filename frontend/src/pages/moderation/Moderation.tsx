@@ -78,7 +78,11 @@ export const Moderation: React.FC = () => {
         .eq("id", user.id)
         .single();
 
-      if (!userData?.is_admin) {
+      if (
+        !userData?.is_admin &&
+        userData?.role !== "founder" &&
+        userData?.role !== "moderator"
+      ) {
         toast.error("Accès refusé: Admin seulement");
         window.location.href = "/";
         return;
