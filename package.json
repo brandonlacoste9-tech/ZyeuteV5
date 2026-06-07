@@ -83,6 +83,7 @@
     "seed:pexels": "tsx scripts/seed-feed-providers.ts --pexels",
     "seed:pixabay": "tsx scripts/seed-feed-providers.ts --pixabay",
     "seed:apify": "tsx scripts/seed-feed-providers.ts --apify",
+    "seed:tiktok-boost": "tsx scripts/run-tiktok-boost.ts --backfill-passes=4",
     "tiktok:seed": "tsx scripts/nightly-tiktok-seed.ts",
     "tikapi:seed": "tsx scripts/seed-tikapi-videos.ts",
     "feed:replenish": "tsx scripts/feed-replenish-once.ts",

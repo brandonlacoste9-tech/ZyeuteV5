@@ -408,7 +408,11 @@ export async function replenishQuebecFeedPool(options?: {
 
   const maxApify =
     options?.maxApify ?? parseInt(process.env.FEED_REPLENISH_BATCH || "50", 10);
-  const maxPexels = options?.maxPexels ?? Math.min(20, Math.max(0, need));
+  const maxPexels =
+    options?.maxPexels ??
+    (process.env.FEED_ALLOW_PEXELS === "1"
+      ? Math.min(20, Math.max(0, need))
+      : 0);
 
   const apifyLimit = Math.min(
     maxApify,
@@ -425,6 +429,7 @@ export async function replenishQuebecFeedPool(options?: {
     limitPerProvider: apifyLimit,
   });
 
+  // No Pexels/Pixabay landscape fallback unless FEED_ALLOW_PEXELS=1 and explicitly requested
   if (maxPexels > 0 && stats.apify < need / 2) {
     const extra = await seedFeedProviders({
       supabaseUrl: options!.supabaseUrl,
@@ -473,8 +478,8 @@ export async function seedFeedProviders(
   );
   const userId = await resolveAuthorId(supabase);
 
-  const runPexels = options.pexels !== false;
-  const runPixabay = options.pixabay !== false;
+  const runPexels = options.pexels === true;
+  const runPixabay = options.pixabay === true;
   const runApify = options.apify !== false;
 
   if (runPexels) {

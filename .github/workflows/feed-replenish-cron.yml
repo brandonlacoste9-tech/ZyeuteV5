@@ -16,9 +16,9 @@ jobs:
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
-          echo "POST $API_BASE/api/seed/providers?force=1&target=350&limit=50"
+          echo "POST $API_BASE/api/seed/providers?force=1&apify_only=1&limit=40"
           code=$(curl -sS -o /tmp/providers.json -w "%{http_code}" \
-            -X POST "$API_BASE/api/seed/providers?force=1&target=350&limit=50&apify=1" \
+            -X POST "$API_BASE/api/seed/providers?force=1&apify_only=1&limit=40" \
             -H "Content-Type: application/json" \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || echo "000")
           echo "HTTP $code"
@@ -31,9 +31,9 @@ jobs:
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
-          echo "POST $API_BASE/api/seed/mux-backfill?limit=10"
+          echo "POST $API_BASE/api/seed/mux-backfill?limit=25"
           curl -sS -o /tmp/mux-backfill.json -w "HTTP %{http_code}\n" \
-            -X POST "$API_BASE/api/seed/mux-backfill?limit=10" \
+            -X POST "$API_BASE/api/seed/mux-backfill?limit=25" \
             -H "Content-Type: application/json" \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || true
           cat /tmp/mux-backfill.json || true
@@ -42,9 +42,9 @@ jobs:
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
-          echo "POST $API_BASE/api/seed/tikapi?limit=20"
+          echo "POST $API_BASE/api/seed/tikapi?limit=30"
           curl -sS -o /tmp/tikapi.json -w "HTTP %{http_code}\n" \
-            -X POST "$API_BASE/api/seed/tikapi?limit=20" \
+            -X POST "$API_BASE/api/seed/tikapi?limit=30" \
             -H "Content-Type: application/json" \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || true
           cat /tmp/tikapi.json || true

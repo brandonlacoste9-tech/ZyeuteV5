@@ -664,7 +664,9 @@ router.get(
       const orderedPosts = orderFeedPosts(boostedPosts, feedType, blockSeed);
       const feedCandidates =
         feedType === "explore"
-          ? orderedPosts.filter(isExplorePlayablePost)
+          ? orderedPosts.filter(
+              (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
+            )
           : orderedPosts;
       let finalPosts = feedCandidates.slice(
         offsetInBlock,
@@ -715,7 +717,9 @@ router.get(
           );
           const fallbackCandidates =
             feedType === "explore"
-              ? shuffledFallback.filter(isExplorePlayablePost)
+              ? shuffledFallback.filter(
+                  (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
+                )
               : shuffledFallback;
           finalPosts = fallbackCandidates.slice(0, limit);
         }

@@ -395,8 +395,8 @@ router.post("/providers", async (req, res) => {
         supabaseUrl,
         supabaseServiceKey: supabaseKey,
         force: true,
-        maxApify: flag("apify_only") || !anySet ? limit : 0,
-        maxPexels: flag("pexels") || !anySet ? Math.min(30, limit) : 0,
+        maxApify: flag("apify") || flag("apify_only") || !anySet ? limit : 0,
+        maxPexels: flag("pexels") ? Math.min(30, limit) : 0,
         targetCount: q.target ? parseInt(String(q.target), 10) : undefined,
       });
       const total = result.apify + result.pexels + result.pixabay;
@@ -414,9 +414,9 @@ router.post("/providers", async (req, res) => {
       limitPerProvider: limit,
       hiveId: (q.hive as string) || "quebec",
       regionId: (q.region as string) || "montreal",
-      pexels: !anySet || flag("pexels"),
-      pixabay: !anySet || flag("pixabay"),
-      apify: !anySet || flag("apify") || flag("apify_only"),
+      pexels: flag("pexels"),
+      pixabay: flag("pixabay"),
+      apify: flag("apify") || flag("apify_only") || !anySet,
     });
 
     const total = stats.pexels + stats.pixabay + stats.apify;

@@ -31,7 +31,7 @@ export async function backfillTikTokToMuxOrStorage(options: {
     failed: 0,
   };
 
-  const limit = Math.min(options.limit ?? 10, 25);
+  const limit = Math.min(options.limit ?? 10, 50);
   const hiveId = options.hiveId ?? "quebec";
   const supabase = createClient(
     options.supabaseUrl,
