@@ -14,13 +14,13 @@ services:
 
       # ── Database ──────────────────────────────────────────────────────────
       - key: DATABASE_URL
-        sync: false  # postgresql://postgres.vuanulvyqkfefmjcikfk:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+        sync: false  # postgresql://postgres.[REF]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
 
       # ── Supabase ──────────────────────────────────────────────────────────
       - key: VITE_SUPABASE_URL
-        value: https://vuanulvyqkfefmjcikfk.supabase.co
+        value: https://[REF].supabase.co
       - key: SUPABASE_URL
-        value: https://vuanulvyqkfefmjcikfk.supabase.co
+        value: https://[REF].supabase.co
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
@@ -96,9 +96,9 @@ services:
 
       # ── Supabase Storage (where processed videos go) ──────────────────────
       - key: VITE_SUPABASE_URL
-        value: https://vuanulvyqkfefmjcikfk.supabase.co
+        value: https://[REF].supabase.co
       - key: SUPABASE_URL
-        value: https://vuanulvyqkfefmjcikfk.supabase.co
+        value: https://[REF].supabase.co
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY

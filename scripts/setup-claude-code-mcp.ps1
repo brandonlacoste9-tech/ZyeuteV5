@@ -17,7 +17,7 @@ if ($claudeCodeAvailable) {
     Write-Host "With environment variables:" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \`" -ForegroundColor White
-    Write-Host "    --env SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co \`" -ForegroundColor White
+    Write-Host "    --env SUPABASE_URL=https://[REF].supabase.co \`" -ForegroundColor White
     Write-Host "    --env SUPABASE_KEY=your_supabase_anon_key_here" -ForegroundColor White
     Write-Host ""
 } else {

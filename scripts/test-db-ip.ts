@@ -10,8 +10,8 @@ async function main() {
   // Use the IP address we found from nslookup for the pooler
   const POOLER_IP = "52.45.94.125"; 
   const PORT = 6543;
-  const USER = "postgres.vuanulvyqkfefmjcikfk";
-  const PASS = "HOEqEZsZeycL9PRE";
+  const USER = "postgres.[REF]";
+  const PASS = "[PASSWORD]";
   const DB = "postgres";
 
   const connectionString = `postgresql://${USER}:${PASS}@${POOLER_IP}:${PORT}/${DB}?sslmode=require`;

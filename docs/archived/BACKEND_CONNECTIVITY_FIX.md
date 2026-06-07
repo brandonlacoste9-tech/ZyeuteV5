@@ -65,7 +65,7 @@ If the health check returns 500 or backend logs show errors, check these **REQUI
 | Variable                                                | Required Value                             | How to Get It                                                   |
 | ------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
 | `DATABASE_URL`                                          | PostgreSQL connection string               | Supabase → Settings → Database → Connection Pooling (port 6543) |
-| `VITE_SUPABASE_URL` or `SUPABASE_URL`                   | `https://vuanulvyqkfefmjcikfk.supabase.co` | Supabase → Settings → API → Project URL                         |
+| `VITE_SUPABASE_URL` or `SUPABASE_URL`                   | `https://[REF].supabase.co` | Supabase → Settings → API → Project URL                         |
 | `VITE_SUPABASE_ANON_KEY` or `SUPABASE_SERVICE_ROLE_KEY` | Your Supabase anon key                     | Supabase → Settings → API → anon key                            |
 
 #### Format for DATABASE_URL:

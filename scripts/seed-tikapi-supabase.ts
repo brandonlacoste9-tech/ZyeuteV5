@@ -1,7 +1,7 @@
 /**
  * Seed via Supabase REST (when DATABASE_URL fails locally).
  * Requires in .env.local:
- *   VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+ *   VITE_SUPABASE_URL=https://[REF].supabase.co
  *   SUPABASE_SERVICE_ROLE_KEY=...
  */
 import dotenv from "dotenv";

@@ -23,7 +23,7 @@ The backend logs these exact messages before exiting. Look for them in **Deploy 
 
 ```
 🔥 [Startup] EXITING: Database connection failed - [error message]
-🔥 [Startup] DATABASE_URL format: postgresql://postgres.vuanulvyqkfefmjcikfk...
+🔥 [Startup] DATABASE_URL format: postgresql://postgres.[REF]...
 ```
 
 **Common causes:**

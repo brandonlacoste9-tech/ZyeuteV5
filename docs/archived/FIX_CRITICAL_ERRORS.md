@@ -35,7 +35,7 @@ This document addresses the three critical issues preventing Zyeuté V5 from run
 
    ```
    DATABASE_URL=<your-supabase-connection-string>
-   VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+   VITE_SUPABASE_URL=https://[REF].supabase.co
    VITE_SUPABASE_ANON_KEY=<your-anon-key>
    ```
 

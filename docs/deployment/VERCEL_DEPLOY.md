@@ -26,7 +26,7 @@ vercel --prod
 In Vercel Dashboard → Project Settings → Environment Variables:
 
 ```
-VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+VITE_SUPABASE_URL=https://[REF].supabase.co
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
 

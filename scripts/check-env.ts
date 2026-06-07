@@ -51,7 +51,7 @@ function main() {
       "DATABASE_URL still contains the placeholder. Update .env.local with your real DB password from Supabase:",
     );
     console.error(
-      "  https://app.supabase.com/project/vuanulvyqkfefmjcikfk/settings/database",
+      "  https://app.supabase.com/project/[REF]/settings/database",
     );
     exit = 1;
   }

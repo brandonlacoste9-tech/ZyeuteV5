@@ -39,7 +39,7 @@ cat C:\Users\north\ZyeuteV5\.mcp.json
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-supabase"],
       "env": {
-        "SUPABASE_URL": "https://vuanulvyqkfefmjcikfk.supabase.co",
+        "SUPABASE_URL": "https://[REF].supabase.co",
         "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       }
     }
@@ -111,7 +111,7 @@ Some MCP servers use different package names:
       "command": "npx",
       "args": ["-y", "@supabase/mcp-server"],
       "env": {
-        "SUPABASE_URL": "https://vuanulvyqkfefmjcikfk.supabase.co",
+        "SUPABASE_URL": "https://[REF].supabase.co",
         "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       }
     }

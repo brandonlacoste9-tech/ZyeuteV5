@@ -24,7 +24,7 @@ GOOGLE_APPLICATION_CREDENTIALS=c:\Users\north\AppData\Local\Perplexity\Comet\App
 DIALOGFLOW_CX_AGENT_ID=projects/spatial-garden-483401-g8/locations/us-central1/agents/YOUR_AGENT_ID
 
 # Other required vars (copy from .env.example)
-VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+VITE_SUPABASE_URL=https://[REF].supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 DATABASE_URL=your-database-url
 # ... etc

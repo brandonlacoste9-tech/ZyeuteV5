@@ -40,9 +40,9 @@ In Render Dashboard → Your Service → **Environment**, add:
 DATABASE_URL=<auto-populated from zyeute-db>
 
 # Supabase
-SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+SUPABASE_URL=https://[REF].supabase.co
 SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
-VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+VITE_SUPABASE_URL=https://[REF].supabase.co
 VITE_SUPABASE_ANON_KEY=<your-anon-key>
 
 # Google Cloud / Vertex AI

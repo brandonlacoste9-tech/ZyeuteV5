@@ -7,8 +7,8 @@ config({ path: join(process.cwd(), ".env") });
 async function main() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-  const DB_PASSWORD = "HOEqEZsZeycL9PRE";
-  const DB_REF = "vuanulvyqkfefmjcikfk";
+  const DB_PASSWORD = "[PASSWORD]";
+  const DB_REF = "[REF]";
   // The IPv6 address we got from nslookup
   const IPV6 = "2600:1f18:2e13:9d3a:b631:d6ce:392f:2ac0";
   

@@ -19,7 +19,7 @@ console.log("🔍 Testing Supabase Connection...\n");
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("❌ Missing Supabase credentials");
   console.log("\n💡 Set in .env:");
-  console.log("   VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co");
+  console.log("   VITE_SUPABASE_URL=https://[REF].supabase.co");
   console.log("   VITE_SUPABASE_ANON_KEY=your_anon_key\n");
   process.exit(1);
 }

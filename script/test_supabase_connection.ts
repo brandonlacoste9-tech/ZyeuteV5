@@ -13,7 +13,7 @@ console.log('Key:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'MISSIN
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ FATAL: Supabase credentials not found in .env');
     console.error('\nCreate .env file with:');
-    console.error('VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co');
+    console.error('VITE_SUPABASE_URL=https://[REF].supabase.co');
     console.error('VITE_SUPABASE_ANON_KEY=your_anon_key_here');
     process.exit(1);
 }

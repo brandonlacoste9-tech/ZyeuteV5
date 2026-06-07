@@ -101,7 +101,7 @@ async function populateFeedV2() {
         display_name: "Zyeuté AI 🤖",
         role: "citoyen",
         avatar_url:
-          "https://vuanulvyqkfefmjcikfk.supabase.co/storage/v1/object/public/avatars/zyeute_ai.png",
+          "https://[REF].supabase.co/storage/v1/object/public/avatars/zyeute_ai.png",
       })
       .select()
       .single();

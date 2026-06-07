@@ -12,7 +12,7 @@ import type { FeedSeedCandidate } from "../backend/services/tikapi-hashtag.js";
 
 const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
 const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+  process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
 const SUPABASE_ANON =
   process.env.VITE_SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1YW51bHZ5cWtmZWZtamNpa2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzczNDIsImV4cCI6MjA3OTg1MzM0Mn0.73euLyOCo-qbQyLZQkaDpzrq8RI_6G3bN_EKY-_RCq8";

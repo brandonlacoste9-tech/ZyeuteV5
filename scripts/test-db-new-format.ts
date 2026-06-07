@@ -7,8 +7,8 @@ config({ path: join(process.cwd(), ".env") });
 async function main() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-  const DB_PASSWORD = "HOEqEZsZeycL9PRE";
-  const DB_REF = "vuanulvyqkfefmjcikfk";
+  const DB_PASSWORD = "[PASSWORD]";
+  const DB_REF = "[REF]";
   
   // Try NEW pooler format
   const connectionString = `postgresql://postgres.${DB_REF}:${DB_PASSWORD}@db.${DB_REF}.supabase.co:6543/postgres`;

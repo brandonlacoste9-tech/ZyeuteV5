@@ -7,7 +7,7 @@ dotenv.config();
 const supabaseUrl =
   process.env.SUPABASE_URL ||
   process.env.VITE_SUPABASE_URL ||
-  "https://vuanulvyqkfefmjcikfk.supabase.co";
+  "https://[REF].supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 

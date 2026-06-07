@@ -14,7 +14,7 @@ dotenv.config();
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const supabaseUrl =
-  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+  process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 

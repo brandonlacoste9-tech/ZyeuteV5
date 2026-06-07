@@ -159,7 +159,7 @@ export function throttle<T extends (...args: any[]) => any>(
  * Extract Supabase project reference from URL
  * @param url - Supabase URL
  * @returns Project reference ID or null if invalid
- * @example extractSupabaseProjectRef('https://vuanulvyqkfefmjcikfk.supabase.co') => 'vuanulvyqkfefmjcikfk'
+ * @example extractSupabaseProjectRef('https://[REF].supabase.co') => '[REF]'
  */
 export function extractSupabaseProjectRef(url: string): string | null {
   const match = url.match(/https?:\/\/([^.]+)\.supabase\.(co|in)/);
@@ -169,11 +169,11 @@ export function extractSupabaseProjectRef(url: string): string | null {
 /**
  * Validate Supabase URL and log appropriate messages
  * @param url - Supabase URL to validate
- * @param expectedRef - Expected project reference (default: 'vuanulvyqkfefmjcikfk')
+ * @param expectedRef - Expected project reference (default: '[REF]')
  */
 export function validateSupabaseUrl(
   url: string,
-  expectedRef: string = "vuanulvyqkfefmjcikfk",
+  expectedRef: string = "[REF]",
 ): void {
   const projectRef = extractSupabaseProjectRef(url);
 

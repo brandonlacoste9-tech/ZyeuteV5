@@ -6,7 +6,7 @@ config({ path: join(process.cwd(), ".env") });
 
 async function test(port: number, user: string, host: string) {
   console.log(`\n--- Testing ${host}:${port} as ${user} ---`);
-  const PASS = "HOEqEZsZeycL9PRE";
+  const PASS = "[PASSWORD]";
   const DB = "postgres";
   
   const connectionString = `postgresql://${user}:${PASS}@${host}:${port}/${DB}?sslmode=require`;
@@ -35,7 +35,7 @@ async function test(port: number, user: string, host: string) {
 async function main() {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
   const host = "aws-0-us-east-1.pooler.supabase.com";
-  const ref = "vuanulvyqkfefmjcikfk";
+  const ref = "[REF]";
 
   // Test 1: Transaction mode (Port 6543) with postgres.REF
   await test(6543, `postgres.${ref}`, host);

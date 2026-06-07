@@ -87,8 +87,8 @@ npm run verify:railway-vars
 2. Click **"Variables"** tab
 3. Add/Update:
    ```
-   DATABASE_URL=postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres
-   VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+   DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+   VITE_SUPABASE_URL=https://[REF].supabase.co
    VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
    ```
 

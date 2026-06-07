@@ -8,8 +8,8 @@ async function test(region: string) {
   const host = `aws-0-${region}.pooler.supabase.com`;
   console.log(`\n--- Testing ${host} ---`);
   
-  const DB_PASSWORD = "HOEqEZsZeycL9PRE";
-  const DB_REF = "vuanulvyqkfefmjcikfk";
+  const DB_PASSWORD = "[PASSWORD]";
+  const DB_REF = "[REF]";
   
   const connectionString = `postgresql://postgres.${DB_REF}:${DB_PASSWORD}@${host}:6543/postgres?sslmode=require`;
   

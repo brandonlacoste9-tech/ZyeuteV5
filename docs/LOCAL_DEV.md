@@ -6,7 +6,7 @@ Quick fixes for getting the ZyeuteV5 server running locally.
 
 | Step               | Command/Action                                                                                 |
 | ------------------ | ---------------------------------------------------------------------------------------------- |
-| 1. Get password    | [Supabase → Database](https://app.supabase.com/project/vuanulvyqkfefmjcikfk/settings/database) |
+| 1. Get password    | [Supabase → Database](https://app.supabase.com/project/[REF]/settings/database) |
 | 2. Edit .env.local | `code .env.local` → set `DATABASE_URL` with real password                                      |
 | 3. Validate        | `npm run check:env`                                                                            |
 | 4. Start server    | `npm run dev:check`                                                                            |
@@ -27,10 +27,10 @@ Quick fixes for getting the ZyeuteV5 server running locally.
 
 The backend loads `.env` then **`.env.local`** (override). Use `.env.local` for your real DB password so you don’t commit it.
 
-- Get the password: [Supabase → Project → Settings → Database](https://app.supabase.com/project/vuanulvyqkfefmjcikfk/settings/database).
+- Get the password: [Supabase → Project → Settings → Database](https://app.supabase.com/project/[REF]/settings/database).
 - Create or edit **`.env.local`** and set:
   ```bash
-  DATABASE_URL=postgresql://postgres.vuanulvyqkfefmjcikfk:YOUR_REAL_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+  DATABASE_URL=postgresql://postgres.[REF]:YOUR_REAL_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres
   ```
 - If the password contains special characters, URL-encode them (e.g. `#` → `%23`, `@` → `%40`).
 
@@ -91,7 +91,7 @@ The repo adds `lightningcss-win32-x64-msvc` as an optional dependency so the Win
 Supabase couldn’t find the project or user. Check:
 
 1. **Project is active** — In [Supabase Dashboard](https://app.supabase.com), confirm the project isn’t paused.
-2. **Connection string** — Use the **Connection pooling** string (port **6543**), not the direct connection. User must be `postgres.PROJECT_REF` (e.g. `postgres.vuanulvyqkfefmjcikfk`).
+2. **Connection string** — Use the **Connection pooling** string (port **6543**), not the direct connection. User must be `postgres.PROJECT_REF` (e.g. `postgres.[REF]`).
 3. **Password** — Copy the database password again from Project → Settings → Database. If the project was recreated, the password changed.
 4. **URL-encode** — If the password contains `#`, `@`, `%`, etc., encode them (see table above).
 

@@ -9,8 +9,8 @@ async function main() {
 
   // Manual direct connection string
   // Format: postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
-  const DB_PASSWORD = "HOEqEZsZeycL9PRE";
-  const DB_REF = "vuanulvyqkfefmjcikfk";
+  const DB_PASSWORD = "[PASSWORD]";
+  const DB_REF = "[REF]";
   
   // Try direct connection first
   const connectionString = `postgresql://postgres:${DB_PASSWORD}@db.${DB_REF}.supabase.co:5432/postgres`;

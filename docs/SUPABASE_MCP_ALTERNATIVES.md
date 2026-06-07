@@ -62,7 +62,7 @@ tsx scripts/test-supabase-mcp.ts
 
 **Check Supabase Dashboard:**
 
-1. https://app.supabase.com/project/vuanulvyqkfefmjcikfk/settings/integrations
+1. https://app.supabase.com/project/[REF]/settings/integrations
 2. Look for "MCP" or "AI Integrations"
 3. Authorize Claude Code if available
 

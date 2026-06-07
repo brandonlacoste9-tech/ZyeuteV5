@@ -3,7 +3,7 @@
  * Usage: SUPABASE_DB_PASSWORD=your_password tsx scripts/fix-db-url.ts
  */
 
-const projectRef = "vuanulvyqkfefmjcikfk";
+const projectRef = "[REF]";
 const password = process.env.SUPABASE_DB_PASSWORD;
 const region = "us-east-1";
 

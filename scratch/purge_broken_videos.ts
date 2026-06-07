@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 config({ path: join(__dirname, "../.env") });
 
 const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co",
+  process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co",
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 

@@ -21,7 +21,7 @@ config({ path: join(__dirname, "../.env.local"), override: true });
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL ||
   process.env.SUPABASE_URL ||
-  "https://vuanulvyqkfefmjcikfk.supabase.co";
+  "https://[REF].supabase.co";
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SERVICE_ROLE_KEY) {

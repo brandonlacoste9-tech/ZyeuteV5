@@ -7,7 +7,7 @@
 ## Where to Find Your Supabase Anon Key
 
 1. **Go to Supabase Dashboard:**
-   - https://app.supabase.com/project/vuanulvyqkfefmjcikfk/settings/api
+   - https://app.supabase.com/project/[REF]/settings/api
 
 2. **Find "Project API keys" section:**
    - Look for **"anon"** or **"anon public"** key
@@ -32,7 +32,7 @@ cat .env | grep SUPABASE_ANON_KEY
 
 **Option 2: Get from Supabase Dashboard**
 
-- Project: `vuanulvyqkfefmjcikfk`
+- Project: `[REF]`
 - Settings → API → Project API keys → **anon public** key
 
 ---
@@ -48,7 +48,7 @@ cat .env | grep SUPABASE_ANON_KEY
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-supabase"],
       "env": {
-        "SUPABASE_URL": "https://vuanulvyqkfefmjcikfk.supabase.co",
+        "SUPABASE_URL": "https://[REF].supabase.co",
         "SUPABASE_KEY": "YOUR_SUPABASE_ANON_KEY_HERE"
       }
     }

@@ -42,7 +42,7 @@
 | Variable                 | Status          | Value Example                                 |
 | ------------------------ | --------------- | --------------------------------------------- |
 | `DATABASE_URL`           | ⚠️ **MUST SET** | `postgresql://postgres:...@...:6543/postgres` |
-| `VITE_SUPABASE_URL`      | ⚠️ **MUST SET** | `https://vuanulvyqkfefmjcikfk.supabase.co`    |
+| `VITE_SUPABASE_URL`      | ⚠️ **MUST SET** | `https://[REF].supabase.co`    |
 | `VITE_SUPABASE_ANON_KEY` | ⚠️ **MUST SET** | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`     |
 
 **If `DATABASE_URL` is missing:**

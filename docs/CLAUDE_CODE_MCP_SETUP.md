@@ -33,7 +33,7 @@ claude mcp add supabase npx -y @modelcontextprotocol/server-supabase
 
 ```bash
 claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \
-  --env SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co \
+  --env SUPABASE_URL=https://[REF].supabase.co \
   --env SUPABASE_KEY=your_supabase_anon_key_here
 ```
 
@@ -57,7 +57,7 @@ claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-supabase"],
       "env": {
-        "SUPABASE_URL": "https://vuanulvyqkfefmjcikfk.supabase.co",
+        "SUPABASE_URL": "https://[REF].supabase.co",
         "SUPABASE_KEY": "your_supabase_anon_key_here"
       }
     }
@@ -96,7 +96,7 @@ claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \
 ```bash
 # Example if Cursor uses @modelcontextprotocol/server-supabase
 claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \
-  --env SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co \
+  --env SUPABASE_URL=https://[REF].supabase.co \
   --env SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
@@ -108,7 +108,7 @@ claude mcp add supabase npx -y @modelcontextprotocol/server-supabase \
 
 | Variable                    | Value                                      | Source                    |
 | --------------------------- | ------------------------------------------ | ------------------------- |
-| `SUPABASE_URL`              | `https://vuanulvyqkfefmjcikfk.supabase.co` | Supabase Dashboard        |
+| `SUPABASE_URL`              | `https://[REF].supabase.co` | Supabase Dashboard        |
 | `SUPABASE_KEY`              | Your anon key                              | Supabase → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Your service role key                      | Supabase → Settings → API |
 

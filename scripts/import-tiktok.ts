@@ -8,7 +8,7 @@ dotenv.config();
 // Fix for TLS issues if needed
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfefmjcikfk.supabase.co";
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TIKTOK_SCRAPER_API_KEY = process.env.TIKTOK_SCRAPER_API_KEY;
 

@@ -14,7 +14,7 @@
 2. Click **+ New Variable**
 3. Add:
    - **Name:** `DATABASE_URL`
-   - **Value:** `postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
+   - **Value:** `postgresql://postgres.[REF]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
 4. Click **Save**
 
 ### Step 2: Set Other Required Variables (Recommended)
@@ -23,7 +23,7 @@
 
 | Variable                 | Value                                                                                                                                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `VITE_SUPABASE_URL`      | `https://vuanulvyqkfefmjcikfk.supabase.co`                                                                                                                                                                         |
+| `VITE_SUPABASE_URL`      | `https://[REF].supabase.co`                                                                                                                                                                         |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1YW51bHZ5cWtmZWZtamNpa2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzczNDIsImV4cCI6MjA3OTg1MzM0Mn0.73euLyOCo-qbQyLZQkaDpzrq8RI_6G3bN_EKY-_RCq8` |
 | `MAX_API_TOKEN`          | `p8KXOOrrGHmOsJF5aKprjaytb8df156q` (optional)                                                                                                                                                                      |
 

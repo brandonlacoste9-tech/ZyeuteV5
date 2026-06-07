@@ -30,7 +30,7 @@
 {
   "mcpServers": {
     "supabase": {
-      "url": "https://mcp.supabase.com/mcp?project_ref=vuanulvyqkfefmjcikfk"
+      "url": "https://mcp.supabase.com/mcp?project_ref=[REF]"
     }
   }
 }
@@ -38,8 +38,8 @@
 
 **Now matches:**
 
-- Your Zyeuté Supabase project: `vuanulvyqkfefmjcikfk`
-- Your Supabase URL: `https://vuanulvyqkfefmjcikfk.supabase.co`
+- Your Zyeuté Supabase project: `[REF]`
+- Your Supabase URL: `https://[REF].supabase.co`
 
 ---
 

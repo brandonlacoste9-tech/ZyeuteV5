@@ -77,7 +77,7 @@ Check if `DATABASE_URL` exists:
 - ✅ **If set:** Verify format is correct
 - ❌ **If missing:** Add it now:
   ```
-  DATABASE_URL=postgresql://postgres.vuanulvyqkfefmjcikfk:HOEqEZsZeycL9PRE@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+  DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
   ```
 
 ### Step 3: Check Other Required Variables
