@@ -27,6 +27,26 @@ async function attachOptionalUser(
   next();
 }
 
+function seededRandom(seed: number) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
+  const a = [...arr];
+  const rand = seededRandom(seed);
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function isTikTokStylePost(p: Record<string, unknown>): boolean {
   const meta = p.media_metadata as Record<string, unknown> | undefined;
   if (meta?.tiktok_id) return true;
@@ -43,21 +63,72 @@ function isPortraitPost(p: Record<string, unknown>): boolean {
   const w = Number(meta?.width ?? p.width ?? 0);
   const h = Number(meta?.height ?? p.height ?? 0);
   if (h > 0 && w > 0) return h > w;
-  if (p.mux_playback_id && !String(p.media_url ?? "").includes("pexels"))
-    return true;
   return false;
+}
+
+function isReliableTikTokPlayback(p: Record<string, unknown>): boolean {
+  const media = String(p.media_url ?? "");
+  if (media.includes("supabase.co/storage")) return true;
+  if (p.mux_playback_id) return true;
+  return false;
+}
+
+/** Explore: TikTok-first interleave — full-block shuffle was burying TikTok posts. */
+function orderExploreFeed(
+  posts: Record<string, unknown>[],
+  blockSeed: number,
+): Record<string, unknown>[] {
+  const tiktokReliable: Record<string, unknown>[] = [];
+  const tiktokCdn: Record<string, unknown>[] = [];
+  const other: Record<string, unknown>[] = [];
+
+  for (const p of posts) {
+    if (!isTikTokStylePost(p)) {
+      other.push(p);
+      continue;
+    }
+    if (isReliableTikTokPlayback(p)) tiktokReliable.push(p);
+    else tiktokCdn.push(p);
+  }
+
+  const sh = (arr: Record<string, unknown>[], seed: number) =>
+    arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
+
+  const reliable = sh(tiktokReliable, blockSeed);
+  const cdn = sh(tiktokCdn, blockSeed + 111);
+  const rest = sh(other, blockSeed + 222);
+  const tiktok = [...reliable, ...cdn];
+
+  const out: Record<string, unknown>[] = [];
+  let ti = 0;
+  let ri = 0;
+  while (ti < tiktok.length || ri < rest.length) {
+    if (ti < tiktok.length) out.push(tiktok[ti++]);
+    if (ti < tiktok.length) out.push(tiktok[ti++]);
+    if (ri < rest.length) out.push(rest[ri++]);
+  }
+  return out;
+}
+
+function orderFeedPosts(
+  posts: Record<string, unknown>[],
+  feedType: string,
+  blockSeed: number,
+): Record<string, unknown>[] {
+  if (feedType === "explore") return orderExploreFeed(posts, blockSeed);
+  return shuffleWithSeed(posts, blockSeed);
 }
 
 /** Explore (Pour toi): favor vertical TikTok over boosted landscape stock. */
 function exploreFeedScore(p: Record<string, unknown>): number {
   let score = Number(p.viral_score) || 0;
-  if (isTikTokStylePost(p)) score += 8000;
+  if (isTikTokStylePost(p)) {
+    score += isReliableTikTokPlayback(p) ? 20000 : 10000;
+  }
   const media = String(p.media_url ?? "");
-  if (media.includes("supabase.co/storage")) score += 5000;
-  if (isPortraitPost(p)) score += 3000;
-  if (/pexels|pixabay/i.test(media)) score -= 6000;
-  if (/tiktok|tiktokv|tiktokcdn|byteoversea|v16-webapp|v19-webapp/i.test(media))
-    score += 1500;
+  if (media.includes("supabase.co/storage")) score += 8000;
+  if (isPortraitPost(p)) score += 4000;
+  if (/pexels|pixabay/i.test(media)) score -= 8000;
   return score;
 }
 
@@ -333,28 +404,6 @@ router.get(
         return q;
       };
 
-      /** Seeded pseudo-random number generator (mulberry32). */
-      function seededRandom(seed: number) {
-        return function () {
-          seed |= 0;
-          seed = (seed + 0x6d2b79f5) | 0;
-          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-        };
-      }
-
-      /** Fisher-Yates shuffle with a deterministic seed. */
-      function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
-        const a = [...arr];
-        const rand = seededRandom(seed);
-        for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(rand() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-        }
-        return a;
-      }
-
       // ── Block-Shuffling Pagination ────────────────────────────────────────
       const BLOCK_SIZE = 240;
       let blockIndex = Math.floor(pageOffset / BLOCK_SIZE);
@@ -457,11 +506,8 @@ router.get(
 
       // Deterministically shuffle block using block seed
       const blockSeed = (seed + blockIndex) >>> 0;
-      const shuffledPosts = shuffleWithSeed(boostedPosts, blockSeed);
-      let finalPosts = shuffledPosts.slice(
-        offsetInBlock,
-        offsetInBlock + limit,
-      );
+      const orderedPosts = orderFeedPosts(boostedPosts, feedType, blockSeed);
+      let finalPosts = orderedPosts.slice(offsetInBlock, offsetInBlock + limit);
 
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {
@@ -500,7 +546,11 @@ router.get(
               b.reactions_count - a.reactions_count ||
               b.id.localeCompare(a.id),
           );
-          const shuffledFallback = shuffleWithSeed(boostedFallback, seed);
+          const shuffledFallback = orderFeedPosts(
+            boostedFallback,
+            feedType,
+            seed,
+          );
           finalPosts = shuffledFallback.slice(0, limit);
         }
       }
