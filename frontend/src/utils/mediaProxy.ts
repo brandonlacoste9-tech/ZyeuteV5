@@ -21,6 +21,11 @@ const PROXY_DOMAINS = [
   // the backend; routing them through /api/media-proxy broke playback when only
   // Vite was running (no server on :3000).
   "fal.media",
+  "tiktok.com",
+  "tiktokv.com",
+  "tiktokcdn.com",
+  "byteoversea.com",
+  "muscdn.com",
 ];
 
 export function needsMediaProxy(url: string | undefined): boolean {

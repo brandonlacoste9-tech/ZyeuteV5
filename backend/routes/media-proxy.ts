@@ -1,4 +1,3 @@
-
 import { Router, Request, Response } from "express";
 import { Readable } from "stream";
 import rateLimit from "express-rate-limit";
@@ -26,6 +25,12 @@ const ALLOWED_HOSTS = [
   // AI Generation - FAL AI
   "fal.media",
   "*.fal.media",
+  // TikTok CDN (requires Referer — see fetchHeaders below)
+  "tiktok.com",
+  "tiktokv.com",
+  "tiktokcdn.com",
+  "byteoversea.com",
+  "muscdn.com",
 ];
 
 function isAllowedUrl(url: string): boolean {
@@ -102,13 +107,18 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
   try {
     const rangeHeader = req.headers.range;
-    
+
     const fetchHeaders: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "*/*",
-      "Referer": url.includes('mixkit.co') ? "https://mixkit.co/" : "https://www.google.com/",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Accept: "*/*",
+      Referer: url.includes("tiktok")
+        ? "https://www.tiktok.com/"
+        : url.includes("mixkit.co")
+          ? "https://mixkit.co/"
+          : "https://www.google.com/",
     };
-    
+
     if (rangeHeader) fetchHeaders["Range"] = rangeHeader;
 
     console.log(`[MediaProxy] Fetching: ${url.substring(0, 100)}`);
@@ -120,10 +130,13 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     if (!resp.ok) {
       console.error(`[MediaProxy] Upstream error ${resp.status} for ${url}`);
-      return res.status(resp.status).json({ error: `Upstream error ${resp.status}` });
+      return res
+        .status(resp.status)
+        .json({ error: `Upstream error ${resp.status}` });
     }
 
-    const contentType = resp.headers.get("content-type") || "application/octet-stream";
+    const contentType =
+      resp.headers.get("content-type") || "application/octet-stream";
     const isHLS = url.includes(".m3u8") || contentType.includes("mpegurl");
 
     if (isHLS) {
@@ -141,7 +154,10 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Range");
-    res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "Content-Length, Content-Range, Accept-Ranges",
+    );
 
     const contentRange = resp.headers.get("content-range");
     const contentLength = resp.headers.get("content-length");
@@ -150,7 +166,7 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     if (contentLength) res.setHeader("Content-Length", contentLength);
 
     res.status(resp.status);
-    
+
     if (resp.body) {
       const nodeStream = Readable.fromWeb(resp.body as any);
       nodeStream.pipe(res);
@@ -161,11 +177,12 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     } else {
       res.end();
     }
-
   } catch (err: any) {
     console.error(`[MediaProxy] Critical error proxying ${url}:`, err.message);
     if (!res.headersSent) {
-      res.status(502).json({ error: "Proxy fetch failed", details: err.message });
+      res
+        .status(502)
+        .json({ error: "Proxy fetch failed", details: err.message });
     }
   }
 });

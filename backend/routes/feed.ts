@@ -97,17 +97,8 @@ function orderExploreFeed(
   const reliable = sh(tiktokReliable, blockSeed);
   const cdn = sh(tiktokCdn, blockSeed + 111);
   const rest = sh(other, blockSeed + 222);
-  const tiktok = [...reliable, ...cdn];
 
-  const out: Record<string, unknown>[] = [];
-  let ti = 0;
-  let ri = 0;
-  while (ti < tiktok.length || ri < rest.length) {
-    if (ti < tiktok.length) out.push(tiktok[ti++]);
-    if (ti < tiktok.length) out.push(tiktok[ti++]);
-    if (ri < rest.length) out.push(rest[ri++]);
-  }
-  return out;
+  return [...reliable, ...cdn, ...rest];
 }
 
 function orderFeedPosts(
