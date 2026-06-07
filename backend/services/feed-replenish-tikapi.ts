@@ -228,7 +228,7 @@ export function startFeedReplenishJob(): () => void {
         )
         .then((r) =>
           log.info(
-            `Pool ${r.feedCountBefore}→${r.feedCountAfter} (+${r.apify} apify, +${r.pexels} pexels)`,
+            `Pool playable ${r.playableCountBefore}→${r.playableCountAfter} (total ${r.feedCountBefore}→${r.feedCountAfter}, +${r.apify} apify, +${r.pexels} pexels)`,
           ),
         )
         .catch((e: unknown) =>

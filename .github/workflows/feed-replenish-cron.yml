@@ -27,8 +27,31 @@ jobs:
             echo "::warning::Deploy latest main (POST /api/seed/providers) first"
           fi
 
+      - name: Mux backfill dead TikTok CDN
+        env:
+          API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
+        run: |
+          echo "POST $API_BASE/api/seed/mux-backfill?limit=10"
+          curl -sS -o /tmp/mux-backfill.json -w "HTTP %{http_code}\n" \
+            -X POST "$API_BASE/api/seed/mux-backfill?limit=10" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || true
+          cat /tmp/mux-backfill.json || true
+
+      - name: TikAPI Mux ingest (when pool low)
+        env:
+          API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
+        run: |
+          echo "POST $API_BASE/api/seed/tikapi?limit=20"
+          curl -sS -o /tmp/tikapi.json -w "HTTP %{http_code}\n" \
+            -X POST "$API_BASE/api/seed/tikapi?limit=20" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || true
+          cat /tmp/tikapi.json || true
+
       - name: Pool stats
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
+          curl -sS "$API_BASE/api/feed/pool-stats" || true
           curl -sS "$API_BASE/api/seed/status" || true

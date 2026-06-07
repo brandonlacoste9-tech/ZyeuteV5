@@ -402,7 +402,7 @@ router.post("/providers", async (req, res) => {
       const total = result.apify + result.pexels + result.pixabay;
       return res.json({
         success: total > 0,
-        message: `Pool ${result.feedCountBefore}→${result.feedCountAfter}`,
+        message: `Playable ${result.playableCountBefore}→${result.playableCountAfter} (total ${result.feedCountBefore}→${result.feedCountAfter})`,
         total,
         ...result,
       });
@@ -502,7 +502,7 @@ router.post("/tikapi", async (req, res) => {
       limitRaw != null ? parseInt(String(limitRaw), 10) : undefined;
 
     const result = await replenishFeedTikApiIfLow({
-      force: force || true,
+      force,
       maxImport:
         Number.isFinite(maxImport) && maxImport! > 0 ? maxImport : undefined,
       hiveId: (req.query.hive as string) || "quebec",
@@ -585,48 +585,57 @@ router.post("/custom", async (req, res) => {
       return res.status(500).json({ error: "Missing Supabase configuration" });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
     const videos = req.body.videos;
+    const rawCandidates = req.body.candidates;
 
-    if (!Array.isArray(videos)) {
-      return res
-        .status(400)
-        .json({ error: "Expected videos array in request body" });
+    if (!Array.isArray(videos) && !Array.isArray(rawCandidates)) {
+      return res.status(400).json({
+        error: "Expected videos or candidates array in request body",
+      });
     }
 
-    // Insert videos
-    const insertedPosts = [];
-    for (const video of videos) {
-      const { data, error } = await supabase
-        .from("publications")
-        .insert({
-          ...video,
-          type: "video",
-          visibility: "public",
-          est_masque: false,
-          moderation_approved: true,
-          processing_status: "completed",
-        })
-        .select("id, caption, media_url")
-        .single();
+    const { importCustomSeedVideos } =
+      await import("../services/seed-custom-import.js");
+    const { importFeedSeedCandidates } =
+      await import("../services/tikapi-feed-insert.js");
 
-      if (error) {
-        console.error("Custom Seed Insert error:", error);
-        continue;
-      }
-      insertedPosts.push(data);
+    if (Array.isArray(rawCandidates) && rawCandidates.length > 0) {
+      const stats = await importFeedSeedCandidates({
+        candidates: rawCandidates,
+        maxImport: rawCandidates.length,
+        databaseUrl: process.env.DATABASE_URL,
+        supabaseUrl,
+        supabaseServiceKey: supabaseKey,
+      });
+      return res.json({
+        success: stats.imported > 0,
+        message: `Imported ${stats.imported} via Mux pipeline (${stats.muxIngested} Mux)`,
+        ...stats,
+      });
     }
+
+    const result = await importCustomSeedVideos({
+      videos: videos as Record<string, unknown>[],
+      supabaseUrl,
+      supabaseServiceKey: supabaseKey,
+      databaseUrl: process.env.DATABASE_URL,
+    });
+
+    const { muxPipeline, legacyInserted, legacyFailed } = result;
+    const totalImported = muxPipeline.imported + legacyInserted;
 
     res.json({
-      success: true,
-      message: `Seeded ${insertedPosts.length} custom videos to the feed`,
-      posts: insertedPosts,
+      success: totalImported > 0,
+      message: `Seeded ${totalImported} videos (${muxPipeline.muxIngested} Mux, ${muxPipeline.mirrored} mirrored, ${legacyInserted} legacy)`,
+      ...muxPipeline,
+      imported: totalImported,
+      legacyInserted,
+      legacyFailed,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("Custom Seed error:", error);
-    res
-      .status(500)
-      .json({ error: "Custom Seed failed", details: error.message });
+    res.status(500).json({ error: "Custom Seed failed", details: message });
   }
 });
 

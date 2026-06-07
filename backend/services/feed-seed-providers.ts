@@ -363,9 +363,14 @@ export async function replenishQuebecFeedPool(options?: {
   supabaseServiceKey: string;
   hiveId?: string;
 }): Promise<
-  ProviderSeedStats & { feedCountBefore: number; feedCountAfter: number }
+  ProviderSeedStats & {
+    feedCountBefore: number;
+    feedCountAfter: number;
+    playableCountBefore: number;
+    playableCountAfter: number;
+  }
 > {
-  const { countPublicFeedPostsSupabase } =
+  const { countPublicFeedPostsSupabase, countPlayableFeedPostsSupabase } =
     await import("./tikapi-feed-insert.js");
   const supabase = createClient(
     options!.supabaseUrl,
@@ -380,10 +385,14 @@ export async function replenishQuebecFeedPool(options?: {
     parseInt(process.env.FEED_REPLENISH_TARGET || "350", 10);
 
   const feedCountBefore = await countPublicFeedPostsSupabase(supabase, hiveId);
-  const need = Math.max(0, targetCount - feedCountBefore);
+  const playableCountBefore = await countPlayableFeedPostsSupabase(
+    supabase,
+    hiveId,
+  );
+  const need = Math.max(0, targetCount - playableCountBefore);
   const force = options?.force === true;
 
-  if (!force && feedCountBefore >= minCount) {
+  if (!force && playableCountBefore >= minCount) {
     return {
       pexels: 0,
       pixabay: 0,
@@ -392,6 +401,8 @@ export async function replenishQuebecFeedPool(options?: {
       errors: [],
       feedCountBefore,
       feedCountAfter: feedCountBefore,
+      playableCountBefore,
+      playableCountAfter: playableCountBefore,
     };
   }
 
@@ -429,7 +440,17 @@ export async function replenishQuebecFeedPool(options?: {
   }
 
   const feedCountAfter = await countPublicFeedPostsSupabase(supabase, hiveId);
-  return { ...stats, feedCountBefore, feedCountAfter };
+  const playableCountAfter = await countPlayableFeedPostsSupabase(
+    supabase,
+    hiveId,
+  );
+  return {
+    ...stats,
+    feedCountBefore,
+    feedCountAfter,
+    playableCountBefore,
+    playableCountAfter,
+  };
 }
 
 export async function seedFeedProviders(

@@ -4,6 +4,7 @@
 
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { isExplorePlayablePost } from "../utils/playable-media.js";
 
 const router = Router();
 
@@ -196,7 +197,9 @@ router.get("/feed/infinite/supabase", async (req, res) => {
       });
     }
 
-    const items = posts?.slice(0, limit) || [];
+    const items = (posts?.slice(0, limit) || []).filter((p) =>
+      isExplorePlayablePost(p as Record<string, unknown>),
+    );
     const hasMore = (posts?.length || 0) > limit;
     const nextCursor =
       hasMore && items.length > 0 ? items[items.length - 1].created_at : null;
@@ -295,14 +298,17 @@ router.get("/explore/supabase", async (req, res) => {
     }
 
     const formattedPosts =
-      posts?.map((post: any) => ({
-        ...post,
-        user: post.user || {
-          id: post.user_id,
-          username: "unknown",
-          display_name: "Unknown User",
-        },
-      })) || [];
+      posts
+        ?.map((post: any) => ({
+          ...post,
+          user: post.user || {
+            id: post.user_id,
+            username: "unknown",
+            display_name: "Unknown User",
+          },
+        }))
+        .filter((p) => isExplorePlayablePost(p as Record<string, unknown>)) ||
+      [];
 
     res.json({
       posts: formattedPosts,

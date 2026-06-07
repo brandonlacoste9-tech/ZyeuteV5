@@ -299,7 +299,9 @@ export async function countPlayableFeedPostsSupabase(
     .eq("est_masque", false)
     .is("deleted_at", null)
     .eq("hive_id", hiveId)
-    .eq("processing_status", "completed")
+    .or(
+      "processing_status.eq.completed,mux_playback_id.not.is.null,media_url.ilike.%stream.mux.com%",
+    )
     .not("media_url", "is", null)
     .limit(5000);
 

@@ -31,12 +31,14 @@ export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStat
 
   const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 45);
 
+  const force = process.env.TIKTOK_FEED_JOB_FORCE === "true";
+
   const result = await replenishQuebecFeedPool({
     supabaseUrl,
     supabaseServiceKey,
     maxApify: maxPerRun,
     maxPexels: 10,
-    force: true, // Forced for testing TikTok imports
+    force,
   });
 
   return {
