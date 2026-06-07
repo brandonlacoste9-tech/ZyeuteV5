@@ -1,4 +1,4 @@
-# Top up the production video feed (Pixabay + Pexels + Apify).
+# Top up the production video feed (Omkar TikTok + Mux backfill).
 name: Feed replenish (scheduled)
 
 on:
@@ -12,13 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - name: POST /api/seed/providers
+      - name: Omkar TikTok seed (primary)
         env:
           API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
         run: |
-          echo "POST $API_BASE/api/seed/providers?force=1&apify_only=1&limit=40"
+          echo "POST $API_BASE/api/seed/omkar?force=1&limit=15"
+          code=$(curl -sS -o /tmp/omkar.json -w "%{http_code}" \
+            -X POST "$API_BASE/api/seed/omkar?force=1&limit=15" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || echo "000")
+          echo "HTTP $code"
+          cat /tmp/omkar.json || true
+
+      - name: Apify fallback (optional)
+        env:
+          API_BASE: ${{ vars.ZYEUTE_API_BASE || 'https://zyeutev5-1.onrender.com' }}
+        run: |
+          echo "POST $API_BASE/api/seed/providers?force=1&apify_only=1&limit=20"
           code=$(curl -sS -o /tmp/providers.json -w "%{http_code}" \
-            -X POST "$API_BASE/api/seed/providers?force=1&apify_only=1&limit=40" \
+            -X POST "$API_BASE/api/seed/providers?force=1&apify_only=1&limit=20" \
             -H "Content-Type: application/json" \
             -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || echo "000")
           echo "HTTP $code"

@@ -217,7 +217,18 @@ export function startFeedReplenishJob(): () => void {
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-    if (
+    if (process.env.TIKTOK_SCRAPER_API_KEY?.trim()) {
+      import("./feed-replenish-omkar.js")
+        .then(({ replenishFeedOmkarIfLow }) => replenishFeedOmkarIfLow())
+        .then((r) =>
+          log.info(
+            `Omkar replenish +${r.imported} (${r.omkarCalls} API calls, playable was ${r.playableCountBefore})`,
+          ),
+        )
+        .catch((e: unknown) =>
+          log.error(e instanceof Error ? e.message : String(e)),
+        );
+    } else if (
       process.env.APIFY_API_KEY?.trim() &&
       supabaseUrl &&
       supabaseServiceKey

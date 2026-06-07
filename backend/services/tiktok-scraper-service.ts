@@ -50,9 +50,7 @@ function queryToHashtag(query: string): string {
   return first.replace(/[^a-zA-Z0-9_]/g, "") || "quebec";
 }
 
-function urlFromTikApiMediaField(
-  field: unknown,
-): string | undefined {
+function urlFromTikApiMediaField(field: unknown): string | undefined {
   if (typeof field === "string" && field.startsWith("http")) return field;
   if (!field || typeof field !== "object") return undefined;
   const list =
@@ -287,20 +285,107 @@ export function missingTikTokProviderErrorMessage(): string {
   return "Aucun fournisseur TikTok configuré: définir TIKTOK_SCRAPER_API_KEY (Omkar), APIFY_API_KEY, TIKAPI_KEY, ou TIKHUB_API_KEY.";
 }
 
+export function isOmkarConfigured(): boolean {
+  return Boolean(process.env.TIKTOK_SCRAPER_API_KEY?.trim());
+}
+
+/** Map Omkar REST JSON → internal TikTokVideo (display_name, avatar_url, etc.). */
+export function mapOmkarItemToVideo(
+  raw: Record<string, unknown> | null | undefined,
+  originalUrl?: string,
+): TikTokVideo | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const videoId = raw.video_id != null ? String(raw.video_id) : "";
+  if (!videoId) return null;
+
+  const author = (raw.author as Record<string, unknown> | undefined) ?? {};
+  const handle =
+    (typeof author.handle === "string" && author.handle) || "unknown";
+  const nickname =
+    (typeof author.display_name === "string" && author.display_name) ||
+    (typeof author.nickname === "string" && author.nickname) ||
+    handle;
+  const avatar =
+    (typeof author.avatar_url === "string" && author.avatar_url) ||
+    (typeof author.avatar === "string" && author.avatar) ||
+    "";
+
+  const mediaRaw = (raw.media as Record<string, unknown> | undefined) ?? {};
+  const standardUrl =
+    typeof mediaRaw.video_url === "string" ? mediaRaw.video_url : "";
+  const hdUrl =
+    typeof mediaRaw.hd_video_url === "string" ? mediaRaw.hd_video_url : "";
+  const videoUrl =
+    (hdUrl.startsWith("http") ? hdUrl : "") ||
+    (standardUrl.startsWith("http") ? standardUrl : "");
+  if (!videoUrl.startsWith("http")) return null;
+
+  const thumbs = (raw.thumbnails as Record<string, unknown> | undefined) ?? {};
+  const coverUrl =
+    (typeof thumbs.cover_url === "string" && thumbs.cover_url) ||
+    (typeof thumbs.original_cover_url === "string" &&
+      thumbs.original_cover_url) ||
+    "";
+
+  const statsRaw = (raw.stats as Record<string, unknown> | undefined) ?? {};
+  const pageUrl =
+    originalUrl?.trim() ||
+    (typeof raw.original_url === "string" ? raw.original_url : "") ||
+    `https://www.tiktok.com/@${handle}/video/${videoId}`;
+
+  return {
+    video_id: videoId,
+    caption: typeof raw.caption === "string" ? raw.caption : "",
+    author: { handle, nickname, avatar },
+    media: {
+      video_url: videoUrl,
+      hd_video_url:
+        hdUrl.startsWith("http") && hdUrl !== videoUrl ? hdUrl : undefined,
+    },
+    thumbnails: { cover_url: coverUrl },
+    stats: {
+      likes: Number(statsRaw.likes ?? 0) || 0,
+      views: Number(statsRaw.views ?? 0) || 0,
+      shares: Number(statsRaw.shares ?? 0) || 0,
+      comments: Number(statsRaw.comments ?? 0) || 0,
+    },
+    original_url: pageUrl,
+    provider: "omkar",
+  };
+}
+
+function mapOmkarList(
+  list: unknown,
+  originalUrlForSingle?: string,
+): TikTokVideo[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((item) =>
+      mapOmkarItemToVideo(
+        item as Record<string, unknown>,
+        originalUrlForSingle,
+      ),
+    )
+    .filter((x): x is TikTokVideo => x != null);
+}
+
 export class TikTokScraperService {
   private static async searchOmkar(
     query: string,
     maxResults: number,
+    sortBy: "relevance" | "most_liked" | "latest" = "relevance",
   ): Promise<TikTokVideo[]> {
     const response = await axios.get(`${OMKAR_BASE_URL}/tiktok/videos/search`, {
       params: {
         search_query: query,
         market: "ca",
         max_results: maxResults,
+        sort_by: sortBy,
       },
       headers: omkarHeaders(),
     });
-    return response.data.videos || [];
+    return mapOmkarList(response.data?.videos);
   }
 
   private static async getTrendingOmkar(
@@ -316,7 +401,7 @@ export class TikTokScraperService {
         headers: omkarHeaders(),
       },
     );
-    return response.data.videos || [];
+    return mapOmkarList(response.data?.videos);
   }
 
   /**
@@ -422,12 +507,10 @@ export class TikTokScraperService {
           },
         );
         if (response.data && typeof response.data === "object") {
-          return {
-            ...(response.data as TikTokVideo),
-            provider: "omkar",
-            original_url:
-              (response.data as TikTokVideo).original_url || videoUrl,
-          };
+          return mapOmkarItemToVideo(
+            response.data as Record<string, unknown>,
+            videoUrl,
+          );
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);

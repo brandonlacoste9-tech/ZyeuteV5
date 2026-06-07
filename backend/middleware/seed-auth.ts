@@ -5,13 +5,34 @@ import type { Request, Response, NextFunction } from "express";
 import { verifyAuthToken } from "../supabase-auth.js";
 import { storage } from "../storage.js";
 
+/** Strip whitespace and optional wrapping quotes from Render/env paste. */
+export function normalizeCronSecret(raw: string | undefined): string {
+  if (!raw) return "";
+  return raw.trim().replace(/^["']+|["']+$/g, "");
+}
+
+function cronHeader(req: Request): string {
+  const direct = String(req.headers["x-cron-secret"] ?? "");
+  if (direct.trim()) return normalizeCronSecret(direct);
+
+  const auth = req.headers.authorization;
+  if (auth?.startsWith("Bearer ")) {
+    const token = auth.slice("Bearer ".length).trim();
+    // Cron secret via Bearer (same value as CRON_SECRET env)
+    if (token && !token.includes(".")) {
+      return normalizeCronSecret(token);
+    }
+  }
+  return "";
+}
+
 export async function requireSeedAccess(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  const header = String(req.headers["x-cron-secret"] ?? "").trim();
+  const cronSecret = normalizeCronSecret(process.env.CRON_SECRET);
+  const header = cronHeader(req);
 
   if (cronSecret && header === cronSecret) {
     return next();
@@ -42,5 +63,14 @@ export async function requireSeedAccess(
     }
   }
 
-  res.status(401).json({ error: "Unauthorized" });
+  res.status(401).json({
+    error: "Unauthorized",
+    ...(header
+      ? {
+          hint: "X-Cron-Secret mismatch — redeploy after updating Render env",
+          expectedLen: cronSecret.length,
+          gotLen: header.length,
+        }
+      : { hint: "Missing X-Cron-Secret header" }),
+  });
 }

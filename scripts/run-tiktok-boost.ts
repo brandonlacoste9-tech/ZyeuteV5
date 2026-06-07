@@ -5,7 +5,7 @@
  *   npx tsx scripts/run-tiktok-boost.ts --backfill-passes=4
  *
  * Via Render (needs CRON_SECRET):
- *   npx tsx scripts/run-tiktok-boost.ts --remote --backfill-passes=3 --apify=40
+ *   npx tsx scripts/run-tiktok-boost.ts --remote --backfill-passes=3 --omkar=15
  */
 import dotenv from "dotenv";
 
@@ -20,6 +20,10 @@ const backfillPasses = parseInt(
 );
 const apifyLimit = parseInt(
   args.find((a) => a.startsWith("--apify="))?.split("=")[1] ?? "0",
+  10,
+);
+const omkarLimit = parseInt(
+  args.find((a) => a.startsWith("--omkar="))?.split("=")[1] ?? "0",
   10,
 );
 
@@ -77,7 +81,9 @@ async function main() {
     for (let i = 0; i < backfillPasses; i++) {
       await remotePost("/api/seed/mux-backfill?limit=25");
     }
-    if (apifyLimit > 0) {
+    if (omkarLimit > 0) {
+      await remotePost(`/api/seed/omkar?force=1&limit=${omkarLimit}`);
+    } else if (apifyLimit > 0) {
       await remotePost(
         `/api/seed/providers?force=1&apify_only=1&limit=${apifyLimit}`,
       );
@@ -90,7 +96,15 @@ async function main() {
 
   await localBackfill(backfillPasses);
 
-  if (apifyLimit > 0) {
+  if (omkarLimit > 0) {
+    const { replenishFeedOmkarIfLow } =
+      await import("../backend/services/feed-replenish-omkar.js");
+    const stats = await replenishFeedOmkarIfLow({
+      force: true,
+      maxImport: omkarLimit,
+    });
+    console.log("Omkar seed:", stats);
+  } else if (apifyLimit > 0) {
     const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) throw new Error("Supabase env missing for Apify seed");

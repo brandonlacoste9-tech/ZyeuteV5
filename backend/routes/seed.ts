@@ -534,6 +534,52 @@ router.post("/tikapi", async (req, res) => {
 });
 
 /**
+ * POST /api/seed/omkar — Import TikToks via Omkar (TIKTOK_SCRAPER_API_KEY + Mux).
+ * Query: ?force=1&limit=15
+ */
+router.post("/omkar", async (req, res) => {
+  try {
+    const { replenishFeedOmkarIfLow } =
+      await import("../services/feed-replenish-omkar.js");
+    const force =
+      req.query.force === "1" ||
+      req.query.force === "true" ||
+      req.body?.force === true;
+    const limitRaw = req.query.limit ?? req.body?.limit;
+    const maxImport =
+      limitRaw != null ? parseInt(String(limitRaw), 10) : undefined;
+
+    const result = await replenishFeedOmkarIfLow({
+      force,
+      maxImport:
+        Number.isFinite(maxImport) && maxImport! > 0 ? maxImport : undefined,
+      hiveId: (req.query.hive as string) || "quebec",
+    });
+
+    if (!result.triggered && result.imported === 0) {
+      const hint = !process.env.TIKTOK_SCRAPER_API_KEY?.trim()
+        ? "Set TIKTOK_SCRAPER_API_KEY on the server (Omkar API key)"
+        : "Feed may already be above threshold; use ?force=1";
+      return res.status(result.errors.length > 0 ? 503 : 200).json({
+        success: false,
+        message: hint,
+        ...result,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Omkar replenish: ${result.imported} imported (${result.omkarCalls} API calls)`,
+      ...result,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Omkar seed error:", error);
+    res.status(500).json({ error: "Omkar seed failed", details: message });
+  }
+});
+
+/**
  * POST /api/seed/mux-backfill — Re-ingest broken TikTok CDN posts into Mux.
  * Query: ?limit=10
  */
