@@ -27,6 +27,40 @@ async function attachOptionalUser(
   next();
 }
 
+function isTikTokStylePost(p: Record<string, unknown>): boolean {
+  const meta = p.media_metadata as Record<string, unknown> | undefined;
+  if (meta?.tiktok_id) return true;
+  const src = String(p.video_source ?? meta?.source ?? "");
+  if (/tiktok|tikapi|apify/i.test(src)) return true;
+  if (String(p.tiktok_url ?? "").includes("tiktok.com")) return true;
+  return false;
+}
+
+function isPortraitPost(p: Record<string, unknown>): boolean {
+  const ar = String(p.aspect_ratio ?? "");
+  if (ar === "9:16" || ar.includes("9/16")) return true;
+  const meta = p.media_metadata as Record<string, unknown> | undefined;
+  const w = Number(meta?.width ?? p.width ?? 0);
+  const h = Number(meta?.height ?? p.height ?? 0);
+  if (h > 0 && w > 0) return h > w;
+  if (p.mux_playback_id && !String(p.media_url ?? "").includes("pexels"))
+    return true;
+  return false;
+}
+
+/** Explore (Pour toi): favor vertical TikTok over boosted landscape stock. */
+function exploreFeedScore(p: Record<string, unknown>): number {
+  let score = Number(p.viral_score) || 0;
+  if (isTikTokStylePost(p)) score += 8000;
+  const media = String(p.media_url ?? "");
+  if (media.includes("supabase.co/storage")) score += 5000;
+  if (isPortraitPost(p)) score += 3000;
+  if (/pexels|pixabay/i.test(media)) score -= 6000;
+  if (/tiktok|tiktokv|tiktokcdn|byteoversea|v16-webapp|v19-webapp/i.test(media))
+    score += 1500;
+  return score;
+}
+
 /** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
 async function getPostsViaSupabase(
   limit: number,
@@ -251,7 +285,11 @@ router.get(
         }
       }
 
-      const buildQuery = (offset: number, ignoreExclusions: boolean, fetchLimit: number) => {
+      const buildQuery = (
+        offset: number,
+        ignoreExclusions: boolean,
+        fetchLimit: number,
+      ) => {
         let q = supabase
           .from("publications")
           .select(
@@ -323,7 +361,11 @@ router.get(
       let offsetInBlock = pageOffset % BLOCK_SIZE;
       let dbOffset = blockIndex * BLOCK_SIZE;
 
-      let { data: posts, error } = await buildQuery(dbOffset, false, BLOCK_SIZE);
+      let { data: posts, error } = await buildQuery(
+        dbOffset,
+        false,
+        BLOCK_SIZE,
+      );
 
       // If we ran out of unseen posts, wrap back to block 0
       let didWrap = false;
@@ -339,7 +381,12 @@ router.get(
       }
 
       // If offset is past available posts in block, wrap back to block 0
-      if (!error && posts && posts.length > 0 && offsetInBlock >= posts.length) {
+      if (
+        !error &&
+        posts &&
+        posts.length > 0 &&
+        offsetInBlock >= posts.length
+      ) {
         blockIndex = 0;
         offsetInBlock = 0;
         dbOffset = 0;
@@ -381,12 +428,22 @@ router.get(
         or: 5,
         argent: 3,
       };
-      const boostedPosts = (posts || []).map((p: any) => {
-        const tier: string = p.user?.subscription_tier?.toLowerCase() || "free";
+      const boostedPosts = (posts || []).map((p: Record<string, unknown>) => {
+        if (feedType === "explore") {
+          return {
+            ...p,
+            viral_score: exploreFeedScore(p),
+            _boost_tier: "explore",
+          };
+        }
+        const tier = String(
+          (p.user as { subscription_tier?: string } | undefined)
+            ?.subscription_tier ?? "free",
+        ).toLowerCase();
         const multiplier = BOOST[tier] ?? 1;
         return {
           ...p,
-          viral_score: (p.viral_score || 0) * multiplier,
+          viral_score: (Number(p.viral_score) || 0) * multiplier,
           _boost_tier: tier,
         };
       });
@@ -401,7 +458,10 @@ router.get(
       // Deterministically shuffle block using block seed
       const blockSeed = (seed + blockIndex) >>> 0;
       const shuffledPosts = shuffleWithSeed(boostedPosts, blockSeed);
-      let finalPosts = shuffledPosts.slice(offsetInBlock, offsetInBlock + limit);
+      let finalPosts = shuffledPosts.slice(
+        offsetInBlock,
+        offsetInBlock + limit,
+      );
 
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {
@@ -415,12 +475,22 @@ router.get(
         didWrap = true;
 
         if (!error && posts) {
-          const boostedFallback = posts.map((p: any) => {
-            const tier: string = p.user?.subscription_tier?.toLowerCase() || "free";
+          const boostedFallback = posts.map((p: Record<string, unknown>) => {
+            if (feedType === "explore") {
+              return {
+                ...p,
+                viral_score: exploreFeedScore(p),
+                _boost_tier: "explore",
+              };
+            }
+            const tier = String(
+              (p.user as { subscription_tier?: string } | undefined)
+                ?.subscription_tier ?? "free",
+            ).toLowerCase();
             const multiplier = BOOST[tier] ?? 1;
             return {
               ...p,
-              viral_score: (p.viral_score || 0) * multiplier,
+              viral_score: (Number(p.viral_score) || 0) * multiplier,
               _boost_tier: tier,
             };
           });
@@ -511,7 +581,7 @@ router.get("/watch-history", async (req: Request, res: Response) => {
       .filter((v: any) => v.publication)
       .map((v: any) => ({
         ...v.publication,
-        completion_rate: (v.watch_pct || 0) / 100 // Normalize to 0-1
+        completion_rate: (v.watch_pct || 0) / 100, // Normalize to 0-1
       }));
 
     res.json({ posts });

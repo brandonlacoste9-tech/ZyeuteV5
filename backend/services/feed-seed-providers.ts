@@ -275,6 +275,10 @@ export async function seedFromApify(
       const handle = String(
         authorMeta.name ?? authorMeta.nickName ?? "unknown",
       );
+      const metaW = Number(videoMeta.width ?? 0);
+      const metaH = Number(videoMeta.height ?? 0);
+      if (metaH > 0 && metaW > 0 && metaW >= metaH) continue;
+
       const rawMp4 =
         String(videoMeta.downloadAddr ?? "") ||
         String((item.mediaUrls as string[] | undefined)?.[0] ?? "");
@@ -326,10 +330,14 @@ export async function seedFromApify(
         video_source: "tiktok",
         reactions_count: Number(item.diggCount ?? 0),
         view_count: Number(item.playCount ?? 0),
+        aspect_ratio:
+          metaH > metaW ? "9:16" : metaW > metaH ? "16:9" : undefined,
         media_metadata: {
           source: "apify-scrape",
           tiktok_id: videoId,
           author: handle,
+          width: metaW || undefined,
+          height: metaH || undefined,
         },
       });
       if (status === "ok") {
