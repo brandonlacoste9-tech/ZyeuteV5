@@ -13,9 +13,7 @@ import { supabaseAdmin } from "../supabase-auth.js";
 
 const router = Router();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 const CENNE_TO_CAD = 0.01; // 1 cenne = $0.01 CAD
 const PLATFORM_CUT = 0.3; // platform already deducted at gift time

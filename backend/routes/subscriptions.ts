@@ -18,9 +18,7 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 let stripe: Stripe | null = null;
 if (STRIPE_SECRET_KEY) {
-  stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
-  });
+  stripe = new Stripe(STRIPE_SECRET_KEY);
 }
 
 // ─── Supabase service-role client (bypasses RLS for webhook writes) ───────────

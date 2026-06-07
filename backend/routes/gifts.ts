@@ -13,9 +13,7 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 let stripe: Stripe | null = null;
 
 if (STRIPE_SECRET_KEY) {
-  stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2025-12-15.acacia" as Stripe.LatestApiVersion,
-  });
+  stripe = new Stripe(STRIPE_SECRET_KEY);
 }
 
 // Get gift catalog
