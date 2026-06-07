@@ -3,7 +3,7 @@
 @layer base {
   :root {
     /* Quebec Color Palette */
-    --zyeute-blue: #003399;
+    --zyeute-blue: #0044CC; /* More vibrant Quebec Blue */
     --zyeute-snow: #f8f9fa;
     --zyeute-alert: #dc3545;
     --zyeute-hydro: #ffcc00;
@@ -15,7 +15,7 @@
     --card-foreground: 0 0% 9%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
-    --primary: 221 100% 30%; /* Quebec Blue */
+    --primary: 221 100% 40%; /* More vibrant primary blue */
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 9%;
@@ -87,7 +87,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-zyeute-blue/30 rounded-full;
+  @apply bg-zyeute-blue/50 rounded-full; /* Increased scrollbar visibility */
 }
 
 ::-webkit-scrollbar-thumb:hover {
