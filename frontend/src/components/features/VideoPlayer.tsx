@@ -49,6 +49,10 @@ export interface VideoPlayerProps {
   onProgress?: (progress: number) => void;
   /** Called when playback crosses 25/50/75/100% — for watch event tracking */
   onWatchThreshold?: (pct: number, currentTimeMs: number) => void;
+  /** Called on each timeupdate with current time and duration */
+  onTimeUpdate?: (currentTime: number, duration: number) => void;
+  /** When false, inactive slides keep playback position (feed swipe-back). */
+  resetOnDeactivate?: boolean;
   style?: React.CSSProperties;
   videoStyle?: React.CSSProperties;
   priority?: boolean;
@@ -73,6 +77,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPause,
   onProgress,
   onWatchThreshold,
+  onTimeUpdate,
+  resetOnDeactivate = true,
   style,
   videoStyle,
   priority = false,
@@ -284,9 +290,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       videoRef.current.play().catch(() => {});
     } else {
       videoRef.current.pause();
-      videoRef.current.currentTime = 0; // reset to start for next time
+      if (resetOnDeactivate) {
+        videoRef.current.currentTime = 0;
+      }
     }
-  }, [autoPlay]);
+  }, [autoPlay, resetOnDeactivate]);
 
   // Metrics
   const metricsRef = useRef({
@@ -887,6 +895,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setCurrentTime(video.currentTime);
       if (video.duration > 0) {
         const progress = video.currentTime / video.duration;
+        onTimeUpdate?.(video.currentTime, video.duration);
         if (onProgress && !progress70FiredRef.current && progress >= 0.7) {
           progress70FiredRef.current = true;
           onProgress(progress);
@@ -951,7 +960,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         stallTimerRef.current = null;
       }
     };
-  }, [onEnded, onProgress, onWatchThreshold, src, mseUrl, videoSource]);
+  }, [
+    onEnded,
+    onProgress,
+    onWatchThreshold,
+    onTimeUpdate,
+    src,
+    mseUrl,
+    videoSource,
+  ]);
 
   // Hard cleanup to stop buffering/decoding immediately on unmount or src change
   useEffect(() => {

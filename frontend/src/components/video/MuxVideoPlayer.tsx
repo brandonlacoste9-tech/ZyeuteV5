@@ -31,6 +31,8 @@ interface MuxVideoPlayerProps {
   onFreeze?: () => void;
   /** Called on timeupdate — provides currentTime and duration */
   onTimeUpdate?: (currentTime: number, duration: number) => void;
+  /** When false, inactive slides keep playback position (feed swipe-back). */
+  resetOnDeactivate?: boolean;
 }
 
 export function MuxVideoPlayer({
@@ -46,6 +48,7 @@ export function MuxVideoPlayer({
   onError: onErrorProp,
   onFreeze,
   onTimeUpdate,
+  resetOnDeactivate = true,
 }: MuxVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -76,9 +79,11 @@ export function MuxVideoPlayer({
       video.play().catch(() => {});
     } else {
       video.pause();
-      video.currentTime = 0; // reset so next time it starts from beginning
+      if (resetOnDeactivate) {
+        video.currentTime = 0;
+      }
     }
-  }, [autoPlay]);
+  }, [autoPlay, resetOnDeactivate]);
 
   // Monitor for freezes (time not advancing despite playing)
   useEffect(() => {
@@ -142,14 +147,15 @@ export function MuxVideoPlayer({
         msg.includes("NotAllowedError") ||
         msg.includes("play()") ||
         msg.includes("user didn't interact") ||
-        (e?.name === "NotAllowedError");
+        e?.name === "NotAllowedError";
 
       if (isAutoplayBlocked) {
         console.warn("[MuxVideoPlayer] Autoplay blocked, retrying muted...");
-        const video = playerRef.current?.media as HTMLVideoElement | null;
-        if (video) {
-          video.muted = true;
-          video.play().catch(() => {});
+        const media = playerRef.current?.media;
+        if (media instanceof HTMLVideoElement) {
+          // eslint-disable-next-line react-hooks/immutability -- DOM playback recovery
+          media.muted = true;
+          media.play().catch(() => {});
         }
         setIsLoading(false);
         return; // Don't show error UI

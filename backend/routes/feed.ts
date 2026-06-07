@@ -283,8 +283,13 @@ router.get(
         const userSeed = viewerId
           ? viewerId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
           : 0;
+        const clientSession = (req.query.session as string) || "";
+        const sessionSeed = clientSession
+          ? clientSession.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+          : Math.floor(Math.random() * 1e9);
         const timeBucket = Math.floor(Date.now() / (30 * 60 * 1000));
-        seed = (userSeed * 2654435761 + timeBucket) >>> 0;
+        seed =
+          (userSeed * 2654435761 + sessionSeed * 1597334677 + timeBucket) >>> 0;
         pageOffset = 0;
       }
 
@@ -295,6 +300,7 @@ router.get(
         feedType,
         hiveId,
         userId: (req as any).userId || null,
+        hasClientSession: !!(req.query.session as string),
       });
 
       // Fetch viewer's region for region-aware feed weighting
@@ -307,9 +313,9 @@ router.get(
         void viewerProfile;
       }
 
-      // ── Exclude already-watched videos (following feed only) ─────────────
+      // ── Exclude recently watched videos (Pour toi + Abonnements) ─────────
       let excludedIds: string[] = [];
-      if (viewerId && feedType === "feed") {
+      if (viewerId && (feedType === "feed" || feedType === "explore")) {
         try {
           const sevenDaysAgo = new Date(
             Date.now() - 7 * 24 * 60 * 60 * 1000,
@@ -547,8 +553,10 @@ router.get(
       }
 
       const activeOffset = didWrap ? 0 : pageOffset;
-      const hasMore = true; // ALWAYS return true for infinite feed
-      const nextCursor = String(activeOffset + finalPosts.length) + "-" + seed;
+      const hasMore = finalPosts.length >= limit && !didWrap;
+      const nextCursor = hasMore
+        ? String(activeOffset + finalPosts.length) + "-" + seed
+        : null;
 
       res.json({
         posts: finalPosts,

@@ -6,10 +6,15 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
+import {
+  getOrCreateFeedSessionId,
+  markFeedHidden,
+  maybeRotateFeedSessionAfterBackground,
+} from "@/lib/feedSession";
 
 function getStoredHive(): string {
   try {
@@ -56,6 +61,20 @@ function fetchWithTimeout(
 }
 
 export function useInfiniteFeed(feedType: FeedType = "explore") {
+  const [feedSessionId, setFeedSessionId] = useState(getOrCreateFeedSessionId);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        markFeedHidden();
+      } else if (maybeRotateFeedSessionAfterBackground()) {
+        setFeedSessionId(getOrCreateFeedSessionId());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   const {
     data,
     fetchNextPage,
@@ -66,9 +85,9 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     error,
     refetch,
   } = useInfiniteQuery<FeedResponse>({
-    queryKey: ["feed-infinite", feedType, getStoredHive()],
-    staleTime: 30_000,
-    gcTime: 5 * 60 * 1000,
+    queryKey: ["feed-infinite", feedType, getStoredHive(), feedSessionId],
+    staleTime: 0,
+    gcTime: 0,
     retry: 1,
     retryDelay: 1500,
     refetchOnWindowFocus: false,
@@ -79,6 +98,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         limit: "30",
         type: feedType,
         hive: getStoredHive(),
+        session: feedSessionId,
         ...(cursorStr ? { cursor: cursorStr } : {}),
       });
 
@@ -159,10 +179,15 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     }
   }, [data?.pages, isPending, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
-  const posts = useMemo(
-    () => data?.pages.flatMap((page) => page.posts) ?? [],
-    [data?.pages],
-  );
+  const posts = useMemo(() => {
+    const seen = new Set<string>();
+    const flat = data?.pages.flatMap((page) => page.posts) ?? [];
+    return flat.filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  }, [data?.pages]);
 
   return {
     posts,
