@@ -89,7 +89,7 @@
     "seed:render": "tsx scripts/seed-tikapi-via-render.ts",
     "seed:minimal": "tsx scripts/seed-tikapi-minimal.ts",
     "seed:tikwm": "tsx scripts/seed-tikwm-via-render.ts",
-    "seed:render:pexels": "node -e \"fetch('https://zyeutev5-1.onrender.com/api/seed/feed',{method:'POST'}).then(r=>r.json()).then(console.log)\""
+    "seed:render:pexels": "node -e \"const h={'Content-Type':'application/json'};if(process.env.CRON_SECRET)h['X-Cron-Secret']=process.env.CRON_SECRET;fetch('https://zyeutev5-1.onrender.com/api/seed/feed',{method:'POST',headers:h}).then(r=>r.json()).then(console.log)\""
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^4.0.61",

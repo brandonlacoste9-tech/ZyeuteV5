@@ -301,11 +301,18 @@ export const Zyeute: React.FC = () => {
     posts: apiPosts,
     loadMoreRef,
     fetchNextPage,
+    isPending,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
+    error: feedError,
     refetch,
   } = useInfiniteFeed(feedSource);
+
+  const forceFromUrl = useMemo(
+    () => new URLSearchParams(location.search).get("force") === "1",
+    [location.search],
+  );
 
   // Demo clips only with ?demo=1 — avoids filling the feed with test videos in production
   const demoFeed = useMemo(
@@ -320,17 +327,33 @@ export const Zyeute: React.FC = () => {
 
   // Recover from empty API after deploy/cache glitches
   useEffect(() => {
-    if (isLoading || apiPosts.length > 0 || feedSource !== "explore") return;
+    if (isPending || apiPosts.length > 0 || feedSource !== "explore") return;
     const t = setTimeout(() => refetch(), 800);
     return () => clearTimeout(t);
-  }, [isLoading, apiPosts.length, feedSource, refetch]);
+  }, [isPending, apiPosts.length, feedSource, refetch]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showUnmuteHint, setShowUnmuteHint] = useState(true);
-  const [forceEnter, setForceEnter] = useState(false);
+  const [forceEnter, setForceEnter] = useState(forceFromUrl);
+  const [bootReady, setBootReady] = useState(forceFromUrl);
+  const [muxFallbackIds, setMuxFallbackIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  useEffect(() => {
+    if (forceFromUrl) {
+      setForceEnter(true);
+      setBootReady(true);
+    }
+  }, [forceFromUrl]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setBootReady(true), 4000);
+    return () => window.clearTimeout(id);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -361,13 +384,21 @@ export const Zyeute: React.FC = () => {
   } | null>(null);
 
   // Progress bar tracking (TikTok-style)
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>(
+    {},
+  );
 
-  const handleTimeUpdate = useCallback((postId: string, currentTime: number, duration: number) => {
-    if (duration > 0) {
-      setVideoProgress((prev) => ({ ...prev, [postId]: currentTime / duration }));
-    }
-  }, []);
+  const handleTimeUpdate = useCallback(
+    (postId: string, currentTime: number, duration: number) => {
+      if (duration > 0) {
+        setVideoProgress((prev) => ({
+          ...prev,
+          [postId]: currentTime / duration,
+        }));
+      }
+    },
+    [],
+  );
 
   const touchStartY = useRef<number>(0);
   const touchEndY = useRef<number>(0);
@@ -620,7 +651,14 @@ export const Zyeute: React.FC = () => {
     });
   }, [posts.length, feedSource]);
 
-  if (isLoading && !forceEnter) {
+  const showBootSplash =
+    isPending &&
+    apiPosts.length === 0 &&
+    !forceEnter &&
+    !forceFromUrl &&
+    !bootReady;
+
+  if (showBootSplash) {
     return (
       <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden items-center justify-center">
         <div className="relative">
@@ -656,14 +694,20 @@ export const Zyeute: React.FC = () => {
 
             {/* Failsafe for stuck loading */}
             <button
+              type="button"
               onClick={() => {
                 tap();
                 setForceEnter(true);
+                setBootReady(true);
+                refetch();
               }}
               className="mt-12 px-6 py-2 rounded-full border border-gold-500/30 text-gold-500/80 text-[10px] uppercase tracking-widest hover:bg-gold-500/10 transition-all"
             >
               Accès Manuel Direct
             </button>
+            <p className="mt-3 text-white/40 text-[9px]">
+              Débloque automatiquement après 4 s
+            </p>
           </div>
         </div>
       </div>
@@ -679,8 +723,15 @@ export const Zyeute: React.FC = () => {
           Aucune publication pour l'instant
         </p>
         <p className="mt-1 text-sm text-white/70">
-          Sois le premier à publier du contenu québécois!
+          {feedError
+            ? "Impossible de charger le fil. Réessaie dans un instant."
+            : "Sois le premier à publier du contenu québécois!"}
         </p>
+        {feedError && (
+          <p className="mt-2 text-xs text-red-300/80">
+            {(feedError as Error).message || "Erreur réseau"}
+          </p>
+        )}
         <div className="mt-4 flex gap-2">
           <button
             type="button"
@@ -784,8 +835,10 @@ export const Zyeute: React.FC = () => {
           {emptyFeedContent}
           {posts.map((post, index) => {
             /** TikTok pattern: only mount real players for current + next (max 2 video elements). Previous slides get poster images. */
-            const nearActive = index === currentIndex || index === currentIndex + 1;
+            const nearActive =
+              index === currentIndex || index === currentIndex + 1;
             const muxId = (post as Post).mux_playback_id;
+            const useMuxPlayer = !!muxId && !muxFallbackIds.has(post.id);
             const slidePoster =
               getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
               post.thumbnail_url ||
@@ -811,11 +864,7 @@ export const Zyeute: React.FC = () => {
                         : getProxiedMediaUrl(post.media_url) || post.media_url
                     }
                     playerPath={
-                      (post as Post).mux_playback_id
-                        ? "mux"
-                        : post.media_url
-                          ? "native"
-                          : "none"
+                      useMuxPlayer ? "mux" : post.media_url ? "native" : "none"
                     }
                     isActive={index === currentIndex}
                   />
@@ -824,7 +873,7 @@ export const Zyeute: React.FC = () => {
                 <div className="absolute inset-0 bg-black gold-rim overflow-hidden">
                   {post.type === "video" ? (
                     nearActive ? (
-                      muxId ? (
+                      useMuxPlayer ? (
                         <MuxVideoPlayer
                           playbackId={muxId || ""}
                           thumbnailUrl={slidePoster}
@@ -832,12 +881,25 @@ export const Zyeute: React.FC = () => {
                           autoPlay={index === currentIndex && isPlaying}
                           muted={isMuted}
                           loop
-                          onTimeUpdate={(ct, dur) => handleTimeUpdate(post.id, ct, dur)}
+                          onTimeUpdate={(ct, dur) =>
+                            handleTimeUpdate(post.id, ct, dur)
+                          }
+                          onError={() => {
+                            setMuxFallbackIds((prev) => {
+                              const next = new Set(prev);
+                              next.add(post.id);
+                              return next;
+                            });
+                          }}
                         />
                       ) : (
                         <VideoPlayer
                           src={
-                            getProxiedMediaUrl(post.media_url) || post.media_url
+                            getProxiedMediaUrl(
+                              post.hls_url || post.media_url,
+                            ) ||
+                            post.hls_url ||
+                            post.media_url
                           }
                           poster={slidePoster}
                           className="w-full h-full object-cover animate-video-reveal"
@@ -896,8 +958,8 @@ export const Zyeute: React.FC = () => {
                       className="h-full rounded-r-full transition-[width] duration-200 ease-linear"
                       style={{
                         width: `${(videoProgress[post.id] || 0) * 100}%`,
-                        background: 'linear-gradient(90deg, #D4AF37, #FFD700)',
-                        boxShadow: '0 0 6px rgba(212,175,55,0.5)',
+                        background: "linear-gradient(90deg, #D4AF37, #FFD700)",
+                        boxShadow: "0 0 6px rgba(212,175,55,0.5)",
                       }}
                     />
                   </div>
@@ -1300,9 +1362,18 @@ export const Zyeute: React.FC = () => {
               setShowUnmuteHint(false);
             }}
             className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold-500/60 bg-black/70 backdrop-blur-md text-gold-400 text-sm font-bold shadow-lg animate-pulse hover:bg-black/90 transition-all"
-            style={{ boxShadow: '0 0 20px rgba(212,175,55,0.3)' }}
+            style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
               <line x1="23" y1="9" x2="17" y2="15" />
               <line x1="17" y1="9" x2="23" y2="15" />

@@ -41,6 +41,7 @@ import {
   expulserTrollTool,
 } from "../ai/orchestrator.js";
 import { GovernanceBee } from "../ai/bees/governance-bee.js";
+import { requireAuth } from "../supabase-auth.js";
 
 // Utility to convert tool array to object for AI SDK
 const getToolsAsObject = (tools: any[]) => {
@@ -58,6 +59,7 @@ const getTIGuyModel = () => {
 };
 
 const router = express.Router();
+router.use(requireAuth);
 
 // ═══════════════════════════════════════════════════════════════
 // 🎭 CELEBRITY VOICES ENDPOINT

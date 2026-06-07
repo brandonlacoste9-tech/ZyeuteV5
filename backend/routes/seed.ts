@@ -5,8 +5,10 @@
 
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { requireSeedAccess } from "../middleware/seed-auth.js";
 
 const router = Router();
+router.use(requireSeedAccess);
 
 // Sample Pexels video URLs for Quebec-themed content
 const SAMPLE_VIDEOS = [

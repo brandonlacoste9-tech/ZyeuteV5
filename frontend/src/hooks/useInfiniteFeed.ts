@@ -2,9 +2,6 @@
  * Infinite Scroll Feed Hook
  * Uses React Query for data fetching with cursor-based pagination
  * Compatible with both Zyeute (TikTok feed) and Feed (grid) components
- *
- * CRITICAL: Uses Supabase session token (not localStorage "token")
- * to match backend JWT validation.
  */
 
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -14,7 +11,6 @@ import type { Post } from "@/types";
 import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
 
-/** Read current hive from localStorage — mirrors HiveContext default */
 function getStoredHive(): string {
   try {
     return localStorage.getItem("zyeute_hive_id") || "quebec";
@@ -43,22 +39,40 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
 }
 
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  ms = 20_000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+  const signal = init.signal;
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort());
+  }
+  return fetch(url, { ...init, signal: controller.signal }).finally(() =>
+    clearTimeout(timeout),
+  );
+}
+
 export function useInfiniteFeed(feedType: FeedType = "explore") {
   const {
     data,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
+    isFetching,
     error,
     refetch,
   } = useInfiniteQuery<FeedResponse>({
     queryKey: ["feed-infinite", feedType, getStoredHive()],
-    staleTime: 30_000, // 30s - avoid aggressive refetch on mount
-    gcTime: 5 * 60 * 1000, // 5 min cache
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    queryFn: async ({ pageParam }) => {
+    staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+    retryDelay: 1500,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ pageParam, signal }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
 
       const params = new URLSearchParams({
@@ -68,46 +82,39 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         ...(cursorStr ? { cursor: cursorStr } : {}),
       });
 
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers,
-        credentials: "include",
-      });
+      const headers =
+        feedType === "feed"
+          ? await getAuthHeaders()
+          : { "Content-Type": "application/json" };
+
+      const response = await fetchWithTimeout(
+        `/api/feed/infinite?${params}`,
+        { headers, credentials: "include", signal },
+        20_000,
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch feed");
+        throw new Error(`Feed ${response.status}`);
       }
 
       const data = await response.json();
-      // Normalize posts for consistent media_url, mux_playback_id shape
       const rawCount = (data.posts || []).length;
       const posts = (data.posts || [])
-        .map((p: any) => normalizePostForFeed(p))
+        .map((p: Record<string, unknown>) => normalizePostForFeed(p))
         .filter(
           (p: Post | null): p is Post =>
             p != null && !!p.id && postHasPlayableMedia(p),
         );
-      // Debug: log feed structure when ?debug=1
+
       if (
         typeof window !== "undefined" &&
         (new URLSearchParams(window.location.search).get("debug") === "1" ||
           localStorage.getItem("debug") === "true")
       ) {
-        const muxCount = posts.filter((p: any) => p.mux_playback_id).length;
-        const withMedia = posts.filter((p: any) => p.media_url).length;
         console.log("[FeedDiagnostic]", {
           rawPosts: rawCount,
           afterFilter: posts.length,
-          withMuxId: muxCount,
-          withMediaUrl: withMedia,
-          sample: posts[0]
-            ? {
-                id: posts[0].id,
-                type: posts[0].type,
-                hasMux: !!posts[0].mux_playback_id,
-                mediaUrlPreview: posts[0].media_url?.slice(0, 50),
-              }
-            : null,
+          sample: posts[0]?.media_url?.slice(0, 60),
         });
       }
       return {
@@ -124,13 +131,11 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     initialPageParam: null,
   });
 
-  // Intersection observer for triggering load more
   const { ref, inView } = useInView({
     threshold: 0.1,
-    rootMargin: "200px", // Start loading 200px before reaching the end
+    rootMargin: "200px",
   });
 
-  // Auto-fetch next page when scroll trigger becomes visible
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -140,17 +145,20 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
   // API returned rows but filter emptied the page — advance cursor (max 15 tries)
   useEffect(() => {
     const pages = data?.pages ?? [];
-    if (isLoading || isFetchingNextPage || !hasNextPage || pages.length === 0)
+    if (isPending || isFetchingNextPage || !hasNextPage || pages.length === 0)
       return;
     const total = pages.flatMap((p) => p.posts).length;
     const last = pages[pages.length - 1];
     const lastPageEmpty = last && last.posts.length === 0;
-    if ((total === 0 || lastPageEmpty) && pages.length < 15 && last?.hasMore !== false) {
+    if (
+      (total === 0 || lastPageEmpty) &&
+      pages.length < 15 &&
+      last?.hasMore !== false
+    ) {
       fetchNextPage();
     }
-  }, [data?.pages, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+  }, [data?.pages, isPending, isFetchingNextPage, hasNextPage, fetchNextPage]);
 
-  // Flatten pages into single array of posts
   const posts = useMemo(
     () => data?.pages.flatMap((page) => page.posts) ?? [],
     [data?.pages],
@@ -160,7 +168,9 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     posts,
     loadMoreRef: ref,
     fetchNextPage,
-    isLoading,
+    isLoading: isPending,
+    isPending,
+    isFetching,
     isFetchingNextPage,
     hasNextPage,
     error,
@@ -168,22 +178,18 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
   };
 }
 
-/**
- * Simpler hook without intersection observer
- * For manual control over loading
- */
 export function useInfiniteFeedManual(feedType: FeedType = "explore") {
   const {
     data,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading,
+    isPending,
     error,
     refetch,
   } = useInfiniteQuery<FeedResponse>({
     queryKey: ["feed-infinite-manual", feedType, getStoredHive()],
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
       const cursorOffset = cursorStr
         ? parseInt(cursorStr.split("-")[0], 10) || 0
@@ -196,14 +202,19 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
         ...(cursorOffset > 0 ? { cursor: String(cursorOffset) } : {}),
       });
 
-      const headers = await getAuthHeaders();
-      const response = await fetch(`/api/feed/infinite?${params}`, {
-        headers,
-        credentials: "include",
-      });
+      const headers =
+        feedType === "feed"
+          ? await getAuthHeaders()
+          : { "Content-Type": "application/json" };
+
+      const response = await fetchWithTimeout(
+        `/api/feed/infinite?${params}`,
+        { headers, credentials: "include", signal },
+        20_000,
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch feed");
+        throw new Error(`Feed ${response.status}`);
       }
 
       return response.json();
@@ -220,7 +231,7 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
   return {
     posts,
     loadMore: fetchNextPage,
-    isLoading,
+    isLoading: isPending,
     isFetchingNextPage,
     hasNextPage,
     error,

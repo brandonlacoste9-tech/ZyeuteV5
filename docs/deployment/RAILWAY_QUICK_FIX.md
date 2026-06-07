@@ -25,7 +25,7 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `VITE_SUPABASE_URL`      | `https://[REF].supabase.co`                                                                                                                                                                         |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1YW51bHZ5cWtmZWZtamNpa2ZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQyNzczNDIsImV4cCI6MjA3OTg1MzM0Mn0.73euLyOCo-qbQyLZQkaDpzrq8RI_6G3bN_EKY-_RCq8` |
-| `MAX_API_TOKEN`          | `p8KXOOrrGHmOsJF5aKprjaytb8df156q` (optional)                                                                                                                                                                      |
+| `MAX_API_TOKEN`          | `[YOUR_MAX_TOKEN]` (optional)                                                                                                                                                                                      |
 
 ### Step 3: Redeploy
 

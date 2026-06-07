@@ -6,6 +6,8 @@
  */
 
 import { Router } from "express";
+import { requireAuth } from "../supabase-auth.js";
+import { storage } from "../storage.js";
 import {
   hiveMindChat,
   getProviderStats,
@@ -291,9 +293,16 @@ router.get("/stats", async (req, res) => {
  *
  * Clear the response cache (admin only)
  */
-router.post("/cache/clear", async (req, res) => {
+router.post("/cache/clear", requireAuth, async (req, res) => {
   try {
-    // TODO: Add admin auth check here
+    const userId = (req as { userId?: string }).userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin && user?.username !== "north") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
     clearCache();
     res.json({ success: true, message: "Cache cleared" });
   } catch (error: any) {

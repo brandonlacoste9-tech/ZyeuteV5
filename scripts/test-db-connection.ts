@@ -2,29 +2,28 @@ import { config } from "dotenv";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 const { Pool } = pg;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "../.env") });
+config({ path: join(__dirname, "../.env.local"), override: true });
 
 async function tryConnect(url: string) {
   console.log(`\n🔍 Trying URL... ${url.replace(/:[^:@]+@/, ":***@")}`);
   const pool = new Pool({
     connectionString: url,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 8000,
     ssl: { rejectUnauthorized: false },
   });
 
   try {
-    const res = await pool.query(
-      "SELECT NOW() as now, current_database() as db",
-    );
+    await pool.query("SELECT NOW() as now, current_database() as db");
     console.log("✅ Connection Successful!");
     return true;
-  } catch (err: any) {
-    console.log(`❌ Failed: ${err.message}`);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`❌ Failed: ${message}`);
     return false;
   } finally {
     await pool.end();
@@ -52,7 +51,7 @@ async function run() {
           projectRef = host.split(".")[0];
         }
       }
-    } catch (e) {
+    } catch {
       const m = original.match(/postgres(?:ql)?:\/\/([^:]+):([^@]+)@/);
       if (m) {
         password = m[2];
@@ -63,24 +62,27 @@ async function run() {
     }
   }
 
-  password = process.env.DB_PASSWORD || process.env.SUPABASE_DB_PASSWORD || password;
+  password =
+    process.env.DB_PASSWORD || process.env.SUPABASE_DB_PASSWORD || password;
   projectRef = process.env.SUPABASE_PROJECT_REF || projectRef;
 
   const scheme = "postgres" + "ql://";
   const alternatives = [
-    `${scheme}postgres.${projectRef}:${password}@aws-0-us-east-1.pooler.supabase.com:6543/postgres`,
     `${scheme}postgres.${projectRef}:${password}@aws-0-ca-central-1.pooler.supabase.com:5432/postgres`,
-    `${scheme}postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`
+    `${scheme}postgres.${projectRef}:${password}@aws-0-us-east-1.pooler.supabase.com:5432/postgres`,
+    `${scheme}postgres:${password}@db.${projectRef}.supabase.co:5432/postgres`,
   ];
 
   for (const url of alternatives) {
     if (await tryConnect(url)) {
-      console.log(`\n🟢 Best connection string found. Please update .env`);
+      console.log("\n🟢 Best connection string found. Please update .env");
       process.exit(0);
     }
   }
 
-  console.log("\n🔴 Could not find a working connection string.");
+  console.error(
+    "❌ No working DATABASE_URL. Set DATABASE_URL in .env.local (never commit passwords).",
+  );
   process.exit(1);
 }
 

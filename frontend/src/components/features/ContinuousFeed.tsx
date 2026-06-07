@@ -66,9 +66,15 @@ import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 const feedLogger = logger.withContext("ContinuousFeed");
-// Use hive from localStorage (set by geo-detection) or fall back to "quebec"
-const HIVE_ID: string = localStorage.getItem("zyeute_hive_id") || "quebec";
 const FEED_PAGE_SIZE = 15;
+
+function getHiveId(): string {
+  try {
+    return localStorage.getItem("zyeute_hive_id") || "quebec";
+  } catch {
+    return "quebec";
+  }
+}
 
 type FeedPost = Post & { user: User; _feedSlot?: string };
 
@@ -637,8 +643,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         validPosts = filterPlayablePosts(followingPosts);
         if (validPosts.length === 0) {
           // Fallback: show explore if not following anyone yet
-          feedLogger.info("[Abonnements] No following posts, falling back to explore");
-          const { posts: data, hasMore } = await getExplorePosts(0, FEED_PAGE_SIZE, undefined, HIVE_ID);
+          feedLogger.info(
+            "[Abonnements] No following posts, falling back to explore",
+          );
+          const { posts: data, hasMore } = await getExplorePosts(
+            0,
+            FEED_PAGE_SIZE,
+            undefined,
+            getHiveId(),
+          );
           validPosts = filterPlayablePosts(data);
           apiHasMore = hasMore;
         } else {
@@ -649,10 +662,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           0,
           FEED_PAGE_SIZE,
           undefined,
-          HIVE_ID,
+          getHiveId(),
         );
         apiHasMore = hasMore;
-        feedLogger.info("[ContinuousFeed] API returned:", data?.length || 0, "posts");
+        feedLogger.info(
+          "[ContinuousFeed] API returned:",
+          data?.length || 0,
+          "posts",
+        );
 
         if (data?.length) {
           validPosts = filterPlayablePosts(data);
@@ -674,36 +691,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         setHasMore(apiHasMore);
       }
 
-      // If API has no posts, try to auto-seed DB first
       if (validPosts.length === 0) {
-        feedLogger.info("No API posts — attempting auto-seed...");
-        try {
-          const seedRes = await fetch("/api/seed/feed", { method: "POST" });
-          if (seedRes.ok) {
-            const seedData = await seedRes.json();
-            if (seedData.posts?.length > 0) {
-              feedLogger.info("Auto-seed successful, re-fetching feed...");
-              const reseeded = await getExplorePosts(
-                0,
-                FEED_PAGE_SIZE,
-                undefined,
-                HIVE_ID,
-              );
-              if (reseeded.posts.length > 0) {
-                const valid = filterPlayablePosts(reseeded.posts);
-                if (valid.length > 0) {
-                  setPosts(valid);
-                  setHasMore(reseeded.hasMore);
-                  setPage(0);
-                  return;
-                }
-              }
-            }
-          }
-        } catch (seedErr) {
-          feedLogger.warn("Auto-seed failed:", seedErr);
-        }
-
         if (allowDemoVideos()) {
           feedLogger.info("Using demo videos (?demo=1)");
           setPosts(DEMO_VIDEOS);
@@ -758,7 +746,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         nextPage,
         FEED_PAGE_SIZE,
         undefined,
-        HIVE_ID,
+        getHiveId(),
       );
 
       if (data.length > 0) {

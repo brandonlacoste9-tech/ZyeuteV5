@@ -144,14 +144,17 @@ export async function registerRoutes(
   // ============ HEALTH & SYSTEM ROUTES ============
   app.use("/api/health", healthRoutes);
 
-  // Feed seeding (public — no auth; must be before requireAuth catch-alls)
+  // Feed seeding (CRON_SECRET or admin — see seed-auth middleware)
   app.use("/api/seed", seedRoutes);
 
   // Video processing webhook (called by HLS worker for cache invalidation)
   app.post("/api/webhook/video-processed", (req, res) => {
     const secret = req.headers["x-webhook-secret"];
     const expected = process.env.WEBHOOK_SECRET;
-    if (expected && secret !== expected) {
+    if (!expected) {
+      return res.status(503).json({ error: "WEBHOOK_SECRET not configured" });
+    }
+    if (secret !== expected) {
       return res.status(401).json({ error: "Invalid webhook secret" });
     }
     const { videoId } = req.body || {};
@@ -185,9 +188,16 @@ export async function registerRoutes(
   // [NEW] Admin Observability Dashboard
   app.use("/api/admin", requireAuth, adminRoutes);
 
-  // TikTok curation (Omkar Cloud proxy + import; staff-only inside router)
-  // Temporary public diagnostic endpoint (no auth)
-  app.get("/api/tiktok/diag", async (_req, res) => {
+  // TikTok diagnostic — admin only (was public; leaked key prefixes)
+  app.get("/api/tiktok/diag", requireAuth, async (req, res) => {
+    const userId = (req as any).userId as string | undefined;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin && user?.username !== "north") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
     const key = process.env.TIKTOK_SCRAPER_API_KEY;
     const diag: Record<string, unknown> = {
       hasKey: !!key,

@@ -19,7 +19,8 @@ jobs:
           echo "POST $API_BASE/api/seed/providers?force=1&target=350&limit=50"
           code=$(curl -sS -o /tmp/providers.json -w "%{http_code}" \
             -X POST "$API_BASE/api/seed/providers?force=1&target=350&limit=50&apify=1" \
-            -H "Content-Type: application/json" || echo "000")
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" || echo "000")
           echo "HTTP $code"
           cat /tmp/providers.json || true
           if [ "$code" = "404" ]; then

@@ -25,6 +25,20 @@ const router = express.Router();
  * }
  */
 router.post("/webhook", async (req, res) => {
+  const expected = process.env.DIALOGFLOW_WEBHOOK_SECRET?.trim();
+  if (expected) {
+    const provided = String(
+      req.headers["x-dialogflow-webhook-secret"] ?? "",
+    ).trim();
+    if (provided !== expected) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  } else if (process.env.NODE_ENV === "production") {
+    return res
+      .status(503)
+      .json({ error: "DIALOGFLOW_WEBHOOK_SECRET not configured" });
+  }
+
   try {
     // Dialogflow CX sends standard WebhookRequest
     // https://cloud.google.com/dialogflow/cx/docs/reference/rest/v3/WebhookRequest

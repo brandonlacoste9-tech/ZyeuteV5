@@ -14,7 +14,7 @@ services:
 
       # ── Database ──────────────────────────────────────────────────────────
       - key: DATABASE_URL
-        sync: false  # postgresql://postgres.[REF]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+        sync: false  # Session pooler port 5432 (see AGENTS.md)
 
       # ── Supabase ──────────────────────────────────────────────────────────
       - key: VITE_SUPABASE_URL
@@ -38,7 +38,7 @@ services:
       - key: MUX_WEBHOOK_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://zyeute.vercel.app
+        value: https://zyeute.com
 
       # ── AI Services ───────────────────────────────────────────────────────
       - key: GOOGLE_CLOUD_PROJECT
@@ -67,6 +67,20 @@ services:
         sync: false
       - key: PEXELS_API_KEY
         sync: false
+      - key: PIXABAY_API_KEY
+        sync: false
+      - key: APIFY_API_KEY
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: FEED_REPLENISH_ENABLED
+        value: "true"
+      - key: FEED_MIN_PLAYABLE_POSTS
+        value: "150"
+      - key: FEED_REPLENISH_TARGET
+        value: "350"
+      - key: FEED_REPLENISH_BATCH
+        value: "50"
 
       # ── Security ──────────────────────────────────────────────────────────
       - key: SESSION_SECRET

@@ -40,40 +40,45 @@ export interface MuxUploadResponse {
  * POST /api/mux/create-upload
  * Create direct upload URL for MUX (chunked upload via UpChunk)
  */
-router.post("/create-upload", async (req: Request, res: Response) => {
-  if (!mux || !Video) {
-    return res.status(503).json({
-      success: false,
-      error: "MUX non configuré. Vérifiez MUX_TOKEN_ID et MUX_TOKEN_SECRET.",
-    });
-  }
+router.post(
+  "/create-upload",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!mux || !Video) {
+      return res.status(503).json({
+        success: false,
+        error: "MUX non configuré. Vérifiez MUX_TOKEN_ID et MUX_TOKEN_SECRET.",
+      });
+    }
 
-  try {
-    const corsOrigin = req.body.cors_origin || process.env.FRONTEND_URL || "*";
+    try {
+      const corsOrigin =
+        req.body.cors_origin || process.env.FRONTEND_URL || "*";
 
-    const upload = await Video.uploads.create({
-      new_asset_settings: {
-        playback_policy: ["public"],
-        // mp4_support: "standard", // Deprecated for basic assets
-      },
-      cors_origin: corsOrigin,
-    });
+      const upload = await Video.uploads.create({
+        new_asset_settings: {
+          playback_policy: ["public"],
+          // mp4_support: "standard", // Deprecated for basic assets
+        },
+        cors_origin: corsOrigin,
+      });
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        uploadUrl: upload.url,
-        uploadId: upload.id,
-      } as MuxUploadResponse,
-    });
-  } catch (error) {
-    console.error("[MUX] Erreur création upload:", error);
-    return res.status(500).json({
-      success: false,
-      error: "Erreur lors de la création de l'upload",
-    });
-  }
-});
+      return res.status(200).json({
+        success: true,
+        data: {
+          uploadUrl: upload.url,
+          uploadId: upload.id,
+        } as MuxUploadResponse,
+      });
+    } catch (error) {
+      console.error("[MUX] Erreur création upload:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Erreur lors de la création de l'upload",
+      });
+    }
+  },
+);
 
 /**
  * GET /api/mux/upload-status/:uploadId
@@ -138,8 +143,9 @@ router.post("/webhooks", async (req: Request, res: Response) => {
   }
 
   if (!MUX_WEBHOOK_SECRET) {
-    console.warn("[MUX] MUX_WEBHOOK_SECRET non configuré, webhook non vérifié");
-  } else if (mux) {
+    return res.status(503).json({ error: "MUX_WEBHOOK_SECRET not configured" });
+  }
+  if (mux) {
     try {
       // Mux verifySignature expects headers object and throws on error
       mux.webhooks.verifySignature(

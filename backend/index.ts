@@ -380,9 +380,15 @@ app.use((req, res, next) => {
           const postCount = parseInt(countResult.rows[0]?.count || "0");
           if (postCount === 0) {
             console.log("🌱 [Startup] Feed is empty — triggering auto-seed...");
+            const seedHeaders: Record<string, string> = {
+              "Content-Type": "application/json",
+            };
+            if (process.env.CRON_SECRET) {
+              seedHeaders["X-Cron-Secret"] = process.env.CRON_SECRET;
+            }
             fetch(`http://127.0.0.1:${port}/api/seed/feed`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: seedHeaders,
             })
               .then((r) => r.json())
               .then((d) => {

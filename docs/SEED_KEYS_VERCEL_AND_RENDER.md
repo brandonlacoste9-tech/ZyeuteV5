@@ -1,5 +1,11 @@
 # Feed seed keys: Vercel vs Render
 
+## CRITICAL
+
+**Vercel env vars do NOT seed production.** All `/api/*` goes to **Render** via [`vercel.json`](../vercel.json).
+
+**`/api/seed/*` requires `X-Cron-Secret`** (or admin JWT). Set `CRON_SECRET` on Render and in GitHub Actions secrets.
+
 ## Important
 
 `vercel.json` sends **all** `/api/*` traffic to **Render**:
@@ -17,18 +23,20 @@ They are **not** automatically available to the Render backend.
 
 In [Render Dashboard](https://dashboard.render.com) → your service → **Environment**:
 
-| Variable                              | Same value as Vercel |
-| ------------------------------------- | -------------------- |
-| `SUPABASE_SERVICE_ROLE_KEY`           | ✓                    |
-| `VITE_SUPABASE_URL` or `SUPABASE_URL` | ✓                    |
-| `PEXELS_API_KEY`                      | ✓                    |
-| `PIXABAY_API_KEY`                     | ✓                    |
-| `APIFY_API_KEY`                       | ✓                    |
+| Variable                              | Same value as Vercel  |
+| ------------------------------------- | --------------------- |
+| `SUPABASE_SERVICE_ROLE_KEY`           | ✓                     |
+| `VITE_SUPABASE_URL` or `SUPABASE_URL` | ✓                     |
+| `PEXELS_API_KEY`                      | ✓                     |
+| `PIXABAY_API_KEY`                     | ✓                     |
+| `APIFY_API_KEY`                       | ✓                     |
+| `CRON_SECRET`                         | Same as GitHub secret |
 
 Redeploy, then:
 
 ```bash
-curl -X POST "https://zyeutev5-1.onrender.com/api/seed/providers?limit=15"
+curl -X POST "https://zyeutev5-1.onrender.com/api/seed/providers?limit=15" \
+  -H "X-Cron-Secret: YOUR_CRON_SECRET"
 ```
 
 Or from the app URL (proxied):

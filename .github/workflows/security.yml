@@ -31,6 +31,14 @@ jobs:
         run: npm audit --audit-level=moderate
         continue-on-error: true
 
+      - name: 🔑 Verify no committed secrets
+        run: npm run verify:secrets
+        continue-on-error: true
+
+      - name: 🛡️ Hive security audit script
+        run: npm run audit:security
+        continue-on-error: true
+
       - name: 🛡️ Check for known vulnerabilities
         uses: github/codeql-action/init@v3
         with:

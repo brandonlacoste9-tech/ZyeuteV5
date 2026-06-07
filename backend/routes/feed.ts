@@ -64,7 +64,7 @@ router.get("/pool-stats", async (_req, res) => {
     const { countPublicFeedPosts } =
       await import("../services/feed-replenish-tikapi.js");
     const count = await countPublicFeedPosts("quebec");
-    const minPosts = parseInt(process.env.FEED_MIN_PLAYABLE_POSTS || "40", 10);
+    const minPosts = parseInt(process.env.FEED_MIN_PLAYABLE_POSTS || "150", 10);
     res.json({
       hive: "quebec",
       publicVideoCount: count,

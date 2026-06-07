@@ -1,40 +1,51 @@
-# Render Environment Variables — Complete Reference
+# Render Environment Variables — Template
 
-# Set these in both `zyeute-api` AND `zyeute-worker` services
+Set these in the Render dashboard for **zyeutev5-1** (production API behind Vercel).
 
-## ✅ CONFIRMED VALUES (paste as-is)
+**Never commit live secrets.** Copy values from Supabase/Mux/Apify dashboards only.
 
-### Redis (Upstash)
+## Required
 
-REDIS_URL=rediss://default:gQAAAAAAAWIAAAIncDI5NjU0ZTlmZjk5NGM0MDYxODRiOGRmZGZkNGVmYzQ3NnAyOTA2MjQ@firm-dodo-90624.upstash.io:6379
+| Variable                    | Notes                                                  |
+| --------------------------- | ------------------------------------------------------ |
+| `NODE_ENV`                  | `production`                                           |
+| `PORT`                      | `10000`                                                |
+| `DATABASE_URL`              | Supabase session pooler, **port 5432** (see AGENTS.md) |
+| `VITE_SUPABASE_URL`         | `https://vuanulvyqkfefmjcikfk.supabase.co`             |
+| `SUPABASE_URL`              | Same as above                                          |
+| `SUPABASE_SERVICE_ROLE_KEY` | From Supabase → Settings → API                         |
+| `VITE_SUPABASE_ANON_KEY`    | From Supabase → Settings → API                         |
+| `SESSION_SECRET`            | Random 32+ chars                                       |
+| `CRON_SECRET`               | Random secret for `/api/seed/*` and GitHub cron        |
+| `FRONTEND_URL`              | `https://zyeute.com`                                   |
 
-### Supabase
+## Feed seeding (Render — not Vercel)
 
-VITE_SUPABASE_URL=https://wbpuiqozntavxsqaemcz.supabase.co
-SUPABASE_URL=https://wbpuiqozntavxsqaemcz.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndicHVpcW96bnRhdnhzcWFlbWN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwOTQ5NjMsImV4cCI6MjA4OTY3MDk2M30.Gy0kye65epaId0-KUl-xMZM_r_6shSXWeFxHJ4TG6CQ
+| Variable                  | Notes              |
+| ------------------------- | ------------------ |
+| `APIFY_API_KEY`           | TikTok bulk import |
+| `PEXELS_API_KEY`          | Stock filler       |
+| `PIXABAY_API_KEY`         | Optional           |
+| `FEED_REPLENISH_ENABLED`  | `true`             |
+| `FEED_MIN_PLAYABLE_POSTS` | `150`              |
+| `FEED_REPLENISH_TARGET`   | `350`              |
+| `FEED_REPLENISH_BATCH`    | `50`               |
 
-### Mux
+## Video (Mux)
 
-MUX_TOKEN_ID=f6fab3e6-f183-4b26-9c2a-eae624b3f618
-MUX_TOKEN_SECRET=3p4EQ23xm+xj+lWAcMOj+CftqOljrCEbKJ+4Ba866VcR
-MUX_WEBHOOK_SECRET=jd5147g8hk2512bhiu4tjj70nncr4ose
+| Variable             | Notes                      |
+| -------------------- | -------------------------- |
+| `MUX_TOKEN_ID`       | Mux dashboard              |
+| `MUX_TOKEN_SECRET`   | Mux dashboard              |
+| `MUX_WEBHOOK_SECRET` | Mux webhook signing secret |
 
-### Worker
+## Optional
 
-WORKER_CONCURRENCY=2
-HLS_WORKER_CONCURRENCY=1
+| Variable          | Notes                         |
+| ----------------- | ----------------------------- |
+| `REDIS_URL`       | Upstash if using Redis        |
+| `TIKAPI_KEY`      | Optional; often rate-limited  |
+| `WEBHOOK_SECRET`  | HLS worker cache invalidation |
+| `HIVE_SECRET_KEY` | Colony / n8n events           |
 
-## ⏳ NEED FROM YOU
-
-### Supabase service role key (for bucket uploads)
-
-# Get from: https://supabase.com/dashboard/project/wbpuiqozntavxsqaemcz/settings/api
-
-SUPABASE_SERVICE_ROLE_KEY=<paste from Supabase dashboard>
-
-### Database
-
-# Get from: https://supabase.com/dashboard/project/wbpuiqozntavxsqaemcz/settings/database
-
-DATABASE_URL=postgresql://postgres.wbpuiqozntavxsqaemcz:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+See also [docs/SEED_KEYS_VERCEL_AND_RENDER.md](docs/SEED_KEYS_VERCEL_AND_RENDER.md).
