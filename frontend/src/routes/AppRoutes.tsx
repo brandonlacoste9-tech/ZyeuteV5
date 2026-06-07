@@ -103,6 +103,9 @@ const PrivacyPolicy = lazy(() => import("@/pages/legal/PrivacyPolicy"));
 const CommunityGuidelines = lazy(
   () => import("@/pages/legal/CommunityGuidelines"),
 );
+const AboutPage = lazy(() => import("@/pages/company/AboutPage"));
+const NewsroomPage = lazy(() => import("@/pages/company/NewsroomPage"));
+const ContactPage = lazy(() => import("@/pages/company/ContactPage"));
 
 function LogoutRoute() {
   const { logout } = useAuth();
@@ -246,8 +249,16 @@ export function AppRoutes() {
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/legal/terms" element={<TermsOfService />} />
         <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/newsroom" element={<NewsroomPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/legal/community" element={<CommunityGuidelines />} />
-        <Route path="/legal/community-guidelines" element={<CommunityGuidelines />} />
+        <Route
+          path="/legal/community-guidelines"
+          element={<CommunityGuidelines />}
+        />
         <Route path="/manus" element={<ManusPage />} />
         <Route path="/gravityclaw" element={<GravityClawPage />} />
         <Route path="/nullclaw" element={<NullClawPage />} />
