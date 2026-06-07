@@ -7,8 +7,13 @@ async function runDoctor() {
   
   // Load environment variables before any other imports
   const envPath = path.resolve(process.cwd(), ".env");
+  const envLocalPath = path.resolve(process.cwd(), ".env.local");
   console.log(`Loading env from ${envPath}`);
   dotenv.config({ path: envPath });
+  // only load .env.local if we don't already have the DB url
+  if (!process.env.DATABASE_URL) {
+    dotenv.config({ path: envLocalPath, override: true });
+  }
   
   if (!process.env.DATABASE_URL) {
     console.error("❌ DATABASE_URL missing from environment!");
