@@ -1,11 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { storage } from "../storage.js";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cacheMiddleware } from "../utils/cache.js";
 import { optionalAuth, verifyAuthToken } from "../supabase-auth.js";
 import {
   isExplorePlayablePost,
   isReliablePlaybackMedia,
+  isTiGuyCuratedPost,
 } from "../utils/playable-media.js";
 
 const SUPABASE_URL =
@@ -77,15 +78,20 @@ function isReliableTikTokPlayback(p: Record<string, unknown>): boolean {
   );
 }
 
-/** Explore: TikTok-first interleave — full-block shuffle was burying TikTok posts. */
+/** Explore: Ti-Guy curated → TikTok → rest (Pour toi felt same after bulk seed). */
 function orderExploreFeed(
   posts: Record<string, unknown>[],
   blockSeed: number,
 ): Record<string, unknown>[] {
+  const tiGuy: Record<string, unknown>[] = [];
   const tiktokReliable: Record<string, unknown>[] = [];
   const other: Record<string, unknown>[] = [];
 
   for (const p of posts) {
+    if (isTiGuyCuratedPost(p)) {
+      tiGuy.push(p);
+      continue;
+    }
     if (!isTikTokStylePost(p)) {
       other.push(p);
       continue;
@@ -96,11 +102,26 @@ function orderExploreFeed(
   const sh = (arr: Record<string, unknown>[], seed: number) =>
     arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
 
+  const castor = sh(tiGuy, blockSeed + 77);
   const reliable = sh(tiktokReliable, blockSeed);
   const rest = sh(other, blockSeed + 222);
 
-  // Skip tiktokCdn — signed URLs expire and 403 via Render media-proxy
-  return [...reliable, ...rest];
+  const merged: Record<string, unknown>[] = [];
+  let ci = 0;
+  let ri = 0;
+  let oi = 0;
+  const total = castor.length + reliable.length + rest.length;
+
+  while (merged.length < total) {
+    if (ci < castor.length) merged.push(castor[ci++]);
+    if (ri < reliable.length) merged.push(reliable[ri++]);
+    if (oi < rest.length) merged.push(rest[oi++]);
+    if (ri < reliable.length) merged.push(reliable[ri++]);
+    if (ci >= castor.length && ri >= reliable.length && oi >= rest.length)
+      break;
+  }
+
+  return merged;
 }
 
 function orderFeedPosts(
@@ -112,9 +133,14 @@ function orderFeedPosts(
   return shuffleWithSeed(posts, blockSeed);
 }
 
-/** Explore (Pour toi): favor vertical TikTok over boosted landscape stock. */
+/** Explore (Pour toi): favor Ti-Guy curated + vertical TikTok over stock filler. */
 function exploreFeedScore(p: Record<string, unknown>): number {
   let score = Number(p.viral_score) || 0;
+  if (isTiGuyCuratedPost(p)) {
+    score += 35000;
+    if (p.choix_du_castor === true) score += 15000;
+    if (p.mux_playback_id) score += 8000;
+  }
   if (isTikTokStylePost(p)) {
     score += isReliableTikTokPlayback(p) ? 20000 : -50000;
   }
@@ -124,6 +150,54 @@ function exploreFeedScore(p: Record<string, unknown>): number {
   if (isPortraitPost(p)) score += 4000;
   if (/pexels|pixabay|googleapis\.com/i.test(media)) score += 6000;
   return score;
+}
+
+const FEED_PUBLICATIONS_SELECT = `
+  *,
+  user:user_id (
+    id,
+    username,
+    display_name,
+    avatar_url,
+    subscription_tier
+  )
+`;
+
+/** Pull Ti-Guy / AI / Castor posts even when viral_score keeps them out of the top block. */
+async function fetchTiGuyCuratedSupabase(
+  supabase: SupabaseClient,
+  hiveId: string,
+  limit = 24,
+): Promise<Record<string, unknown>[]> {
+  const { data: botRow } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("username", "ti_guy_bot")
+    .maybeSingle();
+
+  const { data } = await supabase
+    .from("publications")
+    .select(FEED_PUBLICATIONS_SELECT)
+    .eq("visibility", "public")
+    .eq("est_masque", false)
+    .is("deleted_at", null)
+    .eq("hive_id", hiveId || "quebec")
+    .not("media_url", "is", null)
+    .or(
+      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit * 4);
+
+  if (!data?.length) return [];
+
+  return (data as Record<string, unknown>[])
+    .filter((p) => {
+      if (!isExplorePlayablePost(p)) return false;
+      if (isTiGuyCuratedPost(p)) return true;
+      return botRow?.id != null && p.user_id === botRow.id;
+    })
+    .slice(0, limit);
 }
 
 /** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
@@ -472,6 +546,33 @@ router.get(
         authorIds = savedAuthors;
         posts = fallback.data;
         error = fallback.error;
+      }
+
+      // Pour toi: inject Ti-Guy / AI / Castor clips (often buried after bulk seed)
+      if (feedType === "explore") {
+        try {
+          const curated = await fetchTiGuyCuratedSupabase(
+            supabase,
+            hiveId || "quebec",
+          );
+          if (curated.length) {
+            const merged = [...(posts || [])] as Record<string, unknown>[];
+            const seen = new Set(merged.map((p) => String(p.id)));
+            for (const row of curated) {
+              const id = String(row.id);
+              if (!seen.has(id)) {
+                merged.push(row);
+                seen.add(id);
+              }
+            }
+            posts = merged;
+          }
+        } catch (curatedErr) {
+          console.warn(
+            "[FeedInfinite] Ti-Guy curated fetch skipped:",
+            curatedErr,
+          );
+        }
       }
 
       // ── Subscription boost: multiply viral_score by tier multiplier then re-sort ──
