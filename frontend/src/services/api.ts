@@ -1038,6 +1038,13 @@ export function postHasPlayableMedia(p: Post): boolean {
   if (media.length < 12 || !/^https?:\/\//i.test(media)) return false;
   // FAL temporary URLs expire → black player; still allow if we have a Mux id above
   if (/fal\.media|\.fal\.run/i.test(media)) return false;
+  // Signed TikTok CDN URLs 403 via server proxy and often in-browser too
+  if (
+    /tiktok|tiktokv|tikcdn|byteoversea|muscdn|v\d+-webapp/i.test(media) &&
+    !media.includes("supabase.co/storage")
+  ) {
+    return false;
+  }
   return true;
 }
 

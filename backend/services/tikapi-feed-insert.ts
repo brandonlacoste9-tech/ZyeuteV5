@@ -1,12 +1,18 @@
 /**
  * Insert TikAPI-sourced videos into publications (Postgres or Supabase REST).
- * Avoids Mux/storage import chain so seed scripts work in minimal envs.
+ * Mirrors MP4s to Supabase Storage so Pour toi playback survives CDN expiry.
  */
 import { randomUUID } from "crypto";
 import pg from "pg";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { TikTokVideo } from "./tiktok-scraper-service.js";
 import type { FeedSeedCandidate } from "./tikapi-hashtag.js";
+import { resolvePlayableTikTokMediaUrl } from "./tiktok-mirror-storage.js";
+import {
+  ingestTikTokVideoToMux,
+  isMuxIngestConfigured,
+} from "./tiktok-mux-ingest.js";
+import { isExpiringTikTokCdnUrl } from "../utils/playable-media.js";
 
 const { Pool } = pg;
 
@@ -15,18 +21,81 @@ export type TikApiInsertStats = {
   skipped: number;
   duplicate: number;
   failed: number;
+  mirrored: number;
+  muxIngested: number;
 };
 
-function publicationRow(
+async function buildPublicationRow(
   userId: string,
   video: TikTokVideo,
   regionId: string,
   source: string,
-) {
-  const mediaUrl = video.media?.video_url || video.media?.hd_video_url;
+  supabase: SupabaseClient | null,
+): Promise<Record<string, unknown> | null> {
+  const hd = video.media?.hd_video_url;
+  const sd = video.media?.video_url;
+  const caption = (video.caption || "TikTok").slice(0, 500);
+
+  const muxResult =
+    isMuxIngestConfigured() &&
+    (await ingestTikTokVideoToMux({
+      tiktokId: video.video_id,
+      hdUrl: hd,
+      sdUrl: sd,
+      supabase,
+    }));
+
+  if (muxResult) {
+    return {
+      user_id: userId,
+      type: "video",
+      media_url: muxResult.hlsUrl,
+      hls_url: muxResult.hlsUrl,
+      mux_playback_id: muxResult.muxPlaybackId,
+      original_url: video.original_url || muxResult.hlsUrl,
+      thumbnail_url:
+        video.thumbnails?.cover_url || muxResult.thumbnailUrl || null,
+      caption,
+      content: caption,
+      visibility: "public",
+      hive_id: "quebec",
+      region_id: regionId,
+      video_source: "tiktok",
+      processing_status: "processing",
+      is_moderated: true,
+      moderation_approved: true,
+      est_masque: false,
+      reactions_count: video.stats?.likes ?? 0,
+      view_count: video.stats?.views ?? 0,
+      comments_count: video.stats?.comments ?? 0,
+      shares_count: video.stats?.shares ?? 0,
+      viral_score: video.stats?.likes ?? video.stats?.views ?? 0,
+      aspect_ratio: "9:16",
+      media_metadata: {
+        tiktok_id: video.video_id,
+        author: video.author?.handle ?? null,
+        source,
+        stats: video.stats ?? {},
+        original_url: video.original_url,
+        mux_asset_id: muxResult.muxAssetId,
+        mux_playback_id: muxResult.muxPlaybackId,
+        mux_ingested: true,
+        staging_url: muxResult.stagingUrl,
+      },
+    };
+  }
+
+  const mediaUrl = await resolvePlayableTikTokMediaUrl(
+    supabase,
+    video.video_id,
+    hd,
+    sd,
+    source.includes("apify") ? "apify" : "tikapi",
+  );
   if (!mediaUrl) return null;
 
-  const caption = (video.caption || "TikTok").slice(0, 500);
+  const mirrored = !isExpiringTikTokCdnUrl(mediaUrl);
+
   return {
     user_id: userId,
     type: "video",
@@ -48,12 +117,15 @@ function publicationRow(
     comments_count: video.stats?.comments ?? 0,
     shares_count: video.stats?.shares ?? 0,
     viral_score: video.stats?.likes ?? video.stats?.views ?? 0,
+    aspect_ratio: "9:16",
     media_metadata: {
       tiktok_id: video.video_id,
       author: video.author?.handle ?? null,
       source,
       stats: video.stats ?? {},
       original_url: video.original_url,
+      storage_mirrored: mirrored,
+      mirrored_at: mirrored ? new Date().toISOString() : undefined,
     },
   };
 }
@@ -120,45 +192,56 @@ async function isDuplicateSupabase(
 
 async function insertPg(
   client: pg.PoolClient,
-  userId: string,
-  video: TikTokVideo,
-  regionId: string,
-  source: string,
+  row: Record<string, unknown>,
 ): Promise<void> {
-  const row = publicationRow(userId, video, regionId, source);
-  if (!row) throw new Error("no_media");
-
   await client.query(
     `INSERT INTO publications (
-      id, user_id, type, media_url, original_url, thumbnail_url,
+      id, user_id, type, media_url, hls_url, mux_playback_id, original_url, thumbnail_url,
       content, caption, hive_id, region_id, visibility,
       processing_status, moderation_approved, est_masque,
       reactions_count, view_count, comments_count, shares_count, viral_score,
-      media_metadata
+      aspect_ratio, media_metadata
     ) VALUES (
-      $1, $2, 'video', $3, $4, $5,
-      $6, $7, 'quebec', $8, 'public',
-      'completed', true, false,
-      $9, $10, $11, $12, $13,
-      $14::jsonb
+      $1, $2, 'video', $3, $4, $5, $6, $7,
+      $8, $9, 'quebec', $10, 'public',
+      $11, true, false,
+      $12, $13, $14, $15, $16,
+      $17, $18::jsonb
     )`,
     [
       randomUUID(),
-      userId,
+      row.user_id,
       row.media_url,
+      row.hls_url ?? null,
+      row.mux_playback_id ?? null,
       row.original_url,
       row.thumbnail_url,
       row.content,
       row.caption,
-      regionId,
+      row.region_id,
+      row.processing_status ?? "completed",
       row.reactions_count,
       row.view_count,
       row.comments_count,
       row.shares_count,
       row.viral_score,
+      row.aspect_ratio,
       JSON.stringify(row.media_metadata),
     ],
   );
+}
+
+function trackImportStats(
+  stats: TikApiInsertStats,
+  row: Record<string, unknown>,
+): void {
+  if (row.mux_playback_id) {
+    stats.muxIngested++;
+    return;
+  }
+  if (String(row.media_url).includes("supabase.co/storage")) {
+    stats.mirrored++;
+  }
 }
 
 export async function countPublicFeedPostsPg(
@@ -204,6 +287,29 @@ export async function countPublicFeedPostsSupabase(
   return count ?? 0;
 }
 
+/** Posts that actually play in Pour toi (Supabase/Mux, not expiring TikTok CDN). */
+export async function countPlayableFeedPostsSupabase(
+  supabase: SupabaseClient,
+  hiveId = "quebec",
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("publications")
+    .select("id, media_url, mux_playback_id, hls_url")
+    .eq("visibility", "public")
+    .eq("est_masque", false)
+    .is("deleted_at", null)
+    .eq("hive_id", hiveId)
+    .eq("processing_status", "completed")
+    .not("media_url", "is", null)
+    .limit(5000);
+
+  if (error) throw new Error(error.message);
+  const { isExplorePlayablePost } = await import("../utils/playable-media.js");
+  return (data ?? []).filter((p) =>
+    isExplorePlayablePost(p as Record<string, unknown>),
+  ).length;
+}
+
 export async function importFeedSeedCandidates(options: {
   candidates: FeedSeedCandidate[];
   maxImport: number;
@@ -216,11 +322,15 @@ export async function importFeedSeedCandidates(options: {
     skipped: 0,
     duplicate: 0,
     failed: 0,
+    mirrored: 0,
+    muxIngested: 0,
   };
 
   const dbUrl = options.databaseUrl?.trim();
   const supabaseUrl = options.supabaseUrl?.trim();
   const serviceKey = options.supabaseServiceKey?.trim();
+  const mirrorClient =
+    supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
 
   if (dbUrl) {
     try {
@@ -240,12 +350,22 @@ export async function importFeedSeedCandidates(options: {
             continue;
           }
           try {
-            await insertPg(client, userId, c.video, c.region, c.source);
+            const row = await buildPublicationRow(
+              userId,
+              c.video,
+              c.region,
+              c.source,
+              mirrorClient,
+            );
+            if (!row) {
+              stats.skipped++;
+              continue;
+            }
+            trackImportStats(stats, row);
+            await insertPg(client, row);
             stats.imported++;
-          } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : String(e);
-            if (msg === "no_media") stats.skipped++;
-            else stats.failed++;
+          } catch {
+            stats.failed++;
           }
         }
       } finally {
@@ -273,11 +393,18 @@ export async function importFeedSeedCandidates(options: {
         stats.duplicate++;
         continue;
       }
-      const row = publicationRow(userId, c.video, c.region, c.source);
+      const row = await buildPublicationRow(
+        userId,
+        c.video,
+        c.region,
+        c.source,
+        supabase,
+      );
       if (!row) {
         stats.skipped++;
         continue;
       }
+      trackImportStats(stats, row);
       const { error } = await supabase.from("publications").insert(row);
       if (error) {
         stats.failed++;

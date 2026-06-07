@@ -9,6 +9,7 @@ import {
 import {
   countPublicFeedPostsPg,
   countPublicFeedPostsSupabase,
+  countPlayableFeedPostsSupabase,
   importFeedSeedCandidates,
   type TikApiInsertStats,
 } from "./tikapi-feed-insert.js";
@@ -23,6 +24,7 @@ function envInt(name: string, fallback: number): number {
 
 export type ReplenishResult = TikApiInsertStats & {
   feedCountBefore: number;
+  playableCountBefore: number;
   candidates: number;
   triggered: boolean;
 };
@@ -57,8 +59,25 @@ export async function countPublicFeedPosts(hiveId = "quebec"): Promise<number> {
   return 0;
 }
 
+export async function countPlayableFeedPosts(
+  hiveId = "quebec",
+): Promise<number> {
+  const { databaseUrl, supabaseUrl, supabaseServiceKey } = dbConfig();
+  if (supabaseUrl && supabaseServiceKey) {
+    return countPlayableFeedPostsSupabase(
+      createClient(supabaseUrl, supabaseServiceKey),
+      hiveId,
+    );
+  }
+  if (databaseUrl) {
+    const total = await countPublicFeedPostsPg(databaseUrl, hiveId);
+    return total;
+  }
+  return 0;
+}
+
 /**
- * Import TikToks when feed count is below minimum (or when force=true).
+ * Import TikToks when playable feed count is below minimum (or when force=true).
  */
 export async function replenishFeedTikApiIfLow(options?: {
   force?: boolean;
@@ -76,7 +95,10 @@ export async function replenishFeedTikApiIfLow(options?: {
     skipped: 0,
     duplicate: 0,
     failed: 0,
+    mirrored: 0,
+    muxIngested: 0,
     feedCountBefore: 0,
+    playableCountBefore: 0,
     candidates: 0,
     triggered: false,
   };
@@ -93,7 +115,8 @@ export async function replenishFeedTikApiIfLow(options?: {
   }
 
   const feedCountBefore = await countPublicFeedPosts(hiveId);
-  const need = Math.max(0, targetPosts - feedCountBefore);
+  const playableCountBefore = await countPlayableFeedPosts(hiveId);
+  const need = Math.max(0, targetPosts - playableCountBefore);
   const maxImport =
     options?.maxImport ??
     (force
@@ -102,21 +125,28 @@ export async function replenishFeedTikApiIfLow(options?: {
           defaultBatch,
           Math.max(
             need,
-            minPosts > feedCountBefore ? minPosts - feedCountBefore : 0,
+            minPosts > playableCountBefore ? minPosts - playableCountBefore : 0,
           ),
         ));
 
-  if (!force && feedCountBefore >= minPosts) {
-    log.info(`Feed OK (${feedCountBefore} >= ${minPosts}), no replenish`);
-    return { ...empty, feedCountBefore, triggered: false };
+  if (!force && playableCountBefore >= minPosts) {
+    log.info(
+      `Playable feed OK (${playableCountBefore} >= ${minPosts}), no replenish`,
+    );
+    return {
+      ...empty,
+      feedCountBefore,
+      playableCountBefore,
+      triggered: false,
+    };
   }
 
   if (!force && maxImport <= 0) {
-    return { ...empty, feedCountBefore, triggered: false };
+    return { ...empty, feedCountBefore, playableCountBefore, triggered: false };
   }
 
   log.info(
-    `Replenishing feed (${feedCountBefore} posts, importing up to ${maxImport})`,
+    `Replenishing feed (${playableCountBefore} playable / ${feedCountBefore} total, importing up to ${maxImport})`,
   );
 
   const candidates = await collectFeedSeedCandidates({
@@ -159,12 +189,13 @@ export async function replenishFeedTikApiIfLow(options?: {
   const result: ReplenishResult = {
     ...stats,
     feedCountBefore,
+    playableCountBefore,
     candidates: candidates.length,
     triggered: true,
   };
 
   log.info(
-    `Replenish done: +${result.imported} dup=${result.duplicate} fail=${result.failed} (pool was ${feedCountBefore})`,
+    `Replenish done: +${result.imported} mux=${result.muxIngested} mirrored=${result.mirrored} dup=${result.duplicate} skip=${result.skipped} fail=${result.failed} (playable was ${playableCountBefore})`,
   );
 
   return result;

@@ -54,6 +54,17 @@ describe("postHasPlayableMedia", () => {
     ).toBe(false);
   });
 
+  it("rejects expiring TikTok CDN URLs without Mux or Supabase", () => {
+    expect(
+      postHasPlayableMedia(
+        post({
+          media_url:
+            "https://v16-webapp-prime.tiktok.com/video/tos/alisg/foo.mp4",
+        }),
+      ),
+    ).toBe(false);
+  });
+
   it("rejects empty media", () => {
     expect(postHasPlayableMedia(post({ media_url: "" }))).toBe(false);
   });

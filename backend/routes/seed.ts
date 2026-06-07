@@ -533,6 +533,48 @@ router.post("/tikapi", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed/mux-backfill — Re-ingest broken TikTok CDN posts into Mux.
+ * Query: ?limit=10
+ */
+router.post("/mux-backfill", async (req, res) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: "Missing Supabase configuration" });
+    }
+
+    const limitRaw = req.query.limit ?? req.body?.limit ?? "10";
+    const limit = parseInt(String(limitRaw), 10);
+
+    const { backfillTikTokToMuxOrStorage } =
+      await import("../services/backfill-tiktok-mirror.js");
+    const { isMuxIngestConfigured } =
+      await import("../services/tiktok-mux-ingest.js");
+
+    const stats = await backfillTikTokToMuxOrStorage({
+      supabaseUrl,
+      supabaseServiceKey: supabaseKey,
+      limit: Number.isFinite(limit) && limit > 0 ? limit : 10,
+      hiveId: (req.query.hive as string) || "quebec",
+    });
+
+    res.json({
+      success: true,
+      muxConfigured: isMuxIngestConfigured(),
+      message: `Backfill: ${stats.muxIngested} Mux, ${stats.mirrored} Supabase mirror`,
+      ...stats,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Mux backfill error:", error);
+    res.status(500).json({ error: "Mux backfill failed", details: message });
+  }
+});
+
 router.post("/custom", async (req, res) => {
   try {
     const supabaseUrl =

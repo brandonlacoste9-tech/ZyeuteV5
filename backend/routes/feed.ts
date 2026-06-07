@@ -3,6 +3,10 @@ import { storage } from "../storage.js";
 import { createClient } from "@supabase/supabase-js";
 import { cacheMiddleware } from "../utils/cache.js";
 import { optionalAuth, verifyAuthToken } from "../supabase-auth.js";
+import {
+  isExplorePlayablePost,
+  isReliablePlaybackMedia,
+} from "../utils/playable-media.js";
 
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -67,10 +71,10 @@ function isPortraitPost(p: Record<string, unknown>): boolean {
 }
 
 function isReliableTikTokPlayback(p: Record<string, unknown>): boolean {
-  const media = String(p.media_url ?? "");
-  if (media.includes("supabase.co/storage")) return true;
-  if (p.mux_playback_id) return true;
-  return false;
+  return isReliablePlaybackMedia(
+    String(p.media_url ?? ""),
+    String(p.mux_playback_id ?? ""),
+  );
 }
 
 /** Explore: TikTok-first interleave — full-block shuffle was burying TikTok posts. */
@@ -79,7 +83,6 @@ function orderExploreFeed(
   blockSeed: number,
 ): Record<string, unknown>[] {
   const tiktokReliable: Record<string, unknown>[] = [];
-  const tiktokCdn: Record<string, unknown>[] = [];
   const other: Record<string, unknown>[] = [];
 
   for (const p of posts) {
@@ -88,17 +91,16 @@ function orderExploreFeed(
       continue;
     }
     if (isReliableTikTokPlayback(p)) tiktokReliable.push(p);
-    else tiktokCdn.push(p);
   }
 
   const sh = (arr: Record<string, unknown>[], seed: number) =>
     arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
 
   const reliable = sh(tiktokReliable, blockSeed);
-  const cdn = sh(tiktokCdn, blockSeed + 111);
   const rest = sh(other, blockSeed + 222);
 
-  return [...reliable, ...cdn, ...rest];
+  // Skip tiktokCdn — signed URLs expire and 403 via Render media-proxy
+  return [...reliable, ...rest];
 }
 
 function orderFeedPosts(
@@ -114,12 +116,13 @@ function orderFeedPosts(
 function exploreFeedScore(p: Record<string, unknown>): number {
   let score = Number(p.viral_score) || 0;
   if (isTikTokStylePost(p)) {
-    score += isReliableTikTokPlayback(p) ? 20000 : 10000;
+    score += isReliableTikTokPlayback(p) ? 20000 : -50000;
   }
   const media = String(p.media_url ?? "");
-  if (media.includes("supabase.co/storage")) score += 8000;
+  if (media.includes("supabase.co/storage")) score += 12000;
+  if (p.mux_playback_id || media.includes("mux.com")) score += 10000;
   if (isPortraitPost(p)) score += 4000;
-  if (/pexels|pixabay/i.test(media)) score -= 8000;
+  if (/pexels|pixabay|googleapis\.com/i.test(media)) score += 6000;
   return score;
 }
 
@@ -157,15 +160,20 @@ const router = Router();
 /** GET /api/feed/pool-stats — how many public videos are in the DB (debug) */
 router.get("/pool-stats", async (_req, res) => {
   try {
-    const { countPublicFeedPosts } =
+    const { countPublicFeedPosts, countPlayableFeedPosts } =
       await import("../services/feed-replenish-tikapi.js");
+    const { isMuxIngestConfigured } =
+      await import("../services/tiktok-mux-ingest.js");
     const count = await countPublicFeedPosts("quebec");
+    const playableCount = await countPlayableFeedPosts("quebec");
     const minPosts = parseInt(process.env.FEED_MIN_PLAYABLE_POSTS || "150", 10);
     res.json({
       hive: "quebec",
       publicVideoCount: count,
+      playableVideoCount: playableCount,
       minThreshold: minPosts,
-      needsReplenish: count < minPosts,
+      needsReplenish: playableCount < minPosts,
+      muxIngestConfigured: isMuxIngestConfigured(),
     });
   } catch (e: unknown) {
     res.status(500).json({
@@ -504,7 +512,14 @@ router.get(
       // Deterministically shuffle block using block seed
       const blockSeed = (seed + blockIndex) >>> 0;
       const orderedPosts = orderFeedPosts(boostedPosts, feedType, blockSeed);
-      let finalPosts = orderedPosts.slice(offsetInBlock, offsetInBlock + limit);
+      const feedCandidates =
+        feedType === "explore"
+          ? orderedPosts.filter(isExplorePlayablePost)
+          : orderedPosts;
+      let finalPosts = feedCandidates.slice(
+        offsetInBlock,
+        offsetInBlock + limit,
+      );
 
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {
@@ -548,7 +563,11 @@ router.get(
             feedType,
             seed,
           );
-          finalPosts = shuffledFallback.slice(0, limit);
+          const fallbackCandidates =
+            feedType === "explore"
+              ? shuffledFallback.filter(isExplorePlayablePost)
+              : shuffledFallback;
+          finalPosts = fallbackCandidates.slice(0, limit);
         }
       }
 
