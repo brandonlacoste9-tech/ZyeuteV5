@@ -379,10 +379,31 @@ export const Zyeute: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userPausedRef = useRef(false);
+  const feedRestoreOnce = useRef(false);
+  const [measuredSlideH, setMeasuredSlideH] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.clientHeight;
+      if (h > 0) setMeasuredSlideH(h);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   const getSlideHeight = useCallback(() => {
+    if (measuredSlideH > 0) return measuredSlideH;
     return containerRef.current?.clientHeight || window.innerHeight;
-  }, []);
+  }, [measuredSlideH]);
 
   const scrollToIndex = useCallback(
     (index: number, behavior: ScrollBehavior = "smooth") => {
@@ -511,12 +532,36 @@ export const Zyeute: React.FC = () => {
     }
   }, [currentIndex, showSwipeHint]);
 
-  // Pause when tab/app backgrounded
+  // Pause when tab hidden; resume when visible (unless user paused manually)
   useEffect(() => {
     if (!isPageVisible) {
       setIsPlaying(false);
+    } else if (!userPausedRef.current) {
+      setIsPlaying(true);
     }
   }, [isPageVisible]);
+
+  // Pour toi / Abonnements switch — reset scroll so we don't land on a black gap
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsPlaying(true);
+    userPausedRef.current = false;
+    feedRestoreOnce.current = false;
+    requestAnimationFrame(() => {
+      containerRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    });
+  }, [feedSource]);
+
+  // Keep index in range when feed pages change
+  useEffect(() => {
+    if (posts.length === 0) return;
+    if (currentIndex >= posts.length) {
+      setCurrentIndex(0);
+      requestAnimationFrame(() => {
+        containerRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      });
+    }
+  }, [posts.length, currentIndex]);
 
   // Pre-fetch earlier (avoids blocking swipe and fetch storms)
   const lastPrefetchRef = useRef(0);
@@ -676,6 +721,7 @@ export const Zyeute: React.FC = () => {
           }
         } else {
           const nextPlaying = !isPlaying;
+          userPausedRef.current = !nextPlaying;
           setIsPlaying(nextPlaying);
           setUiVisible(!nextPlaying);
         }
@@ -716,18 +762,24 @@ export const Zyeute: React.FC = () => {
     }
   };
 
-  const feedRestoreOnce = useRef(false);
-  useEffect(() => {
-    feedRestoreOnce.current = false;
-  }, [feedSource]);
-
   useEffect(() => {
     if (posts.length === 0 || feedRestoreOnce.current) return;
-    const raw =
-      sessionStorage.getItem(`zyeute_scroll_${feedSource}`) ??
-      sessionStorage.getItem(`zyeute_la_scroll_${feedSource}`); // legacy key
     const el = containerRef.current;
     if (!el) return;
+
+    // Pour toi always opens at the first video (avoids mis-scroll black screen)
+    if (feedSource === "explore") {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: 0, behavior: "auto" });
+        setCurrentIndex(0);
+        feedRestoreOnce.current = true;
+      });
+      return;
+    }
+
+    const raw =
+      sessionStorage.getItem(`zyeute_scroll_${feedSource}`) ??
+      sessionStorage.getItem(`zyeute_la_scroll_${feedSource}`);
     const idx = raw
       ? Math.min(
           Math.max(0, parseInt(raw, 10) || 0),
@@ -850,7 +902,7 @@ export const Zyeute: React.FC = () => {
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
-      <div className="fixed inset-0 lg:absolute lg:inset-0 leather-dark overflow-hidden flex justify-center">
+      <div className="fixed inset-0 lg:absolute lg:inset-0 leather-dark overflow-hidden flex justify-center h-full">
         {/* Desktop Container Wrapper */}
         <div className="w-full h-full lg:max-w-[450px] lg:mx-auto relative">
           {/* Dynamic Edge Lighting (React-optimized) */}
@@ -902,24 +954,16 @@ export const Zyeute: React.FC = () => {
             </div>
           </div>
 
-          {/* Vertical Snap Scroll Container - flex-1 takes remaining space */}
+          {/* Vertical Snap Scroll Container */}
           <div
             ref={containerRef}
             onScroll={handleScroll}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="fixed overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0"
+            className="absolute inset-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0 w-full h-full"
             style={{
               scrollSnapType: "y mandatory",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              // Force video to start at absolute pixel 0 — under status bar
-              // viewport-fit=cover + this overrides any env(safe-area-inset-top)
-              marginTop: 0,
-              paddingTop: 0,
             }}
           >
             {emptyFeedContent}
@@ -935,15 +979,24 @@ export const Zyeute: React.FC = () => {
                 post.thumbnail_url ||
                 post.media_url ||
                 (muxId ? `https://image.mux.com/${muxId}/thumbnail.jpg` : "");
+              const slideH = getSlideHeight();
+              const isVideoSlide =
+                post.type === "video" ||
+                !!muxId ||
+                /\.(mp4|m3u8|webm|mov)(\?|$)/i.test(post.media_url || "");
 
               return (
                 <div
                   key={`${post.id}-${index}`}
-                  className="h-[100dvh] w-full snap-start snap-always relative flex items-center justify-center"
+                  className="w-full snap-start snap-always relative flex items-center justify-center shrink-0"
+                  style={{
+                    height: slideH > 0 ? slideH : "100dvh",
+                    minHeight: slideH > 0 ? slideH : "100dvh",
+                  }}
                   data-testid={`post-slide-${post.id}`}
                 >
                   {/* Video Playback Diagnostic (?debug=1) */}
-                  {post.type === "video" && nearActive && (
+                  {isVideoSlide && nearActive && (
                     <VideoPlaybackDiagnostic
                       postId={post.id}
                       postType={post.type}
@@ -966,13 +1019,13 @@ export const Zyeute: React.FC = () => {
                   )}
                   {/* Media */}
                   <div className="absolute inset-0 bg-black gold-rim overflow-hidden">
-                    {post.type === "video" ? (
+                    {isVideoSlide ? (
                       nearActive ? (
                         useMuxPlayer ? (
                           <MuxVideoPlayer
                             playbackId={muxId || ""}
                             thumbnailUrl={slidePoster}
-                            className="w-full h-full object-cover animate-video-reveal"
+                            className="w-full h-full object-cover"
                             autoPlay={isActiveSlide}
                             muted={isMuted}
                             loop
@@ -998,7 +1051,7 @@ export const Zyeute: React.FC = () => {
                               post.media_url
                             }
                             poster={slidePoster}
-                            className="w-full h-full object-cover animate-video-reveal"
+                            className="w-full h-full object-cover"
                             autoPlay={isActiveSlide}
                             muted={isMuted}
                             loop
@@ -1023,7 +1076,7 @@ export const Zyeute: React.FC = () => {
                         <img
                           src={slidePoster || undefined}
                           alt=""
-                          className="w-full h-full object-cover animate-video-reveal bg-black"
+                          className="w-full h-full object-cover bg-black"
                         />
                       )
                     ) : (
@@ -1062,7 +1115,7 @@ export const Zyeute: React.FC = () => {
                   />
 
                   {/* TikTok-style progress bar at bottom of video */}
-                  {post.type === "video" && index === currentIndex && (
+                  {isVideoSlide && index === currentIndex && (
                     <div className="absolute bottom-0 left-0 right-0 z-30 h-[3px] bg-white/10">
                       <div
                         className="h-full rounded-r-full transition-[width] duration-200 ease-linear"

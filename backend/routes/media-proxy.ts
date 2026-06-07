@@ -36,7 +36,16 @@ const ALLOWED_HOSTS = [
 function isAllowedUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    const hostname = parsed.hostname;
+    const hostname = parsed.hostname.toLowerCase();
+    if (
+      hostname.includes("tiktok") ||
+      hostname.includes("tiktokv") ||
+      hostname.includes("tikcdn") ||
+      hostname.includes("byteoversea") ||
+      hostname.includes("muscdn")
+    ) {
+      return true;
+    }
     return ALLOWED_HOSTS.some(
       (h) => hostname === h || hostname.endsWith(`.${h}`),
     );

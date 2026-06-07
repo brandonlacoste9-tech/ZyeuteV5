@@ -1084,6 +1084,16 @@
   animation: video-reveal 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-video-reveal {
+    animation: none;
+    opacity: 1;
+    clip-path: none;
+    filter: none;
+    transform: none;
+  }
+}
+
 [data-theme="leather-green"] body,
 [data-theme="leather-green"] #root {
   background-color: var(--leather-bg) !important;
