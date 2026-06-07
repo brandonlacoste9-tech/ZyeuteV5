@@ -78,50 +78,58 @@ function isReliableTikTokPlayback(p: Record<string, unknown>): boolean {
   );
 }
 
-/** Explore: Ti-Guy curated → TikTok → rest (Pour toi felt same after bulk seed). */
+/** Pexels/Pixabay landscape filler — not TikTok-style FYP content. */
+function isStockFillerPost(p: Record<string, unknown>): boolean {
+  if (isTikTokStylePost(p)) return false;
+  const src = String(p.video_source ?? "").toLowerCase();
+  if (/pexels|pixabay|stock/.test(src)) return true;
+  const meta = p.media_metadata as Record<string, unknown> | undefined;
+  if (/pexels|pixabay/i.test(String(meta?.source ?? ""))) return true;
+  const media = String(p.media_url ?? "").toLowerCase();
+  if (/pexels|pixabay|videos\.pexels/i.test(media)) return true;
+  // Mux-hosted landscape clips without TikTok markers (common Pexels seed path)
+  const onMux =
+    !!p.mux_playback_id || /mux\.com/i.test(String(p.media_url ?? ""));
+  const userUpload = src === "upload" || src === "mux";
+  if (onMux && !userUpload && !isPortraitPost(p)) return true;
+  return false;
+}
+
+/** Explore: TikTok first, then curated, then user content; stock landscapes last. */
 function orderExploreFeed(
   posts: Record<string, unknown>[],
   blockSeed: number,
 ): Record<string, unknown>[] {
-  const tiGuy: Record<string, unknown>[] = [];
-  const tiktokReliable: Record<string, unknown>[] = [];
+  const tiktok: Record<string, unknown>[] = [];
+  const curated: Record<string, unknown>[] = [];
+  const stock: Record<string, unknown>[] = [];
   const other: Record<string, unknown>[] = [];
 
   for (const p of posts) {
+    if (isTikTokStylePost(p) && isReliableTikTokPlayback(p)) {
+      tiktok.push(p);
+      continue;
+    }
+    if (isStockFillerPost(p)) {
+      stock.push(p);
+      continue;
+    }
     if (isTiGuyCuratedPost(p)) {
-      tiGuy.push(p);
+      curated.push(p);
       continue;
     }
-    if (!isTikTokStylePost(p)) {
-      other.push(p);
-      continue;
-    }
-    if (isReliableTikTokPlayback(p)) tiktokReliable.push(p);
+    other.push(p);
   }
 
   const sh = (arr: Record<string, unknown>[], seed: number) =>
     arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
 
-  const castor = sh(tiGuy, blockSeed + 77);
-  const reliable = sh(tiktokReliable, blockSeed);
-  const rest = sh(other, blockSeed + 222);
-
-  const merged: Record<string, unknown>[] = [];
-  let ci = 0;
-  let ri = 0;
-  let oi = 0;
-  const total = castor.length + reliable.length + rest.length;
-
-  while (merged.length < total) {
-    if (ci < castor.length) merged.push(castor[ci++]);
-    if (ri < reliable.length) merged.push(reliable[ri++]);
-    if (oi < rest.length) merged.push(rest[oi++]);
-    if (ri < reliable.length) merged.push(reliable[ri++]);
-    if (ci >= castor.length && ri >= reliable.length && oi >= rest.length)
-      break;
-  }
-
-  return merged;
+  return [
+    ...sh(tiktok, blockSeed),
+    ...sh(curated, blockSeed + 77),
+    ...sh(other, blockSeed + 111),
+    ...sh(stock, blockSeed + 333),
+  ];
 }
 
 function orderFeedPosts(
@@ -133,7 +141,7 @@ function orderFeedPosts(
   return shuffleWithSeed(posts, blockSeed);
 }
 
-/** Explore (Pour toi): favor Ti-Guy curated + vertical TikTok over stock filler. */
+/** Explore (Pour toi): TikTok vertical first; demote Pexels landscape stock. */
 function exploreFeedScore(p: Record<string, unknown>): number {
   let score = Number(p.viral_score) || 0;
   if (isTiGuyCuratedPost(p)) {
@@ -142,13 +150,17 @@ function exploreFeedScore(p: Record<string, unknown>): number {
     if (p.mux_playback_id) score += 8000;
   }
   if (isTikTokStylePost(p)) {
-    score += isReliableTikTokPlayback(p) ? 20000 : -50000;
+    score += isReliableTikTokPlayback(p) ? 55000 : -50000;
   }
+  if (isStockFillerPost(p)) score -= 50000;
   const media = String(p.media_url ?? "");
-  if (media.includes("supabase.co/storage")) score += 12000;
-  if (p.mux_playback_id || media.includes("mux.com")) score += 10000;
-  if (isPortraitPost(p)) score += 4000;
-  if (/pexels|pixabay|googleapis\.com/i.test(media)) score += 6000;
+  if (media.includes("supabase.co/storage") && isTikTokStylePost(p))
+    score += 15000;
+  if (p.mux_playback_id || media.includes("mux.com")) {
+    score += isTikTokStylePost(p) ? 12000 : 3000;
+  }
+  if (isPortraitPost(p)) score += 8000;
+  else if (!isTikTokStylePost(p)) score -= 25000;
   return score;
 }
 
@@ -197,6 +209,40 @@ async function fetchTiGuyCuratedSupabase(
       if (isTiGuyCuratedPost(p)) return true;
       return botRow?.id != null && p.user_id === botRow.id;
     })
+    .slice(0, limit);
+}
+
+/** Pull playable TikTok imports (Apify/TikAPI) into Pour toi — often outranked by stock Mux. */
+async function fetchTikTokExploreSupabase(
+  supabase: SupabaseClient,
+  hiveId: string,
+  limit = 36,
+): Promise<Record<string, unknown>[]> {
+  const { data } = await supabase
+    .from("publications")
+    .select(FEED_PUBLICATIONS_SELECT)
+    .eq("visibility", "public")
+    .eq("est_masque", false)
+    .is("deleted_at", null)
+    .eq("hive_id", hiveId || "quebec")
+    .not("media_url", "is", null)
+    .in("video_source", ["tiktok", "tiktok_apify", "apify"])
+    .or(
+      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+    )
+    .order("viral_score", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit * 2);
+
+  if (!data?.length) return [];
+
+  return (data as Record<string, unknown>[])
+    .filter(
+      (p) =>
+        isExplorePlayablePost(p) &&
+        isTikTokStylePost(p) &&
+        isReliableTikTokPlayback(p),
+    )
     .slice(0, limit);
 }
 
@@ -548,28 +594,31 @@ router.get(
         error = fallback.error;
       }
 
-      // Pour toi: inject Ti-Guy / AI / Castor clips (often buried after bulk seed)
+      // Pour toi: inject Ti-Guy + TikTok clips (buried under bulk stock seed)
       if (feedType === "explore") {
-        try {
-          const curated = await fetchTiGuyCuratedSupabase(
-            supabase,
-            hiveId || "quebec",
-          );
-          if (curated.length) {
-            const merged = [...(posts || [])] as Record<string, unknown>[];
-            const seen = new Set(merged.map((p) => String(p.id)));
-            for (const row of curated) {
-              const id = String(row.id);
-              if (!seen.has(id)) {
-                merged.push(row);
-                seen.add(id);
-              }
+        const mergeCurated = (rows: Record<string, unknown>[]) => {
+          if (!rows.length) return;
+          const merged = [...(posts || [])] as Record<string, unknown>[];
+          const seen = new Set(merged.map((p) => String(p.id)));
+          for (const row of rows) {
+            const id = String(row.id);
+            if (!seen.has(id)) {
+              merged.push(row);
+              seen.add(id);
             }
-            posts = merged;
           }
+          posts = merged;
+        };
+        try {
+          const [curated, tiktokRows] = await Promise.all([
+            fetchTiGuyCuratedSupabase(supabase, hiveId || "quebec"),
+            fetchTikTokExploreSupabase(supabase, hiveId || "quebec"),
+          ]);
+          mergeCurated(tiktokRows);
+          mergeCurated(curated);
         } catch (curatedErr) {
           console.warn(
-            "[FeedInfinite] Ti-Guy curated fetch skipped:",
+            "[FeedInfinite] Curated/TikTok fetch skipped:",
             curatedErr,
           );
         }
