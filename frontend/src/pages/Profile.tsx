@@ -20,10 +20,11 @@ import {
   checkFollowing,
   toggleFollow,
   logout,
+  deletePost,
 } from "@/services/api";
 import { formatNumber } from "@/lib/utils";
 import { useHaptics } from "@/hooks/useHaptics";
-import { IoShareOutline } from "react-icons/io5";
+import { IoShareOutline, IoTrashOutline } from "react-icons/io5";
 import type { User, Post } from "@/types";
 import { logger } from "@/lib/logger";
 import { useSEO } from "@/hooks/useSEO";
@@ -42,12 +43,12 @@ import {
 const profileLogger = logger.withContext("Profile");
 
 // Helper component for the Stats bar
-const ProfileStat: React.FC<{ value: number | string; label: string; onClick?: () => void }> = ({
-  value,
-  label,
-  onClick,
-}) => (
-  <button 
+const ProfileStat: React.FC<{
+  value: number | string;
+  label: string;
+  onClick?: () => void;
+}> = ({ value, label, onClick }) => (
+  <button
     onClick={onClick}
     disabled={!onClick}
     className={`flex items-baseline gap-1.5 px-2 ${onClick ? "active:scale-95 hover:bg-white/5 rounded-md py-1 transition-all cursor-pointer" : ""}`}
@@ -82,6 +83,41 @@ export const Profile: React.FC = () => {
   const [isFollowing, setIsFollowing] = React.useState(false);
   const [isBlocked, setIsBlocked] = React.useState(false);
   const [isBlocking, setIsBlocking] = React.useState(false);
+  const [deletingPostId, setDeletingPostId] = React.useState<string | null>(
+    null,
+  );
+
+  const handleDeleteOwnPost = async (post: Post) => {
+    const isPhoto = post.type === "photo";
+    const noun = isPhoto ? "cette photo" : "cette vidéo";
+    if (
+      !window.confirm(
+        `Supprimer ${noun}? Elle disparaîtra du fil et de ton profil.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingPostId(post.id);
+    try {
+      const ok = await deletePost(post.id);
+      if (ok) {
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+        toast.success(isPhoto ? "Photo supprimée" : "Vidéo supprimée");
+        impact();
+      } else {
+        toast.error(
+          isPhoto
+            ? "Impossible de supprimer la photo"
+            : "Impossible de supprimer la vidéo",
+        );
+      }
+    } catch (err) {
+      profileLogger.error("Delete post failed:", err);
+      toast.error("Impossible de supprimer la publication");
+    } finally {
+      setDeletingPostId(null);
+    }
+  };
 
   const handleBlock = async () => {
     if (!currentUser || !user || isBlocking) return;
@@ -134,6 +170,28 @@ export const Profile: React.FC = () => {
   );
 
   const isOwnProfile = username === "me" || user?.id === currentUser?.id;
+
+  const showOwnPostDelete = isOwnProfile && activeTab === "posts";
+
+  const renderOwnPostDeleteButton = (post: Post) => {
+    if (!showOwnPostDelete) return null;
+    const isPhoto = post.type === "photo";
+    return (
+      <button
+        type="button"
+        aria-label={isPhoto ? "Supprimer la photo" : "Supprimer la vidéo"}
+        disabled={deletingPostId === post.id}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          void handleDeleteOwnPost(post);
+        }}
+        className="absolute top-1 right-1 z-30 p-2 rounded-full bg-black/80 text-red-400 border border-red-500/50 hover:bg-red-950/90 hover:text-red-300 transition-colors disabled:opacity-50 touch-manipulation"
+      >
+        <IoTrashOutline className="w-4 h-4" />
+      </button>
+    );
+  };
 
   useSEO(
     user
@@ -988,6 +1046,7 @@ export const Profile: React.FC = () => {
                         {/* Animated shimmer background */}
                         <div className="absolute inset-0 bg-leather-900 animate-pulse" />
                         <div className="absolute inset-0 bg-gradient-to-br from-gold-900/20 to-transparent" />
+                        {renderOwnPostDeleteButton(post)}
                         {/* Spinner + label */}
                         <div className="relative z-10 flex flex-col items-center gap-2">
                           <div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
@@ -1000,25 +1059,43 @@ export const Profile: React.FC = () => {
                   }
 
                   return (
-                    <Link
+                    <div
                       key={post.id}
-                      to={`/p/${post.id}`}
                       className="relative aspect-[3/4] leather-card rounded-xl overflow-hidden stitched-subtle hover:scale-105 transition-transform group"
                     >
+                      <Link
+                        to={`/p/${post.id}`}
+                        className="absolute inset-0 z-0"
+                        aria-label={post.caption || "Voir la vidéo"}
+                      />
                       <Image
-                        src={post.media_url}
+                        src={post.thumbnail_url || post.media_url}
                         alt={post.caption || "Post"}
                         objectFit="cover"
                         fetchPriority={index < 6 ? "high" : "auto"}
                         loading={index < 6 ? "eager" : "lazy"}
+                        className="w-full h-full"
                       />
+                      {renderOwnPostDeleteButton(post)}
                       {/* TikTok-style persistent overlays */}
                       {post.type === "video" && (
                         <div className="absolute bottom-1 left-1 md:bottom-2 md:left-2 flex items-center gap-1 text-white z-10 font-semibold text-xs md:text-sm drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                          <svg className="w-3 h-3 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            className="w-3 h-3 md:w-4 md:h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <polygon points="5 3 19 12 5 21 5 3" />
                           </svg>
-                          <span>{formatNumber(post.view_count || post.fire_count * 5)}</span>
+                          <span>
+                            {formatNumber(
+                              post.view_count || post.fire_count * 5,
+                            )}
+                          </span>
                         </div>
                       )}
                       {(post as any).is_pinned && (
@@ -1026,12 +1103,14 @@ export const Profile: React.FC = () => {
                           Pinned
                         </div>
                       )}
-                      {!isOwnProfile && isFollowing && activeTab === "posts" && (
-                        <div className="absolute top-1 right-1 bg-gold-500/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 flex items-center gap-0.5 border border-gold-400">
-                          <span>Abonné</span>
-                          <span className="text-[8px]">✓</span>
-                        </div>
-                      )}
+                      {!isOwnProfile &&
+                        isFollowing &&
+                        activeTab === "posts" && (
+                          <div className="absolute top-1 right-1 bg-gold-500/90 text-black text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 flex items-center gap-0.5 border border-gold-400">
+                            <span>Abonné</span>
+                            <span className="text-[8px]">✓</span>
+                          </div>
+                        )}
 
                       {/* Overlay on hover */}
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 z-20">
@@ -1062,7 +1141,7 @@ export const Profile: React.FC = () => {
                       </div>
                       {/* Gradient at bottom for text readability */}
                       <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

@@ -89,20 +89,19 @@ function filterPlayablePosts(items: Post[]): FeedPost[] {
   }) as FeedPost[];
 }
 
-/** Append new page; when the pool is small, recycle so vertical scroll never stops. */
+const FEED_SPACING = { minContentGap: 12, minAuthorGap: 3, recycleMinGap: 24 };
+
+function prepareFeedPage(posts: FeedPost[]): FeedPost[] {
+  return spaceOutFeed(
+    dedupePostsByContent(posts),
+    [],
+    FEED_SPACING,
+  ) as FeedPost[];
+}
+
+/** Append new page; dedupe by clip fingerprint and space repeats apart. */
 function mergeFeedPages(prev: FeedPost[], incoming: FeedPost[]): FeedPost[] {
-  const seen = new Set(prev.map((p) => p.id));
-  const unique = incoming.filter((p) => !seen.has(p.id));
-  if (unique.length > 0) return [...prev, ...unique];
-  if (incoming.length === 0) return prev;
-  const base = prev.length;
-  return [
-    ...prev,
-    ...incoming.map((p, i) => ({
-      ...p,
-      _feedSlot: `${p.id}-cycle-${base + i}`,
-    })),
-  ];
+  return mergeFeedWithDedup(prev, incoming, FEED_SPACING) as FeedPost[];
 }
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
@@ -118,6 +117,11 @@ import { videoCache } from "@/lib/videoWarmCache";
 import { useFeedEngagement } from "@/hooks/useFeedEngagement";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
+import {
+  dedupePostsByContent,
+  mergeFeedWithDedup,
+  spaceOutFeed,
+} from "@shared/utils/feedDedup";
 
 // ... imports ...
 
@@ -634,13 +638,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     setFetchError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
-    let apiHasMore = false;
+    let apiHasMore: boolean;
 
     try {
       if (feedType === "abonnements") {
         // Following feed — uses /api/feed which filters to followed creators
         const followingPosts = await getFeedPosts(0, FEED_PAGE_SIZE);
-        validPosts = filterPlayablePosts(followingPosts);
+        validPosts = prepareFeedPage(filterPlayablePosts(followingPosts));
         if (validPosts.length === 0) {
           // Fallback: show explore if not following anyone yet
           feedLogger.info(
@@ -652,7 +656,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             undefined,
             getHiveId(),
           );
-          validPosts = filterPlayablePosts(data);
+          validPosts = prepareFeedPage(filterPlayablePosts(data));
           apiHasMore = hasMore;
         } else {
           apiHasMore = followingPosts.length === FEED_PAGE_SIZE;
@@ -672,7 +676,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         );
 
         if (data?.length) {
-          validPosts = filterPlayablePosts(data);
+          validPosts = prepareFeedPage(filterPlayablePosts(data));
 
           // ── Pour Toi: re-rank based on watch history ─────────────────────
           try {
@@ -680,8 +684,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             if (me?.id) {
               const watchHistory = await fetchWatchHistory(me.id);
               if (watchHistory.length > 0) {
-                validPosts = pourToiRank(validPosts, watchHistory) as Array<Post & { user: User }>;
-                feedLogger.info(`[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`);
+                validPosts = prepareFeedPage(
+                  pourToiRank(validPosts, watchHistory) as Array<
+                    Post & { user: User }
+                  >,
+                );
+                feedLogger.info(
+                  `[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`,
+                );
               }
             }
           } catch (rankErr) {
@@ -750,7 +760,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       );
 
       if (data.length > 0) {
-        const validPosts = filterPlayablePosts(data);
+        const validPosts = prepareFeedPage(filterPlayablePosts(data));
         if (validPosts.length > 0) {
           setPosts((prev) => mergeFeedPages(prev, validPosts));
           setHasMore(apiHasMore);

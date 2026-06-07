@@ -10,3 +10,12 @@ export {
   isImageUrl,
   type MediaType,
 } from "./validatePostType";
+
+export {
+  dedupePostsByContent,
+  getPostAuthorKey,
+  getPostContentKey,
+  mergeFeedWithDedup,
+  spaceOutFeed,
+  type FeedSpacingOptions,
+} from "./feedDedup";

@@ -8,6 +8,11 @@ import {
   isReliablePlaybackMedia,
   isTiGuyCuratedPost,
 } from "../utils/playable-media.js";
+import {
+  dedupePostsByContent,
+  getPostContentKey,
+  spaceOutFeed,
+} from "../../shared/utils/feedDedup.js";
 
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -599,23 +604,26 @@ router.get(
         const mergeCurated = (rows: Record<string, unknown>[]) => {
           if (!rows.length) return;
           const merged = [...(posts || [])] as Record<string, unknown>[];
-          const seen = new Set(merged.map((p) => String(p.id)));
+          const seenIds = new Set(merged.map((p) => String(p.id)));
+          const seenContent = new Set(merged.map((p) => getPostContentKey(p)));
           for (const row of rows) {
             const id = String(row.id);
-            if (!seen.has(id)) {
-              merged.push(row);
-              seen.add(id);
-            }
+            const contentKey = getPostContentKey(row);
+            if (seenIds.has(id) || seenContent.has(contentKey)) continue;
+            merged.push(row);
+            seenIds.add(id);
+            seenContent.add(contentKey);
           }
           posts = merged;
         };
         try {
+          const blockSeed = (seed + blockIndex) >>> 0;
           const [curated, tiktokRows] = await Promise.all([
             fetchTiGuyCuratedSupabase(supabase, hiveId || "quebec"),
             fetchTikTokExploreSupabase(supabase, hiveId || "quebec"),
           ]);
-          mergeCurated(tiktokRows);
-          mergeCurated(curated);
+          mergeCurated(shuffleWithSeed(tiktokRows, blockSeed).slice(0, 18));
+          mergeCurated(shuffleWithSeed(curated, blockSeed + 99).slice(0, 12));
         } catch (curatedErr) {
           console.warn(
             "[FeedInfinite] Curated/TikTok fetch skipped:",
@@ -668,7 +676,15 @@ router.get(
               (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
             )
           : orderedPosts;
-      let finalPosts = feedCandidates.slice(
+      const dedupedCandidates = dedupePostsByContent(feedCandidates);
+      const spacedCandidates =
+        feedType === "explore"
+          ? spaceOutFeed(dedupedCandidates, [], {
+              minContentGap: 10,
+              minAuthorGap: 3,
+            })
+          : dedupedCandidates;
+      let finalPosts = spacedCandidates.slice(
         offsetInBlock,
         offsetInBlock + limit,
       );
@@ -721,7 +737,15 @@ router.get(
                   (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
                 )
               : shuffledFallback;
-          finalPosts = fallbackCandidates.slice(0, limit);
+          const dedupedFallback = dedupePostsByContent(fallbackCandidates);
+          const spacedFallback =
+            feedType === "explore"
+              ? spaceOutFeed(dedupedFallback, [], {
+                  minContentGap: 10,
+                  minAuthorGap: 3,
+                })
+              : dedupedFallback;
+          finalPosts = spacedFallback.slice(0, limit);
         }
       }
 

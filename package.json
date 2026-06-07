@@ -253,11 +253,11 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
+      "npx eslint --fix --ignore-pattern _archive/**",
+      "npx prettier --write"
     ],
     "*.{json,md}": [
-      "prettier --write"
+      "npx prettier --write"
     ]
   },
   "overrides": {
