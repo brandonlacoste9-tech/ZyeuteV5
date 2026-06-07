@@ -26,8 +26,18 @@ export const AppSettings: React.FC = () => {
 
   const leatherThemes = [
     { key: "leather", label: "Cuir Luxe", color: "#c5a055", emoji: "⚜" },
-    { key: "leather-green", label: "Cuir Forêt", color: "#7ec98a", emoji: "🌲" },
-    { key: "leather-purple", label: "Cuir Royal", color: "#b48ad4", emoji: "👑" },
+    {
+      key: "leather-green",
+      label: "Cuir Forêt",
+      color: "#7ec98a",
+      emoji: "🌲",
+    },
+    {
+      key: "leather-purple",
+      label: "Cuir Royal",
+      color: "#b48ad4",
+      emoji: "👑",
+    },
   ];
 
   return (
@@ -48,12 +58,14 @@ export const AppSettings: React.FC = () => {
               onClick={() =>
                 handleToggle("app.haptics", !preferences.app.haptics)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${preferences.app.haptics ? "bg-gold-500" : "bg-leather-700"
-                }`}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                preferences.app.haptics ? "bg-gold-500" : "bg-leather-700"
+              }`}
             >
               <div
-                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${preferences.app.haptics ? "translate-x-6" : "translate-x-0"
-                  }`}
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                  preferences.app.haptics ? "translate-x-6" : "translate-x-0"
+                }`}
               />
             </button>
           </div>
@@ -73,12 +85,14 @@ export const AppSettings: React.FC = () => {
               onClick={() =>
                 handleToggle("app.analytics", !preferences.app.analytics)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${preferences.app.analytics ? "bg-gold-500" : "bg-leather-700"
-                }`}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                preferences.app.analytics ? "bg-gold-500" : "bg-leather-700"
+              }`}
             >
               <div
-                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${preferences.app.analytics ? "translate-x-6" : "translate-x-0"
-                  }`}
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                  preferences.app.analytics ? "translate-x-6" : "translate-x-0"
+                }`}
               />
             </button>
           </div>
@@ -99,14 +113,16 @@ export const AppSettings: React.FC = () => {
               onClick={() =>
                 handleToggle("app.betaFeatures", !preferences.app.betaFeatures)
               }
-              className={`relative w-14 h-8 rounded-full transition-colors ${preferences.app.betaFeatures ? "bg-gold-500" : "bg-leather-700"
-                }`}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                preferences.app.betaFeatures ? "bg-gold-500" : "bg-leather-700"
+              }`}
             >
               <div
-                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${preferences.app.betaFeatures
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition-transform ${
+                  preferences.app.betaFeatures
                     ? "translate-x-6"
                     : "translate-x-0"
-                  }`}
+                }`}
               />
             </button>
           </div>
@@ -122,18 +138,36 @@ export const AppSettings: React.FC = () => {
             {leatherThemes.map((lt) => (
               <button
                 key={lt.key}
-                onClick={() => { tap(); setTheme(lt.key); toast.success(`${lt.label} activé! ${lt.emoji}`); }}
+                onClick={() => {
+                  tap();
+                  setTheme(lt.key);
+                  toast.success(`${lt.label} activé! ${lt.emoji}`);
+                }}
                 className="flex flex-col items-center gap-2 transition-transform hover:scale-110"
               >
                 <div
                   className="w-14 h-14 rounded-full transition-all"
                   style={{
                     background: `radial-gradient(circle at 30% 30%, ${lt.color}40, ${lt.color}15)`,
-                    border: currentTheme === lt.key ? `3px solid ${lt.color}` : '2px solid rgba(255,255,255,0.15)',
-                    boxShadow: currentTheme === lt.key ? `0 0 16px ${lt.color}60` : 'none',
+                    border:
+                      currentTheme === lt.key
+                        ? `3px solid ${lt.color}`
+                        : "2px solid rgba(255,255,255,0.15)",
+                    boxShadow:
+                      currentTheme === lt.key
+                        ? `0 0 16px ${lt.color}60`
+                        : "none",
                   }}
                 />
-                <span className="text-xs" style={{ color: currentTheme === lt.key ? lt.color : 'rgba(255,255,255,0.5)' }}>
+                <span
+                  className="text-xs"
+                  style={{
+                    color:
+                      currentTheme === lt.key
+                        ? lt.color
+                        : "rgba(255,255,255,0.5)",
+                  }}
+                >
                   {lt.label}
                 </span>
               </button>
@@ -145,28 +179,49 @@ export const AppSettings: React.FC = () => {
         <div className="leather-card rounded-xl p-4 stitched">
           <h3 className="text-white font-semibold mb-1">Couleur d'accent</h3>
           <p className="text-leather-300 text-sm mb-4">
-            Personnalise l'éclairage de bordure
+            Change la couleur d&apos;accent partout dans l&apos;app (boutons,
+            liens, lueurs)
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            {Object.entries(PRESET_THEMES).filter(([k]) => !k.startsWith("leather")).map(([key, theme]) => (
-              <button
-                key={key}
-                onClick={() => { tap(); setTheme(key); toast.success(`${theme.name} activé!`); }}
-                className="flex flex-col items-center gap-1 transition-transform hover:scale-110"
-              >
-                <div
-                  className="w-10 h-10 rounded-full transition-all"
-                  style={{
-                    backgroundColor: theme.edgeLighting,
-                    border: currentTheme === key ? '3px solid white' : '2px solid rgba(255,255,255,0.1)',
-                    boxShadow: currentTheme === key ? `0 0 12px ${theme.edgeLighting}80` : 'none',
+            {Object.entries(PRESET_THEMES)
+              .filter(([k]) => !k.startsWith("leather"))
+              .map(([key, theme]) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    tap();
+                    setTheme(key);
+                    toast.success(`${theme.name} activé!`);
                   }}
-                />
-                <span className="text-[10px]" style={{ color: currentTheme === key ? theme.edgeLighting : 'rgba(255,255,255,0.4)' }}>
-                  {theme.name}
-                </span>
-              </button>
-            ))}
+                  className="flex flex-col items-center gap-1 transition-transform hover:scale-110"
+                >
+                  <div
+                    className="w-10 h-10 rounded-full transition-all"
+                    style={{
+                      backgroundColor: theme.edgeLighting,
+                      border:
+                        currentTheme === key
+                          ? "3px solid white"
+                          : "2px solid rgba(255,255,255,0.1)",
+                      boxShadow:
+                        currentTheme === key
+                          ? `0 0 12px ${theme.edgeLighting}80`
+                          : "none",
+                    }}
+                  />
+                  <span
+                    className="text-[10px]"
+                    style={{
+                      color:
+                        currentTheme === key
+                          ? theme.edgeLighting
+                          : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {theme.name}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
 

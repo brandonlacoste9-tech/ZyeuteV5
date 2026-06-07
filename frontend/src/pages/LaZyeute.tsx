@@ -1069,8 +1069,8 @@ export const Zyeute: React.FC = () => {
                         style={{
                           width: `${(videoProgress[post.id] || 0) * 100}%`,
                           background:
-                            "linear-gradient(90deg, #D4AF37, #FFD700)",
-                          boxShadow: "0 0 6px rgba(212,175,55,0.5)",
+                            "linear-gradient(90deg, var(--color-gold-600), var(--color-gold-400))",
+                          boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.5)",
                         }}
                       />
                     </div>
@@ -1091,7 +1091,7 @@ export const Zyeute: React.FC = () => {
                         <path
                           d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"
                           fill="#FF3D3D"
-                          stroke="#FFD700"
+                          stroke={edgeLighting}
                           strokeWidth={0.5}
                         />
                       </svg>
@@ -1289,7 +1289,7 @@ export const Zyeute: React.FC = () => {
                       className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
                       style={{
                         background: isFired
-                          ? "linear-gradient(145deg, #FFD700 0%, #FF6B35 50%, #FF3D3D 100%)"
+                          ? `linear-gradient(145deg, ${edgeLighting} 0%, #FF6B35 50%, #FF3D3D 100%)`
                           : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
                         border: `2px solid ${isFired ? "#FF3D3D" : edgeLighting + "40"}`,
                         boxShadow: isFired
@@ -1300,8 +1300,8 @@ export const Zyeute: React.FC = () => {
                       <svg
                         className="w-5 h-5"
                         viewBox="0 0 24 24"
-                        fill={isFired ? "#FF3D3D" : "#FFD700"}
-                        stroke={isFired ? "#FFD700" : "#8B4513"}
+                        fill={isFired ? "#FF3D3D" : edgeLighting}
+                        stroke={isFired ? edgeLighting : "#8B4513"}
                         strokeWidth={1.5}
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -1311,7 +1311,7 @@ export const Zyeute: React.FC = () => {
                     </div>
                     <span
                       className="text-[10px] font-bold"
-                      style={{ color: isFired ? "#FFD700" : "#D4AF37" }}
+                      style={{ color: isFired ? edgeLighting : edgeLighting }}
                     >
                       {fireCount}
                     </span>
@@ -1406,11 +1406,11 @@ export const Zyeute: React.FC = () => {
                       className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
                       style={{
                         background: isSaved
-                          ? "linear-gradient(145deg, #FFD700 0%, #D4AF37 100%)"
+                          ? `linear-gradient(145deg, ${edgeLighting} 0%, var(--color-gold-600) 100%)`
                           : "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                        border: `2px solid ${isSaved ? "#FFD700" : edgeLighting}`,
+                        border: `2px solid ${isSaved ? edgeLighting : edgeLighting}`,
                         boxShadow: isSaved
-                          ? "0 0 12px rgba(212,175,55,0.7)"
+                          ? "0 0 12px rgba(var(--accent-rgb), 0.7)"
                           : undefined,
                       }}
                     >
@@ -1428,7 +1428,7 @@ export const Zyeute: React.FC = () => {
                     </div>
                     <span
                       className="text-[10px] font-bold"
-                      style={{ color: isSaved ? "#FFD700" : "#D4AF37" }}
+                      style={{ color: edgeLighting }}
                     >
                       {isSaved ? "Sauvé" : "Sauver"}
                     </span>
@@ -1477,7 +1477,7 @@ export const Zyeute: React.FC = () => {
                 }
               }}
               className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold-500/60 bg-black/70 backdrop-blur-md text-gold-400 text-sm font-bold shadow-lg animate-pulse hover:bg-black/90 transition-all"
-              style={{ boxShadow: "0 0 20px rgba(212,175,55,0.3)" }}
+              style={{ boxShadow: "0 0 20px rgba(var(--accent-rgb), 0.3)" }}
             >
               <svg
                 width="18"
@@ -1526,7 +1526,7 @@ export const Zyeute: React.FC = () => {
               background: "rgba(0,0,0,0.85)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(212,175,55,0.25)",
+              borderTop: "1px solid rgba(var(--accent-rgb), 0.25)",
               paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
               transform: "translateY(0)",
               willChange: "opacity",
@@ -1537,7 +1537,7 @@ export const Zyeute: React.FC = () => {
               style={{
                 height: 1,
                 background:
-                  "linear-gradient(90deg, transparent 0%, rgba(212,175,55,0.4) 30%, rgba(255,215,0,0.6) 50%, rgba(212,175,55,0.4) 70%, transparent 100%)",
+                  "linear-gradient(90deg, transparent 0%, rgba(var(--accent-rgb), 0.4) 30%, rgba(var(--accent-rgb), 0.6) 50%, rgba(var(--accent-rgb), 0.4) 70%, transparent 100%)",
               }}
             />
             <div className="flex items-center justify-around py-1">
@@ -1554,8 +1554,8 @@ export const Zyeute: React.FC = () => {
                     className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
                     style={{
                       background:
-                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
-                      boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
+                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
                     }}
                   />
                 )}
@@ -1563,10 +1563,10 @@ export const Zyeute: React.FC = () => {
                   width="24"
                   height="24"
                   viewBox="0 0 24 24"
-                  fill={location.pathname === "/feed" ? "#FFD700" : "none"}
+                  fill={location.pathname === "/feed" ? edgeLighting : "none"}
                   stroke={
                     location.pathname === "/feed"
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "rgba(255,255,255,0.5)"
                   }
                   strokeWidth={2}
@@ -1574,7 +1574,10 @@ export const Zyeute: React.FC = () => {
                   strokeLinejoin="round"
                   style={
                     location.pathname === "/feed"
-                      ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
                       : {}
                   }
                 >
@@ -1586,7 +1589,7 @@ export const Zyeute: React.FC = () => {
                   style={{
                     color:
                       location.pathname === "/feed"
-                        ? "#FFD700"
+                        ? edgeLighting
                         : "rgba(255,255,255,0.5)",
                   }}
                 >
@@ -1607,8 +1610,8 @@ export const Zyeute: React.FC = () => {
                     className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
                     style={{
                       background:
-                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
-                      boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
+                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
                     }}
                   />
                 )}
@@ -1619,7 +1622,7 @@ export const Zyeute: React.FC = () => {
                   fill="none"
                   stroke={
                     location.pathname === "/search"
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "rgba(255,255,255,0.5)"
                   }
                   strokeWidth={2}
@@ -1627,7 +1630,10 @@ export const Zyeute: React.FC = () => {
                   strokeLinejoin="round"
                   style={
                     location.pathname === "/search"
-                      ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
                       : {}
                   }
                 >
@@ -1639,7 +1645,7 @@ export const Zyeute: React.FC = () => {
                   style={{
                     color:
                       location.pathname === "/search"
-                        ? "#FFD700"
+                        ? edgeLighting
                         : "rgba(255,255,255,0.5)",
                   }}
                 >
@@ -1660,9 +1666,9 @@ export const Zyeute: React.FC = () => {
                   className="w-14 h-14 rounded-full flex items-center justify-center stitched-double gold-glow gold-edition-halo"
                   style={{
                     background:
-                      "linear-gradient(145deg, #F4E2A6 0%, #D4AF37 45%, #C9A227 70%, #8B6914 100%)",
-                    border: "2px solid #8B6914",
-                    boxShadow: "0 4px 15px rgba(201, 162, 39, 0.6)",
+                      "linear-gradient(145deg, var(--color-gold-200) 0%, var(--color-gold-500) 45%, var(--color-gold-600) 70%, var(--color-gold-800) 100%)",
+                    border: "2px solid var(--color-gold-700)",
+                    boxShadow: "0 4px 15px rgba(var(--accent-rgb), 0.6)",
                   }}
                 >
                   <svg
@@ -1692,8 +1698,8 @@ export const Zyeute: React.FC = () => {
                     className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
                     style={{
                       background:
-                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
-                      boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
+                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
                     }}
                   />
                 )}
@@ -1702,11 +1708,13 @@ export const Zyeute: React.FC = () => {
                   height="24"
                   viewBox="0 0 24 24"
                   fill={
-                    location.pathname === "/notifications" ? "#FFD700" : "none"
+                    location.pathname === "/notifications"
+                      ? edgeLighting
+                      : "none"
                   }
                   stroke={
                     location.pathname === "/notifications"
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "rgba(255,255,255,0.5)"
                   }
                   strokeWidth={2}
@@ -1714,7 +1722,10 @@ export const Zyeute: React.FC = () => {
                   strokeLinejoin="round"
                   style={
                     location.pathname === "/notifications"
-                      ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
                       : {}
                   }
                 >
@@ -1726,7 +1737,7 @@ export const Zyeute: React.FC = () => {
                   style={{
                     color:
                       location.pathname === "/notifications"
-                        ? "#FFD700"
+                        ? edgeLighting
                         : "rgba(255,255,255,0.5)",
                   }}
                 >
@@ -1747,8 +1758,8 @@ export const Zyeute: React.FC = () => {
                     className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
                     style={{
                       background:
-                        "linear-gradient(90deg, transparent, #FFD700, transparent)",
-                      boxShadow: "0 0 6px rgba(255,215,0,0.8)",
+                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
+                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
                     }}
                   />
                 )}
@@ -1758,12 +1769,12 @@ export const Zyeute: React.FC = () => {
                   viewBox="0 0 24 24"
                   fill={
                     location.pathname.startsWith("/profile")
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "none"
                   }
                   stroke={
                     location.pathname.startsWith("/profile")
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "rgba(255,255,255,0.5)"
                   }
                   strokeWidth={2}
@@ -1771,7 +1782,10 @@ export const Zyeute: React.FC = () => {
                   strokeLinejoin="round"
                   style={
                     location.pathname.startsWith("/profile")
-                      ? { filter: "drop-shadow(0 0 4px rgba(255,215,0,0.6))" }
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
                       : {}
                   }
                 >
@@ -1782,7 +1796,7 @@ export const Zyeute: React.FC = () => {
                   className="text-[10px] font-medium"
                   style={{
                     color: location.pathname.startsWith("/profile")
-                      ? "#FFD700"
+                      ? edgeLighting
                       : "rgba(255,255,255,0.5)",
                   }}
                 >

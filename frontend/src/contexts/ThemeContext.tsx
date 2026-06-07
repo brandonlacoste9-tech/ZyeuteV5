@@ -2,7 +2,14 @@
  * Theme Context - Manages edge lighting colors and theme customization
  */
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { applyAccentPalette, DEFAULT_GOLD } from "@/lib/accentPalette";
 
 export interface ThemeColors {
   edgeLighting: string;
@@ -56,10 +63,20 @@ export const PRESET_THEMES: Record<string, ThemeColors> = {
   },
 };
 
+function readInitialAccent(): string {
+  if (typeof window === "undefined") return PRESET_THEMES.gold.edgeLighting;
+  return (
+    localStorage.getItem("zyeute_edge_color") ||
+    localStorage.getItem("appBorderColor") ||
+    PRESET_THEMES.gold.edgeLighting
+  );
+}
 
 interface ThemeContextType {
   edgeLighting: string;
   setEdgeLighting: (color: string) => void;
+  /** Custom hex — applies app-wide accent scale */
+  setAccentColor: (color: string) => void;
   currentTheme: string;
   setTheme: (themeName: string) => void;
   isAnimated: boolean;
@@ -73,12 +90,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [edgeLighting, setEdgeLightingState] = useState<string>(() => {
-    const saved = localStorage.getItem("zyeute_edge_color");
-    return saved || PRESET_THEMES.gold.edgeLighting;
-  });
+  const [edgeLighting, setEdgeLightingState] =
+    useState<string>(readInitialAccent);
 
   const [currentTheme, setCurrentThemeState] = useState<string>(() => {
+    if (typeof window === "undefined") return "gold";
     return localStorage.getItem("zyeute_theme") || "gold";
   });
 
@@ -89,19 +105,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [glowIntensity, setGlowIntensityState] = useState<number>(() => {
     const saved = localStorage.getItem("zyeute_glow_intensity");
-    return saved ? parseInt(saved) : 0;
+    return saved ? parseInt(saved, 10) : 0;
   });
 
-  // Update CSS variables when colors change
+  const persistAccent = useCallback((color: string, themeName: string) => {
+    const normalized = applyAccentPalette(color);
+    setEdgeLightingState(normalized);
+    setCurrentThemeState(themeName);
+    localStorage.setItem("zyeute_edge_color", normalized);
+    localStorage.setItem("appBorderColor", normalized);
+    localStorage.setItem("zyeute_theme", themeName);
+    return normalized;
+  }, []);
+
+  // Apply accent scale + animation attrs whenever accent/theme changes
   useEffect(() => {
+    applyAccentPalette(edgeLighting);
     const root = document.documentElement;
-    root.style.setProperty("--edge-color", edgeLighting);
+    root.setAttribute("data-theme", currentTheme);
     root.style.setProperty("--glow-intensity", `${glowIntensity}%`);
 
-    // Apply data-theme for CSS theme variants (leather, gold, etc.)
-    root.setAttribute("data-theme", currentTheme);
-
-    // Add animation class if enabled
     if (isAnimated) {
       root.classList.add("edge-animated");
     } else {
@@ -109,18 +132,32 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [edgeLighting, isAnimated, glowIntensity, currentTheme]);
 
-  const setEdgeLighting = (color: string) => {
-    setEdgeLightingState(color);
-    localStorage.setItem("zyeute_edge_color", color);
-  };
+  const setEdgeLighting = useCallback(
+    (color: string) => {
+      persistAccent(color, "custom");
+    },
+    [persistAccent],
+  );
 
-  const setTheme = (themeName: string) => {
-    setCurrentThemeState(themeName);
-    localStorage.setItem("zyeute_theme", themeName);
-    if (PRESET_THEMES[themeName]) {
-      setEdgeLighting(PRESET_THEMES[themeName].edgeLighting);
-    }
-  };
+  const setAccentColor = useCallback(
+    (color: string) => {
+      persistAccent(color, "custom");
+    },
+    [persistAccent],
+  );
+
+  const setTheme = useCallback(
+    (themeName: string) => {
+      const preset = PRESET_THEMES[themeName];
+      if (preset) {
+        persistAccent(preset.edgeLighting, themeName);
+      } else {
+        setCurrentThemeState(themeName);
+        localStorage.setItem("zyeute_theme", themeName);
+      }
+    },
+    [persistAccent],
+  );
 
   const setIsAnimated = (animated: boolean) => {
     setIsAnimatedState(animated);
@@ -132,23 +169,31 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem("zyeute_glow_intensity", intensity.toString());
   };
 
-  const value = React.useMemo(() => ({
-    edgeLighting,
-    setEdgeLighting,
-    currentTheme,
-    setTheme,
-    isAnimated,
-    setIsAnimated,
-    glowIntensity,
-    setGlowIntensity,
-  }), [edgeLighting, currentTheme, isAnimated, glowIntensity]);
+  const value = React.useMemo(
+    () => ({
+      edgeLighting,
+      setEdgeLighting,
+      setAccentColor,
+      currentTheme,
+      setTheme,
+      isAnimated,
+      setIsAnimated,
+      glowIntensity,
+      setGlowIntensity,
+    }),
+    [
+      edgeLighting,
+      setEdgeLighting,
+      setAccentColor,
+      currentTheme,
+      setTheme,
+      isAnimated,
+      glowIntensity,
+    ],
+  );
 
   return (
-    <ThemeContext.Provider
-      value={value}
-    >
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );
 };
 

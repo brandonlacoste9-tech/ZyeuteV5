@@ -17,6 +17,8 @@
   --color-gold-800: #74520a;
   --color-gold-900: #61430c;
   --color-gold-950: #382304;
+  --accent-rgb: 212, 175, 55;
+  --accent-primary: #d4af37;
 }
 
 /* Edge Accent Text */
@@ -356,20 +358,32 @@
   }
 
   .border-gold-gradient {
-    border-image: linear-gradient(to bottom, #FFD966, #B38600) 1;
+    border-image: linear-gradient(
+        to bottom,
+        var(--color-gold-300),
+        var(--color-gold-700)
+      )
+      1;
   }
-  
-  /* Gold Glow Effects */
+
+  /* Gold Glow Effects — driven by accent palette */
   .gold-glow {
-    box-shadow: 0 0 15px rgba(255, 191, 0, 0.3), 0 0 30px rgba(255, 191, 0, 0.15);
+    box-shadow:
+      0 0 15px rgba(var(--accent-rgb), 0.3),
+      0 0 30px rgba(var(--accent-rgb), 0.15);
   }
-  
+
   .gold-glow-strong {
-    box-shadow: 0 0 20px rgba(255, 191, 0, 0.5), 0 0 40px rgba(255, 191, 0, 0.3), 0 0 60px rgba(255, 191, 0, 0.15);
+    box-shadow:
+      0 0 20px rgba(var(--accent-rgb), 0.5),
+      0 0 40px rgba(var(--accent-rgb), 0.3),
+      0 0 60px rgba(var(--accent-rgb), 0.15);
   }
-  
+
   .gold-glow-subtle {
-    box-shadow: 0 0 10px rgba(255, 191, 0, 0.2), 0 0 20px rgba(255, 191, 0, 0.1);
+    box-shadow:
+      0 0 10px rgba(var(--accent-rgb), 0.2),
+      0 0 20px rgba(var(--accent-rgb), 0.1);
   }
   
   .gold-border {

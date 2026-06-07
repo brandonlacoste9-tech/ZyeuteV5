@@ -13,6 +13,7 @@ import { toast } from "@/components/Toast";
 import { generateId } from "@/lib/utils";
 import { QUEBEC_REGIONS } from "@/lib/quebecFeatures";
 import { useBorderColor } from "@/contexts/BorderColorContext";
+import { useTheme, PRESET_THEMES } from "@/contexts/ThemeContext";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import type { User } from "@/types";
@@ -34,7 +35,8 @@ export const Settings: React.FC = () => {
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const { borderColor, setBorderColor, defaultGold } = useBorderColor();
+  const { borderColor, setBorderColor } = useBorderColor();
+  const { setTheme } = useTheme();
   const { tap, success, selection, impact } = useHaptics();
   const {
     isGuest,
@@ -136,7 +138,7 @@ export const Settings: React.FC = () => {
     }
 
     toast.info("Suppression du compte en cours...");
-    
+
     try {
       const { error } = await apiCall("/users/me", {
         method: "DELETE",
@@ -164,9 +166,9 @@ export const Settings: React.FC = () => {
 
   // Reset to default gold
   const resetToGold = () => {
-    tap(); // Haptic feedback for button press
-    setBorderColor(defaultGold);
-    success(); // Success haptic for completed action
+    tap();
+    setTheme("gold");
+    success();
     toast.success("Couleur réinitialisée à l'or par défaut! ⚜️");
   };
 
@@ -822,7 +824,8 @@ export const Settings: React.FC = () => {
                     Éclairage d&apos;accent de l&apos;app
                   </p>
                   <p className="text-sm text-leather-400 mt-0.5">
-                    Couleur de bordure personnalisable autour de l&apos;app
+                    Couleur d&apos;accent partout dans l&apos;app (boutons,
+                    liens, lueurs, feed)
                   </p>
                 </div>
               </div>
@@ -968,10 +971,12 @@ export const Settings: React.FC = () => {
               <div className="flex items-center gap-2">
                 <div
                   className="w-8 h-8 rounded-lg border border-gold-500/50"
-                  style={{ backgroundColor: defaultGold }}
+                  style={{
+                    backgroundColor: PRESET_THEMES.gold.edgeLighting,
+                  }}
                 />
                 <span className="text-sm text-gold-500/80 font-mono">
-                  {defaultGold}
+                  {PRESET_THEMES.gold.edgeLighting}
                 </span>
               </div>
             </button>
