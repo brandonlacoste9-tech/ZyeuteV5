@@ -168,35 +168,50 @@ router.get(
       const supabase = createClient(supabaseUrl, supabaseKey);
 
       const limit = parseInt(req.query.limit as string) || 30;
-      // cursor is now a numeric page offset (0-based), not a created_at timestamp
       const cursorRaw = req.query.cursor as string | undefined;
-      const pageOffset = cursorRaw ? parseInt(cursorRaw, 10) || 0 : 0;
+
+      let pageOffset = 0;
+      let seed = 0;
+      if (cursorRaw) {
+        const parts = cursorRaw.split("-");
+        pageOffset = parseInt(parts[0], 10) || 0;
+        seed = parseInt(parts[1], 10) || 0;
+      }
+
       const feedType = (req.query.type as string) || "explore";
       const hiveId = req.query.hive as string | undefined;
+
+      const viewerId = (req as any).userId as string | undefined;
+
+      if (pageOffset === 0 || seed === 0) {
+        const userSeed = viewerId
+          ? viewerId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+          : 0;
+        const timeBucket = Math.floor(Date.now() / (30 * 60 * 1000));
+        seed = (userSeed * 2654435761 + timeBucket) >>> 0;
+        pageOffset = 0;
+      }
 
       console.log("[FeedInfinite] Query params", {
         limit,
         pageOffset,
+        seed,
         feedType,
         hiveId,
         userId: (req as any).userId || null,
       });
 
-      const viewerId = (req as any).userId as string | undefined;
-
-      // Fetch viewer's region for region-aware feed weighting (informational — ordering done via viral_score)
+      // Fetch viewer's region for region-aware feed weighting
       if (viewerId) {
         const { data: viewerProfile } = await supabase
           .from("user_profiles")
           .select("region")
           .eq("id", viewerId)
           .single();
-        // viewerProfile.region is available for future region-boost logic
         void viewerProfile;
       }
 
       // ── Exclude already-watched videos (following feed only) ─────────────
-      // Explore / Pour toi must not starve — heavy watchers otherwise hit a ~10 video wall.
       let excludedIds: string[] = [];
       if (viewerId && feedType === "feed") {
         try {
@@ -209,7 +224,7 @@ router.get(
             .eq("user_id", viewerId)
             .gte("watched_at", sevenDaysAgo)
             .order("watched_at", { ascending: false })
-            .limit(100); // cap at 100 recent — never starve the feed
+            .limit(100);
           if (watched?.length) {
             excludedIds = watched.map(
               (r: { publication_id: string }) => r.publication_id,
@@ -254,12 +269,12 @@ router.get(
           .eq("visibility", "public")
           .eq("est_masque", false)
           .is("deleted_at", null)
-          .eq("hive_id", hiveId || "quebec") // Filter by hive, default to quebec
+          .neq("processing_status", "no_audio") // Strict filter out silent videos
+          .eq("hive_id", hiveId || "quebec")
           .or(
             "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
           )
           .not("media_url", "is", null)
-          // Drop obvious QA / inject rows and stuck pipeline posts (blank players)
           .not("caption", "ilike", "%DIAGNOSTIC%")
           .not("content", "ilike", "%DIAGNOSTIC%")
           .not("caption", "ilike", "%TEST VIDEO%")
@@ -267,7 +282,6 @@ router.get(
           .order("viral_score", { ascending: false })
           .order("reactions_count", { ascending: false })
           .order("created_at", { ascending: false })
-          // Use range-based offset pagination — consistent with viral_score sort
           .range(offset, offset + fetchLimit - 1);
 
         if (!ignoreExclusions && excludedIds.length > 0) {
@@ -280,14 +294,6 @@ router.get(
 
         return q;
       };
-
-      // ── Pool-and-shuffle for feed variety ─────────────────────────────────
-      // On page 0: fetch a larger candidate pool and shuffle it so every app
-      // open shows a different order. On subsequent pages, use normal offset
-      // pagination to preserve scroll continuity.
-      const isFirstPage = pageOffset === 0;
-      const poolMultiplier = isFirstPage ? 3 : 1;
-      const fetchLimit = Math.min(limit * poolMultiplier, 90);
 
       /** Seeded pseudo-random number generator (mulberry32). */
       function seededRandom(seed: number) {
@@ -311,24 +317,43 @@ router.get(
         return a;
       }
 
-      let { data: posts, error } = await buildQuery(pageOffset, false, fetchLimit);
+      // ── Block-Shuffling Pagination ────────────────────────────────────────
+      const BLOCK_SIZE = 240;
+      let blockIndex = Math.floor(pageOffset / BLOCK_SIZE);
+      let offsetInBlock = pageOffset % BLOCK_SIZE;
+      let dbOffset = blockIndex * BLOCK_SIZE;
 
-      // If we ran out of unseen posts, wrap around to offset 0 and IGNORE exclusions to recycle videos endlessly
+      let { data: posts, error } = await buildQuery(dbOffset, false, BLOCK_SIZE);
+
+      // If we ran out of unseen posts, wrap back to block 0
       let didWrap = false;
       if (!error && (!posts || posts.length === 0)) {
-        const { data: recycledPosts, error: recycledErr } = await buildQuery(
-          0,
-          true,
-          fetchLimit,
-        );
-        posts = recycledPosts;
-        error = recycledErr;
+        blockIndex = 0;
+        offsetInBlock = 0;
+        dbOffset = 0;
+        seed = (seed + 9876543) >>> 0;
+        const fallback = await buildQuery(0, true, BLOCK_SIZE);
+        posts = fallback.data;
+        error = fallback.error;
+        didWrap = true;
+      }
+
+      // If offset is past available posts in block, wrap back to block 0
+      if (!error && posts && posts.length > 0 && offsetInBlock >= posts.length) {
+        blockIndex = 0;
+        offsetInBlock = 0;
+        dbOffset = 0;
+        seed = (seed + 9876543) >>> 0;
+        const fallback = await buildQuery(0, true, BLOCK_SIZE);
+        posts = fallback.data;
+        error = fallback.error;
         didWrap = true;
       }
 
       console.log("[FeedInfinite] Supabase result", {
         postsCount: posts?.length,
         hasError: !!error,
+        didWrap,
       });
 
       if (error) {
@@ -338,11 +363,11 @@ router.get(
           .json({ error: "Database error", details: error.message });
       }
 
-      // Following feed empty → fall back to explore so the app never shows zero slides
+      // Following feed empty → fall back to explore
       if (feedType === "feed" && (!posts || posts.length === 0)) {
         const savedAuthors = authorIds;
         authorIds = null;
-        const fallback = await buildQuery(pageOffset, true, fetchLimit);
+        const fallback = await buildQuery(0, true, BLOCK_SIZE);
         authorIds = savedAuthors;
         posts = fallback.data;
         error = fallback.error;
@@ -353,7 +378,6 @@ router.get(
         gold: 5,
         silver: 3,
         bronze: 2,
-        // Legacy French aliases
         or: 5,
         argent: 3,
       };
@@ -366,34 +390,54 @@ router.get(
           _boost_tier: tier,
         };
       });
+      // Sort candidates stably/deterministically before shuffling
       boostedPosts.sort(
         (a: any, b: any) =>
           b.viral_score - a.viral_score ||
-          b.reactions_count - a.reactions_count,
+          b.reactions_count - a.reactions_count ||
+          b.id.localeCompare(a.id),
       );
 
-      // ── Shuffle first page for feed variety (different videos each app open) ──
-      // Seed = 30-minute bucket × userId hash so each user+session gets a unique order.
-      // Pages > 0 are NOT shuffled to keep scroll position stable.
-      let finalPosts = boostedPosts;
-      if (isFirstPage && finalPosts.length > limit) {
-        const userSeed = viewerId
-          ? viewerId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
-          : 0;
-        // Changes every 30 min → fresh order each session without DB involvement
-        const timeBucket = Math.floor(Date.now() / (30 * 60 * 1000));
-        const seed = (userSeed * 2654435761 + timeBucket) >>> 0;
-        finalPosts = shuffleWithSeed(finalPosts, seed).slice(0, limit);
+      // Deterministically shuffle block using block seed
+      const blockSeed = (seed + blockIndex) >>> 0;
+      const shuffledPosts = shuffleWithSeed(boostedPosts, blockSeed);
+      let finalPosts = shuffledPosts.slice(offsetInBlock, offsetInBlock + limit);
+
+      // If sliced posts are empty, wrap around block 0
+      if (finalPosts.length === 0 && !didWrap) {
+        blockIndex = 0;
+        offsetInBlock = 0;
+        dbOffset = 0;
+        seed = (seed + 9876543) >>> 0;
+        const fallback = await buildQuery(0, true, BLOCK_SIZE);
+        posts = fallback.data;
+        error = fallback.error;
+        didWrap = true;
+
+        if (!error && posts) {
+          const boostedFallback = posts.map((p: any) => {
+            const tier: string = p.user?.subscription_tier?.toLowerCase() || "free";
+            const multiplier = BOOST[tier] ?? 1;
+            return {
+              ...p,
+              viral_score: (p.viral_score || 0) * multiplier,
+              _boost_tier: tier,
+            };
+          });
+          boostedFallback.sort(
+            (a: any, b: any) =>
+              b.viral_score - a.viral_score ||
+              b.reactions_count - a.reactions_count ||
+              b.id.localeCompare(a.id),
+          );
+          const shuffledFallback = shuffleWithSeed(boostedFallback, seed);
+          finalPosts = shuffledFallback.slice(0, limit);
+        }
       }
 
-      // Offset-based pagination: if we got a full page there are likely more
-      // If we wrapped, the new offset is 0
       const activeOffset = didWrap ? 0 : pageOffset;
       const hasMore = true; // ALWAYS return true for infinite feed
-      const nextCursor =
-        finalPosts.length > 0
-          ? String(activeOffset + finalPosts.length) + "-" + Date.now()
-          : "0-" + Date.now();
+      const nextCursor = String(activeOffset + finalPosts.length) + "-" + seed;
 
       res.json({
         posts: finalPosts,

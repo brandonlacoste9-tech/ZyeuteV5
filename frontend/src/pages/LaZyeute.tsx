@@ -398,11 +398,11 @@ export const Zyeute: React.FC = () => {
     prevIndexRef.current = currentIndex;
   }, [currentIndex, posts]);
 
-  // Pre-fetch only on the last slide (avoids fetch storms that blank the feed)
+  // Pre-fetch earlier (avoids blocking swipe and fetch storms)
   const lastPrefetchRef = useRef(0);
   useEffect(() => {
     const atEnd =
-      posts.length > 0 && currentIndex >= posts.length - 1 && hasNextPage;
+      posts.length > 0 && currentIndex >= posts.length - 5 && hasNextPage;
     if (!atEnd || isFetchingNextPage) return;
     const now = Date.now();
     if (now - lastPrefetchRef.current < 2000) return;

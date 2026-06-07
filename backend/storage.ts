@@ -829,6 +829,7 @@ export class DatabaseStorage implements IStorage {
               OR p.processing_status = 'completed'
               OR p.mux_playback_id IS NOT NULL
             )
+            AND (p.processing_status IS NULL OR p.processing_status != 'no_audio')
             -- Allow all video sources including TikTok embed URLs
             AND p.media_url IS NOT NULL
             AND p.media_url != ''

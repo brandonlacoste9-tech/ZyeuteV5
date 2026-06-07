@@ -60,6 +60,7 @@ router.get("/feed/supabase", async (req, res) => {
         .eq("visibility", "public")
         .eq("est_masque", false)
         .is("deleted_at", null)
+        .neq("processing_status", "no_audio")
         .or(
           "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
         )
@@ -178,6 +179,7 @@ router.get("/feed/infinite/supabase", async (req, res) => {
       .eq("visibility", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
+      .neq("processing_status", "no_audio")
       .order("created_at", { ascending: false })
       .limit(limit + 1);
 
@@ -257,6 +259,7 @@ router.get("/explore/supabase", async (req, res) => {
         .eq("visibility", "public")
         .eq("est_masque", false)
         .is("deleted_at", null)
+        .neq("processing_status", "no_audio")
         .eq("hive_id", hiveId)
         .or(
           "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",

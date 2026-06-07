@@ -60,15 +60,12 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
     queryFn: async ({ pageParam }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
-      const cursorOffset = cursorStr
-        ? parseInt(cursorStr.split("-")[0], 10) || 0
-        : 0;
 
       const params = new URLSearchParams({
         limit: "30",
         type: feedType,
         hive: getStoredHive(),
-        ...(cursorOffset > 0 ? { cursor: String(cursorOffset) } : {}),
+        ...(cursorStr ? { cursor: cursorStr } : {}),
       });
 
       const headers = await getAuthHeaders();
@@ -113,24 +110,16 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
             : null,
         });
       }
-      const nextRaw = data.nextCursor;
-      const nextOffset =
-        nextRaw != null && String(nextRaw).length > 0
-          ? parseInt(String(nextRaw).split("-")[0], 10) || 0
-          : 0;
       return {
         ...data,
         posts,
-        nextCursor: nextOffset > 0 ? String(nextOffset) : null,
+        nextCursor: data.nextCursor || null,
         hasMore: data.hasMore !== false && rawCount > 0,
       };
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.hasMore === false) return undefined;
-      const c = lastPage.nextCursor;
-      if (!c) return undefined;
-      const off = parseInt(String(c), 10);
-      return off > 0 ? String(off) : undefined;
+      return lastPage.nextCursor || undefined;
     },
     initialPageParam: null,
   });
