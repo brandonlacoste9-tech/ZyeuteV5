@@ -23,9 +23,17 @@ export async function downloadTikTokMp4(
 ): Promise<Buffer | null> {
   if (!sourceUrl.startsWith("http")) return null;
 
+  const isTikTok = /tiktok|byteoversea|muscdn|tikcdn/i.test(sourceUrl);
+  const headers = isTikTok
+    ? TIKTOK_FETCH_HEADERS
+    : {
+        "User-Agent": TIKTOK_FETCH_HEADERS["User-Agent"],
+        Accept: "*/*",
+      };
+
   try {
     const resp = await fetch(sourceUrl, {
-      headers: TIKTOK_FETCH_HEADERS,
+      headers,
       redirect: "follow",
     });
 

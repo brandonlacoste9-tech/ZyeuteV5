@@ -188,3 +188,37 @@ export async function ingestTikTokVideoToMux(options: {
 
   return null;
 }
+
+/** Download any MP4 URL and ingest to Mux (Seedance, etc.). */
+export async function ingestVideoUrlToMux(options: {
+  sourceUrl: string;
+  storageId: string;
+  supabase?: SupabaseClient | null;
+}): Promise<TikTokMuxIngestResult | null> {
+  const mux = getMuxClient();
+  if (!mux) return null;
+
+  const buffer = await downloadTikTokMp4(options.sourceUrl);
+  if (!buffer) {
+    const fromUrl = await createMuxAssetFromUrl(mux, options.sourceUrl);
+    if (fromUrl) return fromUrl;
+    return null;
+  }
+
+  const direct = await uploadBufferToMuxDirect(mux, buffer);
+  if (direct) return direct;
+
+  if (options.supabase) {
+    const stagingPath = `mux-staging/seedance/${options.storageId}-${Date.now()}.mp4`;
+    const stagingUrl = await uploadMp4ToSupabase(
+      options.supabase,
+      stagingPath,
+      buffer,
+    );
+    if (stagingUrl) {
+      return createMuxAssetFromUrl(mux, stagingUrl);
+    }
+  }
+
+  return null;
+}

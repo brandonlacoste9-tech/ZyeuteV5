@@ -575,6 +575,64 @@ router.post("/mux-backfill", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed/seedance — AI video generation via BytePlus Seedance → Mux → feed.
+ * Query: ?limit=1 (max 5). Requires ARK_API_KEY + MUX or Supabase for permanent storage.
+ */
+router.post("/seedance", async (req, res) => {
+  try {
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return res.status(500).json({ error: "Missing Supabase configuration" });
+    }
+
+    const { isBytePlusArkConfigured, listArkVideoModels } =
+      await import("../services/byteplus-seedance.js");
+    const { isMuxIngestConfigured } =
+      await import("../services/tiktok-mux-ingest.js");
+
+    if (!isBytePlusArkConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: "ARK_API_KEY not configured on server",
+      });
+    }
+
+    const limitRaw = req.query.limit ?? req.body?.limit ?? "1";
+    const limit = parseInt(String(limitRaw), 10);
+    const customPrompt =
+      typeof req.body?.prompt === "string" ? req.body.prompt : undefined;
+
+    const { seedFeedFromSeedance } =
+      await import("../services/seedance-feed-seed.js");
+
+    const stats = await seedFeedFromSeedance({
+      supabaseUrl,
+      supabaseServiceKey: supabaseKey,
+      limit: Number.isFinite(limit) && limit > 0 ? limit : 1,
+      hiveId: (req.query.hive as string) || "quebec",
+      prompts: customPrompt ? [customPrompt] : undefined,
+    });
+
+    const videoModels = await listArkVideoModels();
+
+    res.json({
+      success: stats.imported > 0,
+      message: `Seedance: ${stats.generated} generated, ${stats.imported} in feed (${stats.muxIngested} Mux)`,
+      muxConfigured: isMuxIngestConfigured(),
+      availableVideoModels: videoModels.slice(0, 8),
+      ...stats,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Seedance seed error:", error);
+    res.status(500).json({ error: "Seedance seed failed", details: message });
+  }
+});
+
 router.post("/custom", async (req, res) => {
   try {
     const supabaseUrl =
