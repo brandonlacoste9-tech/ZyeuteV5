@@ -61,14 +61,16 @@ async function fetchPopular(): Promise<TikTokVideo[]> {
   push(trending.data?.videos);
 
   for (const q of [
+    "#montreal",
+    "#laval",
+    "#vaudreuil",
+    "#sherbrooke",
+    "quebec city",
+    "#quebec",
     "viral",
     "fyp",
-    "quebec",
-    "montreal",
     "funny",
     "comedy",
-    "pets",
-    "dance",
   ]) {
     console.log(`🔍 Omkar search "${q}" (most_liked)…`);
     const search = await axios.get(`${OMKAR}/tiktok/videos/search`, {

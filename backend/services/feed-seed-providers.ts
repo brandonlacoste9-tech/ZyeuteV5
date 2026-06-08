@@ -50,18 +50,21 @@ export function getQuebecTikTokQueries(): string[] {
         .filter(Boolean)
     : [];
   const defaults = [
-    "quebec",
+    "#montreal",
+    "#laval",
+    "#vaudreuil",
+    "#sherbrooke",
+    "quebec city",
+    "#quebec",
     "montreal",
+    "laval",
+    "vaudreuil",
+    "sherbrooke",
+    "quebec",
     "quebecois",
     "mtl",
-    "hiver",
-    "poutine",
     "vieuxquebec",
-    "laval",
     "gatineau",
-    "#quebec",
-    "#montreal",
-    "#mtl",
     "quebec viral",
     "montreal nightlife",
   ];
