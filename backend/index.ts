@@ -357,6 +357,7 @@ app.use((req, res, next) => {
             "20260608_grid_rush_tokens.sql",
             "20260608_grid_rush_bot.sql",
             "20260608_grid_rush_rpc.sql",
+            "20260608_grid_rush_rpc_harden.sql",
           ];
           for (const file of migrations) {
             try {

@@ -55,6 +55,7 @@ router.post("/invite", requireAuth, async (req: any, res) => {
 
 router.post("/bot", requireAuth, async (req: any, res) => {
   try {
+    // userId comes from verified JWT; RPC is service_role-only and trusts this id.
     const stakeTokens = Number(req.body?.stakeTokens ?? 500);
     const match = await GridRushService.createBotMatch(
       req.userId!,

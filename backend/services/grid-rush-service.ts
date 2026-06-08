@@ -84,22 +84,38 @@ async function ensureWallet(
   );
 }
 
+/** Lock wallet row (must run inside an open transaction). */
+async function lockWallet(
+  client: PgQueryable,
+  userId: string,
+): Promise<number> {
+  await ensureWallet(client, userId);
+  const locked = await client.query<{ token_balance: number }>(
+    `SELECT token_balance FROM user_wallets WHERE user_id = $1 FOR UPDATE`,
+    [userId],
+  );
+  const balance = locked.rows[0]?.token_balance;
+  if (balance === undefined) {
+    throw new Error("Portefeuille introuvable");
+  }
+  return balance;
+}
+
 async function deductTokens(
   client: PgQueryable,
   userId: string,
   amount: number,
 ): Promise<void> {
-  await ensureWallet(client, userId);
-  const result = await client.query(
-    `UPDATE user_wallets
-     SET token_balance = token_balance - $1, updated_at = NOW()
-     WHERE user_id = $2 AND token_balance >= $1
-     RETURNING user_id`,
-    [amount, userId],
-  );
-  if (!result.rows.length) {
+  const balance = await lockWallet(client, userId);
+  if (balance < amount) {
     throw new Error(INSUFFICIENT_TOKENS);
   }
+  await client.query(
+    `UPDATE user_wallets
+     SET token_balance = $1, updated_at = NOW()
+     WHERE user_id = $2`,
+    [balance - amount, userId],
+  );
 }
 
 async function creditTokens(
@@ -107,12 +123,12 @@ async function creditTokens(
   userId: string,
   amount: number,
 ): Promise<void> {
-  await ensureWallet(client, userId);
+  const balance = await lockWallet(client, userId);
   await client.query(
     `UPDATE user_wallets
-     SET token_balance = token_balance + $1, updated_at = NOW()
+     SET token_balance = $1, updated_at = NOW()
      WHERE user_id = $2`,
-    [amount, userId],
+    [balance + amount, userId],
   );
 }
 
@@ -180,8 +196,6 @@ export class GridRushService {
     const now = new Date();
 
     return withTx(async (client) => {
-      await ensureWallet(client, userId);
-
       const waiting = await client.query<{
         id: string;
         player_1_id: string;
