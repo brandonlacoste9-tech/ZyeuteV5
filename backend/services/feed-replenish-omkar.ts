@@ -240,6 +240,7 @@ async function replenishFeedOmkarIfLowInner(options?: {
         break;
       case "no_media":
       case "invalid_payload":
+      case "dedup_unavailable":
         skipped += 1;
         break;
       default:

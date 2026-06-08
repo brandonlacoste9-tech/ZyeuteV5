@@ -2,9 +2,12 @@
  * Shared TikTok → publications import (HTTP curation + background job).
  */
 import { db, storage } from "../storage.js";
-import { posts, users } from "../../shared/schema.js";
-import { sql } from "drizzle-orm";
+import { users } from "../../shared/schema.js";
 import { v3Mod } from "../v3-swarm.js";
+import {
+  checkTikTokDuplicate,
+  formatDbError,
+} from "../utils/tiktok-seed-dedup.js";
 import {
   TikTokScraperService,
   type TikTokVideo,
@@ -22,7 +25,8 @@ export type TikTokFeedImportResult =
         | "no_system_user"
         | "invalid_payload"
         | "details_fetch_failed"
-        | "database_error";
+        | "database_error"
+        | "dedup_unavailable";
       postId?: string;
       detail?: string;
     };
@@ -115,19 +119,23 @@ export async function importTikTokVideoToFeed(
     return { ok: false, reason: "invalid_payload", detail: "video_id" };
   }
 
-  const existing = await db
-    .select({ id: posts.id })
-    .from(posts)
-    .where(
-      sql`${posts.mediaMetadata}->>'tiktok_id' = ${videoId} AND ${posts.deletedAt} IS NULL`,
-    )
-    .limit(1);
-
-  if (existing.length > 0) {
+  const dedup = await checkTikTokDuplicate(videoId);
+  if (dedup.status === "duplicate") {
     return {
       ok: false,
       reason: "duplicate",
-      postId: existing[0].id,
+      postId: dedup.postId,
+    };
+  }
+  if (dedup.status === "unavailable") {
+    console.warn(
+      `[TikTok import] dedup check unavailable for ${videoId}:`,
+      dedup.detail,
+    );
+    return {
+      ok: false,
+      reason: "dedup_unavailable",
+      detail: dedup.detail,
     };
   }
 
@@ -255,7 +263,7 @@ export async function importTikTokVideoToFeed(
 
     return { ok: true, postId: post.id };
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const msg = formatDbError(e);
     console.error("[TikTok import] insert failed:", msg);
     return {
       ok: false,

@@ -12,7 +12,15 @@ router.use(requireSeedAccess);
 
 /** Plain objects (e.g. Supabase PostgrestError) stringify as [object Object] — extract message/JSON. */
 function serializeErrorDetail(error: unknown): string {
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) {
+    const parts: string[] = [];
+    let current: unknown = error;
+    while (current instanceof Error) {
+      parts.push(current.message);
+      current = current.cause;
+    }
+    return parts.join(" | cause: ");
+  }
   if (typeof error === "object" && error !== null) {
     const o = error as Record<string, unknown>;
     if (typeof o.message === "string" && o.message) {

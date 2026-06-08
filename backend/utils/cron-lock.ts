@@ -56,7 +56,9 @@ export async function acquireCronLock(
       );
       return true;
     }
-    throw error;
+    throw new Error(
+      error.message || `cron lock insert failed (${error.code ?? "unknown"})`,
+    );
   }
 
   return true;
