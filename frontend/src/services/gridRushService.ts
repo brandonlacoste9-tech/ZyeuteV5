@@ -16,7 +16,7 @@ export interface GridRushMatch {
 }
 
 export async function quickMatch(stakeCennes: number) {
-  return apiCall<GridRushMatch>("/api/grid-rush/queue", {
+  return apiCall<GridRushMatch>("/grid-rush/queue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeCennes }),
@@ -24,7 +24,7 @@ export async function quickMatch(stakeCennes: number) {
 }
 
 export async function createInvite(stakeCennes: number) {
-  return apiCall<GridRushMatch>("/api/grid-rush/invite", {
+  return apiCall<GridRushMatch>("/grid-rush/invite", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeCennes }),
@@ -32,29 +32,29 @@ export async function createInvite(stakeCennes: number) {
 }
 
 export async function joinMatch(matchId: string) {
-  return apiCall<GridRushMatch>(`/api/grid-rush/join/${matchId}`, {
+  return apiCall<GridRushMatch>(`/grid-rush/join/${matchId}`, {
     method: "POST",
   });
 }
 
 export async function getMatch(matchId: string) {
-  return apiCall<GridRushMatch>(`/api/grid-rush/match/${matchId}`);
+  return apiCall<GridRushMatch>(`/grid-rush/match/${matchId}`);
 }
 
 export async function submitRoundScore(matchId: string) {
-  return apiCall<GridRushMatch>(`/api/grid-rush/score/${matchId}`, {
+  return apiCall<GridRushMatch>(`/grid-rush/score/${matchId}`, {
     method: "POST",
   });
 }
 
 export async function finishMatch(matchId: string) {
-  return apiCall<GridRushMatch>(`/api/grid-rush/finish/${matchId}`, {
+  return apiCall<GridRushMatch>(`/grid-rush/finish/${matchId}`, {
     method: "POST",
   });
 }
 
 export async function cancelMatch(matchId: string) {
-  return apiCall<GridRushMatch>(`/api/grid-rush/cancel/${matchId}`, {
+  return apiCall<GridRushMatch>(`/grid-rush/cancel/${matchId}`, {
     method: "POST",
   });
 }

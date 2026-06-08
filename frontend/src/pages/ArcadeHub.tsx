@@ -56,13 +56,11 @@ export default function ArcadeHub() {
         {games.map((game) => (
           <motion.div
             key={game.id}
-            whileHover={{ scale: 1.05 }}
             className={`bg-gray-900 border-2 rounded-xl p-6 relative overflow-hidden group ${
               game.status === "LIVE"
-                ? "border-yellow-500 cursor-pointer shadow-[0_0_20px_rgba(234,179,8,0.2)]"
+                ? "border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
                 : "border-gray-700 opacity-60 grayscale"
             }`}
-            onClick={() => game.path && navigate(game.path)}
           >
             <div className="absolute top-4 right-4 text-xs font-bold px-2 py-1 bg-black rounded border border-white/20">
               {game.status}
@@ -75,8 +73,12 @@ export default function ArcadeHub() {
             <h2 className="text-2xl font-black italic mb-2">{game.title}</h2>
             <p className="text-gray-400 text-sm mb-6">{game.description}</p>
 
-            {game.status === "LIVE" && (
-              <button className="w-full bg-yellow-500 text-black font-black py-3 uppercase tracking-wider rounded hover:bg-yellow-400 transition-colors">
+            {game.status === "LIVE" && game.path && (
+              <button
+                type="button"
+                onClick={() => navigate(game.path!)}
+                className="w-full bg-yellow-500 text-black font-black py-3 uppercase tracking-wider rounded hover:bg-yellow-400 transition-colors"
+              >
                 JOUER MAINTENANT
               </button>
             )}

@@ -91,11 +91,11 @@ export default function GridRushGame({
       const updated = normalizeMatch(raw);
       setMatchData(updated);
 
-      const myScore =
+      const serverMyScore =
         updated.player1Id === currentUserId
           ? updated.player1Score
           : updated.player2Score;
-      setLocalScore(myScore);
+      setLocalScore((prev) => Math.max(prev, serverMyScore));
 
       if (updated.status === "ACTIVE") {
         setGameState("PLAYING");
@@ -228,11 +228,11 @@ export default function GridRushGame({
           </div>
 
           <div className="grid grid-cols-4 gap-3 flex-1">
-            {gridNumbers.map((num) => {
+            {gridNumbers.map((num, idx) => {
               const isTapped = num < nextExpectedNumber;
               return (
                 <motion.button
-                  key={`${num}-${gridNumbers.join("-")}`}
+                  key={`cell-${idx}`}
                   type="button"
                   whileTap={isTapped ? undefined : { scale: 0.92 }}
                   onClick={() => handleNumberClick(num)}
