@@ -2,6 +2,7 @@
  * Pull popular TikToks from Omkar (trending + most_liked search) → Render Mux pipeline.
  *
  *   npx tsx scripts/seed-omkar-via-render.ts --limit=15
+ *   npx tsx scripts/seed-omkar-via-render.ts --query=#montreal --no-trending --limit=15
  *
  * Optional: CRON_SECRET in .env.local for POST /api/seed/custom on production.
  */
@@ -33,11 +34,22 @@ function parseArg(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-function omkarHeaders() {
-  return { "API-Key": KEY || "" };
+function parseStringArg(name: string): string | undefined {
+  const arg = process.argv.find((x) => x.startsWith(`--${name}=`));
+  if (!arg) return undefined;
+  const val = arg.slice(name.length + 3).trim();
+  return val || undefined;
 }
 
-async function fetchPopular(): Promise<TikTokVideo[]> {
+function hasFlag(name: string): boolean {
+  return process.argv.includes(`--${name}`);
+}
+
+async function fetchPopular(options: {
+  queries: string[];
+  includeTrending: boolean;
+  maxPerQuery: number;
+}): Promise<TikTokVideo[]> {
   if (!KEY) throw new Error("TIKTOK_SCRAPER_API_KEY missing in .env.local");
 
   const seen = new Set<string>();
@@ -52,32 +64,23 @@ async function fetchPopular(): Promise<TikTokVideo[]> {
     }
   };
 
-  console.log("📈 Omkar trending (CA)…");
-  const trending = await axios.get(`${OMKAR}/tiktok/videos/trending`, {
-    params: { market: "ca", max_results: 20 },
-    headers: omkarHeaders(),
-    timeout: 45000,
-  });
-  push(trending.data?.videos);
+  if (options.includeTrending) {
+    console.log("📈 Omkar trending (CA)…");
+    const trending = await axios.get(`${OMKAR}/tiktok/videos/trending`, {
+      params: { market: "ca", max_results: 20 },
+      headers: omkarHeaders(),
+      timeout: 45000,
+    });
+    push(trending.data?.videos);
+  }
 
-  for (const q of [
-    "#montreal",
-    "#laval",
-    "#vaudreuil",
-    "#sherbrooke",
-    "quebec city",
-    "#quebec",
-    "viral",
-    "fyp",
-    "funny",
-    "comedy",
-  ]) {
+  for (const q of options.queries) {
     console.log(`🔍 Omkar search "${q}" (most_liked)…`);
     const search = await axios.get(`${OMKAR}/tiktok/videos/search`, {
       params: {
         search_query: q,
         market: "ca",
-        max_results: 10,
+        max_results: options.maxPerQuery,
         sort_by: "most_liked",
       },
       headers: omkarHeaders(),
@@ -90,6 +93,23 @@ async function fetchPopular(): Promise<TikTokVideo[]> {
   return out;
 }
 
+function omkarHeaders() {
+  return { "API-Key": KEY || "" };
+}
+
+const DEFAULT_QUERIES = [
+  "#montreal",
+  "#laval",
+  "#vaudreuil",
+  "#sherbrooke",
+  "quebec city",
+  "#quebec",
+  "viral",
+  "fyp",
+  "funny",
+  "comedy",
+];
+
 function toCandidate(v: TikTokVideo): FeedSeedCandidate {
   return {
     video: { ...v, provider: "omkar" },
@@ -101,10 +121,21 @@ function toCandidate(v: TikTokVideo): FeedSeedCandidate {
 async function main() {
   const limit = parseArg("limit", 15);
   const cron = process.env.CRON_SECRET?.trim().replace(/^["']+|["']+$/g, "");
+  const focusQuery = parseStringArg("query");
+  const queries = focusQuery ? [focusQuery] : DEFAULT_QUERIES;
+  const includeTrending = focusQuery ? false : !hasFlag("no-trending");
+  const maxPerQuery = focusQuery ? parseArg("max", 25) : 10;
 
   console.log(`🌐 Remote seed via ${API_BASE}/api/seed/custom\n`);
+  if (focusQuery) {
+    console.log(`🎯 Focus query: ${focusQuery}\n`);
+  }
 
-  const popular = await fetchPopular();
+  const popular = await fetchPopular({
+    queries,
+    includeTrending,
+    maxPerQuery,
+  });
   console.log(`   ${popular.length} unique candidates`);
   popular
     .slice(0, 5)
