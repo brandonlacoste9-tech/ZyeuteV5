@@ -11,12 +11,16 @@ import dotenv from "dotenv";
 dotenv.config();
 dotenv.config({ path: ".env.local", override: true });
 
-import axios from "axios";
 import { createClient } from "@supabase/supabase-js";
 import {
   mapOmkarItemToVideo,
   type TikTokVideo,
 } from "../backend/services/tiktok-scraper-service.js";
+import {
+  getOmkarApiKeys,
+  isOmkarKeyConfigured,
+  omkarRequest,
+} from "../backend/utils/omkar-keys.js";
 import type { FeedSeedCandidate } from "../backend/services/tikapi-hashtag.js";
 import {
   acquireCronLock,
@@ -28,7 +32,6 @@ const LOCK_NAME = "omkar-seed";
 
 const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
 const OMKAR = "https://tiktok-scraper.omkar.cloud";
-const KEY = process.env.TIKTOK_SCRAPER_API_KEY?.trim();
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfezmjcikfk.supabase.co";
 const SUPABASE_ANON =
@@ -57,7 +60,11 @@ async function fetchPopular(options: {
   includeTrending: boolean;
   maxPerQuery: number;
 }): Promise<TikTokVideo[]> {
-  if (!KEY) throw new Error("TIKTOK_SCRAPER_API_KEY missing in .env.local");
+  if (!isOmkarKeyConfigured()) {
+    throw new Error(
+      "TIKTOK_SCRAPER_API_KEY missing in .env.local (optional: TIKTOK_SCRAPER_API_KEY_BACKUP)",
+    );
+  }
 
   const seen = new Set<string>();
   const out: TikTokVideo[] = [];
@@ -73,35 +80,35 @@ async function fetchPopular(options: {
 
   if (options.includeTrending) {
     console.log("📈 Omkar trending (CA)…");
-    const trending = await axios.get(`${OMKAR}/tiktok/videos/trending`, {
+    const data = await omkarRequest<{ videos?: unknown }>((apiKey) => ({
+      method: "get",
+      url: `${OMKAR}/tiktok/videos/trending`,
       params: { market: "ca", max_results: 20 },
-      headers: omkarHeaders(),
+      headers: { "API-Key": apiKey },
       timeout: 45000,
-    });
-    push(trending.data?.videos);
+    }));
+    push(data?.videos);
   }
 
   for (const q of options.queries) {
     console.log(`🔍 Omkar search "${q}" (most_liked)…`);
-    const search = await axios.get(`${OMKAR}/tiktok/videos/search`, {
+    const data = await omkarRequest<{ videos?: unknown }>((apiKey) => ({
+      method: "get",
+      url: `${OMKAR}/tiktok/videos/search`,
       params: {
         search_query: q,
         market: "ca",
         max_results: options.maxPerQuery,
         sort_by: "most_liked",
       },
-      headers: omkarHeaders(),
+      headers: { "API-Key": apiKey },
       timeout: 45000,
-    });
-    push(search.data?.videos);
+    }));
+    push(data?.videos);
   }
 
   out.sort((a, b) => (b.stats?.views ?? 0) - (a.stats?.views ?? 0));
   return out;
-}
-
-function omkarHeaders() {
-  return { "API-Key": KEY || "" };
 }
 
 const DEFAULT_QUERIES = [
@@ -147,7 +154,8 @@ async function runSeed() {
   const includeTrending = focusQuery ? false : !hasFlag("no-trending");
   const maxPerQuery = focusQuery ? parseArg("max", 25) : 10;
 
-  console.log(`🌐 Remote seed via ${API_BASE}/api/seed/custom\n`);
+  console.log(`🌐 Remote seed via ${API_BASE}/api/seed/custom`);
+  console.log(`🔑 Omkar keys configured: ${getOmkarApiKeys().length}\n`);
   if (focusQuery) {
     console.log(`🎯 Focus query: ${focusQuery}\n`);
   }

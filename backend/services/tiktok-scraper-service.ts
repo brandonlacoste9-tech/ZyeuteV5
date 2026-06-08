@@ -1,11 +1,15 @@
 import axios from "axios";
 import { TikApiService, type TikVideo } from "./tikapi-service.js";
 import { TikHubService } from "./tikhub-service.js";
+import {
+  getOmkarApiKeys,
+  isOmkarKeyConfigured,
+  omkarRequest,
+} from "../utils/omkar-keys.js";
 
 const OMKAR_BASE_URL = "https://tiktok-scraper.omkar.cloud";
 const TIKWM_DETAILS_URL = "https://www.tikwm.com/api/";
 const APIFY_BASE_URL = "https://api.apify.com/v2";
-const TIKTOK_SCRAPER_API_KEY = process.env.TIKTOK_SCRAPER_API_KEY;
 const APIFY_API_KEY = process.env.APIFY_API_KEY;
 const TIKHUB_API_KEY = process.env.TIKHUB_API_KEY;
 const APIFY_TIKTOK_ACTOR =
@@ -36,9 +40,9 @@ export interface TikTokVideo {
   provider?: "omkar" | "tikapi" | "tikwm" | "apify" | "tikhub";
 }
 
-function omkarHeaders() {
+function omkarHeaders(apiKey: string) {
   return {
-    "API-Key": TIKTOK_SCRAPER_API_KEY || "",
+    "API-Key": apiKey,
   };
 }
 
@@ -286,7 +290,7 @@ export function missingTikTokProviderErrorMessage(): string {
 }
 
 export function isOmkarConfigured(): boolean {
-  return Boolean(process.env.TIKTOK_SCRAPER_API_KEY?.trim());
+  return isOmkarKeyConfigured();
 }
 
 /** Map Omkar REST JSON → internal TikTokVideo (display_name, avatar_url, etc.). */
@@ -376,32 +380,35 @@ export class TikTokScraperService {
     maxResults: number,
     sortBy: "relevance" | "most_liked" | "latest" = "relevance",
   ): Promise<TikTokVideo[]> {
-    const response = await axios.get(`${OMKAR_BASE_URL}/tiktok/videos/search`, {
+    const data = await omkarRequest<{ videos?: unknown }>((apiKey) => ({
+      method: "get",
+      url: `${OMKAR_BASE_URL}/tiktok/videos/search`,
       params: {
         search_query: query,
         market: "ca",
         max_results: maxResults,
         sort_by: sortBy,
       },
-      headers: omkarHeaders(),
-    });
-    return mapOmkarList(response.data?.videos);
+      headers: omkarHeaders(apiKey),
+      timeout: 45000,
+    }));
+    return mapOmkarList(data?.videos);
   }
 
   private static async getTrendingOmkar(
     maxResults: number,
   ): Promise<TikTokVideo[]> {
-    const response = await axios.get(
-      `${OMKAR_BASE_URL}/tiktok/videos/trending`,
-      {
-        params: {
-          market: "ca",
-          max_results: maxResults,
-        },
-        headers: omkarHeaders(),
+    const data = await omkarRequest<{ videos?: unknown }>((apiKey) => ({
+      method: "get",
+      url: `${OMKAR_BASE_URL}/tiktok/videos/trending`,
+      params: {
+        market: "ca",
+        max_results: maxResults,
       },
-    );
-    return mapOmkarList(response.data?.videos);
+      headers: omkarHeaders(apiKey),
+      timeout: 45000,
+    }));
+    return mapOmkarList(data?.videos);
   }
 
   /**
@@ -411,7 +418,7 @@ export class TikTokScraperService {
     query: string,
     maxResults: number = 15,
   ): Promise<TikTokVideo[]> {
-    if (TIKTOK_SCRAPER_API_KEY) {
+    if (isOmkarKeyConfigured()) {
       try {
         const videos = await this.searchOmkar(query, maxResults);
         if (videos.length > 0) return videos;
@@ -463,7 +470,7 @@ export class TikTokScraperService {
    * Trending (Omkar when keyed, else TikAPI explore for CA).
    */
   static async getTrending(maxResults: number = 15): Promise<TikTokVideo[]> {
-    if (TIKTOK_SCRAPER_API_KEY) {
+    if (isOmkarKeyConfigured()) {
       try {
         const videos = await this.getTrendingOmkar(maxResults);
         if (videos.length > 0) return videos;
@@ -497,20 +504,17 @@ export class TikTokScraperService {
    * Priority: Omkar when configured, then TikWM public fallback.
    */
   static async getVideoDetails(videoUrl: string): Promise<TikTokVideo | null> {
-    if (TIKTOK_SCRAPER_API_KEY) {
+    if (isOmkarKeyConfigured()) {
       try {
-        const response = await axios.get(
-          `${OMKAR_BASE_URL}/tiktok/videos/details`,
-          {
-            params: { video_url: videoUrl },
-            headers: omkarHeaders(),
-          },
-        );
-        if (response.data && typeof response.data === "object") {
-          return mapOmkarItemToVideo(
-            response.data as Record<string, unknown>,
-            videoUrl,
-          );
+        const data = await omkarRequest<Record<string, unknown>>((apiKey) => ({
+          method: "get",
+          url: `${OMKAR_BASE_URL}/tiktok/videos/details`,
+          params: { video_url: videoUrl },
+          headers: omkarHeaders(apiKey),
+          timeout: 45000,
+        }));
+        if (data && typeof data === "object") {
+          return mapOmkarItemToVideo(data, videoUrl);
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
