@@ -9,11 +9,19 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
+import type { Server as SocketIOServer } from "socket.io";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { db } from "../storage.js";
+import { db, storage } from "../storage.js";
 import { users } from "../../shared/schema.js";
 import { eq, sql } from "drizzle-orm";
+
+type DbGiftType =
+  | "comete"
+  | "feuille_erable"
+  | "fleur_de_lys"
+  | "feu"
+  | "coeur_or";
 
 const router = Router();
 
@@ -86,20 +94,41 @@ export type CennePackId = (typeof CENNE_PACKS)[number]["id"];
 // ─── Gift catalog (items users can send) ──────────────────────────────────────
 export const GIFT_ITEMS = [
   { id: "fleur", emoji: "🌸", name: "Fleur", cost: 10 },
+  { id: "bravo", emoji: "👏", name: "Bravo", cost: 15 },
   { id: "cafe", emoji: "☕", name: "Café", cost: 25 },
   { id: "coeur", emoji: "💛", name: "Coeur d'or", cost: 50 },
+  { id: "tiguy", emoji: "🤖", name: "Ti-Guy", cost: 75 },
   { id: "feu", emoji: "🔥", name: "Feu", cost: 100 },
+  { id: "poutine", emoji: "🍟", name: "Poutine", cost: 125 },
   { id: "erable", emoji: "🍁", name: "Érable", cost: 150 },
   { id: "fleur_de_lys", emoji: "⚜️", name: "Fleur de Lys", cost: 250 },
   { id: "couronne", emoji: "👑", name: "Couronne", cost: 500 },
+  { id: "sceau_voyageur", emoji: "🏅", name: "Sceau Voyageur", cost: 750 },
   { id: "comete", emoji: "☄️", name: "Comète", cost: 1000 },
 ] as const;
 
 export type GiftItemId = (typeof GIFT_ITEMS)[number]["id"];
 
+/** Map cenne catalog ids → legacy gift_type enum (amount stores actual cenne cost). */
+export const CENNE_TO_GIFT_TYPE: Record<GiftItemId, DbGiftType> = {
+  fleur: "fleur_de_lys",
+  bravo: "coeur_or",
+  cafe: "coeur_or",
+  coeur: "coeur_or",
+  tiguy: "coeur_or",
+  feu: "feu",
+  poutine: "feuille_erable",
+  erable: "feuille_erable",
+  fleur_de_lys: "fleur_de_lys",
+  couronne: "comete",
+  sceau_voyageur: "comete",
+  comete: "comete",
+};
+
 // ─── GET /catalog ─────────────────────────────────────────────────────────────
 router.get("/catalog", (_req, res) => {
-  res.json({ packs: CENNE_PACKS, gifts: GIFT_ITEMS });
+  const gifts = [...GIFT_ITEMS].sort((a, b) => a.cost - b.cost);
+  res.json({ packs: CENNE_PACKS, gifts });
 });
 
 // ─── GET /balance ─────────────────────────────────────────────────────────────
@@ -176,10 +205,11 @@ router.post("/buy-pack", requireAuth, async (req, res) => {
 // ─── POST /gift ───────────────────────────────────────────────────────────────
 // Deduct from sender balance, credit creator (minus 30% platform fee)
 router.post("/gift", requireAuth, async (req, res) => {
-  const { recipientId, giftId, postId } = req.body as {
+  const { recipientId, giftId, postId, streamId } = req.body as {
     recipientId: string;
     giftId: string;
     postId?: string;
+    streamId?: string;
   };
 
   const gift = GIFT_ITEMS.find((g) => g.id === giftId);
@@ -218,6 +248,25 @@ router.post("/gift", requireAuth, async (req, res) => {
       .set({ cashCredits: sql`${users.cashCredits} + ${creatorEarns}` })
       .where(eq(users.id, recipientId));
 
+    const giftType = CENNE_TO_GIFT_TYPE[gift.id as GiftItemId];
+    const persistedGift = await storage.createGift({
+      senderId,
+      recipientId,
+      postId: postId || null,
+      giftType,
+      amount: cost,
+      stripePaymentId: null,
+    });
+
+    await db
+      .update(users)
+      .set({ totalGiftsSent: sql`${users.totalGiftsSent} + 1` })
+      .where(eq(users.id, senderId));
+    await db
+      .update(users)
+      .set({ totalGiftsReceived: sql`${users.totalGiftsReceived} + 1` })
+      .where(eq(users.id, recipientId));
+
     // Notify creator via Supabase (real schema: actor_id, post_id, payload jsonb)
     await supabaseAdmin.from("notifications").insert({
       user_id: recipientId,
@@ -228,11 +277,56 @@ router.post("/gift", requireAuth, async (req, res) => {
         emoji: gift.emoji,
         name: gift.name,
         cost: gift.cost,
+        cenneGiftId: gift.id,
+        giftRecordId: persistedGift.id,
         message: `Tu as reçu un ${gift.emoji} ${gift.name} (${gift.cost}¢)!`,
       },
       lu: false,
       created_at: new Date().toISOString(),
     });
+
+    // Live stream floaters — server-validated emit after successful gift
+    if (streamId) {
+      const { data: liveStream } = await supabaseAdmin
+        .from("live_streams")
+        .select("id, user_id, status")
+        .eq("id", streamId)
+        .maybeSingle();
+
+      if (
+        liveStream &&
+        liveStream.user_id === recipientId &&
+        liveStream.status === "active"
+      ) {
+        const senderProfile = await db
+          .select({
+            displayName: users.displayName,
+            username: users.username,
+          })
+          .from(users)
+          .where(eq(users.id, senderId))
+          .limit(1);
+
+        const senderName =
+          senderProfile[0]?.displayName ||
+          senderProfile[0]?.username ||
+          "Quelqu'un";
+
+        const io = req.app.get("io") as SocketIOServer | undefined;
+        if (io) {
+          io.to(`live:${streamId}`).emit("live:gift", {
+            id: `${Date.now()}-${persistedGift.id}`,
+            senderId,
+            senderName,
+            recipientId,
+            giftEmoji: gift.emoji,
+            giftName: gift.name,
+            giftCost: gift.cost,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    }
 
     // Fetch updated sender balance
     const balanceResult = await db
@@ -244,6 +338,7 @@ router.post("/gift", requireAuth, async (req, res) => {
     res.json({
       success: true,
       gift: { id: gift.id, emoji: gift.emoji, name: gift.name, cost },
+      giftRecordId: persistedGift.id,
       newBalance: balanceResult[0]?.cashCredits ?? 0,
       creatorEarned: creatorEarns,
     });

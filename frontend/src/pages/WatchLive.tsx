@@ -418,6 +418,7 @@ export default function WatchLive() {
         <GiftPicker
           recipientId={stream.userId}
           recipientName={stream.username || "ce créateur"}
+          streamId={stream.streamId || id}
           onClose={() => {
             setShowGiftPicker(false);
             // Refresh chat after gift picker closes to pick up any new gift messages

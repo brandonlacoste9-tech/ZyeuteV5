@@ -35,6 +35,7 @@ export interface CenneBalance {
 export interface GiftResult {
   success: boolean;
   gift: { id: string; emoji: string; name: string; cost: number };
+  giftRecordId?: string;
   newBalance: number;
   creatorEarned: number;
 }
@@ -68,10 +69,11 @@ export async function sendGift(
   recipientId: string,
   giftId: string,
   postId?: string,
+  streamId?: string,
 ): Promise<GiftResult> {
   const { data, error } = await apiCall<GiftResult>("/cennes/gift", {
     method: "POST",
-    body: JSON.stringify({ recipientId, giftId, postId }),
+    body: JSON.stringify({ recipientId, giftId, postId, streamId }),
   });
   if (error || !data) {
     throw new Error(error || "Erreur lors du cadeau");

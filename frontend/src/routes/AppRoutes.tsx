@@ -59,6 +59,14 @@ const NetworkPage = lazy(() => import("@/pages/Network"));
 const HashtagDetail = lazy(() => import("@/pages/HashtagDetail"));
 const SearchResults = lazy(() => import("@/pages/SearchResults"));
 const SoundDetail = lazy(() => import("@/pages/SoundDetail"));
+const ArcadeHub = lazy(() => import("@/pages/ArcadeHub"));
+const GridRushLobby = lazy(() => import("@/pages/GridRushLobby"));
+const GridRushMatch = lazy(() => import("@/pages/GridRushMatch"));
+const PoutineLobby = lazy(() => import("@/pages/PoutineLobby"));
+const PoutineStackGame = lazy(
+  () => import("@/components/features/PoutineStackGame"),
+);
+const HiveTap = lazy(() => import("@/pages/HiveTap"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -587,6 +595,31 @@ export function AppRoutes() {
             </RequireAuth>
           }
         />
+
+        {/* Arcade */}
+        <Route path="/arcade" element={<ArcadeHub />} />
+        <Route
+          path="/arcade/grid-rush"
+          element={
+            <RequireRealAccount>
+              <GridRushLobby />
+            </RequireRealAccount>
+          }
+        />
+        <Route
+          path="/arcade/grid-rush/:matchId"
+          element={
+            <RequireRealAccount>
+              <GridRushMatch />
+            </RequireRealAccount>
+          }
+        />
+        <Route path="/games/poutine" element={<PoutineLobby />} />
+        <Route
+          path="/royale/play/:tournamentId"
+          element={<PoutineStackGame />}
+        />
+        <Route path="/hive-tap" element={<HiveTap />} />
 
         <Route path="/" element={<Navigate to="/feed" replace />} />
       </Routes>

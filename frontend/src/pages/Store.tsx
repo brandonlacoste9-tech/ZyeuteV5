@@ -15,6 +15,12 @@ import {
 import { toast } from "../components/Toast";
 import { useHaptics } from "../hooks/useHaptics";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  GiftIcon,
+  getCreatorShare,
+  getGiftTier,
+  giftTierBorderClass,
+} from "@/lib/giftCatalog";
 
 export default function Store() {
   const { user } = useAuth();
@@ -37,7 +43,7 @@ export default function Store() {
           : Promise.resolve({ balance: 0, balanceDisplay: "0¢" }),
       ]);
       setPacks(catalog.packs);
-      setGifts(catalog.gifts);
+      setGifts([...catalog.gifts].sort((a, b) => a.cost - b.cost));
       setBalance(bal.balance);
     } catch {
       // silent — catalog still shows
@@ -226,20 +232,27 @@ export default function Store() {
           </p>
           <div className="leather-card rounded-2xl p-5 stitched">
             <div className="grid grid-cols-4 gap-3">
-              {gifts.map((gift) => (
-                <div
-                  key={gift.id}
-                  className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <span className="text-3xl">{gift.emoji}</span>
-                  <span className="text-leather-200 text-xs font-semibold text-center leading-tight">
-                    {gift.name}
-                  </span>
-                  <span className="text-gold-400 text-xs font-black">
-                    {gift.cost}¢
-                  </span>
-                </div>
-              ))}
+              {gifts.map((gift) => {
+                const tier = getGiftTier(gift.cost);
+                const creatorShare = getCreatorShare(gift.cost);
+                return (
+                  <div
+                    key={gift.id}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors ${giftTierBorderClass(tier)}`}
+                  >
+                    <GiftIcon id={gift.id} emoji={gift.emoji} />
+                    <span className="text-leather-200 text-xs font-semibold text-center leading-tight">
+                      {gift.name}
+                    </span>
+                    <span className="text-gold-400 text-xs font-black">
+                      {gift.cost}¢
+                    </span>
+                    <span className="text-[10px] text-gold-500/60 text-center">
+                      Créateur {creatorShare}¢
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

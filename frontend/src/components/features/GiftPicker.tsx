@@ -17,6 +17,12 @@ import { useHaptics } from "../../hooks/useHaptics";
 import { useAuth } from "../../contexts/AuthContext";
 import usePremium from "../../hooks/usePremium";
 import { SheetShell } from "@/components/ui/SheetShell";
+import {
+  GiftIcon,
+  getCreatorShare,
+  getGiftTier,
+  giftTierBorderClass,
+} from "@/lib/giftCatalog";
 
 interface FloatingGift {
   id: string;
@@ -28,6 +34,7 @@ interface GiftPickerProps {
   recipientId: string;
   recipientName: string;
   postId?: string;
+  streamId?: string;
   onClose: () => void;
   /** Container ref so we can float emojis over the video */
   containerRef?: React.RefObject<HTMLElement>;
@@ -37,6 +44,7 @@ export function GiftPicker({
   recipientId,
   recipientName,
   postId,
+  streamId,
   onClose,
 }: GiftPickerProps) {
   const { user } = useAuth();
@@ -58,7 +66,7 @@ export function GiftPicker({
         ? getCenneBalance()
         : Promise.resolve({ balance: 0, balanceDisplay: "0¢" }),
     ]).then(([catalog, bal]) => {
-      setGifts(catalog.gifts);
+      setGifts([...catalog.gifts].sort((a, b) => a.cost - b.cost));
       setBalance(bal.balance);
     });
   }, [user]);
@@ -88,7 +96,7 @@ export function GiftPicker({
 
     setSending(true);
     try {
-      const result = await sendGift(recipientId, selected.id, postId);
+      const result = await sendGift(recipientId, selected.id, postId, streamId);
       fireHaptic();
       spawnFloater(selected.emoji);
       setBalance(result.newBalance);
@@ -189,12 +197,14 @@ export function GiftPicker({
           {gifts.map((gift) => {
             const isSelected = selected?.id === gift.id;
             const canAfford = balance >= gift.cost;
+            const tier = getGiftTier(gift.cost);
+            const creatorShare = getCreatorShare(gift.cost);
             return (
               <button
                 key={gift.id}
                 type="button"
                 onClick={() => setSelected(isSelected ? null : gift)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${
+                className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${giftTierBorderClass(tier)} ${
                   isSelected
                     ? "bg-gold-500/30 ring-2 ring-gold-500 scale-105"
                     : canAfford
@@ -202,9 +212,7 @@ export function GiftPicker({
                       : "bg-white/3 opacity-40"
                 }`}
               >
-                <span className="text-3xl" aria-hidden="true">
-                  {gift.emoji}
-                </span>
+                <GiftIcon id={gift.id} emoji={gift.emoji} />
                 <span className="text-leather-200 text-[10px] font-semibold leading-tight text-center">
                   {gift.name}
                 </span>
@@ -212,6 +220,9 @@ export function GiftPicker({
                   className={`text-[10px] font-black ${canAfford ? "text-gold-400" : "text-leather-500"}`}
                 >
                   {gift.cost}¢
+                </span>
+                <span className="text-[9px] text-gold-500/60 leading-tight text-center">
+                  Créateur {creatorShare}¢
                 </span>
               </button>
             );

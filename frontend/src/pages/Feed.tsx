@@ -3,11 +3,9 @@
  * Leather post cards with gold accents and stitching
  */
 
-import React, { useState, useCallback } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React from "react";
+import { Link } from "react-router-dom";
 import { StoryCarousel } from "@/components/features/StoryCircle";
-import { GiftModal } from "@/components/features/GiftModal";
-import { GiftOverlay } from "@/components/features/GiftOverlay";
 import { Onboarding, useOnboarding } from "@/components/Onboarding";
 import { getCurrentUser, getStories } from "@/services/api";
 import { ContinuousFeed } from "@/components/features/ContinuousFeed";
@@ -67,17 +65,10 @@ const FeedTabBar: React.FC<{
   );
 };
 
-const GIFT_EMOJIS: Record<string, string> = {
-  comete: "☄️",
-  feuille_erable: "⚜️",
-  fleur_de_lys: "⚜️",
-  feu: "🔥",
-  coeur_or: "💛",
-};
-
 export const Feed: React.FC = () => {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = React.useState<"decouverte" | "abonnements">("decouverte");
+  const [activeTab, setActiveTab] = React.useState<
+    "decouverte" | "abonnements"
+  >("decouverte");
 
   // State for stories and user (restored)
   const [stories, setStories] = React.useState<
@@ -93,17 +84,6 @@ export const Feed: React.FC = () => {
   const { showOnboarding, isChecked, completeOnboarding, notifyVideoScrolled } =
     useOnboarding();
   const { incrementViews } = useGuestMode();
-
-  // Gift modal state
-  const [giftModalOpen, setGiftModalOpen] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState<User | null>(null);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-
-  // Gift overlay animation state
-  const [showGiftOverlay, setShowGiftOverlay] = useState(false);
-  const [sentGiftEmoji, setSentGiftEmoji] = useState("");
-  const [sentGiftType, setSentGiftType] = useState("");
-  const [sentGiftRecipientName, setSentGiftRecipientName] = useState("");
 
   // Increment guest view counter on page load
   React.useEffect(() => {
@@ -168,49 +148,6 @@ export const Feed: React.FC = () => {
 
     fetchStories();
   }, [currentUser]);
-
-  // Handle gift button click
-  const handleGift = useCallback(
-    (postId: string, recipient: User) => {
-      const guestMode = localStorage.getItem("zyeute_guest_mode");
-      if (guestMode === "true") {
-        alert("Inscrivez-vous pour envoyer des cadeaux ! 🎁");
-        return;
-      }
-      if (!currentUser) {
-        alert("Tu dois être connecté pour envoyer un cadeau! 🎁");
-        return;
-      }
-      if (currentUser.id === recipient.id) {
-        alert("Tu ne peux pas t'envoyer un cadeau! 😅");
-        return;
-      }
-      setSelectedPostId(postId);
-      setSelectedRecipient(recipient);
-      setGiftModalOpen(true);
-    },
-    [currentUser],
-  );
-
-  // Handle gift sent - update gift count and show overlay
-  const handleGiftSent = useCallback(
-    (giftType: string) => {
-      // Trigger overlay animation
-      setSentGiftType(giftType);
-      setSentGiftEmoji(GIFT_EMOJIS[giftType] || "🎁");
-      setSentGiftRecipientName(
-        selectedRecipient?.display_name ||
-          selectedRecipient?.username ||
-          "Créateur",
-      );
-      setShowGiftOverlay(true);
-
-      setGiftModalOpen(false);
-      setSelectedRecipient(null);
-      setSelectedPostId(null);
-    },
-    [selectedRecipient],
-  );
 
   return (
     <div className="flex flex-col h-full bg-black overflow-hidden">
@@ -348,30 +285,6 @@ export const Feed: React.FC = () => {
           />
         </ErrorBoundary>
       </div>
-
-      {/* Gift Modal */}
-      {selectedRecipient && selectedPostId && (
-        <GiftModal
-          recipient={selectedRecipient}
-          postId={selectedPostId}
-          isOpen={giftModalOpen}
-          onClose={() => {
-            setGiftModalOpen(false);
-            setSelectedRecipient(null);
-            setSelectedPostId(null);
-          }}
-          onGiftSent={handleGiftSent}
-        />
-      )}
-
-      {/* Gift Overlay Animation */}
-      <GiftOverlay
-        giftType={sentGiftType}
-        emoji={sentGiftEmoji}
-        recipientName={sentGiftRecipientName}
-        isVisible={showGiftOverlay}
-        onComplete={() => setShowGiftOverlay(false)}
-      />
     </div>
   );
 };

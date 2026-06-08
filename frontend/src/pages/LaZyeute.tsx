@@ -34,6 +34,10 @@ import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
 import { FeedPostActionsSheet } from "@/components/feed/FeedPostActionsSheet";
+import {
+  FeedProgressBar,
+  type FeedProgressBarHandle,
+} from "@/components/feed/FeedProgressBar";
 import { useQueryClient } from "@tanstack/react-query";
 import { removePostFromFeedCache } from "@/hooks/useInfiniteFeed";
 import { GiftPicker } from "@/components/features/GiftPicker";
@@ -382,6 +386,7 @@ export const Zyeute: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
   const userPausedRef = useRef(false);
   const feedRestoreOnce = useRef(false);
   const [measuredSlideH, setMeasuredSlideH] = useState(0);
@@ -407,14 +412,6 @@ export const Zyeute: React.FC = () => {
     if (measuredSlideH > 0) return measuredSlideH;
     return containerRef.current?.clientHeight || window.innerHeight;
   }, [measuredSlideH]);
-
-  const scrollToIndex = useCallback(
-    (index: number, behavior: ScrollBehavior = "smooth") => {
-      const h = getSlideHeight();
-      containerRef.current?.scrollTo({ top: index * h, behavior });
-    },
-    [getSlideHeight],
-  );
 
   const handleFeedSourceChange = useCallback(
     (source: FeedType) => {
@@ -468,25 +465,19 @@ export const Zyeute: React.FC = () => {
     key: number;
   } | null>(null);
 
-  // Progress bar tracking (TikTok-style)
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>(
-    {},
-  );
+  // Progress bar tracking (TikTok-style).
+  // Driven imperatively so the high-frequency `timeupdate` events never
+  // re-render the feed tree — only the isolated <FeedProgressBar/> updates.
+  const progressBarRef = useRef<FeedProgressBarHandle>(null);
 
   const handleTimeUpdate = useCallback(
-    (postId: string, currentTime: number, duration: number) => {
+    (currentTime: number, duration: number) => {
       if (duration > 0) {
-        setVideoProgress((prev) => ({
-          ...prev,
-          [postId]: currentTime / duration,
-        }));
+        progressBarRef.current?.setProgress(currentTime / duration);
       }
     },
     [],
   );
-
-  const touchStartY = useRef<number>(0);
-  const touchEndY = useRef<number>(0);
 
   // Current post for edge lighting
   const currentPost = useMemo(() => posts[currentIndex], [posts, currentIndex]);
@@ -584,60 +575,57 @@ export const Zyeute: React.FC = () => {
     fetchNextPage,
   ]);
 
+  // Active-index detection from scroll position, coalesced to one read per
+  // animation frame. This keeps the scroll thread free of repeated layout
+  // reads/setState during a fling — setCurrentIndex still only fires when the
+  // slide boundary actually changes.
   const handleScroll = useCallback(() => {
-    if (!containerRef.current) return;
-    const scrollTop = containerRef.current.scrollTop;
-    const slideHeight = getSlideHeight();
-    const newIndex = Math.round(scrollTop / slideHeight);
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < posts.length) {
-      setCurrentIndex(newIndex);
-    }
-    if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
-    scrollSaveTimer.current = setTimeout(() => {
-      const idx = Math.round(scrollTop / slideHeight);
-      if (idx >= 0 && idx < posts.length) {
-        try {
-          sessionStorage.setItem(`zyeute_scroll_${feedSource}`, String(idx));
-        } catch {
-          /* */
-        }
+    if (scrollRafRef.current != null) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const el = containerRef.current;
+      if (!el) return;
+      const scrollTop = el.scrollTop;
+      const slideHeight = getSlideHeight();
+      if (slideHeight <= 0) return;
+      const newIndex = Math.round(scrollTop / slideHeight);
+      if (
+        newIndex !== currentIndex &&
+        newIndex >= 0 &&
+        newIndex < posts.length
+      ) {
+        setCurrentIndex(newIndex);
       }
-    }, 400);
+      if (scrollSaveTimer.current) clearTimeout(scrollSaveTimer.current);
+      scrollSaveTimer.current = setTimeout(() => {
+        if (newIndex >= 0 && newIndex < posts.length) {
+          try {
+            sessionStorage.setItem(
+              `zyeute_scroll_${feedSource}`,
+              String(newIndex),
+            );
+          } catch {
+            /* */
+          }
+        }
+      }, 400);
+    });
   }, [currentIndex, posts.length, feedSource, getSlideHeight]);
 
-  // Touch gesture handlers for swipe
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const y = e.touches[0].clientY;
-    touchStartY.current = y;
-    touchEndY.current = y; // Initialize to same value to prevent false swipes on taps
-  }, []);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    touchEndY.current = e.touches[0].clientY;
-  }, []);
-
-  const handleTouchEnd = useCallback(
-    (e: React.TouchEvent) => {
-      // Use changedTouches for accurate end position
-      const endY = e.changedTouches[0]?.clientY ?? touchEndY.current;
-      const diff = touchStartY.current - endY;
-      const threshold = 50;
-
-      // Only swipe if there was actual movement (not a tap)
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0 && currentIndex < posts.length - 1) {
-          const next = currentIndex + 1;
-          setCurrentIndex(next);
-          scrollToIndex(next);
-        } else if (diff < 0 && currentIndex > 0) {
-          const prev = currentIndex - 1;
-          setCurrentIndex(prev);
-          scrollToIndex(prev);
-        }
+  // Cancel any pending scroll rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current != null) {
+        cancelAnimationFrame(scrollRafRef.current);
       }
-    },
-    [currentIndex, posts.length, scrollToIndex],
-  );
+    };
+  }, []);
+
+  // Vertical paging is driven entirely by native CSS scroll-snap
+  // (`snap-y snap-mandatory`). We intentionally do NOT run a JS swipe handler
+  // that programmatically scrolls, because that fought the browser's native
+  // snap/momentum and produced the stutter users felt. The active index is
+  // derived from the scroll position in `handleScroll` (rAF-coalesced).
 
   const uid = authUser?.id ?? currentUser?.id;
 
@@ -961,12 +949,14 @@ export const Zyeute: React.FC = () => {
           <div
             ref={containerRef}
             onScroll={handleScroll}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
             className="absolute inset-0 overflow-y-scroll snap-y snap-mandatory scrollbar-hide z-0 w-full h-full"
             style={{
               scrollSnapType: "y mandatory",
+              // Keep paging contained to the feed and hint native momentum so
+              // swipes don't rubber-band into the page or fight a JS scroller.
+              overscrollBehavior: "contain",
+              touchAction: "pan-y",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {emptyFeedContent}
@@ -995,6 +985,17 @@ export const Zyeute: React.FC = () => {
                   style={{
                     height: slideH > 0 ? slideH : "100dvh",
                     minHeight: slideH > 0 ? slideH : "100dvh",
+                    // Isolate each slide's paint/layout so painting one slide
+                    // doesn't invalidate the others during scroll. Promote only
+                    // the active±1 slides to their own GPU layer (avoids
+                    // spawning a compositor layer per post in a long feed).
+                    contain: "layout paint",
+                    ...(nearActive
+                      ? {
+                          transform: "translateZ(0)",
+                          backfaceVisibility: "hidden" as const,
+                        }
+                      : null),
                   }}
                   data-testid={`post-slide-${post.id}`}
                 >
@@ -1033,9 +1034,10 @@ export const Zyeute: React.FC = () => {
                             muted={isMuted}
                             loop
                             resetOnDeactivate={false}
-                            onTimeUpdate={(ct, dur) =>
-                              handleTimeUpdate(post.id, ct, dur)
-                            }
+                            onTimeUpdate={(ct, dur) => {
+                              if (index === currentIndex)
+                                handleTimeUpdate(ct, dur);
+                            }}
                             onError={() => {
                               setMuxFallbackIds((prev) => {
                                 const next = new Set(prev);
@@ -1065,9 +1067,10 @@ export const Zyeute: React.FC = () => {
                                 ? "auto"
                                 : "metadata"
                             }
-                            onTimeUpdate={(ct, dur) =>
-                              handleTimeUpdate(post.id, ct, dur)
-                            }
+                            onTimeUpdate={(ct, dur) => {
+                              if (index === currentIndex)
+                                handleTimeUpdate(ct, dur);
+                            }}
                             onWatchThreshold={(_pct, ms) => {
                               if (index === currentIndex) {
                                 markVideoWatched(post.id, ms);
@@ -1089,25 +1092,31 @@ export const Zyeute: React.FC = () => {
                             getProxiedMediaUrl(post.media_url) || post.media_url
                           }
                           alt={post.caption || "Post image"}
-                          className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear ${
+                          className={`w-full h-full object-cover transition-transform duration-[8000ms] ease-linear motion-reduce:transition-none motion-reduce:scale-100 ${
                             index === currentIndex ? "scale-110" : "scale-100"
                           }`}
                         />
                       </div>
                     )}
 
-                    {/* Gold Edition Cinematic Particles & High-Fidelity Tech Overlay */}
-                    <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
-                      {/* Ambient Gold Aura */}
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
+                    {/* Gold Edition Cinematic Particles & High-Fidelity Tech
+                        Overlay. Only rendered for the active slide and its
+                        neighbours — the blurred/mix-blend/animated layers are
+                        expensive to composite, so we never paint them for
+                        off-screen slides (huge scroll-paint win on long feeds). */}
+                    {nearActive && (
+                      <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
+                        {/* Ambient Gold Aura */}
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
 
-                      {/* Sub-pixel Tech Scanlines */}
-                      <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
+                        {/* Sub-pixel Tech Scanlines */}
+                        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
 
-                      {/* Localized 'Gold Edition' Lens Flare Glow */}
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse" />
-                      <div className="absolute inset-0 gold-glow-soft opacity-50" />
-                    </div>
+                        {/* Localized 'Gold Edition' Lens Flare Glow */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse motion-reduce:animate-none" />
+                        <div className="absolute inset-0 gold-glow-soft opacity-50" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Tap overlay: single tap = play/pause, double-tap = fire */}
@@ -1117,19 +1126,12 @@ export const Zyeute: React.FC = () => {
                     onClick={() => handleVideoTap(post.id)}
                   />
 
-                  {/* TikTok-style progress bar at bottom of video */}
+                  {/* TikTok-style progress bar at bottom of video.
+                      Isolated component + key={post.id} → remounts (resets to
+                      0) on slide change and updates without re-rendering the
+                      feed. */}
                   {isVideoSlide && index === currentIndex && (
-                    <div className="absolute bottom-0 left-0 right-0 z-30 h-[3px] bg-white/10">
-                      <div
-                        className="h-full rounded-r-full transition-[width] duration-200 ease-linear"
-                        style={{
-                          width: `${(videoProgress[post.id] || 0) * 100}%`,
-                          background:
-                            "linear-gradient(90deg, var(--color-gold-600), var(--color-gold-400))",
-                          boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.5)",
-                        }}
-                      />
-                    </div>
+                    <FeedProgressBar key={post.id} ref={progressBarRef} />
                   )}
 
                   {/* Heart burst animation on double-tap fire */}

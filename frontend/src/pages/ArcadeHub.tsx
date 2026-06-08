@@ -2,11 +2,21 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { FaGamepad, FaHive, FaQuestionCircle } from "react-icons/fa";
+import { Zap } from "lucide-react";
 
 export default function ArcadeHub() {
   const navigate = useNavigate();
 
   const games = [
+    {
+      id: "grid-rush",
+      title: "Grid Rush",
+      description:
+        "Bataille de vitesse 1v1. Tape 1→16 avant ton adversaire. 45 secondes chrono.",
+      icon: <Zap className="w-12 h-12 text-amber-400" />,
+      status: "LIVE",
+      path: "/arcade/grid-rush",
+    },
     {
       id: "poutine",
       title: "Poutine Royale",

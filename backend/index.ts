@@ -2,8 +2,13 @@ import "./preload.js";
 // [SECURITY] SSL certificate validation bypass for local development.
 // This is required when connecting to certain Supabase/Railway endpoints with self-signed certs.
 // WARNING: Never enable this in production.
-if (process.env.NODE_ENV !== "production" && process.env.SKIP_SSL_VALIDATION === "true") {
-  console.warn("⚠️ Security: SSL certificate validation is disabled (SKIP_SSL_VALIDATION=true)");
+if (
+  process.env.NODE_ENV !== "production" &&
+  process.env.SKIP_SSL_VALIDATION === "true"
+) {
+  console.warn(
+    "⚠️ Security: SSL certificate validation is disabled (SKIP_SSL_VALIDATION=true)",
+  );
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 import express from "express";
@@ -347,6 +352,8 @@ app.use((req, res, next) => {
             "20260221_video_playback_schema.sql",
             "20260224_add_type_column.sql",
             "20260225_bulk_repair_videos.sql",
+            "20260608_gifts_nullable_post_id.sql",
+            "20260608_grid_rush_matches.sql",
           ];
           for (const file of migrations) {
             try {

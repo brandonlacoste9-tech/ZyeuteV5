@@ -454,9 +454,9 @@ export const gifts = pgTable(
     recipientId: uuid("recipient_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    postId: uuid("post_id")
-      .notNull()
-      .references(() => posts.id, { onDelete: "cascade" }),
+    postId: uuid("post_id").references(() => posts.id, {
+      onDelete: "cascade",
+    }),
     giftType: giftTypeEnum("gift_type").notNull(),
     amount: integer("amount").notNull(), // in cents
     stripePaymentId: text("stripe_payment_id").unique(),
@@ -893,6 +893,44 @@ export const tournaments = pgTable("tournaments", {
     .defaultNow()
     .notNull(),
 });
+
+export const gridRushStatusEnum = pgEnum("grid_rush_status", [
+  "WAITING",
+  "ACTIVE",
+  "COMPLETED",
+  "CANCELLED",
+]);
+
+export const gridRushMatches = pgTable(
+  "grid_rush_matches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    status: gridRushStatusEnum("status").default("WAITING").notNull(),
+    player1Id: uuid("player_1_id")
+      .references(() => users.id)
+      .notNull(),
+    player2Id: uuid("player_2_id").references(() => users.id),
+    player1Score: integer("player_1_score").default(0).notNull(),
+    player2Score: integer("player_2_score").default(0).notNull(),
+    stakeCennes: integer("stake_cennes").default(500).notNull(),
+    winnerId: uuid("winner_id").references(() => users.id),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    waitingIdx: index("idx_grid_rush_waiting").on(
+      table.status,
+      table.stakeCennes,
+      table.createdAt,
+    ),
+  }),
+);
 
 export const royaleScores = pgTable(
   "royale_scores",

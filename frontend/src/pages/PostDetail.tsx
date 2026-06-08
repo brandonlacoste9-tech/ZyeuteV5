@@ -15,7 +15,7 @@ import { FireRating } from "../components/features/FireRating";
 import { VideoPlayer } from "../components/features/VideoPlayer";
 import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
 import { VirtualCommentList } from "../components/features/VirtualCommentList";
-import { GiftModal } from "../components/features/GiftModal";
+import { GiftPicker } from "../components/features/GiftPicker";
 import { supabase } from "../lib/supabase";
 import { getPostById } from "../services/api";
 import { formatNumber, getTimeAgo } from "../lib/utils";
@@ -42,7 +42,7 @@ export const PostDetail: React.FC = () => {
   const [newComment, setNewComment] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isGiftModalOpen, setIsGiftModalOpen] = React.useState(false);
+  const [isGiftPickerOpen, setIsGiftPickerOpen] = React.useState(false);
 
   useOpenGraph(post);
 
@@ -263,7 +263,7 @@ export const PostDetail: React.FC = () => {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => setIsGiftModalOpen(true)}
+                    onClick={() => setIsGiftPickerOpen(true)}
                   >
                     🎁
                   </Button>
@@ -343,13 +343,15 @@ export const PostDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* Gift Modal */}
-      {post?.user && (
-        <GiftModal
-          recipient={post.user}
+      {/* Gift picker — cenne balance flow */}
+      {isGiftPickerOpen && post?.user && (
+        <GiftPicker
+          recipientId={post.user.id}
+          recipientName={
+            post.user.display_name || post.user.username || "ce créateur"
+          }
           postId={post.id}
-          isOpen={isGiftModalOpen}
-          onClose={() => setIsGiftModalOpen(false)}
+          onClose={() => setIsGiftPickerOpen(false)}
         />
       )}
 
