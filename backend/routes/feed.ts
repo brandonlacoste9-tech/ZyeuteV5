@@ -690,13 +690,6 @@ router.get(
         offsetInBlock + limit,
       );
 
-      if (hiddenIds.length > 0) {
-        const hiddenSet = new Set(hiddenIds);
-        finalPosts = finalPosts.filter(
-          (p: Record<string, unknown>) => !hiddenSet.has(String(p.id)),
-        );
-      }
-
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {
         blockIndex = 0;
@@ -756,6 +749,13 @@ router.get(
               : dedupedFallback;
           finalPosts = spacedFallback.slice(0, limit);
         }
+      }
+
+      if (hiddenIds.length > 0) {
+        const hiddenSet = new Set(hiddenIds);
+        finalPosts = finalPosts.filter(
+          (p: Record<string, unknown>) => !hiddenSet.has(String(p.id)),
+        );
       }
 
       const activeOffset = didWrap ? 0 : pageOffset;
