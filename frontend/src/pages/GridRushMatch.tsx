@@ -108,11 +108,13 @@ export default function GridRushMatchPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  useEffect(() => {
-    if (!user) navigate("/login");
-  }, [user, navigate]);
-
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-gold-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (

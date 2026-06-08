@@ -138,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
 
         if ((initialSession as any)?.user) {
+          setIsGuest(false);
           setSession(initialSession as any);
           // Start profile enhancement but don't block on it
           enhanceUser((initialSession as any).user)

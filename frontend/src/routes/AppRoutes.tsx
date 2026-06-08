@@ -151,11 +151,16 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 /** Real Supabase profile — blocks guest mode (RequireAuth alone allows guests). */
 function RequireRealAccount({ children }: { children: ReactNode }) {
-  const { user, isGuest, isLoading } = useAuth();
+  const { user, session, isGuest, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
     return <LoadingScreen message="Chargement..." />;
+  }
+
+  // Session exists but profile still hydrating — wait (avoids login ↔ app bounce)
+  if (session?.user && !user && !isGuest) {
+    return <LoadingScreen message="Chargement du profil..." />;
   }
 
   if (!user || isGuest) {
