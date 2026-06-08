@@ -3,6 +3,8 @@
  * API budget: defaults to ~1 Omkar call per run (100 free queries/month).
  */
 import { logger } from "../utils/logger.js";
+import { withCronLock } from "../utils/cron-lock.js";
+import { filterUnseenTikTokVideos } from "../utils/tiktok-seed-dedup.js";
 import { getQuebecTikTokQueries } from "./feed-seed-providers.js";
 import {
   countPlayableFeedPosts,
@@ -16,6 +18,7 @@ import {
 } from "./tiktok-scraper-service.js";
 
 const log = logger.withContext("FeedReplenishOmkar");
+const OMKAR_SEED_LOCK = "omkar-seed";
 
 function envInt(name: string, fallback: number): number {
   const v = parseInt(process.env[name] || "", 10);
@@ -108,6 +111,35 @@ export async function replenishFeedOmkarIfLow(options?: {
   maxImport?: number;
   hiveId?: string;
 }): Promise<OmkarReplenishResult> {
+  const result = await withCronLock(OMKAR_SEED_LOCK, () =>
+    replenishFeedOmkarIfLowInner(options),
+  );
+
+  if (result === null) {
+    log.info("Another Omkar seed run in progress — skipping");
+    return {
+      imported: 0,
+      duplicate: 0,
+      skipped: 0,
+      failed: 0,
+      moderation: 0,
+      candidates: 0,
+      omkarCalls: 0,
+      feedCountBefore: 0,
+      playableCountBefore: 0,
+      triggered: false,
+      errors: ["skipped: overlapping cron lock"],
+    };
+  }
+
+  return result;
+}
+
+async function replenishFeedOmkarIfLowInner(options?: {
+  force?: boolean;
+  maxImport?: number;
+  hiveId?: string;
+}): Promise<OmkarReplenishResult> {
   const hiveId = options?.hiveId ?? "quebec";
   const force = options?.force === true;
   const minPosts = envInt("FEED_MIN_PLAYABLE_POSTS", 150);
@@ -166,13 +198,18 @@ export async function replenishFeedOmkarIfLow(options?: {
     force,
   });
 
+  const { unseen, skippedDuplicate } = await filterUnseenTikTokVideos(videos);
+  if (skippedDuplicate > 0) {
+    log.info(`${skippedDuplicate} Omkar candidates already in DB (pre-filter)`);
+  }
+
   let imported = 0;
-  let duplicate = 0;
+  let duplicate = skippedDuplicate;
   let skipped = 0;
   let failed = 0;
   let moderation = 0;
 
-  for (const video of videos) {
+  for (const video of unseen) {
     if (imported >= maxImport) break;
 
     const result = await importTikTokVideoToFeed(video, {
@@ -208,7 +245,7 @@ export async function replenishFeedOmkarIfLow(options?: {
     skipped,
     failed,
     moderation,
-    candidates: videos.length,
+    candidates: unseen.length,
     omkarCalls,
     feedCountBefore,
     playableCountBefore,

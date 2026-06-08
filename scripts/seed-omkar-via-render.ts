@@ -18,6 +18,13 @@ import {
   type TikTokVideo,
 } from "../backend/services/tiktok-scraper-service.js";
 import type { FeedSeedCandidate } from "../backend/services/tikapi-hashtag.js";
+import {
+  acquireCronLock,
+  releaseCronLock,
+} from "../backend/utils/cron-lock.js";
+import { filterUnseenTikTokVideos } from "../backend/utils/tiktok-seed-dedup.js";
+
+const LOCK_NAME = "omkar-seed";
 
 const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
 const OMKAR = "https://tiktok-scraper.omkar.cloud";
@@ -119,6 +126,20 @@ function toCandidate(v: TikTokVideo): FeedSeedCandidate {
 }
 
 async function main() {
+  const acquired = await acquireCronLock(LOCK_NAME);
+  if (!acquired) {
+    console.log("Another Omkar seed run is in progress — exiting.");
+    process.exit(0);
+  }
+
+  try {
+    await runSeed();
+  } finally {
+    await releaseCronLock(LOCK_NAME);
+  }
+}
+
+async function runSeed() {
   const limit = parseArg("limit", 15);
   const cron = process.env.CRON_SECRET?.trim().replace(/^["']+|["']+$/g, "");
   const focusQuery = parseStringArg("query");
@@ -136,8 +157,18 @@ async function main() {
     includeTrending,
     maxPerQuery,
   });
-  console.log(`   ${popular.length} unique candidates`);
-  popular
+  console.log(`   ${popular.length} unique candidates from Omkar`);
+
+  const { unseen, skippedDuplicate } = await filterUnseenTikTokVideos(popular);
+  if (skippedDuplicate > 0) {
+    console.log(`   ⏩ ${skippedDuplicate} already in DB (skipped)`);
+  }
+  if (unseen.length === 0) {
+    console.error("❌ No new videos to import (all duplicates)");
+    process.exit(1);
+  }
+
+  unseen
     .slice(0, 5)
     .forEach((v) =>
       console.log(
@@ -145,7 +176,7 @@ async function main() {
       ),
     );
 
-  const candidates = popular.slice(0, limit).map(toCandidate);
+  const candidates = unseen.slice(0, limit).map(toCandidate);
   if (!candidates.length) {
     console.error("❌ No importable videos from Omkar");
     process.exit(1);
