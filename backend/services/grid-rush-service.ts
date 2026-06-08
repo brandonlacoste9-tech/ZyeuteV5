@@ -284,9 +284,10 @@ export class GridRushService {
 
     // Primary path: Postgres RPC over Supabase HTTP — no pg pool at all.
     if (supabaseAdmin) {
+      // PostgREST resolves RPC args in alphabetical key order (p_stake, p_user_id).
       const { data, error } = await supabaseAdmin.rpc(
         "grid_rush_create_bot_match",
-        { p_user_id: userId, p_stake: stake },
+        { p_stake: stake, p_user_id: userId },
       );
       if (error) throw new Error(error.message);
       const row = (Array.isArray(data) ? data[0] : data) as Record<
