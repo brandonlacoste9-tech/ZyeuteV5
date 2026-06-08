@@ -89,19 +89,39 @@ function filterPlayablePosts(items: Post[]): FeedPost[] {
   }) as FeedPost[];
 }
 
-const FEED_SPACING = { minContentGap: 12, minAuthorGap: 3, recycleMinGap: 24 };
+const FEED_SPACING = {
+  minContentGap: 16,
+  minAuthorGap: 6,
+  recycleMinGap: 40,
+};
 
-function prepareFeedPage(posts: FeedPost[]): FeedPost[] {
-  return spaceOutFeed(
-    dedupePostsByContent(posts),
-    [],
-    FEED_SPACING,
-  ) as FeedPost[];
+function getFeedShuffleSeed(): number {
+  try {
+    const key = "zyeute_feed_shuffle_seed";
+    let stored = sessionStorage.getItem(key);
+    if (!stored) {
+      stored = String((Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
+      sessionStorage.setItem(key, stored);
+    }
+    return parseInt(stored, 10) || Date.now() >>> 0;
+  } catch {
+    return Date.now() >>> 0;
+  }
+}
+
+function prepareFeedPage(posts: FeedPost[], pageOffset = 0): FeedPost[] {
+  return prepareShuffledFeed(posts, {
+    ...FEED_SPACING,
+    shuffleSeed: (getFeedShuffleSeed() + pageOffset) >>> 0,
+  }) as FeedPost[];
 }
 
 /** Append new page; dedupe by clip fingerprint and space repeats apart. */
 function mergeFeedPages(prev: FeedPost[], incoming: FeedPost[]): FeedPost[] {
-  return mergeFeedWithDedup(prev, incoming, FEED_SPACING) as FeedPost[];
+  return mergeFeedWithDedup(prev, incoming, {
+    ...FEED_SPACING,
+    shuffleSeed: (getFeedShuffleSeed() + prev.length) >>> 0,
+  }) as FeedPost[];
 }
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
@@ -118,9 +138,8 @@ import { useFeedEngagement } from "@/hooks/useFeedEngagement";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
 import { getProxiedMediaUrl } from "@/utils/mediaProxy";
 import {
-  dedupePostsByContent,
   mergeFeedWithDedup,
-  spaceOutFeed,
+  prepareShuffledFeed,
 } from "@shared/utils/feedDedup";
 
 // ... imports ...
@@ -760,7 +779,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       );
 
       if (data.length > 0) {
-        const validPosts = prepareFeedPage(filterPlayablePosts(data));
+        const validPosts = prepareFeedPage(filterPlayablePosts(data), nextPage);
         if (validPosts.length > 0) {
           setPosts((prev) => mergeFeedPages(prev, validPosts));
           setHasMore(apiHasMore);

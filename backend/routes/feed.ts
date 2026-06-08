@@ -11,7 +11,10 @@ import {
 import {
   dedupePostsByContent,
   getPostContentKey,
-  spaceOutFeed,
+  interleaveQueues,
+  mergeFeedWithDedup,
+  prepareShuffledFeed,
+  shuffleWithSeed,
 } from "../../shared/utils/feedDedup.js";
 
 const SUPABASE_URL =
@@ -129,11 +132,19 @@ function orderExploreFeed(
   const sh = (arr: Record<string, unknown>[], seed: number) =>
     arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
 
+  const stockShuffled = sh(stock, blockSeed + 333);
+  const stockTail = stockShuffled.slice(0, Math.min(8, stockShuffled.length));
+
   return [
-    ...sh(tiktok, blockSeed),
-    ...sh(curated, blockSeed + 77),
-    ...sh(other, blockSeed + 111),
-    ...sh(stock, blockSeed + 333),
+    ...interleaveQueues(
+      [
+        sh(tiktok, blockSeed),
+        sh(curated, blockSeed + 77),
+        sh(other, blockSeed + 111),
+      ],
+      blockSeed,
+    ),
+    ...stockTail,
   ];
 }
 
@@ -679,9 +690,10 @@ router.get(
       const dedupedCandidates = dedupePostsByContent(feedCandidates);
       const spacedCandidates =
         feedType === "explore"
-          ? spaceOutFeed(dedupedCandidates, [], {
-              minContentGap: 10,
-              minAuthorGap: 3,
+          ? prepareShuffledFeed(dedupedCandidates, {
+              shuffleSeed: (blockSeed + seed) >>> 0,
+              minContentGap: 16,
+              minAuthorGap: 6,
             })
           : dedupedCandidates;
       let finalPosts = spacedCandidates.slice(
@@ -740,9 +752,10 @@ router.get(
           const dedupedFallback = dedupePostsByContent(fallbackCandidates);
           const spacedFallback =
             feedType === "explore"
-              ? spaceOutFeed(dedupedFallback, [], {
-                  minContentGap: 10,
-                  minAuthorGap: 3,
+              ? prepareShuffledFeed(dedupedFallback, {
+                  shuffleSeed: seed >>> 0,
+                  minContentGap: 16,
+                  minAuthorGap: 6,
                 })
               : dedupedFallback;
           finalPosts = spacedFallback.slice(0, limit);

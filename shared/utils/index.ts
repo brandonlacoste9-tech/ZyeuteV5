@@ -15,7 +15,11 @@ export {
   dedupePostsByContent,
   getPostAuthorKey,
   getPostContentKey,
+  interleaveByAuthor,
+  interleaveQueues,
   mergeFeedWithDedup,
+  prepareShuffledFeed,
+  shuffleWithSeed,
   spaceOutFeed,
   type FeedSpacingOptions,
 } from "./feedDedup";

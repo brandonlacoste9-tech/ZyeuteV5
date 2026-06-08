@@ -54,6 +54,108 @@ export function dedupePostsByContent<T extends Record<string, unknown>>(
   return out;
 }
 
+/** Deterministic Fisher–Yates shuffle (same seed → same order per session). */
+export function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
+  const a = [...arr];
+  let s = seed >>> 0;
+  const rand = () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/** Round-robin across creators so one account cannot dominate consecutive slots. */
+export function interleaveByAuthor<T extends Record<string, unknown>>(
+  posts: T[],
+  shuffleSeed?: number,
+): T[] {
+  if (posts.length <= 1) return [...posts];
+
+  const buckets = new Map<string, T[]>();
+  for (const p of posts) {
+    const key = getPostAuthorKey(p) || `post:${getPostContentKey(p)}`;
+    const list = buckets.get(key) ?? [];
+    list.push(p);
+    buckets.set(key, list);
+  }
+
+  if (buckets.size <= 1) {
+    return shuffleWithSeed(posts, shuffleSeed ?? posts.length * 7919);
+  }
+
+  const lists = [...buckets.values()].sort((a, b) => b.length - a.length);
+  const result: T[] = [];
+  while (result.length < posts.length) {
+    let placed = false;
+    for (const list of lists) {
+      if (list.length === 0) continue;
+      result.push(list.shift()!);
+      placed = true;
+    }
+    if (!placed) break;
+  }
+  return result;
+}
+
+/** Interleave category queues (TikTok / curated / other) instead of stacking blocks. */
+export function interleaveQueues<T>(queues: T[][], seed = 0): T[] {
+  const lists = queues.filter((q) => q.length > 0).map((q) => [...q]);
+  if (lists.length === 0) return [];
+  if (lists.length === 1) return lists[0];
+
+  const result: T[] = [];
+  const total = lists.reduce((n, l) => n + l.length, 0);
+  let round = 0;
+  while (result.length < total) {
+    for (let i = 0; i < lists.length; i++) {
+      const idx = (i + round + (seed % lists.length)) % lists.length;
+      const list = lists[idx];
+      if (list.length > 0) result.push(list.shift()!);
+    }
+    round++;
+  }
+  return result;
+}
+
+function countUniqueAuthors(posts: Record<string, unknown>[]): number {
+  return new Set(posts.map(getPostAuthorKey).filter(Boolean)).size;
+}
+
+/**
+ * Dedupe → shuffle → interleave creators → space identical clips apart.
+ * Use on each feed page and after personalization re-rank.
+ */
+export function prepareShuffledFeed<T extends Record<string, unknown>>(
+  posts: T[],
+  options: FeedSpacingOptions & {
+    shuffleSeed?: number;
+    recentContext?: T[];
+    recycleMinGap?: number;
+  } = {},
+): T[] {
+  const deduped = dedupePostsByContent(posts);
+  if (deduped.length <= 1) return deduped;
+
+  const seed = options.shuffleSeed ?? deduped.length * 2654435761;
+  const interleaved = interleaveByAuthor(shuffleWithSeed(deduped, seed), seed);
+  const uniqueAuthors = countUniqueAuthors(interleaved);
+
+  const spacing: Required<FeedSpacingOptions> = {
+    minContentGap: options.minContentGap ?? (uniqueAuthors <= 1 ? 20 : 16),
+    minAuthorGap: options.minAuthorGap ?? (uniqueAuthors <= 2 ? 10 : 6),
+  };
+  if (uniqueAuthors <= 1) spacing.minAuthorGap = 0;
+
+  return spaceOutFeed(interleaved, options.recentContext ?? [], spacing);
+}
+
 function violatesGap(
   post: Record<string, unknown>,
   recent: Record<string, unknown>[],
@@ -125,7 +227,10 @@ export function spaceOutFeed<T extends Record<string, unknown>>(
 export function mergeFeedWithDedup<T extends Record<string, unknown>>(
   prev: T[],
   incoming: T[],
-  options: FeedSpacingOptions & { recycleMinGap?: number } = {},
+  options: FeedSpacingOptions & {
+    recycleMinGap?: number;
+    shuffleSeed?: number;
+  } = {},
 ): T[] {
   const recycleMinGap = options.recycleMinGap ?? 24;
   const prevKeys = new Set(prev.map((p) => getPostContentKey(p)));
@@ -149,7 +254,12 @@ export function mergeFeedWithDedup<T extends Record<string, unknown>>(
   const tail = prev.slice(
     -Math.max(options.minContentGap ?? 12, options.minAuthorGap ?? 3),
   );
-  const spaced = spaceOutFeed(fresh, tail as T[], options);
+  const spaced = prepareShuffledFeed(fresh, {
+    ...options,
+    recentContext: tail as T[],
+    shuffleSeed:
+      options.shuffleSeed ?? (prev.length + fresh.length) * 2246822519,
+  });
   const base = prev.length;
 
   return [
