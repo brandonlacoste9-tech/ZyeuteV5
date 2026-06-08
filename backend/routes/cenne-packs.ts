@@ -33,10 +33,23 @@ if (STRIPE_SECRET_KEY) {
   stripe = new Stripe(STRIPE_SECRET_KEY);
 }
 
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-);
+// Build the real admin client when configured; otherwise a placeholder that
+// throws only when actually used at runtime — so a missing key degrades the
+// route gracefully instead of crashing the whole server at import time.
+function makeSupabaseAdmin() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (url && key) return createClient(url, key);
+  return new Proxy({} as ReturnType<typeof createClient>, {
+    get() {
+      throw new Error(
+        "Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)",
+      );
+    },
+  });
+}
+
+const supabaseAdmin = makeSupabaseAdmin();
 
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   if (!req.userId) return res.status(401).json({ error: "Non autorisé" });

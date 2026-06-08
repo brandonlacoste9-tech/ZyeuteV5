@@ -67,6 +67,7 @@ export default function GridRushMatchPage() {
             player1Score: Number(row.player_1_score ?? 0),
             player2Score: Number(row.player_2_score ?? 0),
             stakeTokens: Number(row.stake_tokens ?? 500),
+            isBot: Boolean(row.is_bot ?? false),
             winnerId: (row.winner_id as string) ?? null,
             startedAt: (row.started_at as string) ?? null,
             endsAt: (row.ends_at as string) ?? null,

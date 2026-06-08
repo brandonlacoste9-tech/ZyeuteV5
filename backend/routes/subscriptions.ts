@@ -22,10 +22,23 @@ if (STRIPE_SECRET_KEY) {
 }
 
 // ─── Supabase service-role client (bypasses RLS for webhook writes) ───────────
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-);
+// Build the real client when configured; otherwise a placeholder that throws
+// only when used at runtime — avoids crashing the server at import time when
+// credentials are missing (local dev / degraded mode).
+function makeSupabaseAdmin() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (url && key) return createClient(url, key);
+  return new Proxy({} as ReturnType<typeof createClient>, {
+    get() {
+      throw new Error(
+        "Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing)",
+      );
+    },
+  });
+}
+
+const supabaseAdmin = makeSupabaseAdmin();
 
 // ─── Confirmed Stripe price IDs (CAD) ────────────────────────────────────────
 const PRICE_IDS: Record<string, string> = {

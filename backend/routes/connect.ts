@@ -13,7 +13,20 @@ import { supabaseAdmin } from "../supabase-auth.js";
 
 const router = Router();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+// Build the real Stripe client when a key is present; otherwise a placeholder
+// that throws only when used at runtime — avoids crashing the server at import
+// time in local dev / degraded mode.
+function makeStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY || "";
+  if (key) return new Stripe(key);
+  return new Proxy({} as Stripe, {
+    get() {
+      throw new Error("Stripe not configured (STRIPE_SECRET_KEY missing)");
+    },
+  });
+}
+
+const stripe = makeStripe();
 
 const CENNE_TO_CAD = 0.01; // 1 cenne = $0.01 CAD
 const PLATFORM_CUT = 0.3; // platform already deducted at gift time

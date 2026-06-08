@@ -44,6 +44,7 @@ function normalizeMatch(row: Record<string, unknown>): GridRushMatch {
     player1Score: Number(row.player1Score ?? row.player_1_score ?? 0),
     player2Score: Number(row.player2Score ?? row.player_2_score ?? 0),
     stakeTokens: Number(row.stakeTokens ?? row.stake_tokens ?? 500),
+    isBot: Boolean(row.isBot ?? row.is_bot ?? false),
     winnerId: ((row.winnerId ?? row.winner_id) as string) ?? null,
     startedAt: (row.startedAt ?? row.started_at) as string | null,
     endsAt: (row.endsAt ?? row.ends_at) as string | null,

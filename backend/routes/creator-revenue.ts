@@ -3,7 +3,20 @@ import { supabaseAdmin } from "../supabase-auth.js";
 import Stripe from "stripe";
 
 const router = Router();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
+// Lazy placeholder so a missing STRIPE_SECRET_KEY degrades the route instead of
+// crashing the server at import time.
+function makeStripe(): Stripe {
+  const key = process.env.STRIPE_SECRET_KEY || "";
+  if (key) return new Stripe(key);
+  return new Proxy({} as Stripe, {
+    get() {
+      throw new Error("Stripe not configured (STRIPE_SECRET_KEY missing)");
+    },
+  });
+}
+
+const stripe = makeStripe();
 
 // GET /api/creator/revenue — get creator earnings summary
 router.get("/revenue", async (req: any, res) => {

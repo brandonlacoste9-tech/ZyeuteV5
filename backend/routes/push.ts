@@ -24,10 +24,22 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 }
 
 // ─── Supabase admin client ─────────────────────────────────────────────────────
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "",
-  process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-);
+// Lazily constructed: stays null when credentials are missing so the server
+// degrades gracefully (push routes 503) instead of crashing at import time.
+const SUPABASE_URL =
+  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const supabaseAdmin =
+  SUPABASE_URL && SUPABASE_SERVICE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    : null;
+
+if (!supabaseAdmin) {
+  console.warn(
+    "[Push] Supabase not configured — push routes disabled (degraded mode)",
+  );
+}
 
 // ─── Auth guard ───────────────────────────────────────────────────────────────
 const requireAuth = (req: Request, res: Response, next: NextFunction) => {
@@ -55,6 +67,10 @@ router.post("/subscribe", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Subscription invalide" });
   }
 
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: "Push non configuré" });
+  }
+
   const { error } = await supabaseAdmin.from("push_subscriptions").upsert(
     {
       user_id: req.userId,
@@ -78,6 +94,10 @@ router.delete("/subscribe", requireAuth, async (req, res) => {
   const { endpoint } = req.body as { endpoint: string };
 
   if (!endpoint) return res.status(400).json({ error: "Endpoint requis" });
+
+  if (!supabaseAdmin) {
+    return res.status(503).json({ error: "Push non configuré" });
+  }
 
   await supabaseAdmin
     .from("push_subscriptions")
@@ -104,7 +124,7 @@ router.post("/send", async (req, res) => {
     return res.status(400).json({ error: "userId, title, body requis" });
   }
 
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !supabaseAdmin) {
     return res.status(503).json({ error: "Push non configuré" });
   }
 
@@ -170,7 +190,7 @@ export async function sendPushToUser(
   body: string,
   url?: string,
 ): Promise<void> {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !supabaseAdmin) return;
 
   const { data: subs } = await supabaseAdmin
     .from("push_subscriptions")
