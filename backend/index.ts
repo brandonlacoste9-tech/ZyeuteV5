@@ -354,6 +354,7 @@ app.use((req, res, next) => {
             "20260225_bulk_repair_videos.sql",
             "20260608_gifts_nullable_post_id.sql",
             "20260608_grid_rush_matches.sql",
+            "20260608_grid_rush_tokens.sql",
           ];
           for (const file of migrations) {
             try {

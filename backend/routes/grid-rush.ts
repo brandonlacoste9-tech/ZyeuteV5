@@ -8,6 +8,15 @@ const requireAuth = (req: any, res: Response, next: any) => {
 
 const router = Router();
 
+router.get("/wallet", requireAuth, async (req: any, res) => {
+  try {
+    const tokenBalance = await GridRushService.getWalletBalance(req.userId!);
+    res.json({ tokenBalance });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get("/match/:matchId", requireAuth, async (req: any, res) => {
   try {
     const match = await GridRushService.getMatch(req.params.matchId);
@@ -26,8 +35,8 @@ router.get("/match/:matchId", requireAuth, async (req: any, res) => {
 
 router.post("/queue", requireAuth, async (req: any, res) => {
   try {
-    const stakeCennes = Number(req.body?.stakeCennes ?? 500);
-    const match = await GridRushService.quickMatch(req.userId!, stakeCennes);
+    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const match = await GridRushService.quickMatch(req.userId!, stakeTokens);
     res.json(match);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
@@ -36,8 +45,8 @@ router.post("/queue", requireAuth, async (req: any, res) => {
 
 router.post("/invite", requireAuth, async (req: any, res) => {
   try {
-    const stakeCennes = Number(req.body?.stakeCennes ?? 500);
-    const match = await GridRushService.createInvite(req.userId!, stakeCennes);
+    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const match = await GridRushService.createInvite(req.userId!, stakeTokens);
     res.json(match);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

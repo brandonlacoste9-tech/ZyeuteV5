@@ -913,6 +913,7 @@ export const gridRushMatches = pgTable(
     player1Score: integer("player_1_score").default(0).notNull(),
     player2Score: integer("player_2_score").default(0).notNull(),
     stakeCennes: integer("stake_cennes").default(500).notNull(),
+    stakeTokens: integer("stake_tokens").default(500).notNull(),
     winnerId: uuid("winner_id").references(() => users.id),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endsAt: timestamp("ends_at", { withTimezone: true }),
@@ -931,6 +932,14 @@ export const gridRushMatches = pgTable(
     ),
   }),
 );
+
+export const userWallets = pgTable("user_wallets", {
+  userId: uuid("user_id").primaryKey(),
+  tokenBalance: integer("token_balance").default(1000).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const royaleScores = pgTable(
   "royale_scores",

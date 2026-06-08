@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
+import { Star, Gift } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   submitRoundScore,
@@ -42,7 +43,7 @@ function normalizeMatch(row: Record<string, unknown>): GridRushMatch {
     player2Id: ((row.player2Id ?? row.player_2_id) as string) ?? null,
     player1Score: Number(row.player1Score ?? row.player_1_score ?? 0),
     player2Score: Number(row.player2Score ?? row.player_2_score ?? 0),
-    stakeCennes: Number(row.stakeCennes ?? row.stake_cennes ?? 500),
+    stakeTokens: Number(row.stakeTokens ?? row.stake_tokens ?? 500),
     winnerId: ((row.winnerId ?? row.winner_id) as string) ?? null,
     startedAt: (row.startedAt ?? row.started_at) as string | null,
     endsAt: (row.endsAt ?? row.ends_at) as string | null,
@@ -194,8 +195,10 @@ export default function GridRushGame({
     <div className="flex flex-col items-center justify-center min-h-[70vh] text-white p-4">
       <div className="w-full max-w-md leather-card border border-gold-500/20 rounded-2xl p-4 mb-6 stitched">
         <div className="flex justify-between items-center mb-4">
-          <div className="text-sm font-semibold tracking-wider text-gold-400 uppercase">
-            Mise: {matchData.stakeCennes}¢
+          <div className="text-sm font-semibold tracking-wider text-gold-400 uppercase flex items-center gap-1">
+            Mise:
+            <Star className="w-3.5 h-3.5 fill-gold-400" />
+            {matchData.stakeTokens}
           </div>
           <div className="text-2xl font-black tabular-nums bg-red-500/10 text-red-400 px-3 py-1 rounded-full border border-red-500/20">
             {timeLeft}s
@@ -261,16 +264,18 @@ export default function GridRushGame({
           </p>
 
           {matchData.winnerId === currentUserId ? (
-            <div className="bg-gold-500/10 text-gold-400 font-bold p-4 rounded-xl border border-gold-500/20 text-xl">
-              Tu gagnes {matchData.stakeCennes * 2}¢!
+            <div className="bg-gold-500/10 text-gold-400 font-bold p-4 rounded-xl border border-gold-500/20 text-xl flex items-center justify-center gap-2">
+              <Star className="w-6 h-6 fill-gold-400" />
+              Victoire! GG Gift de {matchData.stakeTokens * 2} étoiles reçu!
             </div>
           ) : matchData.winnerId === null ? (
             <div className="bg-leather-800 text-leather-200 font-bold p-4 rounded-xl text-xl">
-              Égalité — mises remboursées
+              Égalité — jetons remboursés
             </div>
           ) : (
-            <div className="bg-red-500/10 text-red-400 font-bold p-4 rounded-xl border border-red-500/20 text-xl">
-              Défaite — meilleure chance la prochaine fois!
+            <div className="bg-red-500/10 text-red-400 font-bold p-4 rounded-xl border border-red-500/20 text-xl flex items-center justify-center gap-2">
+              <Gift className="w-6 h-6" />
+              GG Gift de {matchData.stakeTokens} étoiles envoyé au gagnant.
             </div>
           )}
         </div>

@@ -1,45 +1,65 @@
 import { db, pool } from "../storage.js";
-import { gridRushMatches, users } from "../../shared/schema.js";
+import { gridRushMatches } from "../../shared/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
-export type StakeCennes = (typeof ALLOWED_STAKES)[number];
+export const DEFAULT_WALLET_TOKENS = 1000;
+export type StakeTokens = (typeof ALLOWED_STAKES)[number];
 
 export type GridRushMatch = typeof gridRushMatches.$inferSelect;
 
-function assertStake(stake: number): StakeCennes {
-  if (!ALLOWED_STAKES.includes(stake as StakeCennes)) {
-    throw new Error(`Mise invalide. Choix: ${ALLOWED_STAKES.join(", ")}¢`);
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+const INSUFFICIENT_TOKENS =
+  "Pas assez de jetons! Tu repartiras avec 1000 jetons gratuits.";
+
+function assertStake(stake: number): StakeTokens {
+  if (!ALLOWED_STAKES.includes(stake as StakeTokens)) {
+    throw new Error(
+      `Mise invalide. Choix: ${ALLOWED_STAKES.join(", ")} jetons`,
+    );
   }
-  return stake as StakeCennes;
+  return stake as StakeTokens;
 }
 
-async function deductCennes(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+/** Create the wallet (seeded with default tokens) if it does not exist yet. */
+async function ensureWalletTx(tx: Tx, userId: string): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO user_wallets (user_id, token_balance)
+    VALUES (${userId}, ${DEFAULT_WALLET_TOKENS})
+    ON CONFLICT (user_id) DO NOTHING
+  `);
+}
+
+async function deductTokens(
+  tx: Tx,
   userId: string,
   amount: number,
 ): Promise<void> {
-  const result = await tx
-    .update(users)
-    .set({ cashCredits: sql`${users.cashCredits} - ${amount}` })
-    .where(sql`${users.id} = ${userId} AND ${users.cashCredits} >= ${amount}`)
-    .returning({ id: users.id });
-
-  if (!result.length) {
-    throw new Error("Solde insuffisant. Achète des cennes dans la boutique!");
+  await ensureWalletTx(tx, userId);
+  const result = await tx.execute(sql`
+    UPDATE user_wallets
+    SET token_balance = token_balance - ${amount}, updated_at = NOW()
+    WHERE user_id = ${userId} AND token_balance >= ${amount}
+    RETURNING user_id
+  `);
+  if (!result.rows.length) {
+    throw new Error(INSUFFICIENT_TOKENS);
   }
 }
 
-async function creditCennes(
-  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+async function creditTokens(
+  tx: Tx,
   userId: string,
   amount: number,
 ): Promise<void> {
-  await tx
-    .update(users)
-    .set({ cashCredits: sql`${users.cashCredits} + ${amount}` })
-    .where(eq(users.id, userId));
+  await ensureWalletTx(tx, userId);
+  await tx.execute(sql`
+    UPDATE user_wallets
+    SET token_balance = token_balance + ${amount}, updated_at = NOW()
+    WHERE user_id = ${userId}
+  `);
 }
 
 function activateMatch(now: Date) {
@@ -59,25 +79,33 @@ export class GridRushService {
 
   static async quickMatch(
     userId: string,
-    stakeCennes: number,
+    stakeTokens: number,
   ): Promise<GridRushMatch> {
-    const stake = assertStake(stakeCennes);
+    const stake = assertStake(stakeTokens);
     const now = new Date();
 
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
+      // Seed wallet for first-time players (1000 free tokens).
+      await client.query(
+        `INSERT INTO user_wallets (user_id, token_balance)
+         VALUES ($1, $2)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [userId, DEFAULT_WALLET_TOKENS],
+      );
+
       const waiting = await client.query<{
         id: string;
         player_1_id: string;
-        stake_cennes: number;
+        stake_tokens: number;
       }>(
-        `SELECT id, player_1_id, stake_cennes
+        `SELECT id, player_1_id, stake_tokens
          FROM grid_rush_matches
          WHERE status = 'WAITING'
            AND player_2_id IS NULL
-           AND stake_cennes = $1
+           AND stake_tokens = $1
            AND player_1_id != $2
          ORDER BY created_at ASC
          LIMIT 1
@@ -85,20 +113,20 @@ export class GridRushService {
         [stake, userId],
       );
 
-      if (waiting.rows.length > 0) {
-        const row = waiting.rows[0];
+      const deductTokens = async () => {
         const deduct = await client.query(
-          `UPDATE user_profiles
-           SET cash_credits = cash_credits - $1
-           WHERE id = $2 AND cash_credits >= $1
-           RETURNING id`,
+          `UPDATE user_wallets
+           SET token_balance = token_balance - $1, updated_at = NOW()
+           WHERE user_id = $2 AND token_balance >= $1
+           RETURNING user_id`,
           [stake, userId],
         );
-        if (!deduct.rows.length) {
-          throw new Error(
-            "Solde insuffisant. Achète des cennes dans la boutique!",
-          );
-        }
+        if (!deduct.rows.length) throw new Error(INSUFFICIENT_TOKENS);
+      };
+
+      if (waiting.rows.length > 0) {
+        const row = waiting.rows[0];
+        await deductTokens();
 
         const { startedAt, endsAt, status } = activateMatch(now);
         const updated = await client.query(
@@ -117,21 +145,10 @@ export class GridRushService {
         return mapRow(updated.rows[0]);
       }
 
-      const deduct = await client.query(
-        `UPDATE user_profiles
-         SET cash_credits = cash_credits - $1
-         WHERE id = $2 AND cash_credits >= $1
-         RETURNING id`,
-        [stake, userId],
-      );
-      if (!deduct.rows.length) {
-        throw new Error(
-          "Solde insuffisant. Achète des cennes dans la boutique!",
-        );
-      }
+      await deductTokens();
 
       const created = await client.query(
-        `INSERT INTO grid_rush_matches (player_1_id, stake_cennes, status)
+        `INSERT INTO grid_rush_matches (player_1_id, stake_tokens, status)
          VALUES ($1, $2, 'WAITING')
          RETURNING *`,
         [userId, stake],
@@ -147,20 +164,33 @@ export class GridRushService {
     }
   }
 
+  static async getWalletBalance(userId: string): Promise<number> {
+    await db.execute(sql`
+      INSERT INTO user_wallets (user_id, token_balance)
+      VALUES (${userId}, ${DEFAULT_WALLET_TOKENS})
+      ON CONFLICT (user_id) DO NOTHING
+    `);
+    const result = await db.execute(
+      sql`SELECT token_balance FROM user_wallets WHERE user_id = ${userId}`,
+    );
+    const row = result.rows[0] as { token_balance?: number } | undefined;
+    return Number(row?.token_balance ?? 0);
+  }
+
   static async createInvite(
     userId: string,
-    stakeCennes: number,
+    stakeTokens: number,
   ): Promise<GridRushMatch> {
-    const stake = assertStake(stakeCennes);
+    const stake = assertStake(stakeTokens);
 
     return await db.transaction(async (tx) => {
-      await deductCennes(tx, userId, stake);
+      await deductTokens(tx, userId, stake);
 
       const [match] = await tx
         .insert(gridRushMatches)
         .values({
           player1Id: userId,
-          stakeCennes: stake,
+          stakeTokens: stake,
           status: "WAITING",
         })
         .returning();
@@ -190,7 +220,7 @@ export class GridRushService {
         throw new Error("Tu ne peux pas rejoindre ta propre partie");
       }
 
-      await deductCennes(tx, userId, match.stakeCennes);
+      await deductTokens(tx, userId, match.stakeTokens);
 
       const { startedAt, endsAt, status } = activateMatch(now);
 
@@ -295,11 +325,12 @@ export class GridRushService {
         winnerId = match.player2Id!;
       }
 
+      // GG gift: loser's staked tokens transfer to the winner (winner keeps own stake + gift).
       if (winnerId) {
-        await creditCennes(tx, winnerId, match.stakeCennes * 2);
+        await creditTokens(tx, winnerId, match.stakeTokens * 2);
       } else if (match.player2Id) {
-        await creditCennes(tx, match.player1Id, match.stakeCennes);
-        await creditCennes(tx, match.player2Id, match.stakeCennes);
+        await creditTokens(tx, match.player1Id, match.stakeTokens);
+        await creditTokens(tx, match.player2Id, match.stakeTokens);
       }
 
       const [updated] = await tx
@@ -351,7 +382,7 @@ export class GridRushService {
         throw new Error("Cette partie ne peut pas être annulée");
       }
 
-      await creditCennes(tx, userId, match.stakeCennes);
+      await creditTokens(tx, userId, match.stakeTokens);
 
       const [updated] = await tx
         .update(gridRushMatches)
@@ -372,7 +403,8 @@ function mapRow(row: Record<string, unknown>): GridRushMatch {
     player2Id: (row.player_2_id as string) ?? null,
     player1Score: row.player_1_score as number,
     player2Score: row.player_2_score as number,
-    stakeCennes: row.stake_cennes as number,
+    stakeCennes: (row.stake_cennes as number) ?? 500,
+    stakeTokens: (row.stake_tokens as number) ?? 500,
     winnerId: (row.winner_id as string) ?? null,
     startedAt: row.started_at ? new Date(row.started_at as string) : null,
     endsAt: row.ends_at ? new Date(row.ends_at as string) : null,

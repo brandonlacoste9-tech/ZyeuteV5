@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Copy, Loader2, Users } from "lucide-react";
+import { Copy, Loader2, Users, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import GridRushGame from "@/components/games/GridRushGame";
@@ -66,7 +66,7 @@ export default function GridRushMatchPage() {
             player2Id: (row.player_2_id as string) ?? null,
             player1Score: Number(row.player_1_score ?? 0),
             player2Score: Number(row.player_2_score ?? 0),
-            stakeCennes: Number(row.stake_cennes ?? 500),
+            stakeTokens: Number(row.stake_tokens ?? 500),
             winnerId: (row.winner_id as string) ?? null,
             startedAt: (row.started_at as string) ?? null,
             endsAt: (row.ends_at as string) ?? null,
@@ -154,8 +154,9 @@ export default function GridRushMatchPage() {
           <h1 className="text-2xl font-black text-gold-400 uppercase">
             {isHost ? "En attente d'un adversaire" : "Partie ouverte"}
           </h1>
-          <p className="text-leather-300 text-sm">
-            Mise: {match.stakeCennes}¢ · Partage le lien à ton chum
+          <p className="text-leather-300 text-sm flex items-center justify-center gap-1">
+            Mise: <Star className="w-3.5 h-3.5 fill-gold-400 text-gold-400" />
+            {match.stakeTokens} · Partage le lien à ton chum
           </p>
 
           {isHost && (
@@ -178,7 +179,9 @@ export default function GridRushMatchPage() {
               onClick={handleJoin}
               className="w-full py-4 rounded-xl bg-gold-500 text-black font-black uppercase disabled:opacity-50"
             >
-              {joining ? "Connexion..." : `Rejoindre (${match.stakeCennes}¢)`}
+              {joining
+                ? "Connexion..."
+                : `Rejoindre (${match.stakeTokens} étoiles)`}
             </motion.button>
           )}
 
