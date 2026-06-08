@@ -1,10 +1,9 @@
-import pg from "pg";
+import type pg from "pg";
 import { db } from "../storage.js";
 import { gridRushMatches } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { supabaseAdmin } from "../supabase-auth.js";
-
-type PgQueryable = Pick<pg.Client, "query">;
+import { createDirectClient, type PgQueryable } from "../db-direct.js";
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
@@ -48,12 +47,32 @@ function assertStake(stake: number): StakeTokens {
   return stake as StakeTokens;
 }
 
-function createDirectClient(): pg.Client {
-  return new pg.Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    connectionTimeoutMillis: 15000,
+function isRpcMissingError(message: string): boolean {
+  return /schema cache|could not find the function/i.test(message);
+}
+
+async function createBotMatchDirect(
+  userId: string,
+  stake: StakeTokens,
+): Promise<GridRushMatch> {
+  const now = new Date();
+  const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
+
+  const match = await withTx(async (client) => {
+    await deductTokens(client, userId, stake);
+
+    const created = await client.query(
+      `INSERT INTO grid_rush_matches
+         (player_1_id, stake_tokens, status, is_bot, started_at, ends_at)
+       VALUES ($1, $2, 'ACTIVE', true, $3, $4)
+       RETURNING *`,
+      [userId, stake, now, endsAt],
+    );
+    return mapRow(created.rows[0]);
   });
+
+  scheduleBotTick(match.id, endsAt, userId);
+  return match;
 }
 
 async function withTx<T>(fn: (client: PgQueryable) => Promise<T>): Promise<T> {
@@ -325,43 +344,36 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
 
+    // Prefer RPC (Supabase HTTP). Fall back to direct SQL when PostgREST's
+    // schema cache doesn't know the function yet (migration not applied/reloaded).
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin.rpc(
         "grid_rush_create_bot_match",
         { p_stake: stake, p_user_id: userId },
       );
-      if (error) throw new Error(error.message);
-      const row = (Array.isArray(data) ? data[0] : data) as Record<
-        string,
-        unknown
-      >;
-      const match = mapRow(row);
-      scheduleBotTick(
-        match.id,
-        match.endsAt ?? new Date(Date.now() + GRID_RUSH_DURATION_SEC * 1000),
-        userId,
+      if (!error) {
+        const row = (Array.isArray(data) ? data[0] : data) as Record<
+          string,
+          unknown
+        >;
+        const match = mapRow(row);
+        scheduleBotTick(
+          match.id,
+          match.endsAt ?? new Date(Date.now() + GRID_RUSH_DURATION_SEC * 1000),
+          userId,
+        );
+        return match;
+      }
+      if (!isRpcMissingError(error.message)) {
+        throw new Error(error.message);
+      }
+      console.warn(
+        "[GridRush] RPC not in schema cache — using direct SQL fallback:",
+        error.message,
       );
-      return match;
     }
 
-    const now = new Date();
-    const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
-
-    const match = await withTx(async (client) => {
-      await deductTokens(client, userId, stake);
-
-      const created = await client.query(
-        `INSERT INTO grid_rush_matches
-           (player_1_id, stake_tokens, status, is_bot, started_at, ends_at)
-         VALUES ($1, $2, 'ACTIVE', true, $3, $4)
-         RETURNING *`,
-        [userId, stake, now, endsAt],
-      );
-      return mapRow(created.rows[0]);
-    });
-
-    scheduleBotTick(match.id, endsAt, userId);
-    return match;
+    return createBotMatchDirect(userId, stake);
   }
 
   static async createInvite(

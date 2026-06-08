@@ -72,4 +72,7 @@ REVOKE ALL ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) TO service_role;
 
+-- Nudge PostgREST to reload its schema cache so RPC is discoverable immediately.
+NOTIFY pgrst, 'reload schema';
+
 COMMIT;

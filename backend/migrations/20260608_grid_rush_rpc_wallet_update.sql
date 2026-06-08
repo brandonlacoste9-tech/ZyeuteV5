@@ -65,3 +65,5 @@ $$;
 REVOKE ALL ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) TO service_role;
+
+NOTIFY pgrst, 'reload schema';

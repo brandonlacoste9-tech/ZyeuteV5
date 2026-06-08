@@ -351,19 +351,27 @@ app.use((req, res, next) => {
       // [CRITICAL] Validate Database Connection
       try {
         console.log("📦 [Startup] Connecting to Database...");
-        const client = await pool.connect();
-        client.release();
-        console.log("✅ [Startup] Database Connected Successfully");
+        try {
+          const client = await pool.connect();
+          client.release();
+          console.log("✅ [Startup] Database pool connected");
+        } catch (poolErr: any) {
+          console.warn(
+            "⚠️ [Startup] Pool connect failed (migrations still run via direct client):",
+            poolErr.message?.split("\n")[0],
+          );
+        }
 
         // Recover any bot matches that were active before server restart
         void recoverBotMatches();
 
         // Run critical migrations that are safe to run on every startup
-        // (they all use IF NOT EXISTS / safe guards)
+        // (they all use IF NOT EXISTS / safe guards). Uses dedicated pg.Client
+        // connections so migrations apply even when the shared pool is saturated.
         try {
           const { readFileSync } = await import("fs");
           const { join } = await import("path");
-          const migClient = await pool.connect();
+          const { runSqlScript } = await import("./db-direct.js");
           const migrations = [
             "20260202_add_hls_url.sql",
             "20260221_video_playback_schema.sql",
@@ -384,7 +392,8 @@ app.use((req, res, next) => {
                 join(process.cwd(), "backend/migrations", file),
                 "utf-8",
               );
-              await migClient.query(sql);
+              // Dedicated connection — shared pool may be saturated on Render.
+              await runSqlScript(sql);
               console.log(`✅ [Startup] Migration applied: ${file}`);
             } catch (migErr: any) {
               console.warn(
@@ -392,7 +401,6 @@ app.use((req, res, next) => {
               );
             }
           }
-          migClient.release();
         } catch (migSetupErr: any) {
           console.warn(
             "⚠️ [Startup] Migration runner skipped:",
