@@ -10,6 +10,24 @@ import { requireSeedAccess } from "../middleware/seed-auth.js";
 const router = Router();
 router.use(requireSeedAccess);
 
+/** Plain objects (e.g. Supabase PostgrestError) stringify as [object Object] — extract message/JSON. */
+function serializeErrorDetail(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null) {
+    const o = error as Record<string, unknown>;
+    if (typeof o.message === "string" && o.message) {
+      const code = typeof o.code === "string" ? o.code : "";
+      return code ? `${o.message} (${code})` : o.message;
+    }
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return "[unserializable error]";
+    }
+  }
+  return String(error);
+}
+
 // Sample Pexels video URLs for Quebec-themed content
 const SAMPLE_VIDEOS = [
   {
@@ -574,9 +592,9 @@ router.post("/omkar", async (req, res) => {
       ...result,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const details = serializeErrorDetail(error);
     console.error("Omkar seed error:", error);
-    res.status(500).json({ error: "Omkar seed failed", details: message });
+    res.status(500).json({ error: "Omkar seed failed", details });
   }
 });
 
