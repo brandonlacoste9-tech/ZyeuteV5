@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   quickMatch,
   createInvite,
+  createBotMatch,
   getWallet,
 } from "@/services/gridRushService";
 
@@ -15,7 +16,9 @@ export default function GridRushLobby() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stake, setStake] = useState<(typeof STAKE_TIERS)[number]>(500);
-  const [loading, setLoading] = useState<"queue" | "invite" | null>(null);
+  const [loading, setLoading] = useState<"queue" | "invite" | "bot" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
 
@@ -64,6 +67,26 @@ export default function GridRushLobby() {
 
     if (apiError || !data) {
       setError(apiError || "Erreur lors de la création");
+      return;
+    }
+
+    navigate(`/arcade/grid-rush/${data.id}`);
+  };
+
+  const handlePlayBot = async () => {
+    if (!user) return navigate("/login");
+    if (balance !== null && balance < stake) {
+      setError("Pas assez de jetons pour cette mise.");
+      return;
+    }
+
+    setLoading("bot");
+    setError(null);
+    const { data, error: apiError } = await createBotMatch(stake);
+    setLoading(null);
+
+    if (apiError || !data) {
+      setError(apiError || "Erreur lors du lancement");
       return;
     }
 
@@ -149,6 +172,16 @@ export default function GridRushLobby() {
           className="w-full py-4 rounded-2xl border-2 border-gold-500/60 text-gold-400 font-black uppercase tracking-wider disabled:opacity-50 hover:bg-gold-500/10"
         >
           {loading === "invite" ? "Création..." : "Inviter un ami"}
+        </motion.button>
+
+        <motion.button
+          type="button"
+          whileTap={{ scale: 0.97 }}
+          disabled={loading !== null}
+          onClick={handlePlayBot}
+          className="w-full py-3 rounded-2xl border border-leather-600 text-leather-200 font-bold uppercase tracking-wider text-sm disabled:opacity-50 hover:border-gold-500/40"
+        >
+          {loading === "bot" ? "Lancement..." : "Jouer contre le bot (test)"}
         </motion.button>
 
         <section className="leather-card rounded-xl p-4 text-sm text-leather-300 space-y-2">

@@ -53,6 +53,19 @@ router.post("/invite", requireAuth, async (req: any, res) => {
   }
 });
 
+router.post("/bot", requireAuth, async (req: any, res) => {
+  try {
+    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const match = await GridRushService.createBotMatch(
+      req.userId!,
+      stakeTokens,
+    );
+    res.json(match);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 router.post("/join/:matchId", requireAuth, async (req: any, res) => {
   try {
     const match = await GridRushService.joinMatch(

@@ -67,6 +67,47 @@ function activateMatch(now: Date) {
   return { startedAt: now, endsAt, status: "ACTIVE" as const };
 }
 
+// ─── Bot opponent (solo testing) ─────────────────────────────────────────────
+const BOT_MIN_TICK_MS = 6000;
+const BOT_MAX_TICK_MS = 10000;
+const botTimers = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Drives a simulated opponent: increments player_2_score on a jittered interval
+ * (each tick = one completed grid), then finalizes the match once time is up.
+ * Every UPDATE flows through Supabase Realtime so the human client sees it live.
+ */
+function scheduleBotTick(
+  matchId: string,
+  endsAt: Date,
+  player1Id: string,
+): void {
+  const delay =
+    BOT_MIN_TICK_MS + Math.random() * (BOT_MAX_TICK_MS - BOT_MIN_TICK_MS);
+
+  const timer = setTimeout(async () => {
+    try {
+      if (Date.now() >= endsAt.getTime()) {
+        botTimers.delete(matchId);
+        await GridRushService.finishMatch(player1Id, matchId).catch(() => {});
+        return;
+      }
+
+      await pool.query(
+        `UPDATE grid_rush_matches
+         SET player_2_score = player_2_score + 1, updated_at = NOW()
+         WHERE id = $1 AND status = 'ACTIVE'`,
+        [matchId],
+      );
+      scheduleBotTick(matchId, endsAt, player1Id);
+    } catch {
+      botTimers.delete(matchId);
+    }
+  }, delay);
+
+  botTimers.set(matchId, timer);
+}
+
 export class GridRushService {
   static async getMatch(matchId: string): Promise<GridRushMatch | null> {
     const [match] = await db
@@ -175,6 +216,36 @@ export class GridRushService {
     );
     const row = result.rows[0] as { token_balance?: number } | undefined;
     return Number(row?.token_balance ?? 0);
+  }
+
+  static async createBotMatch(
+    userId: string,
+    stakeTokens: number,
+  ): Promise<GridRushMatch> {
+    const stake = assertStake(stakeTokens);
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
+
+    const match = await db.transaction(async (tx) => {
+      await deductTokens(tx, userId, stake);
+
+      const [created] = await tx
+        .insert(gridRushMatches)
+        .values({
+          player1Id: userId,
+          stakeTokens: stake,
+          status: "ACTIVE",
+          isBot: true,
+          startedAt: now,
+          endsAt,
+        })
+        .returning();
+
+      return created;
+    });
+
+    scheduleBotTick(match.id, endsAt, userId);
+    return match;
   }
 
   static async createInvite(
@@ -318,21 +389,18 @@ export class GridRushService {
         throw new Error("La partie n'est pas encore terminée");
       }
 
+      // winnerId is null for a tie OR a bot win (bot has no auth user row).
       let winnerId: string | null = null;
       if (match.player1Score > match.player2Score) {
         winnerId = match.player1Id;
       } else if (match.player2Score > match.player1Score) {
-        winnerId = match.player2Id!;
+        winnerId = match.player2Id;
       }
+      const isTie = match.player1Score === match.player2Score;
 
-      // GG gift: loser's staked tokens transfer to the winner (winner keeps own stake + gift).
-      if (winnerId) {
-        await creditTokens(tx, winnerId, match.stakeTokens * 2);
-      } else if (match.player2Id) {
-        await creditTokens(tx, match.player1Id, match.stakeTokens);
-        await creditTokens(tx, match.player2Id, match.stakeTokens);
-      }
-
+      // Claim the match atomically — only the caller that flips ACTIVE→COMPLETED
+      // runs the payout, which prevents a double payout when both clients
+      // (or a client and the bot loop) finish at the same instant.
       const [updated] = await tx
         .update(gridRushMatches)
         .set({
@@ -356,6 +424,18 @@ export class GridRushService {
           .limit(1);
         return existing!;
       }
+
+      // GG gift: loser's stake transfers to the winner (winner keeps own stake + gift).
+      if (winnerId) {
+        await creditTokens(tx, winnerId, match.stakeTokens * 2);
+      } else if (isTie) {
+        // Refund real players on a draw (the bot has no wallet to refund).
+        await creditTokens(tx, match.player1Id, match.stakeTokens);
+        if (match.player2Id) {
+          await creditTokens(tx, match.player2Id, match.stakeTokens);
+        }
+      }
+      // Bot win (winnerId null, not a tie): no payout — player's stake is gone.
 
       return updated;
     });
@@ -405,6 +485,7 @@ function mapRow(row: Record<string, unknown>): GridRushMatch {
     player2Score: row.player_2_score as number,
     stakeCennes: (row.stake_cennes as number) ?? 500,
     stakeTokens: (row.stake_tokens as number) ?? 500,
+    isBot: (row.is_bot as boolean) ?? false,
     winnerId: (row.winner_id as string) ?? null,
     startedAt: row.started_at ? new Date(row.started_at as string) : null,
     endsAt: row.ends_at ? new Date(row.ends_at as string) : null,

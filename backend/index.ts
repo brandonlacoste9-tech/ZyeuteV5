@@ -355,6 +355,7 @@ app.use((req, res, next) => {
             "20260608_gifts_nullable_post_id.sql",
             "20260608_grid_rush_matches.sql",
             "20260608_grid_rush_tokens.sql",
+            "20260608_grid_rush_bot.sql",
           ];
           for (const file of migrations) {
             try {

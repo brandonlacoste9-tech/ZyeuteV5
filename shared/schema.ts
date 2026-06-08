@@ -914,6 +914,7 @@ export const gridRushMatches = pgTable(
     player2Score: integer("player_2_score").default(0).notNull(),
     stakeCennes: integer("stake_cennes").default(500).notNull(),
     stakeTokens: integer("stake_tokens").default(500).notNull(),
+    isBot: boolean("is_bot").default(false).notNull(),
     winnerId: uuid("winner_id").references(() => users.id),
     startedAt: timestamp("started_at", { withTimezone: true }),
     endsAt: timestamp("ends_at", { withTimezone: true }),

@@ -268,7 +268,8 @@ export default function GridRushGame({
               <Star className="w-6 h-6 fill-gold-400" />
               Victoire! GG Gift de {matchData.stakeTokens * 2} étoiles reçu!
             </div>
-          ) : matchData.winnerId === null ? (
+          ) : matchData.winnerId === null &&
+            matchData.player1Score === matchData.player2Score ? (
             <div className="bg-leather-800 text-leather-200 font-bold p-4 rounded-xl text-xl">
               Égalité — jetons remboursés
             </div>

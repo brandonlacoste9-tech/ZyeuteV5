@@ -8,6 +8,7 @@ export interface GridRushMatch {
   player1Score: number;
   player2Score: number;
   stakeTokens: number;
+  isBot: boolean;
   winnerId: string | null;
   startedAt: string | null;
   endsAt: string | null;
@@ -29,6 +30,14 @@ export async function quickMatch(stakeTokens: number) {
 
 export async function createInvite(stakeTokens: number) {
   return apiCall<GridRushMatch>("/grid-rush/invite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stakeTokens }),
+  });
+}
+
+export async function createBotMatch(stakeTokens: number) {
+  return apiCall<GridRushMatch>("/grid-rush/bot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeTokens }),
