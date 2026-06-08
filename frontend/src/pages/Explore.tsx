@@ -67,7 +67,7 @@ export const Explore: React.FC = () => {
     "Nourriture",
     "Mode",
     "Animaux",
-    "Éducation"
+    "Éducation",
   ];
 
   // Dynamic trending hashtags from API
@@ -132,7 +132,13 @@ export const Explore: React.FC = () => {
   });
 
   React.useEffect(() => {
-    stateRef.current = { posts, searchQuery, selectedRegion, selectedHashtag, selectedCategory };
+    stateRef.current = {
+      posts,
+      searchQuery,
+      selectedRegion,
+      selectedHashtag,
+      selectedCategory,
+    };
   }, [posts, searchQuery, selectedRegion, selectedHashtag, selectedCategory]);
 
   /** Deep link from captions: /explore?tag=Montreal */
@@ -220,23 +226,23 @@ export const Explore: React.FC = () => {
       if (selectedCategory && selectedCategory !== "Tout") {
         // Map categories to simple keyword checks since we don't have hardcoded post categories yet
         const categoryMap: Record<string, string[]> = {
-          "Humour": ["drôle", "humour", "blague", "joke", "lol"],
-          "Musique": ["musique", "chanson", "music", "cover", "chanteur"],
+          Humour: ["drôle", "humour", "blague", "joke", "lol"],
+          Musique: ["musique", "chanson", "music", "cover", "chanteur"],
           "Jeux vidéo": ["gaming", "jeu", "twitch", "gamer", "playstation"],
-          "Sports": ["sport", "hockey", "soccer", "gym", "workout", "fitness"],
-          "Actualités": ["nouvelles", "news", "politique", "actu"],
-          "Nourriture": ["recette", "food", "cuisine", "manger", "restaurant"],
-          "Mode": ["mode", "fashion", "ootd", "style", "vêtement"],
-          "Animaux": ["chien", "chat", "dog", "cat", "animal"],
-          "Éducation": ["apprendre", "tuto", "comment", "savoir", "education"]
+          Sports: ["sport", "hockey", "soccer", "gym", "workout", "fitness"],
+          Actualités: ["nouvelles", "news", "politique", "actu"],
+          Nourriture: ["recette", "food", "cuisine", "manger", "restaurant"],
+          Mode: ["mode", "fashion", "ootd", "style", "vêtement"],
+          Animaux: ["chien", "chat", "dog", "cat", "animal"],
+          Éducation: ["apprendre", "tuto", "comment", "savoir", "education"],
         };
-        
+
         const keywords = categoryMap[selectedCategory] || [];
         filtered = filtered.filter((p) => {
           const cap = (p.caption || "").toLowerCase();
           const tags = (p.hashtags || []).join(" ").toLowerCase();
           const text = `${cap} ${tags}`;
-          return keywords.some(kw => text.includes(kw));
+          return keywords.some((kw) => text.includes(kw));
         });
       }
 
@@ -290,7 +296,6 @@ export const Explore: React.FC = () => {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-500/30 to-transparent" />
       </div>
 
-
       {/* TikTok-style Category Chips (Sticky) */}
       <div className="sticky top-[60px] z-20 bg-black/90 backdrop-blur-md border-b border-white/5 py-3 px-4 shadow-sm">
         <div className="flex gap-2 overflow-x-auto hide-scrollbar snap-x max-w-7xl mx-auto">
@@ -322,7 +327,9 @@ export const Explore: React.FC = () => {
               defaultValue={searchQuery}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.currentTarget.value) {
-                  navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
+                  navigate(
+                    `/search?q=${encodeURIComponent(e.currentTarget.value)}`,
+                  );
                 }
               }}
               placeholder="Recherche des posts, users, hashtags..."
@@ -344,6 +351,47 @@ export const Explore: React.FC = () => {
             </svg>
           </div>
         </div>
+
+        {/* Arcade entry card */}
+        <button
+          type="button"
+          onClick={() => {
+            tap();
+            navigate("/arcade");
+          }}
+          className="w-full mb-6 leather-card stitched rounded-2xl p-4 border border-gold-500/30 flex items-center gap-4 text-left hover:border-gold-500/60 transition-all group"
+          aria-label="Ouvrir l'Arcade Zyeuté"
+        >
+          <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-3xl group-hover:scale-105 transition-transform">
+            🎮
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black text-gold-400">
+                Arcade Zyeuté
+              </h2>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">
+                Nouveau
+              </span>
+            </div>
+            <p className="text-leather-300 text-sm">
+              Grid Rush, Poutine Royale et plus — défie tes chums en 1v1.
+            </p>
+          </div>
+          <svg
+            className="w-5 h-5 text-gold-400 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
 
         {/* Enhanced Trending Hashtags Component */}
         <QuebecHashtags />
@@ -614,10 +662,20 @@ export const Explore: React.FC = () => {
                     {/* TikTok-style persistent play count overlay */}
                     {post.type === "video" && (
                       <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white z-10 font-semibold text-xs drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                        <svg className="w-3 h-3 md:w-4 md:h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg
+                          className="w-3 h-3 md:w-4 md:h-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
                           <polygon points="5 3 19 12 5 21 5 3" />
                         </svg>
-                        <span>{formatNumber(post.view_count || post.fire_count * 5)}</span>
+                        <span>
+                          {formatNumber(post.view_count || post.fire_count * 5)}
+                        </span>
                       </div>
                     )}
 
@@ -636,7 +694,11 @@ export const Explore: React.FC = () => {
                     <div className="flex items-center gap-2 px-1 pb-1">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden border border-leather-600 bg-leather-800">
                         {post.user?.avatar_url ? (
-                          <img src={post.user.avatar_url} alt={post.user.username} className="w-full h-full object-cover" />
+                          <img
+                            src={post.user.avatar_url}
+                            alt={post.user.username}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gold-500">
                             {post.user?.username?.[0]?.toUpperCase()}
@@ -644,7 +706,13 @@ export const Explore: React.FC = () => {
                         )}
                       </div>
                       <div className="flex flex-col overflow-hidden">
-                        <span className="text-white text-xs font-bold truncate hover:underline cursor-pointer" onClick={(e) => { e.preventDefault(); navigate(`/profile/${post.user?.username}`); }}>
+                        <span
+                          className="text-white text-xs font-bold truncate hover:underline cursor-pointer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            navigate(`/profile/${post.user?.username}`);
+                          }}
+                        >
                           {post.user?.display_name || post.user?.username}
                         </span>
                         <span className="text-leather-300 text-[10px] truncate">
