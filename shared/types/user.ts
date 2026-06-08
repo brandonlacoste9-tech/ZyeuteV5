@@ -32,6 +32,7 @@ export interface User {
   isFollowing?: boolean; // Compat
   is_online?: boolean;
   role?: UserRole;
+  isAdmin?: boolean;
   custom_permissions?: Record<string, boolean>;
   tiGuyCommentsEnabled: boolean;
   ti_guy_comments_enabled?: boolean; // Compat

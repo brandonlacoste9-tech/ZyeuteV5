@@ -1041,6 +1041,7 @@ function mapBackendUser(user: Record<string, any>): User {
     is_following: user.isFollowing || user.is_following || false,
     // RBAC Fields
     role: user.role || "citoyen",
+    isAdmin: user.isAdmin || user.is_admin || false,
     custom_permissions: user.custom_permissions || {},
     // Ti-Guy Preferences
     tiGuyCommentsEnabled:

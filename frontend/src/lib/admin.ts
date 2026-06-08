@@ -34,7 +34,9 @@ export async function checkIsAdmin(
       user.app_metadata?.role === "service_role" || // Supabase service role
       user.app_metadata?.role === "admin" || // Custom RBAC role
       user.user_metadata?.is_admin === true || // Boolean flag
-      user.user_metadata?.role === "admin"; // String role
+      user.user_metadata?.role === "admin" || // String role
+      user.user_metadata?.role === "founder" ||
+      user.user_metadata?.role === "moderator";
 
     if (isAdminViaMetadata) {
       adminLogger.debug("Admin status confirmed via Supabase Metadata");
@@ -45,7 +47,7 @@ export async function checkIsAdmin(
     // This is necessary because Supabase Auth metadata might not be synced with our custom table
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
-      .select("is_admin")
+      .select("is_admin, role")
       .eq("id", user.id)
       .single();
 
@@ -56,7 +58,11 @@ export async function checkIsAdmin(
       );
     }
 
-    if (profile?.is_admin) {
+    if (
+      profile?.is_admin ||
+      profile?.role === "founder" ||
+      profile?.role === "moderator"
+    ) {
       adminLogger.debug("Admin status confirmed via user_profiles table");
       return true;
     }

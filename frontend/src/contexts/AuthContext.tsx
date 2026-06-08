@@ -12,6 +12,24 @@ import { supabase, getSessionWithTimeout } from "@/lib/supabase";
 import { getUserProfile } from "@/services/api";
 import { User } from "@/types"; // Use our extended User type
 import { checkIsAdmin } from "@/lib/admin";
+
+function profileGrantsAdmin(profile: User | null | undefined): boolean {
+  if (!profile) return false;
+  return (
+    profile.role === "founder" ||
+    profile.role === "moderator" ||
+    profile.isAdmin === true
+  );
+}
+
+async function resolveIsAdmin(
+  profile: User | null,
+  sessionUser: { id: string } | null | undefined,
+): Promise<boolean> {
+  if (profileGrantsAdmin(profile)) return true;
+  if (!sessionUser) return false;
+  return checkIsAdmin(sessionUser as Parameters<typeof checkIsAdmin>[0]);
+}
 import {
   GUEST_MODE_KEY,
   GUEST_TIMESTAMP_KEY,
@@ -62,9 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!sessionUser) return null;
     try {
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error("Profile fetch timeout")), 4000)
+        setTimeout(() => reject(new Error("Profile fetch timeout")), 4000),
       );
-      const fullProfile = await Promise.race([getUserProfile("me"), timeoutPromise]);
+      const fullProfile = await Promise.race([
+        getUserProfile("me"),
+        timeoutPromise,
+      ]);
       if (fullProfile) return fullProfile;
 
       return {
@@ -110,36 +131,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession } } = await getSessionWithTimeout(2500);
+        const {
+          data: { session: initialSession },
+        } = await getSessionWithTimeout(2500);
 
         if (!mounted) return;
 
         if ((initialSession as any)?.user) {
           setSession(initialSession as any);
           // Start profile enhancement but don't block on it
-          enhanceUser((initialSession as any).user).then((profile) => {
-            if (!mounted) return;
-            if (profile) {
-              setUser(profile);
-              // Admin check is non-blocking
-              checkIsAdmin((initialSession as any).user).then((admin) => {
-                if (mounted) {
-                  setIsAdmin(
-                    profile.role === "founder" ||
-                    profile.role === "moderator" ||
-                    admin,
-                  );
-                }
-              }).catch(() => {});
-            }
-            setIsLoading(false);
-            clearTimeout(emergencyTimeout);
-          }).catch(() => {
-            if (mounted) {
+          enhanceUser((initialSession as any).user)
+            .then(async (profile) => {
+              if (!mounted) return;
+              if (profile) {
+                setUser(profile);
+                const admin = await resolveIsAdmin(
+                  profile,
+                  (initialSession as any).user,
+                ).catch(() => profileGrantsAdmin(profile));
+                if (mounted) setIsAdmin(admin);
+              }
               setIsLoading(false);
               clearTimeout(emergencyTimeout);
-            }
-          });
+            })
+            .catch(() => {
+              if (mounted) {
+                setIsLoading(false);
+                clearTimeout(emergencyTimeout);
+              }
+            });
         } else {
           // No session — check guest mode and resolve immediately
           const validGuest = checkGuestMode();
@@ -175,10 +195,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             if (!mounted) return;
             enhanceUser(newSession.user)
-              .then((profile) => {
+              .then(async (profile) => {
                 if (mounted && profile) {
                   setUser(profile);
-                  setIsAdmin(profile.role === "founder" || profile.role === "moderator");
+                  const admin = await resolveIsAdmin(
+                    profile,
+                    newSession.user,
+                  ).catch(() => profileGrantsAdmin(profile));
+                  if (mounted) setIsAdmin(admin);
                 }
                 if (mounted) setIsLoading(false);
               })
@@ -238,16 +262,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, isGuest, isLoading]);
 
-  const value = React.useMemo(() => ({
-    user,
-    session,
-    isAuthenticated: !!user || isGuest,
-    isAdmin,
-    isGuest,
-    isLoading,
-    logout,
-    enterGuestMode,
-  }), [user, session, isGuest, isLoading, logout, enterGuestMode]);
+  const value = React.useMemo(
+    () => ({
+      user,
+      session,
+      isAuthenticated: !!user || isGuest,
+      isAdmin,
+      isGuest,
+      isLoading,
+      logout,
+      enterGuestMode,
+    }),
+    [user, session, isAdmin, isGuest, isLoading, logout, enterGuestMode],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
