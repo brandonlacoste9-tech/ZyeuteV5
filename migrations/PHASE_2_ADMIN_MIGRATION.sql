@@ -10,13 +10,13 @@
 -- ----------------------------------------------------------------------------
 -- STEP 1: Grant Admin Access to Specific User
 -- ----------------------------------------------------------------------------
--- INSTRUCTION: Replace 'your-email@example.com' with your actual admin email
+-- INSTRUCTION: Founder admin email is zyeutequebec@gmail.com
 -- This updates the user_metadata to include the is_admin flag
 
 UPDATE auth.users
 SET raw_user_meta_data = 
   COALESCE(raw_user_meta_data, '{}'::jsonb) || '{"is_admin": true}'::jsonb
-WHERE email = 'your-email@example.com';
+WHERE email = 'zyeutequebec@gmail.com';
 
 -- Verify the update
 SELECT 
@@ -25,7 +25,7 @@ SELECT
   raw_user_meta_data->>'is_admin' as is_admin,
   created_at
 FROM auth.users
-WHERE email = 'your-email@example.com';
+WHERE email = 'zyeutequebec@gmail.com';
 
 -- ----------------------------------------------------------------------------
 -- STEP 2 (OPTIONAL): Grant Admin to First Registered User
@@ -92,7 +92,7 @@ ORDER BY created_at ASC;
 -- ----------------------------------------------------------------------------
 -- VERIFICATION CHECKLIST
 -- ----------------------------------------------------------------------------
--- [ ] Replace email in STEP 1 with your actual email
+-- [ ] Confirm founder email zyeutequebec@gmail.com in STEP 1
 -- [ ] Run STEP 1 query to grant yourself admin access
 -- [ ] Run verification query to confirm is_admin = true
 -- [ ] (Optional) Run STEP 3 to create the helper function

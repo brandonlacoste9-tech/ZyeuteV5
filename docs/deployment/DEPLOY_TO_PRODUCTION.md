@@ -112,7 +112,7 @@ npm run build
 **If admin routes return 401:**
 
 - Verify user has `is_admin: true` in Supabase user_metadata
-- Run SQL: `SELECT raw_user_meta_data FROM auth.users WHERE email = 'your@email.com';`
+- Run SQL: `SELECT raw_user_meta_data FROM auth.users WHERE email = 'zyeutequebec@gmail.com';`
 
 ---
 
