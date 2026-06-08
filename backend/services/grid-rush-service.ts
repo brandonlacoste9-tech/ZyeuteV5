@@ -85,20 +85,18 @@ async function ensureWallet(
 }
 
 /** Lock wallet row (must run inside an open transaction). */
-async function lockWallet(
+async function lockWalletRow(
   client: PgQueryable,
   userId: string,
-): Promise<number> {
+): Promise<void> {
   await ensureWallet(client, userId);
-  const locked = await client.query<{ token_balance: number }>(
-    `SELECT token_balance FROM user_wallets WHERE user_id = $1 FOR UPDATE`,
+  const locked = await client.query(
+    `SELECT user_id FROM user_wallets WHERE user_id = $1 FOR UPDATE`,
     [userId],
   );
-  const balance = locked.rows[0]?.token_balance;
-  if (balance === undefined) {
-    throw new Error("Portefeuille introuvable");
+  if (!locked.rows.length) {
+    throw new Error("Portefeuille introuvable — contacte le support.");
   }
-  return balance;
 }
 
 async function deductTokens(
@@ -106,16 +104,17 @@ async function deductTokens(
   userId: string,
   amount: number,
 ): Promise<void> {
-  const balance = await lockWallet(client, userId);
-  if (balance < amount) {
+  await lockWalletRow(client, userId);
+  const result = await client.query(
+    `UPDATE user_wallets
+     SET token_balance = token_balance - $1, updated_at = NOW()
+     WHERE user_id = $2 AND token_balance >= $1
+     RETURNING user_id`,
+    [amount, userId],
+  );
+  if (!result.rows.length) {
     throw new Error(INSUFFICIENT_TOKENS);
   }
-  await client.query(
-    `UPDATE user_wallets
-     SET token_balance = $1, updated_at = NOW()
-     WHERE user_id = $2`,
-    [balance - amount, userId],
-  );
 }
 
 async function creditTokens(
@@ -123,12 +122,12 @@ async function creditTokens(
   userId: string,
   amount: number,
 ): Promise<void> {
-  const balance = await lockWallet(client, userId);
+  await lockWalletRow(client, userId);
   await client.query(
     `UPDATE user_wallets
-     SET token_balance = $1, updated_at = NOW()
+     SET token_balance = token_balance + $1, updated_at = NOW()
      WHERE user_id = $2`,
-    [balance + amount, userId],
+    [amount, userId],
   );
 }
 
