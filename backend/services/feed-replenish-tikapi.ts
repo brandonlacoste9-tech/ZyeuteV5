@@ -14,6 +14,7 @@ import {
   type TikApiInsertStats,
 } from "./tikapi-feed-insert.js";
 import { createClient } from "@supabase/supabase-js";
+import { isOmkarKeyConfigured } from "../utils/omkar-keys.js";
 
 const log = logger.withContext("FeedReplenish");
 
@@ -217,7 +218,6 @@ export function startFeedReplenishJob(): () => void {
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-    const { isOmkarKeyConfigured } = await import("../utils/omkar-keys.js");
     if (isOmkarKeyConfigured()) {
       import("./feed-replenish-omkar.js")
         .then(({ replenishFeedOmkarIfLow }) => replenishFeedOmkarIfLow())
