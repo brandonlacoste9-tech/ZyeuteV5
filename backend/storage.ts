@@ -92,9 +92,13 @@ export function getPool(): pg.Pool {
         process.env.DATABASE_URL.substring(0, 30) + "...",
       );
     }
+    const isProd = process.env.NODE_ENV === "production";
     _pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
-      connectionTimeoutMillis: 3000, // Fail fast → triggers Supabase REST fallback
+      // Keep the shared pool small on Render — Supabase pooler has limited slots
+      // per client. Grid Rush transactions use direct pg.Client connections instead.
+      max: isProd ? 4 : 10,
+      connectionTimeoutMillis: isProd ? 15000 : 3000,
       idleTimeoutMillis: 30000,
       ssl: { rejectUnauthorized: false }, // FORCE SSL ALWAYS
     });

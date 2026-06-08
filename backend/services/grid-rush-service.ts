@@ -1,7 +1,10 @@
-import { db, pool } from "../storage.js";
+import pg from "pg";
+import { db } from "../storage.js";
 import { gridRushMatches } from "../../shared/schema.js";
-import { eq, sql } from "drizzle-orm";
-import type { PoolClient } from "pg";
+import { eq } from "drizzle-orm";
+import { supabaseAdmin } from "../supabase-auth.js";
+
+type PgQueryable = Pick<pg.Client, "query">;
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
@@ -22,38 +25,25 @@ function assertStake(stake: number): StakeTokens {
   return stake as StakeTokens;
 }
 
-/**
- * Run a function inside a DB transaction using a RAW pool client.
- *
- * IMPORTANT: we deliberately do NOT use Drizzle's `db.transaction()` here.
- * Drizzle issues `BEGIN` over the extended query protocol, which Supabase's
- * connection pooler rejects with "Failed query: begin". A raw client running
- * `client.query("BEGIN")` (simple protocol) works through the pooler — this is
- * the same pattern `quickMatch` uses.
- */
-/**
- * Acquire a pool client, retrying a few times on transient connection timeouts
- * (Render cold start, or a briefly saturated Supabase pooler). The base pool is
- * configured with a tight 3s connect timeout, so a short retry avoids spurious
- * "timeout exceeded when trying to connect" failures.
- */
-async function connectWithRetry(retries = 2): Promise<PoolClient> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await pool.connect();
-    } catch (err) {
-      lastErr = err;
-      if (attempt < retries) {
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-      }
-    }
-  }
-  throw lastErr;
+function createDirectClient(): pg.Client {
+  return new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15000,
+  });
 }
 
-async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await connectWithRetry();
+/**
+ * Run a function inside a DB transaction on a dedicated pg.Client connection.
+ *
+ * We deliberately avoid Drizzle `db.transaction()` (extended-protocol BEGIN fails
+ * on Supabase pooler) AND `pool.connect()` (shared pool slots exhaust on Render,
+ * causing "timeout exceeded when trying to connect"). A one-shot Client opens
+ * its own connection through the pooler and is always released in `finally`.
+ */
+async function withTx<T>(fn: (client: PgQueryable) => Promise<T>): Promise<T> {
+  const client = createDirectClient();
+  await client.connect();
   try {
     await client.query("BEGIN");
     const result = await fn(client);
@@ -63,12 +53,29 @@ async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
     await client.query("ROLLBACK").catch(() => {});
     throw err;
   } finally {
-    client.release();
+    await client.end().catch(() => {});
+  }
+}
+
+/** One-shot query on a dedicated connection (avoids shared pool contention). */
+async function queryDirect(
+  text: string,
+  params?: unknown[],
+): Promise<pg.QueryResult> {
+  const client = createDirectClient();
+  await client.connect();
+  try {
+    return await client.query(text, params);
+  } finally {
+    await client.end().catch(() => {});
   }
 }
 
 /** Create the wallet (seeded with default tokens) if it does not exist yet. */
-async function ensureWallet(client: PoolClient, userId: string): Promise<void> {
+async function ensureWallet(
+  client: PgQueryable,
+  userId: string,
+): Promise<void> {
   await client.query(
     `INSERT INTO user_wallets (user_id, token_balance)
      VALUES ($1, $2)
@@ -78,7 +85,7 @@ async function ensureWallet(client: PoolClient, userId: string): Promise<void> {
 }
 
 async function deductTokens(
-  client: PoolClient,
+  client: PgQueryable,
   userId: string,
   amount: number,
 ): Promise<void> {
@@ -96,7 +103,7 @@ async function deductTokens(
 }
 
 async function creditTokens(
-  client: PoolClient,
+  client: PgQueryable,
   userId: string,
   amount: number,
 ): Promise<void> {
@@ -140,7 +147,7 @@ function scheduleBotTick(
         return;
       }
 
-      await pool.query(
+      await queryDirect(
         `UPDATE grid_rush_matches
          SET player_2_score = player_2_score + 1, updated_at = NOW()
          WHERE id = $1 AND status = 'ACTIVE'`,
@@ -224,16 +231,35 @@ export class GridRushService {
   }
 
   static async getWalletBalance(userId: string): Promise<number> {
-    await db.execute(sql`
-      INSERT INTO user_wallets (user_id, token_balance)
-      VALUES (${userId}, ${DEFAULT_WALLET_TOKENS})
-      ON CONFLICT (user_id) DO NOTHING
-    `);
-    const result = await db.execute(
-      sql`SELECT token_balance FROM user_wallets WHERE user_id = ${userId}`,
+    // Prefer Supabase HTTP (service role) — never competes with the pg pool.
+    if (supabaseAdmin) {
+      const { data: existing } = await supabaseAdmin
+        .from("user_wallets")
+        .select("token_balance")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (existing) return Number(existing.token_balance);
+
+      const { error: insertErr } = await supabaseAdmin
+        .from("user_wallets")
+        .insert({ user_id: userId, token_balance: DEFAULT_WALLET_TOKENS });
+      if (insertErr && insertErr.code !== "23505") throw insertErr;
+      return DEFAULT_WALLET_TOKENS;
+    }
+
+    await queryDirect(
+      `INSERT INTO user_wallets (user_id, token_balance)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id) DO NOTHING`,
+      [userId, DEFAULT_WALLET_TOKENS],
+    );
+    const result = await queryDirect(
+      `SELECT token_balance FROM user_wallets WHERE user_id = $1`,
+      [userId],
     );
     const row = result.rows[0] as { token_balance?: number } | undefined;
-    return Number(row?.token_balance ?? 0);
+    return Number(row?.token_balance ?? DEFAULT_WALLET_TOKENS);
   }
 
   static async createBotMatch(
@@ -241,6 +267,27 @@ export class GridRushService {
     stakeTokens: number,
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
+
+    // Primary path: Postgres RPC over Supabase HTTP — no pg pool at all.
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin.rpc(
+        "grid_rush_create_bot_match",
+        { p_user_id: userId, p_stake: stake },
+      );
+      if (error) throw new Error(error.message);
+      const row = (Array.isArray(data) ? data[0] : data) as Record<
+        string,
+        unknown
+      >;
+      const match = mapRow(row);
+      scheduleBotTick(
+        match.id,
+        match.endsAt ?? new Date(Date.now() + GRID_RUSH_DURATION_SEC * 1000),
+        userId,
+      );
+      return match;
+    }
+
     const now = new Date();
     const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
 
@@ -321,7 +368,7 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     // Single atomic UPDATE — increments the caller's own score column, guarded
     // so it only counts while the match is ACTIVE and the clock hasn't expired.
-    const result = await pool.query(
+    const result = await queryDirect(
       `UPDATE grid_rush_matches
        SET player_1_score = player_1_score + (CASE WHEN player_1_id = $1 THEN 1 ELSE 0 END),
            player_2_score = player_2_score + (CASE WHEN player_2_id = $1 THEN 1 ELSE 0 END),
@@ -339,7 +386,7 @@ export class GridRushService {
     }
 
     // Guard failed — surface a precise reason.
-    const cur = await pool.query(
+    const cur = await queryDirect(
       `SELECT status, ends_at, player_1_id, player_2_id
        FROM grid_rush_matches WHERE id = $1 LIMIT 1`,
       [matchId],
