@@ -117,7 +117,9 @@ export async function importTikTokVideoToFeed(
   const existing = await db
     .select({ id: posts.id })
     .from(posts)
-    .where(sql`${posts.mediaMetadata}->>'tiktok_id' = ${videoId}`)
+    .where(
+      sql`${posts.mediaMetadata}->>'tiktok_id' = ${videoId} AND ${posts.deletedAt} IS NULL`,
+    )
     .limit(1);
 
   if (existing.length > 0) {
@@ -187,14 +189,14 @@ export async function importTikTokVideoToFeed(
     // ── Mux upload for permanent hosting (TikTok URLs expire) ──
     let muxPlaybackId: string | undefined;
     let muxAssetId: string | undefined;
-    
+
     try {
       const Mux = (await import("@mux/mux-node")).default;
       const muxClient = new Mux({
         tokenId: process.env.MUX_TOKEN_ID || "",
         tokenSecret: process.env.MUX_TOKEN_SECRET || "",
       });
-      
+
       if (process.env.MUX_TOKEN_ID && process.env.MUX_TOKEN_SECRET) {
         const asset = await muxClient.video.assets.create({
           inputs: [{ url: mediaUrl }],
@@ -203,7 +205,9 @@ export async function importTikTokVideoToFeed(
         });
         muxAssetId = asset.id;
         muxPlaybackId = asset.playback_ids?.[0]?.id;
-        console.log(`[TikTok import] Mux upload started for ${videoId} → asset ${muxAssetId}`);
+        console.log(
+          `[TikTok import] Mux upload started for ${videoId} → asset ${muxAssetId}`,
+        );
       }
     } catch (muxErr: any) {
       console.warn(`[TikTok import] Mux upload skipped: ${muxErr.message}`);
@@ -212,8 +216,8 @@ export async function importTikTokVideoToFeed(
     const post = await storage.createPost({
       userId,
       type: "video",
-      mediaUrl: muxPlaybackId 
-        ? `https://stream.mux.com/${muxPlaybackId}.m3u8` 
+      mediaUrl: muxPlaybackId
+        ? `https://stream.mux.com/${muxPlaybackId}.m3u8`
         : mediaUrl,
       hlsUrl: hlsOrHd || undefined,
       thumbnailUrl: thumbnailUrl || undefined,
@@ -223,10 +227,13 @@ export async function importTikTokVideoToFeed(
       hiveId,
       processingStatus: muxAssetId ? "processing" : "completed",
       fireCount: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
-      commentCount: typeof video.stats?.comments === "number" ? video.stats.comments : 0,
-      sharesCount: typeof video.stats?.shares === "number" ? video.stats.shares : 0,
+      commentCount:
+        typeof video.stats?.comments === "number" ? video.stats.comments : 0,
+      sharesCount:
+        typeof video.stats?.shares === "number" ? video.stats.shares : 0,
       viewCount: typeof video.stats?.views === "number" ? video.stats.views : 0,
-      viralScore: typeof video.stats?.likes === "number" ? video.stats.likes : 0,
+      viralScore:
+        typeof video.stats?.likes === "number" ? video.stats.likes : 0,
       mediaMetadata: {
         tiktok_id: videoId,
         author: authorHandle,

@@ -172,7 +172,10 @@ async function isDuplicatePg(
   tiktokId: string,
 ): Promise<boolean> {
   const res = await client.query(
-    `SELECT id FROM publications WHERE media_metadata->>'tiktok_id' = $1 LIMIT 1`,
+    `SELECT id FROM publications
+     WHERE media_metadata->>'tiktok_id' = $1
+       AND deleted_at IS NULL
+     LIMIT 1`,
     [tiktokId],
   );
   return res.rows.length > 0;
@@ -186,6 +189,7 @@ async function isDuplicateSupabase(
     .from("publications")
     .select("id")
     .contains("media_metadata", { tiktok_id: tiktokId })
+    .is("deleted_at", null)
     .limit(1);
   return !!data?.length;
 }

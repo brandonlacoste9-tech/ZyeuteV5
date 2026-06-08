@@ -28,6 +28,7 @@ export async function getExistingTikTokIds(
       .from("publications")
       .select("id")
       .contains("media_metadata", { tiktok_id: id })
+      .is("deleted_at", null)
       .limit(1);
     if (rows?.length) existing.add(id);
   }
