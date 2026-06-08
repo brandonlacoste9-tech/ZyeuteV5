@@ -154,7 +154,9 @@ export function FeedPostActionsSheet({
               key={code}
               type="button"
               onClick={() => setLanguage(code)}
-              className={`px-2.5 py-1 uppercase transition-colors ${
+              aria-pressed={lang === code}
+              aria-label={code === "fr" ? "Français" : "English"}
+              className={`flex min-h-11 min-w-11 items-center justify-center px-3 uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold-500/60 ${
                 lang === code
                   ? "bg-gold-500/20 text-gold-400"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -203,7 +205,7 @@ export function FeedPostActionsSheet({
           <button
             type="button"
             onClick={close}
-            className="w-full py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300"
+            className="min-h-11 w-full rounded-xl py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
           >
             {t.cancel}
           </button>
@@ -226,7 +228,7 @@ export function FeedPostActionsSheet({
           <button
             type="button"
             onClick={() => setShowReportReasons(false)}
-            className="w-full py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300"
+            className="min-h-11 w-full rounded-xl py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
           >
             {t.back}
           </button>

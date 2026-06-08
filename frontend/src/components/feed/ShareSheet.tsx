@@ -1,4 +1,13 @@
 import { useCallback } from "react";
+import {
+  Repeat2,
+  Link2,
+  MessageCircle,
+  Facebook,
+  MessageSquare,
+  MoreHorizontal,
+  X,
+} from "lucide-react";
 import { toast } from "@/components/Toast";
 import { SheetShell } from "@/components/ui/SheetShell";
 
@@ -52,7 +61,7 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "repost",
       name: "Republier",
       color: "bg-yellow-500",
-      icon: "🔁",
+      icon: <Repeat2 className="h-6 w-6" aria-hidden="true" />,
       action: () => {
         toast.success("Republié !");
         onClose();
@@ -62,14 +71,14 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "copy",
       name: "Copier le lien",
       color: "bg-blue-500",
-      icon: "🔗",
+      icon: <Link2 className="h-6 w-6" aria-hidden="true" />,
       action: copy,
     },
     {
       id: "whatsapp",
       name: "WhatsApp",
       color: "bg-[#25D366]",
-      icon: "💬",
+      icon: <MessageCircle className="h-6 w-6" aria-hidden="true" />,
       action: () => {
         window.open(`https://wa.me/?text=${encodeURIComponent(url)}`);
         onClose();
@@ -79,7 +88,7 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "facebook",
       name: "Facebook",
       color: "bg-[#1877F2]",
-      icon: "📘",
+      icon: <Facebook className="h-6 w-6" aria-hidden="true" />,
       action: () => {
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
@@ -91,7 +100,7 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "sms",
       name: "SMS",
       color: "bg-green-500",
-      icon: "📱",
+      icon: <MessageSquare className="h-6 w-6" aria-hidden="true" />,
       action: () => {
         window.open(`sms:?body=${encodeURIComponent(url)}`);
         onClose();
@@ -101,7 +110,7 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "more",
       name: "Plus",
       color: "bg-zinc-700",
-      icon: "⋯",
+      icon: <MoreHorizontal className="h-6 w-6" aria-hidden="true" />,
       action: native,
     },
   ];
@@ -114,27 +123,19 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       panelClassName="px-4 pb-safe md:w-[480px] md:rounded-2xl md:border"
     >
       <div className="mb-4 flex items-center justify-between">
-        <div className="w-6" /> {/* Spacer for centering */}
+        <div className="w-11" /> {/* Spacer for centering */}
         <p className="text-center text-white font-bold text-sm tracking-wide">
           Partager vers
         </p>
         <button
+          type="button"
           onClick={onClose}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/70 transition-colors hover:bg-white/20"
+          aria-label="Fermer"
+          className="group flex h-11 w-11 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 transition-colors group-hover:bg-white/20">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </span>
         </button>
       </div>
 
@@ -143,11 +144,12 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
         {mockFriends.map((friend) => (
           <button
             key={friend.id}
+            type="button"
             onClick={() => {
               toast.success(`Envoyé à ${friend.name}`);
               onClose();
             }}
-            className="flex w-14 flex-shrink-0 flex-col items-center gap-1.5"
+            className="flex w-14 flex-shrink-0 flex-col items-center gap-1.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
           >
             <div
               className={`flex h-12 w-12 items-center justify-center rounded-full ${friend.color} text-lg font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-95`}
@@ -166,11 +168,12 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
         {externalTargets.map((target) => (
           <button
             key={target.id}
+            type="button"
             onClick={target.action}
-            className="flex w-14 flex-shrink-0 flex-col items-center gap-1.5"
+            className="flex w-14 flex-shrink-0 flex-col items-center gap-1.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
           >
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full ${target.color} text-xl text-white shadow-sm transition-transform hover:scale-105 active:scale-95`}
+              className={`flex h-12 w-12 items-center justify-center rounded-full ${target.color} text-white shadow-sm transition-transform hover:scale-105 active:scale-95`}
             >
               {target.icon}
             </div>

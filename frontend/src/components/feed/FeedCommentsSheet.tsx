@@ -85,7 +85,7 @@ export function FeedCommentsSheet({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-zinc-400 text-sm transition-colors hover:text-zinc-200"
+                className="min-h-11 rounded-lg px-2 text-zinc-400 text-sm transition-colors hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
               >
                 Fermer
               </button>
@@ -124,14 +124,14 @@ export function FeedCommentsSheet({
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Ajouter un commentaire…"
-                  className="flex-1 rounded-xl bg-black/50 border border-gold-500/20 px-3 py-2 text-sm text-white"
+                  className="min-h-11 flex-1 rounded-xl bg-black/50 border border-gold-500/20 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
                   maxLength={500}
                 />
                 <button
                   type="button"
                   disabled={sending || !text.trim()}
                   onClick={send}
-                  className="px-4 rounded-xl bg-gold-500 text-black font-bold text-sm disabled:opacity-40"
+                  className="min-h-11 px-4 rounded-xl bg-gold-500 text-black font-bold text-sm transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 disabled:opacity-40"
                 >
                   Envoyer
                 </button>

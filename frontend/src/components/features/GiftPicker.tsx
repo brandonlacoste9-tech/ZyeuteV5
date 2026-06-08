@@ -16,6 +16,7 @@ import { toast } from "../Toast";
 import { useHaptics } from "../../hooks/useHaptics";
 import { useAuth } from "../../contexts/AuthContext";
 import usePremium from "../../hooks/usePremium";
+import { SheetShell } from "@/components/ui/SheetShell";
 
 interface FloatingGift {
   id: string;
@@ -122,19 +123,14 @@ export function GiftPicker({
         </div>
       ))}
 
-      {/* Sheet backdrop */}
-      <div
-        className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-[160] bg-[#1a0f0a] border-t-2 border-gold-700/50 rounded-t-3xl p-5 safe-area-bottom">
-        {/* Handle */}
-        <div className="w-12 h-1 bg-leather-600 rounded-full mx-auto mb-4" />
-
+      <SheetShell
+        open
+        onClose={onClose}
+        className="z-[160]"
+        panelClassName="px-5 pb-safe max-h-[85vh] overflow-y-auto"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="mt-1 flex items-center justify-between mb-4">
           <div>
             <h3 className="text-white font-black text-lg">Envoyer un cadeau</h3>
             <p className="text-leather-400 text-sm">à {recipientName}</p>
@@ -144,11 +140,12 @@ export function GiftPicker({
               <span className="text-gold-400 font-black">{balance}¢</span>
             </div>
             <button
+              type="button"
               onClick={() => {
                 navigate("/store");
                 onClose();
               }}
-              className="text-gold-400 text-xs font-semibold underline"
+              className="min-h-11 rounded-lg px-1 text-gold-400 text-xs font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
             >
               Acheter +
             </button>
@@ -167,18 +164,20 @@ export function GiftPicker({
           >
             <div>
               <p className="text-gold-300 text-xs font-bold">
-                Abonnés Argent et Or reçoivent des cennes chaque mois 🎁
+                Abonnés Argent et Or reçoivent des cennes chaque mois{" "}
+                <span aria-hidden="true">🎁</span>
               </p>
               <p className="text-white/50 text-[11px] mt-0.5">
                 Ou achète un pack dans la boutique
               </p>
             </div>
             <button
+              type="button"
               onClick={() => {
                 navigate("/premium");
                 onClose();
               }}
-              className="ml-3 flex-shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black"
+              className="ml-3 min-h-11 flex-shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
             >
               Upgrader
             </button>
@@ -193,8 +192,9 @@ export function GiftPicker({
             return (
               <button
                 key={gift.id}
+                type="button"
                 onClick={() => setSelected(isSelected ? null : gift)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all ${
+                className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${
                   isSelected
                     ? "bg-gold-500/30 ring-2 ring-gold-500 scale-105"
                     : canAfford
@@ -202,7 +202,9 @@ export function GiftPicker({
                       : "bg-white/3 opacity-40"
                 }`}
               >
-                <span className="text-3xl">{gift.emoji}</span>
+                <span className="text-3xl" aria-hidden="true">
+                  {gift.emoji}
+                </span>
                 <span className="text-leather-200 text-[10px] font-semibold leading-tight text-center">
                   {gift.name}
                 </span>
@@ -218,9 +220,10 @@ export function GiftPicker({
 
         {/* Send button */}
         <button
+          type="button"
           onClick={handleSend}
           disabled={!selected || sending}
-          className="w-full py-3.5 rounded-2xl font-black text-base transition-all btn-gold disabled:opacity-40 disabled:cursor-not-allowed"
+          className="w-full py-3.5 rounded-2xl font-black text-base transition-all btn-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {sending ? (
             <span className="flex items-center justify-center gap-2">
@@ -233,7 +236,7 @@ export function GiftPicker({
             "Choisis un cadeau"
           )}
         </button>
-      </div>
+      </SheetShell>
     </>
   );
 }
