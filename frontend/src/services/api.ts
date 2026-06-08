@@ -382,9 +382,23 @@ export async function deletePost(postId: string): Promise<boolean> {
 }
 
 /** Hard-delete any post (moderator/founder/is_admin only). */
-export async function moderatorDeletePost(postId: string): Promise<boolean> {
-  const { error } = await apiCall(`/moderation/posts/${postId}`, {
-    method: "DELETE",
+export async function moderatorDeletePost(
+  postId: string,
+  source: "feed" | "profile" = "profile",
+): Promise<boolean> {
+  const { error } = await apiCall(
+    `/moderation/posts/${postId}?source=${source}`,
+    {
+      method: "DELETE",
+    },
+  );
+  return !error;
+}
+
+/** Hide a post from the viewer's Pour toi feed. */
+export async function markPostNotInterested(postId: string): Promise<boolean> {
+  const { error } = await apiCall(`/posts/${postId}/not-interested`, {
+    method: "POST",
   });
   return !error;
 }

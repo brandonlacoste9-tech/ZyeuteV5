@@ -377,6 +377,9 @@ router.post("/ban/:userId", requireModerator, async (req: any, res) => {
 router.delete("/posts/:postId", requireModerator, async (req: any, res) => {
   const reviewerId = req.userId;
   const postId = req.params.postId as string;
+  const source =
+    (req.query.source as string) || (req.body?.source as string) || "profile";
+  const auditSuffix = source === "feed" ? "feed" : "profil";
 
   if (!supabaseAdmin) {
     return res.status(503).json({ error: "Service indisponible" });
@@ -402,7 +405,7 @@ router.delete("/posts/:postId", requireModerator, async (req: any, res) => {
       ai_severity: "medium",
       ai_categories: ["moderator_action"],
       ai_confidence: 100,
-      ai_reason: "Suppression manuelle par modérateur (profil)",
+      ai_reason: `Suppression manuelle par modérateur (${auditSuffix})`,
       ai_action: "remove",
       status: "removed",
       human_reviewed: true,

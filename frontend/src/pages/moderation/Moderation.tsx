@@ -8,6 +8,7 @@ import { Header } from "../../components/Header";
 import { Button } from "../../components/Button";
 import { Avatar } from "../../components/Avatar";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "../../components/Toast";
 import { formatNumber, getTimeAgo } from "../../lib/utils";
 import type { User } from "../../types";
@@ -42,6 +43,7 @@ interface Stats {
 }
 
 export const Moderation: React.FC = () => {
+  const { user: authUser, isAdmin, isLoading: authLoading } = useAuth();
   const [logs, setLogs] = useState<ModerationLog[]>([]);
   const [stats, setStats] = useState<Stats>({
     pending: 0,
@@ -61,38 +63,22 @@ export const Moderation: React.FC = () => {
   });
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Check if user is admin
   useEffect(() => {
-    const checkAdmin = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        window.location.href = "/login";
-        return;
-      }
-
-      const { data: userData } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (
-        !userData?.is_admin &&
-        userData?.role !== "founder" &&
-        userData?.role !== "moderator"
-      ) {
-        toast.error("Accès refusé: Admin seulement");
-        window.location.href = "/";
-        return;
-      }
-
-      setCurrentUser(userData);
-    };
-
-    checkAdmin();
-  }, []);
+    if (authLoading) return;
+    if (!authUser || !isAdmin) {
+      toast.error("Accès refusé: modérateur requis");
+      window.location.href = "/";
+      return;
+    }
+    void supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setCurrentUser(data);
+      });
+  }, [authLoading, authUser, isAdmin]);
 
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);

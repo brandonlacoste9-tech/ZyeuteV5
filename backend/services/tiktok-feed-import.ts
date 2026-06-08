@@ -9,6 +9,7 @@ import {
   TikTokScraperService,
   type TikTokVideo,
 } from "./tiktok-scraper-service.js";
+import { inferQuebecScoreFromText } from "../utils/quebec-relevance.js";
 
 export type TikTokFeedImportResult =
   | { ok: true; postId: string }
@@ -213,6 +214,8 @@ export async function importTikTokVideoToFeed(
       console.warn(`[TikTok import] Mux upload skipped: ${muxErr.message}`);
     }
 
+    const quebecScore = inferQuebecScoreFromText(caption);
+
     const post = await storage.createPost({
       userId,
       type: "video",
@@ -234,6 +237,7 @@ export async function importTikTokVideoToFeed(
       viewCount: typeof video.stats?.views === "number" ? video.stats.views : 0,
       viralScore:
         typeof video.stats?.likes === "number" ? video.stats.likes : 0,
+      quebecScore,
       mediaMetadata: {
         tiktok_id: videoId,
         author: authorHandle,

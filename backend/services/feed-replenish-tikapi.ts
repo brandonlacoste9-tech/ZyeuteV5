@@ -217,7 +217,8 @@ export function startFeedReplenishJob(): () => void {
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-    if (process.env.TIKTOK_SCRAPER_API_KEY?.trim()) {
+    const { isOmkarKeyConfigured } = await import("../utils/omkar-keys.js");
+    if (isOmkarKeyConfigured()) {
       import("./feed-replenish-omkar.js")
         .then(({ replenishFeedOmkarIfLow }) => replenishFeedOmkarIfLow())
         .then((r) =>

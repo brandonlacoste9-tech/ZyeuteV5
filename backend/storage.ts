@@ -164,6 +164,8 @@ export interface IStorage {
   ): Promise<(Post & { user: User })[]>;
   createPost(post: InsertPost): Promise<Post>;
   deletePost(id: string): Promise<boolean>;
+  hidePostForUser(userId: string, postId: string): Promise<boolean>;
+  getHiddenPostIds(userId: string): Promise<string[]>;
   incrementPostViews(id: string): Promise<number>;
   markPostBurned(id: string, reason: string): Promise<void>;
   // Comments
@@ -1017,6 +1019,35 @@ export class DatabaseStorage implements IStorage {
 
     await db.delete(posts).where(eq(posts.id, id));
     return true;
+  }
+
+  async hidePostForUser(userId: string, postId: string): Promise<boolean> {
+    try {
+      await db.execute(sql`
+        INSERT INTO user_hidden_posts (user_id, post_id, reason)
+        VALUES (${userId}::uuid, ${postId}::uuid, 'not_interested')
+        ON CONFLICT (user_id, post_id) DO NOTHING
+      `);
+      return true;
+    } catch (err) {
+      console.error("[Storage] hidePostForUser error:", err);
+      return false;
+    }
+  }
+
+  async getHiddenPostIds(userId: string): Promise<string[]> {
+    try {
+      const result = await db.execute<{ post_id: string }>(sql`
+        SELECT post_id::text AS post_id
+        FROM user_hidden_posts
+        WHERE user_id = ${userId}::uuid
+      `);
+      const rows = result.rows ?? [];
+      return rows.map((r) => r.post_id).filter(Boolean);
+    } catch (err) {
+      console.warn("[Storage] getHiddenPostIds skipped:", err);
+      return [];
+    }
   }
 
   async incrementPostViews(id: string): Promise<number> {

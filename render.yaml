@@ -63,6 +63,14 @@ services:
         sync: false
 
       # ── TikTok Feed ───────────────────────────────────────────────────────
+      - key: TIKTOK_SCRAPER_API_KEY
+        sync: false
+      - key: TIKTOK_SCRAPER_API_KEY_BACKUP
+        sync: false
+      - key: TIKTOK_FEED_JOB_QUERIES
+        sync: false
+      - key: FEED_OMKAR_CALLS_PER_RUN
+        value: "2"
       - key: TIKAPI_KEY
         sync: false
       - key: PEXELS_API_KEY

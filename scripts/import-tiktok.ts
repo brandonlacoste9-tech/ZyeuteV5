@@ -6,9 +6,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Fix for TLS issues if needed
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
+const supabaseUrl =
+  process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TIKTOK_SCRAPER_API_KEY = process.env.TIKTOK_SCRAPER_API_KEY;
 
@@ -19,9 +20,12 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-console.log(`🔑 TikTok Scraper API Key: ${TIKTOK_SCRAPER_API_KEY ? "Present (Starts with " + TIKTOK_SCRAPER_API_KEY.substring(0, 4) + ")" : "MISSING"}`);
+console.log(
+  `🔑 TikTok Scraper API Key: ${TIKTOK_SCRAPER_API_KEY ? "Present (Starts with " + TIKTOK_SCRAPER_API_KEY.substring(0, 4) + ")" : "MISSING"}`,
+);
 
-const OMKAR_API_BASE = "https://tiktok-scraper.omkar.cloud/tiktok/videos/search";
+const OMKAR_API_BASE =
+  "https://tiktok-scraper.omkar.cloud/tiktok/videos/search";
 
 const QUEBEC_QUERIES = [
   "#quebec",
@@ -29,12 +33,14 @@ const QUEBEC_QUERIES = [
   "#quebecois",
   "vieux quebec",
   "poutine montreal",
-  "fleur de lys quebec"
+  "fleur de lys quebec",
 ];
 
 async function fetchTikTokVideos(query: string) {
   if (!TIKTOK_SCRAPER_API_KEY) {
-    console.warn(`[TikTok] Skipping fetch for "${query}" - TIKTOK_SCRAPER_API_KEY missing.`);
+    console.warn(
+      `[TikTok] Skipping fetch for "${query}" - TIKTOK_SCRAPER_API_KEY missing.`,
+    );
     return [];
   }
 
@@ -43,7 +49,7 @@ async function fetchTikTokVideos(query: string) {
     const response = await axios.get(OMKAR_API_BASE, {
       params: {
         search_query: query,
-        market: "ca", 
+        market: "ca",
         max_results: 15,
       },
       headers: {
@@ -84,7 +90,7 @@ async function getAuthorUserId() {
     .select("id")
     .limit(1)
     .single();
-  
+
   return fallback?.id || null;
 }
 
@@ -104,7 +110,7 @@ async function run() {
 
   for (const query of QUEBEC_QUERIES) {
     const videos = await fetchTikTokVideos(query);
-    
+
     if (!videos || !Array.isArray(videos)) continue;
 
     console.log(`📦 Found ${videos.length} videos for ${query}`);
@@ -115,6 +121,7 @@ async function run() {
         .from("publications")
         .select("id")
         .contains("media_metadata", { tiktok_id: v.video_id })
+        .is("deleted_at", null)
         .limit(1);
 
       if (existing && existing.length > 0) {
@@ -140,12 +147,15 @@ async function run() {
             tiktok_id: v.video_id,
             author: v.author?.handle,
             source: "tiktok-scraper",
-            stats: v.stats
-          }
+            stats: v.stats,
+          },
         });
 
       if (insertError) {
-        console.error(`❌ Error inserting video ${v.video_id}:`, insertError.message);
+        console.error(
+          `❌ Error inserting video ${v.video_id}:`,
+          insertError.message,
+        );
       } else {
         totalImported++;
       }

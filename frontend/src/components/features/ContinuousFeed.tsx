@@ -22,6 +22,7 @@ interface RowData {
   handleFireToggle: (postId: string, currentFire: number) => Promise<void>;
   handleComment: (postId: string) => void;
   handleShare: (postId: string) => Promise<void>;
+  handleOpenActions: (postId: string) => void;
   isFastScrolling: boolean;
   isMediumScrolling: boolean;
   isSlowScrolling: boolean;
@@ -43,6 +44,7 @@ type FeedRowProps = any;
 
 import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
+import { FeedPostActionsSheet } from "@/components/feed/FeedPostActionsSheet";
 import {
   getExplorePosts,
   getFeedPosts,
@@ -160,6 +162,7 @@ const FeedRow = memo(
       handleFireToggle,
       handleComment,
       handleShare,
+      handleOpenActions,
       isFastScrolling,
       isMediumScrolling,
       isSlowScrolling,
@@ -228,6 +231,7 @@ const FeedRow = memo(
           onFireToggle={handleFireToggle}
           onComment={handleComment}
           onShare={handleShare}
+          onOpenActions={handleOpenActions}
           priority={isPriority}
           preload={
             // Adjacent video (Next): aggressively buffer for instant swipe
@@ -352,6 +356,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [actionsCtx, setActionsCtx] = useState<{
+    postId: string;
+    authorUserId?: string;
+  } | null>(null);
 
   // Real-time engagement: subscribe to live fire/comment count updates
   // Uses a single Supabase channel for all visible posts (efficient)
@@ -1112,6 +1121,29 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, []);
 
+  const handleOpenActions = useCallback((postId: string) => {
+    const post = postsRef.current.find((p) => p.id === postId);
+    setActionsCtx({
+      postId,
+      authorUserId: post?.user?.id,
+    });
+    setActionsOpen(true);
+  }, []);
+
+  const handlePostRemoved = useCallback((postId: string) => {
+    const prev = postsRef.current;
+    const removedIdx = prev.findIndex((p) => p.id === postId);
+    const next = prev.filter((p) => p.id !== postId);
+    postsRef.current = next;
+    setPosts(next);
+    setCurrentIndex((idx) => {
+      if (removedIdx < 0) return Math.min(idx, Math.max(0, next.length - 1));
+      if (idx > removedIdx) return idx - 1;
+      if (idx >= next.length) return Math.max(0, next.length - 1);
+      return idx;
+    });
+  }, []);
+
   // Prefetch next 2 videos when active video hits 70% playback
   const handleVideoProgress = useCallback(
     (_progress: number) => {
@@ -1144,6 +1176,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       handleFireToggle,
       handleComment,
       handleShare,
+      handleOpenActions,
       isFastScrolling: isFast,
       isMediumScrolling: isMedium,
       isSlowScrolling: isSlow,
@@ -1158,6 +1191,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       handleFireToggle,
       handleComment,
       handleShare,
+      handleOpenActions,
       isFast,
       isMedium,
       isSlow,
@@ -1256,6 +1290,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           <div className="w-6 h-6 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin" />
         </div>
       )}
+
+      <FeedPostActionsSheet
+        open={actionsOpen && !!actionsCtx}
+        postId={actionsCtx?.postId || ""}
+        authorUserId={actionsCtx?.authorUserId}
+        source="feed"
+        onPostRemoved={handlePostRemoved}
+        onClose={() => {
+          setActionsOpen(false);
+          setActionsCtx(null);
+        }}
+      />
     </div>
   );
 };

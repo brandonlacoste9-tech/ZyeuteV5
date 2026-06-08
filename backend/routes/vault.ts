@@ -32,8 +32,10 @@ router.post("/:postId/not-interested", requireAuth, async (req, res) => {
     const post = await storage.getPost(postId);
     if (!post) return res.status(404).json({ error: "Post not found" });
 
-    // Future: Update user's content preferences in database
-    console.log(`User ${userId} marked post ${postId} as not interested`);
+    const ok = await storage.hidePostForUser(userId, postId);
+    if (!ok) {
+      return res.status(500).json({ error: "Failed to update preferences" });
+    }
 
     res.json({
       success: true,

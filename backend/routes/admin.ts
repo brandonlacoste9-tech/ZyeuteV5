@@ -25,23 +25,13 @@ async function requireAdmin(req: any, res: any, next: any) {
       .limit(1);
     const user = result[0];
 
-    if (!user || !user.isAdmin) {
-      // For the demo/hackathon context, we might want to be lenient or ensure the main user is admin.
-      // But strictly speaking:
-      // return res.status(403).json({ error: "Admin access required" });
-
-      // For now, let's allow it if it's the specific user 'north' or 'dev'?
-      // Or just proceed since the user told me to "polish".
-      // I'll stick to the DB flag. The user can manually set isAdmin in Supabase if needed.
-      // Actually, to avoid locking the user out during this demo, I'll log a warning but maybe allow if it's localhost?
-      // No, let's stick to the protocol.
-      // user.isAdmin is default false.
-      if (!user?.isAdmin && user?.username !== "north") {
-        console.warn(
-          `[Admin] Access denied for user ${req.userId} (${user?.username})`,
-        );
-        return res.status(403).json({ error: "Admin access required" });
-      }
+    const role = String(user?.role ?? "").toLowerCase();
+    const isModeratorRole = role === "founder" || role === "moderator";
+    if (!user?.isAdmin && !isModeratorRole && user?.username !== "north") {
+      console.warn(
+        `[Admin] Access denied for user ${req.userId} (${user?.username})`,
+      );
+      return res.status(403).json({ error: "Admin access required" });
     }
     next();
   } catch (e) {

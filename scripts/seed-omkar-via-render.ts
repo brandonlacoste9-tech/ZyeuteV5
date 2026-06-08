@@ -118,10 +118,16 @@ const DEFAULT_QUERIES = [
   "#sherbrooke",
   "quebec city",
   "#quebec",
-  "viral",
-  "fyp",
-  "funny",
-  "comedy",
+  "montreal",
+  "laval",
+  "sherbrooke",
+  "quebec",
+  "quebecois",
+  "mtl",
+  "vieuxquebec",
+  "gatineau",
+  "quebec viral",
+  "montreal nightlife",
 ];
 
 function toCandidate(v: TikTokVideo): FeedSeedCandidate {

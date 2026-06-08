@@ -164,6 +164,7 @@ async function alreadyImported(tiktokId: string) {
     .from("publications")
     .select("id")
     .contains("media_metadata", { tiktok_id: tiktokId })
+    .is("deleted_at", null)
     .limit(1);
 
   return !!data?.length;

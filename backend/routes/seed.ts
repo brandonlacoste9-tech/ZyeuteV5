@@ -557,8 +557,9 @@ router.post("/omkar", async (req, res) => {
     });
 
     if (!result.triggered && result.imported === 0) {
-      const hint = !process.env.TIKTOK_SCRAPER_API_KEY?.trim()
-        ? "Set TIKTOK_SCRAPER_API_KEY on the server (Omkar API key)"
+      const { isOmkarKeyConfigured } = await import("../utils/omkar-keys.js");
+      const hint = !isOmkarKeyConfigured()
+        ? "Set TIKTOK_SCRAPER_API_KEY (or _BACKUP) on the server (Omkar API key)"
         : "Feed may already be above threshold; use ?force=1";
       return res.status(result.errors.length > 0 ? 503 : 200).json({
         success: false,

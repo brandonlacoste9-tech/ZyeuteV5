@@ -19,9 +19,12 @@ Minimum for feed + seed:
 CRON_SECRET=<generate 32+ random chars>
 SUPABASE_SERVICE_ROLE_KEY=...
 VITE_SUPABASE_URL=https://vuanulvyqkfefmjcikfk.supabase.co
+TIKTOK_SCRAPER_API_KEY=...          # Omkar primary (Quebec seed)
+TIKTOK_SCRAPER_API_KEY_BACKUP=...   # optional failover
 APIFY_API_KEY=...
 PEXELS_API_KEY=...
 FEED_REPLENISH_ENABLED=true
+FEED_OMKAR_CALLS_PER_RUN=2
 FEED_MIN_PLAYABLE_POSTS=150
 FEED_REPLENISH_TARGET=350
 DATABASE_URL=postgresql://...pooler...:5432/postgres

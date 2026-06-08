@@ -420,7 +420,9 @@ export class TikTokScraperService {
   ): Promise<TikTokVideo[]> {
     if (isOmkarKeyConfigured()) {
       try {
-        const videos = await this.searchOmkar(query, maxResults);
+        const { isQuebecQuery } = await import("../utils/quebec-relevance.js");
+        const sortBy = isQuebecQuery(query) ? "most_liked" : "relevance";
+        const videos = await this.searchOmkar(query, maxResults, sortBy);
         if (videos.length > 0) return videos;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);

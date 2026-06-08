@@ -198,9 +198,13 @@ export async function registerRoutes(
     if (!user?.isAdmin && user?.username !== "north") {
       return res.status(403).json({ error: "Admin access required" });
     }
-    const key = process.env.TIKTOK_SCRAPER_API_KEY;
+    const { isOmkarKeyConfigured, getOmkarApiKeys } =
+      await import("./utils/omkar-keys.js");
+    const keys = getOmkarApiKeys();
+    const key = keys[0];
     const diag: Record<string, unknown> = {
-      hasKey: !!key,
+      hasKey: isOmkarKeyConfigured(),
+      keyCount: keys.length,
       keyPrefix: key ? key.substring(0, 6) + "..." : null,
       hasTikApiKey: !!process.env.TIKAPI_KEY,
       nodeEnv: process.env.NODE_ENV,

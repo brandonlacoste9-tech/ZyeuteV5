@@ -4,7 +4,11 @@
  * Compatible with both Zyeute (TikTok feed) and Feed (grid) components
  */
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  type InfiniteData,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { useEffect, useMemo, useState } from "react";
 import type { Post } from "@/types";
@@ -32,6 +36,26 @@ interface FeedResponse {
 }
 
 export type FeedType = "feed" | "explore" | "smart";
+
+/** Remove a post from all infinite-feed React Query caches (Pour toi / Abonnements). */
+export function removePostFromFeedCache(
+  queryClient: QueryClient,
+  postId: string,
+): void {
+  queryClient.setQueriesData<InfiniteData<FeedResponse>>(
+    { queryKey: ["feed-infinite"] },
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          posts: page.posts.filter((p) => p.id !== postId),
+        })),
+      };
+    },
+  );
+}
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const {

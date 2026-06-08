@@ -13,6 +13,7 @@ import {
   isMuxIngestConfigured,
 } from "./tiktok-mux-ingest.js";
 import { isExpiringTikTokCdnUrl } from "../utils/playable-media.js";
+import { inferQuebecScoreFromText } from "../utils/quebec-relevance.js";
 
 const { Pool } = pg;
 
@@ -35,6 +36,7 @@ async function buildPublicationRow(
   const hd = video.media?.hd_video_url;
   const sd = video.media?.video_url;
   const caption = (video.caption || "TikTok").slice(0, 500);
+  const quebec_score = inferQuebecScoreFromText(caption);
 
   const muxResult =
     isMuxIngestConfigured() &&
@@ -70,6 +72,7 @@ async function buildPublicationRow(
       comments_count: video.stats?.comments ?? 0,
       shares_count: video.stats?.shares ?? 0,
       viral_score: video.stats?.likes ?? video.stats?.views ?? 0,
+      quebec_score,
       aspect_ratio: "9:16",
       media_metadata: {
         tiktok_id: video.video_id,
@@ -117,6 +120,7 @@ async function buildPublicationRow(
     comments_count: video.stats?.comments ?? 0,
     shares_count: video.stats?.shares ?? 0,
     viral_score: video.stats?.likes ?? video.stats?.views ?? 0,
+    quebec_score,
     aspect_ratio: "9:16",
     media_metadata: {
       tiktok_id: video.video_id,

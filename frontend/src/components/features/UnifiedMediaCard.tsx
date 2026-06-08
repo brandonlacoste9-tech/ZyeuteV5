@@ -17,6 +17,7 @@ interface UnifiedMediaCardProps {
   onFireToggle?: (postId: string, currentFire: number) => void;
   onComment?: (postId: string) => void;
   onShare?: (postId: string) => void;
+  onOpenActions?: (postId: string) => void;
   priority?: boolean;
   preload?: "auto" | "metadata" | "none";
   videoSource?: VideoSource;
@@ -46,6 +47,7 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
     onFireToggle,
     onComment,
     onShare,
+    onOpenActions,
     priority = false,
     preload = "metadata",
     videoSource,
@@ -79,6 +81,9 @@ export const UnifiedMediaCard = React.memo<UnifiedMediaCardProps>(
           priority={priority}
           onCommentClick={onComment ? () => onComment(post.id) : undefined}
           onShareClick={onShare ? () => onShare(post.id) : undefined}
+          onOpenActions={
+            onOpenActions ? () => onOpenActions(post.id) : undefined
+          }
           onVideoProgress={onVideoProgress}
         />
       );

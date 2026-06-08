@@ -12,6 +12,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { RequireModerator } from "@/components/auth/RequireModerator";
 import { LoadingScreen as LoadingScreenComponent } from "@/components/LoadingScreen";
 
 function LoadingScreen({ message }: { message?: string }) {
@@ -484,7 +485,9 @@ export function AppRoutes() {
           path="/moderation"
           element={
             <RequireAuth>
-              <ModerationPage />
+              <RequireModerator>
+                <ModerationPage />
+              </RequireModerator>
             </RequireAuth>
           }
         />

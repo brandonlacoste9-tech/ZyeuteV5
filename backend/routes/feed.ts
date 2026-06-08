@@ -437,8 +437,17 @@ router.get(
         void viewerProfile;
       }
 
-      // ── Exclude recently watched videos (Pour toi + Abonnements) ─────────
+      // ── Exclude hidden + recently watched videos ─────────────────────────
       let excludedIds: string[] = [];
+      let hiddenIds: string[] = [];
+      if (viewerId) {
+        try {
+          hiddenIds = await storage.getHiddenPostIds(viewerId);
+          if (hiddenIds.length > 0) excludedIds.push(...hiddenIds);
+        } catch {
+          // non-critical
+        }
+      }
       if (viewerId && (feedType === "feed" || feedType === "explore")) {
         try {
           const sevenDaysAgo = new Date(
@@ -680,6 +689,13 @@ router.get(
         offsetInBlock,
         offsetInBlock + limit,
       );
+
+      if (hiddenIds.length > 0) {
+        const hiddenSet = new Set(hiddenIds);
+        finalPosts = finalPosts.filter(
+          (p: Record<string, unknown>) => !hiddenSet.has(String(p.id)),
+        );
+      }
 
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {

@@ -11,6 +11,7 @@ import {
   countPublicFeedPosts,
 } from "./feed-replenish-tikapi.js";
 import { importTikTokVideoToFeed } from "./tiktok-feed-import.js";
+import { scoreQuebecRelevance } from "../utils/quebec-relevance.js";
 import {
   isOmkarConfigured,
   TikTokScraperService,
@@ -48,21 +49,21 @@ async function collectOmkarCandidates(options: {
   const errors: string[] = [];
   const seen = new Set<string>();
   const out: TikTokVideo[] = [];
+  const queryByVideo = new Map<string, string>();
   let omkarCalls = 0;
 
   const queries = getQuebecTikTokQueries();
   const slot = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
   const includeTrending =
     options.force === true ||
-    process.env.FEED_OMKAR_INCLUDE_TRENDING === "true" ||
-    (process.env.FEED_OMKAR_INCLUDE_TRENDING !== "false" &&
-      slot % envInt("FEED_OMKAR_TRENDING_EVERY_N_SLOTS", 4) === 0);
+    process.env.FEED_OMKAR_INCLUDE_TRENDING === "true";
 
-  const push = (videos: TikTokVideo[]) => {
+  const push = (videos: TikTokVideo[], query?: string) => {
     for (const v of videos) {
       if (!v.video_id || seen.has(v.video_id)) continue;
       if (!v.media?.video_url?.startsWith("http")) continue;
       seen.add(v.video_id);
+      if (query) queryByVideo.set(v.video_id, query);
       out.push(v);
     }
   };
@@ -88,7 +89,7 @@ async function collectOmkarCandidates(options: {
         options.resultsPerQuery,
       );
       omkarCalls += 1;
-      push(videos);
+      push(videos, q);
     } catch (e: unknown) {
       errors.push(
         `search(${q}): ${e instanceof Error ? e.message : String(e)}`,
@@ -96,8 +97,16 @@ async function collectOmkarCandidates(options: {
     }
   }
 
+  const rank = (v: TikTokVideo) => {
+    const qScore = scoreQuebecRelevance(
+      v.caption || "",
+      queryByVideo.get(v.video_id),
+    );
+    return qScore * 1e9 + (v.stats?.views ?? 0);
+  };
+
   return {
-    videos: out.sort((a, b) => (b.stats?.views ?? 0) - (a.stats?.views ?? 0)),
+    videos: out.sort((a, b) => rank(b) - rank(a)),
     omkarCalls,
     errors,
   };

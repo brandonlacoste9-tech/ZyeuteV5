@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   MessageCircle,
   Share2,
+  MoreHorizontal,
   Volume2,
   VolumeX,
   Music,
@@ -42,6 +43,7 @@ interface SingleVideoViewProps {
   onToggleMute: () => void;
   onCommentClick?: () => void;
   onShareClick?: () => void;
+  onOpenActions?: () => void;
   onVideoProgress?: (progress: number) => void;
   onVideoEnd?: () => void;
 }
@@ -54,6 +56,7 @@ export function SingleVideoView({
   onToggleMute,
   onCommentClick,
   onShareClick,
+  onOpenActions,
   onVideoProgress,
   onVideoEnd,
 }: SingleVideoViewProps) {
@@ -63,7 +66,9 @@ export function SingleVideoView({
   const { toast } = useToast();
   const [videoError, setVideoError] = useState<Error | null>(null);
   const [isLiked, setIsLiked] = useState(false);
-  const [localFireCount, setLocalFireCount] = useState<number>(post.fireCount || 0);
+  const [localFireCount, setLocalFireCount] = useState<number>(
+    post.fireCount || 0,
+  );
   const [isFollowing, setIsFollowing] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showRemix, setShowRemix] = useState(false);
@@ -147,47 +152,60 @@ export function SingleVideoView({
     }
   }, [impact, isLiked, currentUser, post.id]);
 
-  const handleFollowFromFeed = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!currentUser || !post.user) return;
-    if (currentUser.id === post.user.id) return; // can't follow yourself
-    tap();
-    setIsFollowing((prev) => !prev);
-    const ok = await followUser(post.user.id);
-    if (!ok) {
-      setIsFollowing((prev) => !prev); // rollback
-      toast({ title: "Erreur lors de l'abonnement", variant: "destructive" });
-    } else {
-      toast({ title: isFollowing ? `Désabonné de @${post.user.username}` : `Abonné à @${post.user.username} ✅` });
-    }
-  }, [currentUser, post.user, isFollowing, tap, toast]);
+  const handleFollowFromFeed = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!currentUser || !post.user) return;
+      if (currentUser.id === post.user.id) return; // can't follow yourself
+      tap();
+      setIsFollowing((prev) => !prev);
+      const ok = await followUser(post.user.id);
+      if (!ok) {
+        setIsFollowing((prev) => !prev); // rollback
+        toast({ title: "Erreur lors de l'abonnement", variant: "destructive" });
+      } else {
+        toast({
+          title: isFollowing
+            ? `Désabonné de @${post.user.username}`
+            : `Abonné à @${post.user.username} ✅`,
+        });
+      }
+    },
+    [currentUser, post.user, isFollowing, tap, toast],
+  );
 
   // Track video progress for the progress bar
-  const handleVideoProgressInternal = useCallback((progress: number) => {
-    setVideoProgress(progress);
-    onVideoProgress?.(progress);
-  }, [onVideoProgress]);
+  const handleVideoProgressInternal = useCallback(
+    (progress: number) => {
+      setVideoProgress(progress);
+      onVideoProgress?.(progress);
+    },
+    [onVideoProgress],
+  );
 
-  const handleShareClick = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    tap();
-    const url = `${window.location.origin}/p/${post.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: (post as any).caption || "Vidéo Zyeuté",
-          text: `@${post.user?.username || "anonyme"} sur Zyeuté ⚜️`,
-          url,
-        });
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast({ title: "Lien copié! 📋", description: url });
+  const handleShareClick = useCallback(
+    async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      tap();
+      const url = `${window.location.origin}/p/${post.id}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: (post as any).caption || "Vidéo Zyeuté",
+            text: `@${post.user?.username || "anonyme"} sur Zyeuté ⚜️`,
+            url,
+          });
+        } else {
+          await navigator.clipboard.writeText(url);
+          toast({ title: "Lien copié! 📋", description: url });
+        }
+      } catch {
+        // user cancelled or clipboard blocked — silently ignore
       }
-    } catch {
-      // user cancelled or clipboard blocked — silently ignore
-    }
-    onShareClick?.();
-  }, [post, tap, toast, onShareClick]);
+      onShareClick?.();
+    },
+    [post, tap, toast, onShareClick],
+  );
 
   // Sound info derived from post
   const soundTitle = useMemo(() => {
@@ -203,7 +221,7 @@ export function SingleVideoView({
 
     // Split by #hashtag but keep the hashtag using regex capture
     const parts = text.split(/(#[\w\u00C0-\u017F]+)/g);
-    
+
     return parts.map((part: string, i: number) => {
       if (part.startsWith("#")) {
         const tag = part.substring(1);
@@ -441,6 +459,26 @@ export function SingleVideoView({
               {(post as any).remixCount || (post as any).remix_count || 0}
             </span>
           </div>
+
+          {onOpenActions ? (
+            <div className="flex flex-col items-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  tap();
+                  onOpenActions();
+                }}
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  backdropFilter: "blur(8px)",
+                }}
+                aria-label="Options"
+              >
+                <MoreHorizontal size={24} />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Bottom Info Bar */}
@@ -505,9 +543,7 @@ export function SingleVideoView({
                 <div
                   className="text-white/80 text-xs font-medium whitespace-nowrap"
                   style={{
-                    animation: isActive
-                      ? "marquee 8s linear infinite"
-                      : "none",
+                    animation: isActive ? "marquee 8s linear infinite" : "none",
                   }}
                 >
                   <Music

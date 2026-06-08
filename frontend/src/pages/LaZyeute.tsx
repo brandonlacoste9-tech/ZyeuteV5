@@ -33,7 +33,9 @@ import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
 import { FeedCommentsSheet } from "@/components/feed/FeedCommentsSheet";
-import { ReportPostSheet } from "@/components/feed/ReportPostSheet";
+import { FeedPostActionsSheet } from "@/components/feed/FeedPostActionsSheet";
+import { useQueryClient } from "@tanstack/react-query";
+import { removePostFromFeedCache } from "@/hooks/useInfiniteFeed";
 import { GiftPicker } from "@/components/features/GiftPicker";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
@@ -300,6 +302,7 @@ export const Zyeute: React.FC = () => {
   const { edgeLighting } = useTheme();
   const { user: authUser, isGuest } = useAuth();
   const { isPremium } = usePremium();
+  const queryClient = useQueryClient();
 
   /** Pour toi = explore; Abonnements = people you follow (requires auth for filtering). */
   const [feedSource, setFeedSource] = useState<FeedType>("explore");
@@ -1876,10 +1879,21 @@ export const Zyeute: React.FC = () => {
             }}
             canComment={!!authUser?.id && !isGuest}
           />
-          <ReportPostSheet
+          <FeedPostActionsSheet
             open={reportOpen && !!reportCtx}
             postId={reportCtx?.postId || ""}
             authorUserId={reportCtx?.authorUserId}
+            source="feed"
+            onPostRemoved={(postId) => {
+              removePostFromFeedCache(queryClient, postId);
+              setCurrentIndex((idx) => {
+                const removedIdx = posts.findIndex((p) => p.id === postId);
+                if (removedIdx < 0) return idx;
+                if (idx > removedIdx) return idx - 1;
+                if (idx >= posts.length - 1) return Math.max(0, idx - 1);
+                return idx;
+              });
+            }}
             onClose={() => {
               setReportOpen(false);
               setReportCtx(null);
