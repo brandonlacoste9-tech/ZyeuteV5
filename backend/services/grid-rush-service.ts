@@ -31,8 +31,29 @@ function assertStake(stake: number): StakeTokens {
  * `client.query("BEGIN")` (simple protocol) works through the pooler — this is
  * the same pattern `quickMatch` uses.
  */
+/**
+ * Acquire a pool client, retrying a few times on transient connection timeouts
+ * (Render cold start, or a briefly saturated Supabase pooler). The base pool is
+ * configured with a tight 3s connect timeout, so a short retry avoids spurious
+ * "timeout exceeded when trying to connect" failures.
+ */
+async function connectWithRetry(retries = 2): Promise<PoolClient> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await pool.connect();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await pool.connect();
+  const client = await connectWithRetry();
   try {
     await client.query("BEGIN");
     const result = await fn(client);
