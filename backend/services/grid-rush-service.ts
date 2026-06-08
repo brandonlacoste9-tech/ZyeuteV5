@@ -1,6 +1,7 @@
 import { db, pool } from "../storage.js";
 import { gridRushMatches } from "../../shared/schema.js";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import type { PoolClient } from "pg";
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
@@ -8,8 +9,6 @@ export const DEFAULT_WALLET_TOKENS = 1000;
 export type StakeTokens = (typeof ALLOWED_STAKES)[number];
 
 export type GridRushMatch = typeof gridRushMatches.$inferSelect;
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const INSUFFICIENT_TOKENS =
   "Pas assez de jetons! Tu repartiras avec 1000 jetons gratuits.";
@@ -23,43 +22,70 @@ function assertStake(stake: number): StakeTokens {
   return stake as StakeTokens;
 }
 
+/**
+ * Run a function inside a DB transaction using a RAW pool client.
+ *
+ * IMPORTANT: we deliberately do NOT use Drizzle's `db.transaction()` here.
+ * Drizzle issues `BEGIN` over the extended query protocol, which Supabase's
+ * connection pooler rejects with "Failed query: begin". A raw client running
+ * `client.query("BEGIN")` (simple protocol) works through the pooler — this is
+ * the same pattern `quickMatch` uses.
+ */
+async function withTx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 /** Create the wallet (seeded with default tokens) if it does not exist yet. */
-async function ensureWalletTx(tx: Tx, userId: string): Promise<void> {
-  await tx.execute(sql`
-    INSERT INTO user_wallets (user_id, token_balance)
-    VALUES (${userId}, ${DEFAULT_WALLET_TOKENS})
-    ON CONFLICT (user_id) DO NOTHING
-  `);
+async function ensureWallet(client: PoolClient, userId: string): Promise<void> {
+  await client.query(
+    `INSERT INTO user_wallets (user_id, token_balance)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId, DEFAULT_WALLET_TOKENS],
+  );
 }
 
 async function deductTokens(
-  tx: Tx,
+  client: PoolClient,
   userId: string,
   amount: number,
 ): Promise<void> {
-  await ensureWalletTx(tx, userId);
-  const result = await tx.execute(sql`
-    UPDATE user_wallets
-    SET token_balance = token_balance - ${amount}, updated_at = NOW()
-    WHERE user_id = ${userId} AND token_balance >= ${amount}
-    RETURNING user_id
-  `);
+  await ensureWallet(client, userId);
+  const result = await client.query(
+    `UPDATE user_wallets
+     SET token_balance = token_balance - $1, updated_at = NOW()
+     WHERE user_id = $2 AND token_balance >= $1
+     RETURNING user_id`,
+    [amount, userId],
+  );
   if (!result.rows.length) {
     throw new Error(INSUFFICIENT_TOKENS);
   }
 }
 
 async function creditTokens(
-  tx: Tx,
+  client: PoolClient,
   userId: string,
   amount: number,
 ): Promise<void> {
-  await ensureWalletTx(tx, userId);
-  await tx.execute(sql`
-    UPDATE user_wallets
-    SET token_balance = token_balance + ${amount}, updated_at = NOW()
-    WHERE user_id = ${userId}
-  `);
+  await ensureWallet(client, userId);
+  await client.query(
+    `UPDATE user_wallets
+     SET token_balance = token_balance + $1, updated_at = NOW()
+     WHERE user_id = $2`,
+    [amount, userId],
+  );
 }
 
 function activateMatch(now: Date) {
@@ -125,17 +151,8 @@ export class GridRushService {
     const stake = assertStake(stakeTokens);
     const now = new Date();
 
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      // Seed wallet for first-time players (1000 free tokens).
-      await client.query(
-        `INSERT INTO user_wallets (user_id, token_balance)
-         VALUES ($1, $2)
-         ON CONFLICT (user_id) DO NOTHING`,
-        [userId, DEFAULT_WALLET_TOKENS],
-      );
+    return withTx(async (client) => {
+      await ensureWallet(client, userId);
 
       const waiting = await client.query<{
         id: string;
@@ -154,20 +171,9 @@ export class GridRushService {
         [stake, userId],
       );
 
-      const deductTokens = async () => {
-        const deduct = await client.query(
-          `UPDATE user_wallets
-           SET token_balance = token_balance - $1, updated_at = NOW()
-           WHERE user_id = $2 AND token_balance >= $1
-           RETURNING user_id`,
-          [stake, userId],
-        );
-        if (!deduct.rows.length) throw new Error(INSUFFICIENT_TOKENS);
-      };
-
       if (waiting.rows.length > 0) {
         const row = waiting.rows[0];
-        await deductTokens();
+        await deductTokens(client, userId, stake);
 
         const { startedAt, endsAt, status } = activateMatch(now);
         const updated = await client.query(
@@ -181,12 +187,10 @@ export class GridRushService {
            RETURNING *`,
           [userId, status, startedAt, endsAt, row.id],
         );
-
-        await client.query("COMMIT");
         return mapRow(updated.rows[0]);
       }
 
-      await deductTokens();
+      await deductTokens(client, userId, stake);
 
       const created = await client.query(
         `INSERT INTO grid_rush_matches (player_1_id, stake_tokens, status)
@@ -194,15 +198,8 @@ export class GridRushService {
          RETURNING *`,
         [userId, stake],
       );
-
-      await client.query("COMMIT");
       return mapRow(created.rows[0]);
-    } catch (err) {
-      await client.query("ROLLBACK");
-      throw err;
-    } finally {
-      client.release();
-    }
+    });
   }
 
   static async getWalletBalance(userId: string): Promise<number> {
@@ -226,22 +223,17 @@ export class GridRushService {
     const now = new Date();
     const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
 
-    const match = await db.transaction(async (tx) => {
-      await deductTokens(tx, userId, stake);
+    const match = await withTx(async (client) => {
+      await deductTokens(client, userId, stake);
 
-      const [created] = await tx
-        .insert(gridRushMatches)
-        .values({
-          player1Id: userId,
-          stakeTokens: stake,
-          status: "ACTIVE",
-          isBot: true,
-          startedAt: now,
-          endsAt,
-        })
-        .returning();
-
-      return created;
+      const created = await client.query(
+        `INSERT INTO grid_rush_matches
+           (player_1_id, stake_tokens, status, is_bot, started_at, ends_at)
+         VALUES ($1, $2, 'ACTIVE', true, $3, $4)
+         RETURNING *`,
+        [userId, stake, now, endsAt],
+      );
+      return mapRow(created.rows[0]);
     });
 
     scheduleBotTick(match.id, endsAt, userId);
@@ -254,19 +246,16 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
 
-    return await db.transaction(async (tx) => {
-      await deductTokens(tx, userId, stake);
+    return withTx(async (client) => {
+      await deductTokens(client, userId, stake);
 
-      const [match] = await tx
-        .insert(gridRushMatches)
-        .values({
-          player1Id: userId,
-          stakeTokens: stake,
-          status: "WAITING",
-        })
-        .returning();
-
-      return match;
+      const created = await client.query(
+        `INSERT INTO grid_rush_matches (player_1_id, stake_tokens, status)
+         VALUES ($1, $2, 'WAITING')
+         RETURNING *`,
+        [userId, stake],
+      );
+      return mapRow(created.rows[0]);
     });
   }
 
@@ -276,38 +265,32 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const now = new Date();
 
-    return await db.transaction(async (tx) => {
-      const [match] = await tx
-        .select()
-        .from(gridRushMatches)
-        .where(eq(gridRushMatches.id, matchId))
-        .limit(1);
+    return withTx(async (client) => {
+      const sel = await client.query(
+        `SELECT * FROM grid_rush_matches WHERE id = $1 LIMIT 1 FOR UPDATE`,
+        [matchId],
+      );
+      const match = sel.rows[0];
 
       if (!match) throw new Error("Partie introuvable");
       if (match.status !== "WAITING")
         throw new Error("Cette partie n'est plus disponible");
-      if (match.player2Id) throw new Error("Cette partie est déjà pleine");
-      if (match.player1Id === userId) {
+      if (match.player_2_id) throw new Error("Cette partie est déjà pleine");
+      if (match.player_1_id === userId) {
         throw new Error("Tu ne peux pas rejoindre ta propre partie");
       }
 
-      await deductTokens(tx, userId, match.stakeTokens);
+      await deductTokens(client, userId, match.stake_tokens);
 
       const { startedAt, endsAt, status } = activateMatch(now);
-
-      const [updated] = await tx
-        .update(gridRushMatches)
-        .set({
-          player2Id: userId,
-          status,
-          startedAt,
-          endsAt,
-          updatedAt: now,
-        })
-        .where(eq(gridRushMatches.id, matchId))
-        .returning();
-
-      return updated;
+      const updated = await client.query(
+        `UPDATE grid_rush_matches
+         SET player_2_id = $1, status = $2, started_at = $3, ends_at = $4, updated_at = NOW()
+         WHERE id = $5
+         RETURNING *`,
+        [userId, status, startedAt, endsAt, matchId],
+      );
+      return mapRow(updated.rows[0]);
     });
   }
 
@@ -315,51 +298,38 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
-    const now = new Date();
+    // Single atomic UPDATE — increments the caller's own score column, guarded
+    // so it only counts while the match is ACTIVE and the clock hasn't expired.
+    const result = await pool.query(
+      `UPDATE grid_rush_matches
+       SET player_1_score = player_1_score + (CASE WHEN player_1_id = $1 THEN 1 ELSE 0 END),
+           player_2_score = player_2_score + (CASE WHEN player_2_id = $1 THEN 1 ELSE 0 END),
+           updated_at = NOW()
+       WHERE id = $2
+         AND status = 'ACTIVE'
+         AND ends_at > NOW()
+         AND (player_1_id = $1 OR player_2_id = $1)
+       RETURNING *`,
+      [userId, matchId],
+    );
 
-    return await db.transaction(async (tx) => {
-      const [match] = await tx
-        .select()
-        .from(gridRushMatches)
-        .where(eq(gridRushMatches.id, matchId))
-        .limit(1);
+    if (result.rows.length) {
+      return mapRow(result.rows[0]);
+    }
 
-      if (!match) throw new Error("Partie introuvable");
-      if (match.status !== "ACTIVE")
-        throw new Error("La partie n'est pas active");
-      if (!match.endsAt || match.endsAt <= now) {
-        throw new Error("Le temps est écoulé");
-      }
-
-      const isPlayer1 = match.player1Id === userId;
-      const isPlayer2 = match.player2Id === userId;
-      if (!isPlayer1 && !isPlayer2) {
-        throw new Error("Tu n'es pas dans cette partie");
-      }
-
-      const [updated] = await tx
-        .update(gridRushMatches)
-        .set(
-          isPlayer1
-            ? {
-                player1Score: match.player1Score + 1,
-                updatedAt: now,
-              }
-            : {
-                player2Score: match.player2Score + 1,
-                updatedAt: now,
-              },
-        )
-        .where(
-          and(
-            eq(gridRushMatches.id, matchId),
-            eq(gridRushMatches.status, "ACTIVE"),
-          ),
-        )
-        .returning();
-
-      return updated;
-    });
+    // Guard failed — surface a precise reason.
+    const cur = await pool.query(
+      `SELECT status, ends_at, player_1_id, player_2_id
+       FROM grid_rush_matches WHERE id = $1 LIMIT 1`,
+      [matchId],
+    );
+    const m = cur.rows[0];
+    if (!m) throw new Error("Partie introuvable");
+    if (m.player_1_id !== userId && m.player_2_id !== userId) {
+      throw new Error("Tu n'es pas dans cette partie");
+    }
+    if (m.status !== "ACTIVE") throw new Error("La partie n'est pas active");
+    throw new Error("Le temps est écoulé");
   }
 
   static async finishMatch(
@@ -368,76 +338,59 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const now = new Date();
 
-    return await db.transaction(async (tx) => {
-      const [match] = await tx
-        .select()
-        .from(gridRushMatches)
-        .where(eq(gridRushMatches.id, matchId))
-        .limit(1);
+    return withTx(async (client) => {
+      // FOR UPDATE locks the row: a concurrent finisher (e.g. client + bot loop)
+      // blocks here, then sees status COMPLETED and returns without a 2nd payout.
+      const sel = await client.query(
+        `SELECT * FROM grid_rush_matches WHERE id = $1 LIMIT 1 FOR UPDATE`,
+        [matchId],
+      );
+      const match = sel.rows[0];
 
       if (!match) throw new Error("Partie introuvable");
-      if (match.status === "COMPLETED") return match;
+      if (match.status === "COMPLETED") return mapRow(match);
       if (match.status !== "ACTIVE") {
         throw new Error("La partie ne peut pas être terminée");
       }
 
       const isParticipant =
-        match.player1Id === userId || match.player2Id === userId;
+        match.player_1_id === userId || match.player_2_id === userId;
       if (!isParticipant) throw new Error("Tu n'es pas dans cette partie");
 
-      if (match.endsAt && match.endsAt > now) {
+      if (match.ends_at && new Date(match.ends_at) > now) {
         throw new Error("La partie n'est pas encore terminée");
       }
 
       // winnerId is null for a tie OR a bot win (bot has no auth user row).
       let winnerId: string | null = null;
-      if (match.player1Score > match.player2Score) {
-        winnerId = match.player1Id;
-      } else if (match.player2Score > match.player1Score) {
-        winnerId = match.player2Id;
+      if (match.player_1_score > match.player_2_score) {
+        winnerId = match.player_1_id;
+      } else if (match.player_2_score > match.player_1_score) {
+        winnerId = match.player_2_id;
       }
-      const isTie = match.player1Score === match.player2Score;
+      const isTie = match.player_1_score === match.player_2_score;
 
-      // Claim the match atomically — only the caller that flips ACTIVE→COMPLETED
-      // runs the payout, which prevents a double payout when both clients
-      // (or a client and the bot loop) finish at the same instant.
-      const [updated] = await tx
-        .update(gridRushMatches)
-        .set({
-          status: "COMPLETED",
-          winnerId,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(gridRushMatches.id, matchId),
-            eq(gridRushMatches.status, "ACTIVE"),
-          ),
-        )
-        .returning();
-
-      if (!updated) {
-        const [existing] = await tx
-          .select()
-          .from(gridRushMatches)
-          .where(eq(gridRushMatches.id, matchId))
-          .limit(1);
-        return existing!;
-      }
+      const updated = await client.query(
+        `UPDATE grid_rush_matches
+         SET status = 'COMPLETED', winner_id = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING *`,
+        [winnerId, matchId],
+      );
 
       // GG gift: loser's stake transfers to the winner (winner keeps own stake + gift).
       if (winnerId) {
-        await creditTokens(tx, winnerId, match.stakeTokens * 2);
+        await creditTokens(client, winnerId, match.stake_tokens * 2);
       } else if (isTie) {
         // Refund real players on a draw (the bot has no wallet to refund).
-        await creditTokens(tx, match.player1Id, match.stakeTokens);
-        if (match.player2Id) {
-          await creditTokens(tx, match.player2Id, match.stakeTokens);
+        await creditTokens(client, match.player_1_id, match.stake_tokens);
+        if (match.player_2_id) {
+          await creditTokens(client, match.player_2_id, match.stake_tokens);
         }
       }
       // Bot win (winnerId null, not a tie): no payout — player's stake is gone.
 
-      return updated;
+      return mapRow(updated.rows[0]);
     });
   }
 
@@ -445,32 +398,31 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
-    const now = new Date();
-
-    return await db.transaction(async (tx) => {
-      const [match] = await tx
-        .select()
-        .from(gridRushMatches)
-        .where(eq(gridRushMatches.id, matchId))
-        .limit(1);
+    return withTx(async (client) => {
+      const sel = await client.query(
+        `SELECT * FROM grid_rush_matches WHERE id = $1 LIMIT 1 FOR UPDATE`,
+        [matchId],
+      );
+      const match = sel.rows[0];
 
       if (!match) throw new Error("Partie introuvable");
-      if (match.player1Id !== userId) {
+      if (match.player_1_id !== userId) {
         throw new Error("Seul l'hôte peut annuler");
       }
-      if (match.status !== "WAITING" || match.player2Id) {
+      if (match.status !== "WAITING" || match.player_2_id) {
         throw new Error("Cette partie ne peut pas être annulée");
       }
 
-      await creditTokens(tx, userId, match.stakeTokens);
+      await creditTokens(client, userId, match.stake_tokens);
 
-      const [updated] = await tx
-        .update(gridRushMatches)
-        .set({ status: "CANCELLED", updatedAt: now })
-        .where(eq(gridRushMatches.id, matchId))
-        .returning();
-
-      return updated;
+      const updated = await client.query(
+        `UPDATE grid_rush_matches
+         SET status = 'CANCELLED', updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [matchId],
+      );
+      return mapRow(updated.rows[0]);
     });
   }
 }
@@ -481,8 +433,8 @@ function mapRow(row: Record<string, unknown>): GridRushMatch {
     status: row.status as GridRushMatch["status"],
     player1Id: row.player_1_id as string,
     player2Id: (row.player_2_id as string) ?? null,
-    player1Score: row.player_1_score as number,
-    player2Score: row.player_2_score as number,
+    player1Score: Number(row.player_1_score ?? 0),
+    player2Score: Number(row.player_2_score ?? 0),
     stakeCennes: (row.stake_cennes as number) ?? 500,
     stakeTokens: (row.stake_tokens as number) ?? 500,
     isBot: (row.is_bot as boolean) ?? false,
