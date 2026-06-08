@@ -5,6 +5,8 @@ import {
   type FeedActionSource,
   type FeedActionsLang,
 } from "@/hooks/useFeedPostActions";
+import { SheetShell } from "@/components/ui/SheetShell";
+import { SheetActionRow } from "@/components/ui/SheetActionRow";
 
 const LANG_KEY = "zyeute_feed_actions_lang";
 
@@ -93,8 +95,6 @@ export function FeedPostActionsSheet({
   } = useFeedPostActions(source, lang);
   const [showReportReasons, setShowReportReasons] = useState(false);
 
-  if (!open) return null;
-
   const setLanguage = (next: FeedActionsLang) => {
     setLang(next);
     persistLang(next);
@@ -133,117 +133,105 @@ export function FeedPostActionsSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[155] flex flex-col justify-end bg-black/70">
-      <button
-        type="button"
-        className="flex-1 cursor-default"
-        aria-label={t.close}
-        onClick={close}
-      />
-      <div className="rounded-t-2xl bg-zinc-900 border-t border-gold-500/30 p-4 pb-safe max-h-[80vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-gold-400 font-bold text-sm">{t.title}</p>
-          <div
-            className="flex text-[10px] font-semibold rounded-md border border-gold-500/30 overflow-hidden"
-            role="group"
-            aria-label="Language"
-          >
-            {(["fr", "en"] as const).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setLanguage(code)}
-                className={`px-2 py-0.5 uppercase transition-colors ${
-                  lang === code
-                    ? "bg-gold-500/20 text-gold-400"
-                    : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                {code}
-              </button>
-            ))}
-          </div>
+    <SheetShell
+      open={open}
+      onClose={close}
+      className="z-[155]"
+      panelClassName="max-h-[80vh] overflow-y-auto px-4 pb-safe"
+      closeLabel={t.close}
+    >
+      <div className="mb-3 mt-1 flex items-center justify-between">
+        <p className="text-gold-400 font-bold text-sm tracking-wide uppercase">
+          {t.title}
+        </p>
+        <div
+          className="flex overflow-hidden rounded-md border border-gold-500/30 text-[10px] font-semibold"
+          role="group"
+          aria-label="Language"
+        >
+          {(["fr", "en"] as const).map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLanguage(code)}
+              className={`px-2.5 py-1 uppercase transition-colors ${
+                lang === code
+                  ? "bg-gold-500/20 text-gold-400"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {code}
+            </button>
+          ))}
         </div>
-
-        {!showReportReasons ? (
-          <div className="space-y-2">
-            {isAuthenticated ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onNotInterested}
-                className="w-full py-2.5 rounded-xl bg-white/5 text-left px-3 text-sm text-white border border-white/10 hover:border-gold-500/40"
-              >
-                {t.notInterested}
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setShowReportReasons(true)}
-              className="w-full py-2.5 rounded-xl bg-white/5 text-left px-3 text-sm text-white border border-white/10 hover:border-red-500/40"
-            >
-              {t.report}
-            </button>
-
-            {authorUserId ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onBlock}
-                className="w-full py-2.5 rounded-xl bg-red-950/50 text-red-200 text-sm font-semibold border border-red-500/30"
-              >
-                {t.block}
-              </button>
-            ) : null}
-
-            {isAdmin ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onModDelete}
-                className="w-full py-2.5 rounded-xl bg-orange-950/80 text-orange-200 text-sm font-semibold border border-orange-500/50 flex items-center justify-center gap-2"
-              >
-                <IoShieldOutline className="w-4 h-4" />
-                {t.modDelete}
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={close}
-              className="w-full py-2 text-zinc-500 text-sm"
-            >
-              {t.cancel}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs text-zinc-400 mb-2 text-center">
-              {t.chooseReason}
-            </p>
-            {t.reasons.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                disabled={busy}
-                onClick={() => onReport(r.id)}
-                className="w-full py-2.5 rounded-xl bg-white/5 text-left px-3 text-sm text-white border border-white/10 hover:border-gold-500/40"
-              >
-                {r.label}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setShowReportReasons(false)}
-              className="w-full py-2 text-zinc-500 text-sm"
-            >
-              {t.back}
-            </button>
-          </div>
-        )}
       </div>
-    </div>
+
+      {!showReportReasons ? (
+        <div className="space-y-2">
+          {isAuthenticated ? (
+            <SheetActionRow disabled={busy} onClick={onNotInterested}>
+              {t.notInterested}
+            </SheetActionRow>
+          ) : null}
+
+          <SheetActionRow
+            variant="report"
+            disabled={busy}
+            onClick={() => setShowReportReasons(true)}
+          >
+            {t.report}
+          </SheetActionRow>
+
+          {authorUserId ? (
+            <SheetActionRow variant="danger" disabled={busy} onClick={onBlock}>
+              {t.block}
+            </SheetActionRow>
+          ) : null}
+
+          {isAdmin ? (
+            <SheetActionRow
+              variant="moderation"
+              disabled={busy}
+              onClick={onModDelete}
+              center
+              icon={<IoShieldOutline className="h-4 w-4" />}
+            >
+              {t.modDelete}
+            </SheetActionRow>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={close}
+            className="w-full py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300"
+          >
+            {t.cancel}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="mb-2 text-center text-xs text-zinc-400">
+            {t.chooseReason}
+          </p>
+          {t.reasons.map((r) => (
+            <SheetActionRow
+              key={r.id}
+              variant="report"
+              disabled={busy}
+              onClick={() => onReport(r.id)}
+            >
+              {r.label}
+            </SheetActionRow>
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowReportReasons(false)}
+            className="w-full py-2 text-zinc-500 text-sm transition-colors hover:text-zinc-300"
+          >
+            {t.back}
+          </button>
+        </div>
+      )}
+    </SheetShell>
   );
 }
