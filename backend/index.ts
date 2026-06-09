@@ -15,6 +15,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes.js";
+import { recoverBotMatches } from "./services/grid-rush-service.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
 import hiveRouter from "./routes/hive.js";
@@ -353,6 +354,9 @@ app.use((req, res, next) => {
         const client = await pool.connect();
         client.release();
         console.log("✅ [Startup] Database Connected Successfully");
+
+        // Recover any bot matches that were active before server restart
+        void recoverBotMatches();
 
         // Run critical migrations that are safe to run on every startup
         // (they all use IF NOT EXISTS / safe guards)

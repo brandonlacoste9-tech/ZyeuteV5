@@ -9,12 +9,35 @@ type PgQueryable = Pick<pg.Client, "query">;
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
 export const DEFAULT_WALLET_TOKENS = 1000;
-export type StakeTokens = (typeof ALLOWED_STAKES)[number];
+// Minimum seconds between score submissions (tapping 1→16 at world-record speed ~3s)
+const MIN_SCORE_INTERVAL_MS = 2800;
 
+export type StakeTokens = (typeof ALLOWED_STAKES)[number];
 export type GridRushMatch = typeof gridRushMatches.$inferSelect;
 
 const INSUFFICIENT_TOKENS =
   "Pas assez de jetons! Tu repartiras avec 1000 jetons gratuits.";
+
+// ─── Per-match score rate limiting ───────────────────────────────────────────
+// matchId → Map<userId, lastSubmitTimestamp>
+const lastScoreSubmit = new Map<string, Map<string, number>>();
+
+function checkScoreRateLimit(matchId: string, userId: string): void {
+  if (!lastScoreSubmit.has(matchId)) {
+    lastScoreSubmit.set(matchId, new Map());
+  }
+  const matchMap = lastScoreSubmit.get(matchId)!;
+  const last = matchMap.get(userId) ?? 0;
+  const now = Date.now();
+  if (now - last < MIN_SCORE_INTERVAL_MS) {
+    throw new Error("Trop rapide! Attends avant de soumettre un autre score.");
+  }
+  matchMap.set(userId, now);
+}
+
+function cleanScoreRateLimit(matchId: string): void {
+  lastScoreSubmit.delete(matchId);
+}
 
 function assertStake(stake: number): StakeTokens {
   if (!ALLOWED_STAKES.includes(stake as StakeTokens)) {
@@ -33,14 +56,6 @@ function createDirectClient(): pg.Client {
   });
 }
 
-/**
- * Run a function inside a DB transaction on a dedicated pg.Client connection.
- *
- * We deliberately avoid Drizzle `db.transaction()` (extended-protocol BEGIN fails
- * on Supabase pooler) AND `pool.connect()` (shared pool slots exhaust on Render,
- * causing "timeout exceeded when trying to connect"). A one-shot Client opens
- * its own connection through the pooler and is always released in `finally`.
- */
 async function withTx<T>(fn: (client: PgQueryable) => Promise<T>): Promise<T> {
   const client = createDirectClient();
   await client.connect();
@@ -57,7 +72,6 @@ async function withTx<T>(fn: (client: PgQueryable) => Promise<T>): Promise<T> {
   }
 }
 
-/** One-shot query on a dedicated connection (avoids shared pool contention). */
 async function queryDirect(
   text: string,
   params?: unknown[],
@@ -71,7 +85,6 @@ async function queryDirect(
   }
 }
 
-/** Create the wallet (seeded with default tokens) if it does not exist yet. */
 async function ensureWallet(
   client: PgQueryable,
   userId: string,
@@ -84,7 +97,6 @@ async function ensureWallet(
   );
 }
 
-/** Lock wallet row (must run inside an open transaction). */
 async function lockWalletRow(
   client: PgQueryable,
   userId: string,
@@ -136,16 +148,11 @@ function activateMatch(now: Date) {
   return { startedAt: now, endsAt, status: "ACTIVE" as const };
 }
 
-// ─── Bot opponent (solo testing) ─────────────────────────────────────────────
+// ─── Bot opponent ─────────────────────────────────────────────────────────────
 const BOT_MIN_TICK_MS = 6000;
 const BOT_MAX_TICK_MS = 10000;
 const botTimers = new Map<string, NodeJS.Timeout>();
 
-/**
- * Drives a simulated opponent: increments player_2_score on a jittered interval
- * (each tick = one completed grid), then finalizes the match once time is up.
- * Every UPDATE flows through Supabase Realtime so the human client sees it live.
- */
 function scheduleBotTick(
   matchId: string,
   endsAt: Date,
@@ -158,6 +165,7 @@ function scheduleBotTick(
     try {
       if (Date.now() >= endsAt.getTime()) {
         botTimers.delete(matchId);
+        cleanScoreRateLimit(matchId);
         await GridRushService.finishMatch(player1Id, matchId).catch(() => {});
         return;
       }
@@ -175,6 +183,43 @@ function scheduleBotTick(
   }, delay);
 
   botTimers.set(matchId, timer);
+}
+
+/**
+ * On server startup: find all ACTIVE bot matches and either finish them
+ * (if time already expired) or reschedule the bot tick (if still running).
+ * Prevents matches from hanging forever after a server restart.
+ */
+export async function recoverBotMatches(): Promise<void> {
+  try {
+    const result = await queryDirect(
+      `SELECT id, ends_at, player_1_id
+       FROM grid_rush_matches
+       WHERE status = 'ACTIVE' AND is_bot = true`,
+    );
+
+    for (const row of result.rows) {
+      const matchId = row.id as string;
+      const endsAt = new Date(row.ends_at as string);
+      const player1Id = row.player_1_id as string;
+
+      if (Date.now() >= endsAt.getTime()) {
+        // Already expired — finish immediately
+        GridRushService.finishMatch(player1Id, matchId).catch(() => {});
+      } else {
+        // Still running — reschedule bot
+        scheduleBotTick(matchId, endsAt, player1Id);
+      }
+    }
+
+    if (result.rows.length > 0) {
+      console.log(
+        `[GridRush] Recovered ${result.rows.length} active bot match(es) after restart.`,
+      );
+    }
+  } catch (err) {
+    console.warn("[GridRush] Bot match recovery failed:", err);
+  }
 }
 
 export class GridRushService {
@@ -244,7 +289,6 @@ export class GridRushService {
   }
 
   static async getWalletBalance(userId: string): Promise<number> {
-    // Prefer Supabase HTTP (service role) — never competes with the pg pool.
     if (supabaseAdmin) {
       const { data: existing } = await supabaseAdmin
         .from("user_wallets")
@@ -281,9 +325,7 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
 
-    // Primary path: Postgres RPC over Supabase HTTP — no pg pool at all.
     if (supabaseAdmin) {
-      // PostgREST resolves RPC args in alphabetical key order (p_stake, p_user_id).
       const { data, error } = await supabaseAdmin.rpc(
         "grid_rush_create_bot_match",
         { p_stake: stake, p_user_id: userId },
@@ -380,8 +422,9 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
-    // Single atomic UPDATE — increments the caller's own score column, guarded
-    // so it only counts while the match is ACTIVE and the clock hasn't expired.
+    // Rate limit: one completed grid takes at least ~3s even for a fast player
+    checkScoreRateLimit(matchId, userId);
+
     const result = await queryDirect(
       `UPDATE grid_rush_matches
        SET player_1_score = player_1_score + (CASE WHEN player_1_id = $1 THEN 1 ELSE 0 END),
@@ -399,7 +442,6 @@ export class GridRushService {
       return mapRow(result.rows[0]);
     }
 
-    // Guard failed — surface a precise reason.
     const cur = await queryDirect(
       `SELECT status, ends_at, player_1_id, player_2_id
        FROM grid_rush_matches WHERE id = $1 LIMIT 1`,
@@ -421,8 +463,6 @@ export class GridRushService {
     const now = new Date();
 
     return withTx(async (client) => {
-      // FOR UPDATE locks the row: a concurrent finisher (e.g. client + bot loop)
-      // blocks here, then sees status COMPLETED and returns without a 2nd payout.
       const sel = await client.query(
         `SELECT * FROM grid_rush_matches WHERE id = $1 LIMIT 1 FOR UPDATE`,
         [matchId],
@@ -443,7 +483,6 @@ export class GridRushService {
         throw new Error("La partie n'est pas encore terminée");
       }
 
-      // winnerId is null for a tie OR a bot win (bot has no auth user row).
       let winnerId: string | null = null;
       if (match.player_1_score > match.player_2_score) {
         winnerId = match.player_1_id;
@@ -460,18 +499,16 @@ export class GridRushService {
         [winnerId, matchId],
       );
 
-      // GG gift: loser's stake transfers to the winner (winner keeps own stake + gift).
       if (winnerId) {
         await creditTokens(client, winnerId, match.stake_tokens * 2);
       } else if (isTie) {
-        // Refund real players on a draw (the bot has no wallet to refund).
         await creditTokens(client, match.player_1_id, match.stake_tokens);
         if (match.player_2_id) {
           await creditTokens(client, match.player_2_id, match.stake_tokens);
         }
       }
-      // Bot win (winnerId null, not a tie): no payout — player's stake is gone.
 
+      cleanScoreRateLimit(matchId);
       return mapRow(updated.rows[0]);
     });
   }
@@ -517,13 +554,13 @@ function mapRow(row: Record<string, unknown>): GridRushMatch {
     player2Id: (row.player_2_id as string) ?? null,
     player1Score: Number(row.player_1_score ?? 0),
     player2Score: Number(row.player_2_score ?? 0),
-    stakeCennes: (row.stake_cennes as number) ?? 500,
-    stakeTokens: (row.stake_tokens as number) ?? 500,
-    isBot: (row.is_bot as boolean) ?? false,
+    stakeCennes: Number(row.stake_cennes ?? row.stakeCennes ?? 500),
+    stakeTokens: Number(row.stake_tokens ?? row.stakeTokens ?? 500),
+    isBot: Boolean(row.is_bot ?? row.isBot ?? false),
     winnerId: (row.winner_id as string) ?? null,
     startedAt: row.started_at ? new Date(row.started_at as string) : null,
     endsAt: row.ends_at ? new Date(row.ends_at as string) : null,
-    createdAt: new Date(row.created_at as string),
-    updatedAt: new Date(row.updated_at as string),
+    createdAt: new Date((row.created_at ?? row.createdAt) as string),
+    updatedAt: new Date((row.updated_at ?? row.updatedAt) as string),
   };
 }

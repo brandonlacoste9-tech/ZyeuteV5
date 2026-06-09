@@ -29,11 +29,14 @@ export const PoutineStackGame: React.FC = () => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [pieces, setPieces] = useState<Piece[]>([]);
-  const [currentX, setCurrentX] = useState(50); // 0-100
-  const [direction, setDirection] = useState(1); // 1 or -1
+  const [currentX, setCurrentX] = useState(50);
+  const [direction, setDirection] = useState(1);
   const [speed, setSpeed] = useState(2);
   const [timeLeft, setTimeLeft] = useState(60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [finalRank, setFinalRank] = useState<number | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
   const [restriction, setRestriction] = useState<string | null>(null);
   const [visualBuzz, setVisualBuzz] = useState(false);
   const { user } = useAuth();
@@ -65,6 +68,9 @@ export const PoutineStackGame: React.FC = () => {
     setPieces([]);
     setSpeed(2);
     setTimeLeft(60);
+    setSubmitted(false);
+    setFinalRank(null);
+    setIsNewBest(false);
     tap();
   };
 
@@ -117,7 +123,7 @@ export const PoutineStackGame: React.FC = () => {
 
     const move = () => {
       setCurrentX((prev) => {
-        let next = prev + speed * direction;
+        const next = prev + speed * direction;
         if (next >= 100 - getPieceWidth(score)) {
           setDirection(-1);
           return 100 - getPieceWidth(score);
@@ -143,8 +149,17 @@ export const PoutineStackGame: React.FC = () => {
   }, [isPlaying, isGameOver, timeLeft]);
 
   const submitScore = async () => {
+    if (submitted) return;
     setIsSubmitting(true);
     try {
+      // Get today's tournament if tournamentId not provided via URL
+      let tid = tournamentId;
+      if (!tid) {
+        const t = await fetch("/api/royale/today").then((r) => r.json());
+        tid = t?.id;
+      }
+      if (!tid) throw new Error("Tournoi introuvable");
+
       const token = localStorage.getItem("token");
       const res = await fetch("/api/royale/submit", {
         method: "POST",
@@ -153,24 +168,28 @@ export const PoutineStackGame: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          tournamentId,
-          score: score,
+          tournamentId: tid,
+          score,
           layers: pieces.length,
-          metadata: {
-            // Future metadata like tap timings
-            playedAt: new Date().toISOString(),
-          },
+          metadata: { playedAt: new Date().toISOString() },
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to submit");
+        const err = await res.json();
+        throw new Error(err.error || "Erreur lors de la soumission");
       }
 
-      navigate("/arcade");
-    } catch (error) {
+      const data = await res.json();
+      setFinalRank(data.rank ?? null);
+      setIsNewBest(data.entry?.score === score);
+      setSubmitted(true);
+    } catch (error: any) {
       console.error("Failed to submit score:", error);
-      alert("Erreur lors de la soumission. T'as p-e pas payé l'entrée?");
+      alert(
+        error.message ||
+          "Erreur lors de la soumission. T'as p-e pas payé l'entrée?",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -309,27 +328,45 @@ export const PoutineStackGame: React.FC = () => {
                 <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
                   Score Final
                 </span>
-                <span className="text-3xl font-black text-gold-400">
-                  {score}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-3xl font-black text-gold-400">
+                    {score}
+                  </span>
+                  {isNewBest && submitted && (
+                    <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold">
+                      RECORD!
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
-                  Rang Mondial
+                  Classement
                 </span>
-                <span className="text-3xl font-black text-purple-400">#42</span>
+                <span className="text-3xl font-black text-purple-400">
+                  {finalRank != null ? `#${finalRank}` : "—"}
+                </span>
               </div>
             </div>
 
             <div className="flex flex-col gap-4 w-full max-w-sm">
-              <button
-                onClick={submitScore}
-                disabled={isSubmitting}
-                className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {isSubmitting ? "SOUCOUPAGE..." : "SOUMETTRE LE SCORE"}{" "}
-                <ChevronRight className="w-6 h-6" />
-              </button>
+              {!submitted ? (
+                <button
+                  onClick={submitScore}
+                  disabled={isSubmitting}
+                  className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {isSubmitting ? "SOUCOUPAGE..." : "SOUMETTRE LE SCORE"}{" "}
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(`/games/poutine`)}
+                  className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3"
+                >
+                  VOIR LE CLASSEMENT <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
               <button
                 onClick={startNewGame}
                 className="bg-white text-black h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-zinc-200 transition-colors"
