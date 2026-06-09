@@ -47,12 +47,17 @@ export default function PoutineLobby() {
   const [myRank, setMyRank] = useState<MyRank | null>(null);
   const [wallet, setWallet] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
 
   const fetchAll = useCallback(async () => {
+    setLoadError(false);
     try {
       const t = await getTodayTournament();
-      if (!t) return;
+      if (!t) {
+        setLoadError(true);
+        return;
+      }
       setTournament(t);
       setTimeLeft(t.timeRemainingMs);
 
@@ -69,6 +74,7 @@ export default function PoutineLobby() {
       }
     } catch (e) {
       console.error("Failed to load royale data", e);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -147,6 +153,30 @@ export default function PoutineLobby() {
       </div>
 
       <div className="max-w-md mx-auto px-4 pt-6 space-y-6">
+        {/* Load error */}
+        {loadError && !tournament && (
+          <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-6 text-center">
+            <p className="text-4xl mb-3">🛠️</p>
+            <p className="text-white/70 font-bold mb-1">
+              Le tournoi est en pause technique
+            </p>
+            <p className="text-white/40 text-sm mb-4">
+              Impossible de charger le tournoi du jour. Réessaie dans un
+              instant.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                fetchAll();
+              }}
+              className="px-6 py-2 rounded-full bg-white/10 border border-white/20 text-sm font-bold hover:bg-white/20 transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
         {/* My rank card */}
         {user && (
           <motion.div
@@ -190,16 +220,18 @@ export default function PoutineLobby() {
         )}
 
         {/* Play button */}
-        <motion.button
-          type="button"
-          whileTap={{ scale: 0.97 }}
-          onClick={handlePlay}
-          className="w-full py-5 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(234,179,8,0.3)]"
-        >
-          <Flame className="w-6 h-6" />
-          {myRank?.score != null ? "Réessayer" : "Jouer maintenant"}
-          <ChevronRight className="w-6 h-6" />
-        </motion.button>
+        {tournament && (
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.97 }}
+            onClick={handlePlay}
+            className="w-full py-5 rounded-2xl bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(234,179,8,0.3)]"
+          >
+            <Flame className="w-6 h-6" />
+            {myRank?.score != null ? "Réessayer" : "Jouer maintenant"}
+            <ChevronRight className="w-6 h-6" />
+          </motion.button>
+        )}
 
         {/* Stats row */}
         {tournament && (

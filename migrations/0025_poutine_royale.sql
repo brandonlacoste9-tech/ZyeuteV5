@@ -27,9 +27,11 @@ CREATE INDEX IF NOT EXISTS idx_tournaments_active
   WHERE status = 'active';
 
 -- Per-player best score per tournament
+-- NOTE: FK targets auth.users (like grid_rush_matches) — public.users does not
+-- exist in prod; the app's profile table is user_profiles.
 CREATE TABLE IF NOT EXISTS royale_scores (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   tournament_id UUID NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
   score INTEGER NOT NULL,
   layers INTEGER NOT NULL DEFAULT 0,
