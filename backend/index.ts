@@ -385,6 +385,7 @@ app.use((req, res, next) => {
             "20260608_grid_rush_rpc_harden.sql",
             "20260608_grid_rush_rpc_postgrest_sig.sql",
             "20260608_grid_rush_rpc_wallet_update.sql",
+            "20260608_poutine_royale.sql",
           ];
           for (const file of migrations) {
             try {

@@ -2,6 +2,7 @@ import { db } from "../storage.js";
 import { tournaments, royaleScores, users } from "../../shared/schema.js";
 import { eq, desc, and, sql, lt } from "drizzle-orm";
 import { supabaseAdmin } from "../supabase-auth.js";
+import { createDirectClient, type PgQueryable } from "../db-direct.js";
 
 export interface LeaderboardEntry {
   rank: number;
@@ -27,8 +28,89 @@ export interface TournamentWithStats {
   timeRemainingMs: number;
 }
 
-const DAILY_ENTRY_FEE = 0; // Free to play for now
+const DAILY_ENTRY_FEE = 0; // Free to play — rewards are "GG gifts", not buy-ins
 const DAILY_PRIZE_POOL = 0;
+const DEFAULT_WALLET_TOKENS = 1000;
+
+// Virtual-token "GG gift" awarded when a player sets a NEW personal best for the
+// day. Play-Store-compliant framing: a celebratory gift, never a cash payout.
+// Scales with score so better stacks feel rewarding, capped to avoid inflation.
+const REWARD_PER_POINT = 5;
+const MAX_REWARD = 200;
+
+export function computeReward(score: number): number {
+  if (score <= 0) return 0;
+  return Math.min(score * REWARD_PER_POINT, MAX_REWARD);
+}
+
+// ─── Direct-client helpers (Supabase pooler rejects Drizzle db.transaction) ───
+async function withTx<T>(fn: (client: PgQueryable) => Promise<T>): Promise<T> {
+  const client = createDirectClient();
+  await client.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await fn(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function lockWalletRow(
+  client: PgQueryable,
+  userId: string,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO user_wallets (user_id, token_balance)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId, DEFAULT_WALLET_TOKENS],
+  );
+  const locked = await client.query(
+    `SELECT user_id FROM user_wallets WHERE user_id = $1 FOR UPDATE`,
+    [userId],
+  );
+  if (!locked.rows.length) {
+    throw new Error("Portefeuille introuvable — contacte le support.");
+  }
+}
+
+async function creditTokens(
+  client: PgQueryable,
+  userId: string,
+  amount: number,
+): Promise<number> {
+  await lockWalletRow(client, userId);
+  const result = await client.query<{ token_balance: number }>(
+    `UPDATE user_wallets
+     SET token_balance = token_balance + $1, updated_at = NOW()
+     WHERE user_id = $2
+     RETURNING token_balance`,
+    [amount, userId],
+  );
+  return Number(result.rows[0]?.token_balance ?? DEFAULT_WALLET_TOKENS);
+}
+
+async function getWalletBalanceDirect(
+  client: PgQueryable,
+  userId: string,
+): Promise<number> {
+  await client.query(
+    `INSERT INTO user_wallets (user_id, token_balance)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId, DEFAULT_WALLET_TOKENS],
+  );
+  const result = await client.query<{ token_balance: number }>(
+    `SELECT token_balance FROM user_wallets WHERE user_id = $1`,
+    [userId],
+  );
+  return Number(result.rows[0]?.token_balance ?? DEFAULT_WALLET_TOKENS);
+}
 
 /**
  * Get or auto-create today's daily Poutine Royale tournament.
@@ -122,9 +204,27 @@ async function enrichTournament(
   };
 }
 
+export interface SubmitResult {
+  entry: {
+    id: string;
+    userId: string;
+    tournamentId: string;
+    score: number;
+    layers: number;
+  };
+  rank: number;
+  isNewBest: boolean;
+  reward: number;
+  tokenBalance: number;
+}
+
 /**
- * Submit a score — keeps only the player's best score for this tournament.
- * Returns the entry + the player's new rank.
+ * Submit a score — keeps only the player's best score for this tournament and,
+ * on a NEW personal best, settles a virtual-token "GG gift" into their wallet.
+ *
+ * Runs on a dedicated pg.Client transaction (the Supabase pooler rejects
+ * Drizzle's db.transaction()). The score upsert + wallet credit are atomic:
+ * the row is locked FOR UPDATE so the reward can never double-settle.
  */
 export async function submitScore(
   userId: string,
@@ -132,58 +232,98 @@ export async function submitScore(
   score: number,
   layers: number,
   metadata: Record<string, unknown> = {},
-): Promise<{ entry: typeof royaleScores.$inferSelect; rank: number }> {
-  // Basic validation
+): Promise<SubmitResult> {
+  // Basic anti-cheat validation
   if (score < 0 || score > 200) throw new Error("Score invalide");
   if (layers < 0 || layers > score + 5) throw new Error("Données invalides");
 
-  // Check tournament exists and is active
-  const [tournament] = await db
-    .select()
-    .from(tournaments)
-    .where(eq(tournaments.id, tournamentId))
-    .limit(1);
-  if (!tournament) throw new Error("Tournoi introuvable");
-  if (tournament.status !== "active") throw new Error("Ce tournoi est terminé");
+  const metadataJson = JSON.stringify(metadata ?? {});
 
-  // Upsert: only keep the player's best score
-  const existing = await db
-    .select()
-    .from(royaleScores)
-    .where(
-      and(
-        eq(royaleScores.userId, userId),
-        eq(royaleScores.tournamentId, tournamentId),
-      ),
-    )
-    .limit(1);
-
-  let entry: typeof royaleScores.$inferSelect;
-
-  if (existing[0]) {
-    if (score <= existing[0].score) {
-      // Not a new best — return existing entry with current rank
-      entry = existing[0];
-    } else {
-      // New best — update
-      const [updated] = await db
-        .update(royaleScores)
-        .set({ score, layers, metadata, createdAt: new Date() })
-        .where(eq(royaleScores.id, existing[0].id))
-        .returning();
-      entry = updated;
+  const result = await withTx(async (client) => {
+    // Tournament must exist and be active (lock it so it can't expire mid-write)
+    const tour = await client.query<{ status: string }>(
+      `SELECT status FROM tournaments WHERE id = $1 LIMIT 1 FOR UPDATE`,
+      [tournamentId],
+    );
+    if (!tour.rows.length) throw new Error("Tournoi introuvable");
+    if (tour.rows[0].status !== "active") {
+      throw new Error("Ce tournoi est terminé");
     }
-  } else {
-    // First submission
-    const [created] = await db
-      .insert(royaleScores)
-      .values({ userId, tournamentId, score, layers, metadata })
-      .returning();
-    entry = created;
-  }
 
-  const rank = await getPlayerRank(userId, tournamentId, entry.score);
-  return { entry, rank };
+    // Lock the player's existing best (if any) for this tournament
+    const existing = await client.query<{ id: string; score: number }>(
+      `SELECT id, score FROM royale_scores
+       WHERE user_id = $1 AND tournament_id = $2
+       LIMIT 1 FOR UPDATE`,
+      [userId, tournamentId],
+    );
+
+    let entryId: string;
+    let bestScore: number;
+    let bestLayers: number;
+    let isNewBest: boolean;
+
+    if (existing.rows.length) {
+      const prev = existing.rows[0];
+      if (score <= prev.score) {
+        // Not a new best — keep the existing entry, no reward
+        entryId = prev.id;
+        bestScore = prev.score;
+        isNewBest = false;
+        const layersRow = await client.query<{ layers: number }>(
+          `SELECT layers FROM royale_scores WHERE id = $1`,
+          [prev.id],
+        );
+        bestLayers = Number(layersRow.rows[0]?.layers ?? layers);
+      } else {
+        const updated = await client.query<{ id: string; layers: number }>(
+          `UPDATE royale_scores
+           SET score = $1, layers = $2, metadata = $3::jsonb, created_at = NOW()
+           WHERE id = $4
+           RETURNING id, layers`,
+          [score, layers, metadataJson, prev.id],
+        );
+        entryId = updated.rows[0].id;
+        bestScore = score;
+        bestLayers = Number(updated.rows[0].layers);
+        isNewBest = true;
+      }
+    } else {
+      const created = await client.query<{ id: string; layers: number }>(
+        `INSERT INTO royale_scores (user_id, tournament_id, score, layers, metadata)
+         VALUES ($1, $2, $3, $4, $5::jsonb)
+         RETURNING id, layers`,
+        [userId, tournamentId, score, layers, metadataJson],
+      );
+      entryId = created.rows[0].id;
+      bestScore = score;
+      bestLayers = Number(created.rows[0].layers);
+      isNewBest = true;
+    }
+
+    // Settle the GG-gift reward only when the player beat their own best
+    const reward = isNewBest ? computeReward(score) : 0;
+    const tokenBalance =
+      reward > 0
+        ? await creditTokens(client, userId, reward)
+        : await getWalletBalanceDirect(client, userId);
+
+    return {
+      entry: {
+        id: entryId,
+        userId,
+        tournamentId,
+        score: bestScore,
+        layers: bestLayers,
+      },
+      isNewBest,
+      reward,
+      tokenBalance,
+    };
+  });
+
+  const rank = await getPlayerRank(userId, tournamentId, result.entry.score);
+  return { ...result, rank };
 }
 
 async function getPlayerRank(
@@ -254,6 +394,32 @@ export async function getMyRank(
 
   const rank = await getPlayerRank(userId, tournamentId, entry.score);
   return { rank, score: entry.score, layers: entry.layers };
+}
+
+/** Read (auto-seeding) the player's virtual-token wallet balance. */
+export async function getWalletBalance(userId: string): Promise<number> {
+  if (supabaseAdmin) {
+    const { data: existing } = await supabaseAdmin
+      .from("user_wallets")
+      .select("token_balance")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (existing) return Number(existing.token_balance);
+
+    const { error: insertErr } = await supabaseAdmin
+      .from("user_wallets")
+      .insert({ user_id: userId, token_balance: DEFAULT_WALLET_TOKENS });
+    if (insertErr && insertErr.code !== "23505") throw insertErr;
+    return DEFAULT_WALLET_TOKENS;
+  }
+
+  const client = createDirectClient();
+  await client.connect();
+  try {
+    return await getWalletBalanceDirect(client, userId);
+  } finally {
+    await client.end().catch(() => {});
+  }
 }
 
 // Legacy compat

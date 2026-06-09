@@ -5,6 +5,7 @@ import {
   getLeaderboard,
   getMyRank,
   submitScore,
+  getWalletBalance,
 } from "../services/royale-service.js";
 
 const requireAuth = (req: any, res: Response, next: any) => {
@@ -45,6 +46,16 @@ router.get("/leaderboard/:tournamentId", async (req, res) => {
   }
 });
 
+// GET /api/royale/wallet — player's virtual-token balance (auto-seeds 1000)
+router.get("/wallet", requireAuth, async (req: any, res) => {
+  try {
+    const tokenBalance = await getWalletBalance(req.userId!);
+    res.json({ tokenBalance });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/royale/my-rank/:tournamentId — auth required
 router.get("/my-rank/:tournamentId", requireAuth, async (req: any, res) => {
   try {
@@ -60,7 +71,7 @@ const SubmitSchema = z.object({
   tournamentId: z.string().uuid(),
   score: z.number().int().min(0).max(200),
   layers: z.number().int().min(0),
-  metadata: z.record(z.unknown()).optional().default({}),
+  metadata: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
 router.post("/submit", requireAuth, async (req: any, res) => {
