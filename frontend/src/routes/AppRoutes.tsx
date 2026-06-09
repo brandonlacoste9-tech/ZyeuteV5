@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { RequireModerator } from "@/components/auth/RequireModerator";
 import { LoadingScreen as LoadingScreenComponent } from "@/components/LoadingScreen";
+import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
 
 function LoadingScreen({ message }: { message?: string }) {
   return <LoadingScreenComponent message={message || "Chargement..."} />;
@@ -222,412 +223,414 @@ function NullClawPage() {
 
 export function AppRoutes() {
   return (
-    <Suspense
-      fallback={<LoadingScreen message="Initialisation du module..." />}
-    >
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/logout" element={<LogoutRoute />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          path="/onboarding"
-          element={
-            <Suspense fallback={<div className="min-h-screen bg-black" />}>
-              <OnboardingPage />
-            </Suspense>
-          }
-        />
+    <RouteErrorBoundary>
+      <Suspense
+        fallback={<LoadingScreen message="Initialisation du module..." />}
+      >
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/logout" element={<LogoutRoute />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/onboarding"
+            element={
+              <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <OnboardingPage />
+              </Suspense>
+            }
+          />
 
-        {/* Public — TikTok-style: anyone can open FYP, discover, and post links */}
-        <Route
-          path="/feed"
-          element={
-            <OnboardingGate>
-              <Zyeute />
-            </OnboardingGate>
-          }
-        />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/feed/grid" element={<FeedGrid />} />
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="/hashtag/:tag" element={<HashtagDetail />} />
-        <Route path="/sound/:id" element={<SoundDetail />} />
-        <Route path="/p/:id" element={<PostDetailPage />} />
-        <Route path="/profile/:username" element={<ProfilePage />} />
-        <Route path="/profile/:username/network" element={<NetworkPage />} />
-        <Route path="/premium" element={<PremiumPage />} />
-        <Route path="/store" element={<StorePage />} />
-        <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/legal/terms" element={<TermsOfService />} />
-        <Route path="/legal/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/newsroom" element={<NewsroomPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/legal/community" element={<CommunityGuidelines />} />
-        <Route
-          path="/legal/community-guidelines"
-          element={<CommunityGuidelines />}
-        />
-        <Route path="/manus" element={<ManusPage />} />
-        <Route path="/gravityclaw" element={<GravityClawPage />} />
-        <Route path="/nullclaw" element={<NullClawPage />} />
+          {/* Public — TikTok-style: anyone can open FYP, discover, and post links */}
+          <Route
+            path="/feed"
+            element={
+              <OnboardingGate>
+                <Zyeute />
+              </OnboardingGate>
+            }
+          />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/feed/grid" element={<FeedGrid />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/hashtag/:tag" element={<HashtagDetail />} />
+          <Route path="/sound/:id" element={<SoundDetail />} />
+          <Route path="/p/:id" element={<PostDetailPage />} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route path="/profile/:username/network" element={<NetworkPage />} />
+          <Route path="/premium" element={<PremiumPage />} />
+          <Route path="/store" element={<StorePage />} />
+          <Route path="/wallet" element={<WalletPage />} />
+          <Route path="/legal/terms" element={<TermsOfService />} />
+          <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/newsroom" element={<NewsroomPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/legal/community" element={<CommunityGuidelines />} />
+          <Route
+            path="/legal/community-guidelines"
+            element={<CommunityGuidelines />}
+          />
+          <Route path="/manus" element={<ManusPage />} />
+          <Route path="/gravityclaw" element={<GravityClawPage />} />
+          <Route path="/nullclaw" element={<NullClawPage />} />
 
-        <Route
-          path="/profile"
-          element={<Navigate to="/profile/me" replace />}
-        />
+          <Route
+            path="/profile"
+            element={<Navigate to="/profile/me" replace />}
+          />
 
-        <Route
-          path="/upload"
-          element={
-            <RequireAuth>
+          <Route
+            path="/upload"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <UploadPage />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/creator"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <CreatorHubPage />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/creator/revenue"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <CreatorRevenuePage />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/create"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <Navigate to="/upload" replace />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/messages"
+            element={
+              <RequireAuth>
+                <MessagesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <RequireAuth>
+                <NotificationsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth>
+                <SettingsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/tags"
+            element={
+              <RequireAuth>
+                <TagsSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/comments"
+            element={
+              <RequireAuth>
+                <CommentsSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/sharing"
+            element={
+              <RequireAuth>
+                <SharingSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/restricted"
+            element={
+              <RequireAuth>
+                <RestrictedAccountsSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/favorites"
+            element={
+              <RequireAuth>
+                <FavoritesSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/muted"
+            element={
+              <RequireAuth>
+                <MutedAccountsSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/content"
+            element={
+              <RequireAuth>
+                <ContentPreferencesSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/media"
+            element={
+              <RequireAuth>
+                <MediaSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/audio"
+            element={
+              <RequireAuth>
+                <AudioSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/storage"
+            element={
+              <RequireAuth>
+                <StorageSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/app"
+            element={
+              <RequireAuth>
+                <AppSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/region"
+            element={
+              <RequireAuth>
+                <RegionSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/language"
+            element={
+              <RequireAuth>
+                <LanguageSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/voice"
+            element={
+              <RequireAuth>
+                <VoiceSettingsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/profile"
+            element={
+              <RequireAuth>
+                <ProfileEditSettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/privacy"
+            element={
+              <RequireAuth>
+                <PrivacySettings />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings/notifications"
+            element={
+              <RequireAuth>
+                <NotificationSettings />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/parental"
+            element={
+              <RequireAuth>
+                <ParentalDashboard />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/moderation"
+            element={
+              <RequireAuth>
+                <RequireModerator>
+                  <ModerationPage />
+                </RequireModerator>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/ai-studio"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <AIStudio />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="/admin/dashboard"
+            element={
+              <RequireAuth>
+                <AdminDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/hive"
+            element={
+              <RequireAuth>
+                <HiveCommand />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/email"
+            element={
+              <RequireAuth>
+                <EmailCampaigns />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/observability"
+            element={
+              <RequireAuth>
+                <Observability />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/video-doctor"
+            element={
+              <RequireAuth>
+                <VideoDoctorDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin/tiktok-curation"
+            element={
+              <RequireAuth>
+                <TikTokCuration />
+              </RequireAuth>
+            }
+          />
+
+          {/* Live streaming */}
+          <Route path="/live" element={<LiveDiscoverPage />} />
+          <Route path="/live/watch/:id" element={<WatchLivePage />} />
+          <Route
+            path="/live/go"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <GoLivePage />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+
+          {/* Analytics */}
+          <Route
+            path="/analytics"
+            element={
+              <RequireAuth>
+                <RequireRealAccount>
+                  <AnalyticsPage />
+                </RequireRealAccount>
+              </RequireAuth>
+            }
+          />
+
+          {/* Email preferences */}
+          <Route
+            path="/settings/email-preferences"
+            element={
+              <RequireAuth>
+                <EmailPreferencesPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* Arcade */}
+          <Route path="/arcade" element={<ArcadeHub />} />
+          <Route
+            path="/arcade/grid-rush"
+            element={
               <RequireRealAccount>
-                <UploadPage />
+                <GridRushLobby />
               </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/creator"
-          element={
-            <RequireAuth>
+            }
+          />
+          <Route
+            path="/arcade/grid-rush/:matchId"
+            element={
               <RequireRealAccount>
-                <CreatorHubPage />
+                <GridRushMatch />
               </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/creator/revenue"
-          element={
-            <RequireAuth>
-              <RequireRealAccount>
-                <CreatorRevenuePage />
-              </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/create"
-          element={
-            <RequireAuth>
-              <RequireRealAccount>
-                <Navigate to="/upload" replace />
-              </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
+            }
+          />
+          <Route path="/games/poutine" element={<PoutineLobby />} />
+          <Route
+            path="/royale/play/:tournamentId"
+            element={<PoutineStackGame />}
+          />
+          <Route path="/hive-tap" element={<HiveTap />} />
 
-        <Route
-          path="/messages"
-          element={
-            <RequireAuth>
-              <MessagesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/notifications"
-          element={
-            <RequireAuth>
-              <NotificationsPage />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/settings"
-          element={
-            <RequireAuth>
-              <SettingsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/tags"
-          element={
-            <RequireAuth>
-              <TagsSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/comments"
-          element={
-            <RequireAuth>
-              <CommentsSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/sharing"
-          element={
-            <RequireAuth>
-              <SharingSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/restricted"
-          element={
-            <RequireAuth>
-              <RestrictedAccountsSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/favorites"
-          element={
-            <RequireAuth>
-              <FavoritesSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/muted"
-          element={
-            <RequireAuth>
-              <MutedAccountsSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/content"
-          element={
-            <RequireAuth>
-              <ContentPreferencesSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/media"
-          element={
-            <RequireAuth>
-              <MediaSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/audio"
-          element={
-            <RequireAuth>
-              <AudioSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/storage"
-          element={
-            <RequireAuth>
-              <StorageSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/app"
-          element={
-            <RequireAuth>
-              <AppSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/region"
-          element={
-            <RequireAuth>
-              <RegionSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/language"
-          element={
-            <RequireAuth>
-              <LanguageSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/voice"
-          element={
-            <RequireAuth>
-              <VoiceSettingsPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/profile"
-          element={
-            <RequireAuth>
-              <ProfileEditSettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/privacy"
-          element={
-            <RequireAuth>
-              <PrivacySettings />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/notifications"
-          element={
-            <RequireAuth>
-              <NotificationSettings />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/parental"
-          element={
-            <RequireAuth>
-              <ParentalDashboard />
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/moderation"
-          element={
-            <RequireAuth>
-              <RequireModerator>
-                <ModerationPage />
-              </RequireModerator>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/ai-studio"
-          element={
-            <RequireAuth>
-              <RequireRealAccount>
-                <AIStudio />
-              </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-
-        <Route
-          path="/admin/dashboard"
-          element={
-            <RequireAuth>
-              <AdminDashboard />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/hive"
-          element={
-            <RequireAuth>
-              <HiveCommand />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/email"
-          element={
-            <RequireAuth>
-              <EmailCampaigns />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/observability"
-          element={
-            <RequireAuth>
-              <Observability />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/video-doctor"
-          element={
-            <RequireAuth>
-              <VideoDoctorDashboard />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/admin/tiktok-curation"
-          element={
-            <RequireAuth>
-              <TikTokCuration />
-            </RequireAuth>
-          }
-        />
-
-        {/* Live streaming */}
-        <Route path="/live" element={<LiveDiscoverPage />} />
-        <Route path="/live/watch/:id" element={<WatchLivePage />} />
-        <Route
-          path="/live/go"
-          element={
-            <RequireAuth>
-              <RequireRealAccount>
-                <GoLivePage />
-              </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-
-        {/* Analytics */}
-        <Route
-          path="/analytics"
-          element={
-            <RequireAuth>
-              <RequireRealAccount>
-                <AnalyticsPage />
-              </RequireRealAccount>
-            </RequireAuth>
-          }
-        />
-
-        {/* Email preferences */}
-        <Route
-          path="/settings/email-preferences"
-          element={
-            <RequireAuth>
-              <EmailPreferencesPage />
-            </RequireAuth>
-          }
-        />
-
-        {/* Arcade */}
-        <Route path="/arcade" element={<ArcadeHub />} />
-        <Route
-          path="/arcade/grid-rush"
-          element={
-            <RequireRealAccount>
-              <GridRushLobby />
-            </RequireRealAccount>
-          }
-        />
-        <Route
-          path="/arcade/grid-rush/:matchId"
-          element={
-            <RequireRealAccount>
-              <GridRushMatch />
-            </RequireRealAccount>
-          }
-        />
-        <Route path="/games/poutine" element={<PoutineLobby />} />
-        <Route
-          path="/royale/play/:tournamentId"
-          element={<PoutineStackGame />}
-        />
-        <Route path="/hive-tap" element={<HiveTap />} />
-
-        <Route path="/" element={<Navigate to="/feed" replace />} />
-      </Routes>
-    </Suspense>
+          <Route path="/" element={<Navigate to="/feed" replace />} />
+        </Routes>
+      </Suspense>
+    </RouteErrorBoundary>
   );
 }
