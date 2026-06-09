@@ -2,17 +2,20 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Flame,
   Trophy,
   Timer,
   ArrowDown,
   ChevronRight,
   AlertCircle,
+  Coins,
 } from "lucide-react";
-import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import { ParentalService } from "@/services/parental-service";
 import { useHaptics } from "@/hooks/useHaptics";
+import {
+  getTodayTournament,
+  submitScore as submitRoyaleScore,
+} from "@/services/royaleService";
 
 interface Piece {
   id: number;
@@ -37,6 +40,8 @@ export const PoutineStackGame: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [finalRank, setFinalRank] = useState<number | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [reward, setReward] = useState(0);
+  const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [restriction, setRestriction] = useState<string | null>(null);
   const [visualBuzz, setVisualBuzz] = useState(false);
   const { user } = useAuth();
@@ -71,6 +76,7 @@ export const PoutineStackGame: React.FC = () => {
     setSubmitted(false);
     setFinalRank(null);
     setIsNewBest(false);
+    setReward(0);
     tap();
   };
 
@@ -155,40 +161,32 @@ export const PoutineStackGame: React.FC = () => {
       // Get today's tournament if tournamentId not provided via URL
       let tid = tournamentId;
       if (!tid) {
-        const t = await fetch("/api/royale/today").then((r) => r.json());
+        const t = await getTodayTournament();
         tid = t?.id;
       }
       if (!tid) throw new Error("Tournoi introuvable");
 
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/royale/submit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          tournamentId: tid,
-          score,
-          layers: pieces.length,
-          metadata: { playedAt: new Date().toISOString() },
-        }),
+      const { result, error } = await submitRoyaleScore({
+        tournamentId: tid,
+        score,
+        layers: pieces.length,
+        metadata: { playedAt: new Date().toISOString() },
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erreur lors de la soumission");
+      if (error || !result) {
+        throw new Error(error || "Erreur lors de la soumission");
       }
 
-      const data = await res.json();
-      setFinalRank(data.rank ?? null);
-      setIsNewBest(data.entry?.score === score);
+      setFinalRank(result.rank ?? null);
+      setIsNewBest(result.isNewBest);
+      setReward(result.reward);
+      setTokenBalance(result.tokenBalance);
       setSubmitted(true);
     } catch (error: any) {
       console.error("Failed to submit score:", error);
       alert(
         error.message ||
-          "Erreur lors de la soumission. T'as p-e pas payé l'entrée?",
+          "Erreur lors de la soumission. Réessaie dans un instant.",
       );
     } finally {
       setIsSubmitting(false);
@@ -347,6 +345,34 @@ export const PoutineStackGame: React.FC = () => {
                   {finalRank != null ? `#${finalRank}` : "—"}
                 </span>
               </div>
+
+              {submitted && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  {reward > 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                        Cadeau GG 🪙
+                      </span>
+                      <span className="flex items-center gap-1.5 text-2xl font-black text-yellow-400">
+                        <Coins className="w-5 h-5" />+{reward}
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <p className="text-center text-zinc-500 text-xs">
+                      Bats ton record du jour pour gagner des jetons!
+                    </p>
+                  )}
+                  {tokenBalance != null && (
+                    <p className="text-center text-zinc-600 text-xs mt-2 tabular-nums">
+                      Solde : {tokenBalance} jetons
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-4 w-full max-w-sm">

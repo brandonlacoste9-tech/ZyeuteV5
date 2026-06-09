@@ -10,37 +10,17 @@ import {
   ChevronRight,
   ArrowLeft,
   Star,
-  Medal,
+  Coins,
 } from "lucide-react";
-
-interface Tournament {
-  id: string;
-  title: string;
-  entryFee: number;
-  prizePool: number;
-  status: string;
-  expiresAt: string;
-  entryCount: number;
-  topScore: number | null;
-  timeRemainingMs: number;
-}
-
-interface LeaderboardEntry {
-  rank: number;
-  userId: string;
-  username: string | null;
-  displayName: string | null;
-  avatarUrl: string | null;
-  score: number;
-  layers: number;
-  submittedAt: string;
-}
-
-interface MyRank {
-  rank: number | null;
-  score: number | null;
-  layers: number | null;
-}
+import {
+  getTodayTournament,
+  getLeaderboard,
+  getMyRank,
+  getWallet,
+  type RoyaleTournament as Tournament,
+  type RoyaleLeaderboardEntry as LeaderboardEntry,
+  type RoyaleMyRank as MyRank,
+} from "@/services/royaleService";
 
 function formatTimeRemaining(ms: number): string {
   if (ms <= 0) return "Terminé";
@@ -65,38 +45,34 @@ export default function PoutineLobby() {
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [myRank, setMyRank] = useState<MyRank | null>(null);
+  const [wallet, setWallet] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(0);
 
-  const getAuthHeaders = useCallback((): Record<string, string> => {
-    const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, []);
-
   const fetchAll = useCallback(async () => {
     try {
-      const t = await fetch("/api/royale/today").then((r) => r.json());
-      if (!t?.id) return;
+      const t = await getTodayTournament();
+      if (!t) return;
       setTournament(t);
       setTimeLeft(t.timeRemainingMs);
 
-      const [board] = await Promise.all([
-        fetch(`/api/royale/leaderboard/${t.id}?limit=10`).then((r) => r.json()),
-      ]);
-      if (Array.isArray(board)) setLeaderboard(board);
+      const board = await getLeaderboard(t.id, 10);
+      setLeaderboard(board);
 
       if (user) {
-        const rank = await fetch(`/api/royale/my-rank/${t.id}`, {
-          headers: getAuthHeaders(),
-        }).then((r) => r.json());
+        const [rank, balance] = await Promise.all([
+          getMyRank(t.id),
+          getWallet(),
+        ]);
         setMyRank(rank);
+        setWallet(balance);
       }
     } catch (e) {
       console.error("Failed to load royale data", e);
     } finally {
       setLoading(false);
     }
-  }, [user, getAuthHeaders]);
+  }, [user]);
 
   useEffect(() => {
     fetchAll();
@@ -152,11 +128,21 @@ export default function PoutineLobby() {
             <p className="text-xs text-white/40">{tournament.title}</p>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-1 text-xs text-white/50">
-          <Clock className="w-3.5 h-3.5" />
-          <span className="tabular-nums font-mono">
-            {formatTimeRemaining(timeLeft)}
-          </span>
+        <div className="ml-auto flex items-center gap-3">
+          {user && wallet != null && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="tabular-nums font-bold text-yellow-300 text-sm">
+                {wallet}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-1 text-xs text-white/50">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="tabular-nums font-mono">
+              {formatTimeRemaining(timeLeft)}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -354,6 +340,7 @@ export default function PoutineLobby() {
           <p>• Tape pour lâcher chaque couche de poutine</p>
           <p>• Stack le plus haut possible sans rater</p>
           <p>• Les pièces deviennent plus petites à mesure que tu montes</p>
+          <p>• Bats ton record du jour pour gagner un cadeau GG en jetons 🪙</p>
           <p>• Le classement reset chaque minuit</p>
         </div>
       </div>
