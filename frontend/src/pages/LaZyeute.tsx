@@ -322,6 +322,7 @@ export const Zyeute: React.FC = () => {
     hasNextPage,
     error: feedError,
     refetch,
+    reshuffle,
   } = useInfiniteFeed(feedSource);
 
   const forceFromUrl = useMemo(
@@ -420,9 +421,16 @@ export const Zyeute: React.FC = () => {
         navigate("/login", { state: { from: location.pathname } });
         return;
       }
+      // Re-tapping the already-active tab reshuffles to a fresh set of videos.
+      if (source === feedSource) {
+        reshuffle();
+        setCurrentIndex(0);
+        containerRef.current?.scrollTo({ top: 0, behavior: "auto" });
+        return;
+      }
       setFeedSource(source);
     },
-    [authUser?.id, navigate, location.pathname],
+    [authUser?.id, navigate, location.pathname, feedSource, reshuffle],
   );
 
   const nextVideoUrl = useMemo(() => {

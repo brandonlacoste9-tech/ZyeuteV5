@@ -10,7 +10,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import { getSessionWithTimeout } from "@/lib/supabase";
@@ -18,6 +18,7 @@ import {
   getOrCreateFeedSessionId,
   markFeedHidden,
   maybeRotateFeedSessionAfterBackground,
+  rotateFeedSessionId,
 } from "@/lib/feedSession";
 
 function getStoredHive(): string {
@@ -85,7 +86,15 @@ function fetchWithTimeout(
 }
 
 export function useInfiniteFeed(feedType: FeedType = "explore") {
-  const [feedSessionId, setFeedSessionId] = useState(getOrCreateFeedSessionId);
+  // Fresh shuffle seed on each entry to the feed: rotating the session id on
+  // mount means every time the user opens/returns to the feed they get a newly
+  // shuffled order (the backend derives its block-shuffle seed from this id).
+  const [feedSessionId, setFeedSessionId] = useState(rotateFeedSessionId);
+
+  /** Force a brand-new shuffle (e.g. re-tapping the active feed tab). */
+  const reshuffle = useCallback(() => {
+    setFeedSessionId(rotateFeedSessionId());
+  }, []);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -224,6 +233,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     hasNextPage,
     error,
     refetch,
+    reshuffle,
   };
 }
 
