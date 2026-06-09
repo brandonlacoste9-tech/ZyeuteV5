@@ -372,22 +372,8 @@ app.use((req, res, next) => {
           const { readFileSync } = await import("fs");
           const { join } = await import("path");
           const { runSqlScript } = await import("./db-direct.js");
-          const migrations = [
-            "20260202_add_hls_url.sql",
-            "20260221_video_playback_schema.sql",
-            "20260224_add_type_column.sql",
-            "20260225_bulk_repair_videos.sql",
-            "20260608_gifts_nullable_post_id.sql",
-            "20260608_grid_rush_matches.sql",
-            "20260608_grid_rush_tokens.sql",
-            "20260608_grid_rush_bot.sql",
-            "20260608_grid_rush_rpc.sql",
-            "20260608_grid_rush_rpc_harden.sql",
-            "20260608_grid_rush_rpc_postgrest_sig.sql",
-            "20260608_grid_rush_rpc_wallet_update.sql",
-            "20260608_poutine_royale.sql",
-          ];
-          for (const file of migrations) {
+          const { STARTUP_MIGRATIONS } = await import("./migrations-list.js");
+          for (const file of STARTUP_MIGRATIONS) {
             try {
               const sql = readFileSync(
                 join(process.cwd(), "backend/migrations", file),

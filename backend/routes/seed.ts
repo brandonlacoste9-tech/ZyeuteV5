@@ -201,6 +201,40 @@ router.post("/feed", async (req, res) => {
 });
 
 /**
+ * POST /api/seed/migrations — re-run the startup migration list on demand.
+ * Returns per-file ok/error so failures are visible without Render log access.
+ */
+router.post("/migrations", async (_req, res) => {
+  try {
+    const { readFileSync } = await import("fs");
+    const { join } = await import("path");
+    const { runSqlScript } = await import("../db-direct.js");
+    const { STARTUP_MIGRATIONS } = await import("../migrations-list.js");
+
+    const results: { file: string; ok: boolean; error?: string }[] = [];
+    for (const file of STARTUP_MIGRATIONS) {
+      try {
+        const sql = readFileSync(
+          join(process.cwd(), "backend/migrations", file),
+          "utf-8",
+        );
+        await runSqlScript(sql);
+        results.push({ file, ok: true });
+      } catch (err) {
+        results.push({ file, ok: false, error: serializeErrorDetail(err) });
+      }
+    }
+    res.json({
+      ok: results.every((r) => r.ok),
+      databaseUrlSet: Boolean(process.env.DATABASE_URL),
+      results,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: serializeErrorDetail(error) });
+  }
+});
+
+/**
  * GET /api/seed/status - Check if feed needs seeding
  */
 router.get("/status", async (req, res) => {
