@@ -1,6 +1,6 @@
 import { db } from "../storage.js";
-import { tournaments, royaleScores, users } from "../../shared/schema.js";
-import { eq, desc, and, sql, lt } from "drizzle-orm";
+import { royaleScores, users } from "../../shared/schema.js";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { supabaseAdmin } from "../supabase-auth.js";
 import { createDirectClient, type PgQueryable } from "../db-direct.js";
 
@@ -118,45 +118,74 @@ async function getWalletBalanceDirect(
  */
 export async function getOrCreateDailyTournament(): Promise<TournamentWithStats> {
   const now = new Date();
-
-  // Expire any stale active tournaments
-  await db
-    .update(tournaments)
-    .set({ status: "completed" })
-    .where(
-      and(eq(tournaments.status, "active"), lt(tournaments.expiresAt, now)),
+  const client = createDirectClient();
+  await client.connect();
+  try {
+    // Drizzle pool updates fail on Supabase pooler — use dedicated pg.Client
+    await client.query(
+      `UPDATE tournaments SET status = 'completed'
+       WHERE status = 'active' AND expires_at < $1`,
+      [now],
     );
 
-  // Look for today's active tournament
-  const existing = await db
-    .select()
-    .from(tournaments)
-    .where(eq(tournaments.status, "active"))
-    .orderBy(desc(tournaments.createdAt))
-    .limit(1);
+    const existing = await client.query<{
+      id: string;
+      title: string;
+      entry_fee: number;
+      prize_pool: number;
+      status: string;
+      expires_at: Date;
+      created_at: Date;
+    }>(
+      `SELECT id, title, entry_fee, prize_pool, status, expires_at, created_at
+       FROM tournaments
+       WHERE status = 'active'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    );
 
-  let tournament = existing[0];
+    let row = existing.rows[0];
+    if (!row) {
+      const midnight = new Date(now);
+      midnight.setHours(23, 59, 59, 999);
+      const title = formatDailyTitle(now);
+      const created = await client.query<typeof row>(
+        `INSERT INTO tournaments (title, entry_fee, prize_pool, status, expires_at)
+         VALUES ($1, $2, $3, 'active', $4)
+         RETURNING id, title, entry_fee, prize_pool, status, expires_at, created_at`,
+        [title, DAILY_ENTRY_FEE, DAILY_PRIZE_POOL, midnight],
+      );
+      row = created.rows[0];
+    }
 
-  if (!tournament) {
-    // Create a new daily tournament expiring at midnight tonight (ET)
-    const midnight = new Date(now);
-    midnight.setHours(23, 59, 59, 999);
+    const stats = await client.query<{
+      entry_count: number;
+      top_score: number | null;
+    }>(
+      `SELECT COUNT(DISTINCT user_id)::int AS entry_count,
+              MAX(score) AS top_score
+       FROM royale_scores
+       WHERE tournament_id = $1`,
+      [row.id],
+    );
+    const s = stats.rows[0];
+    const expiresAt = new Date(row.expires_at);
 
-    const title = formatDailyTitle(now);
-    const [created] = await db
-      .insert(tournaments)
-      .values({
-        title,
-        entryFee: DAILY_ENTRY_FEE,
-        prizePool: DAILY_PRIZE_POOL,
-        status: "active",
-        expiresAt: midnight,
-      })
-      .returning();
-    tournament = created;
+    return {
+      id: row.id,
+      title: row.title,
+      entryFee: Number(row.entry_fee),
+      prizePool: Number(row.prize_pool),
+      status: row.status,
+      expiresAt: expiresAt.toISOString(),
+      createdAt: new Date(row.created_at).toISOString(),
+      entryCount: s?.entry_count ?? 0,
+      topScore: s?.top_score != null ? Number(s.top_score) : null,
+      timeRemainingMs: Math.max(0, expiresAt.getTime() - Date.now()),
+    };
+  } finally {
+    await client.end().catch(() => {});
   }
-
-  return enrichTournament(tournament);
 }
 
 function formatDailyTitle(date: Date): string {
@@ -176,32 +205,6 @@ function formatDailyTitle(date: Date): string {
     "Déc",
   ];
   return `Poutine Royale — ${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-}
-
-async function enrichTournament(
-  t: typeof tournaments.$inferSelect,
-): Promise<TournamentWithStats> {
-  const stats = await db
-    .select({
-      entryCount: sql<number>`count(distinct ${royaleScores.userId})::int`,
-      topScore: sql<number>`max(${royaleScores.score})`,
-    })
-    .from(royaleScores)
-    .where(eq(royaleScores.tournamentId, t.id));
-
-  const s = stats[0];
-  return {
-    id: t.id,
-    title: t.title,
-    entryFee: t.entryFee,
-    prizePool: t.prizePool,
-    status: t.status,
-    expiresAt: t.expiresAt.toISOString(),
-    createdAt: t.createdAt.toISOString(),
-    entryCount: s?.entryCount ?? 0,
-    topScore: s?.topScore ?? null,
-    timeRemainingMs: Math.max(0, t.expiresAt.getTime() - Date.now()),
-  };
 }
 
 export interface SubmitResult {
