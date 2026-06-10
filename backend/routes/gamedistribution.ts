@@ -16,7 +16,7 @@ router.get("/rss", async (req, res) => {
 
     // Add a cache buster timestamp so Vercel doesn't heavily cache across tabs
     const cacheBuster = Date.now();
-    const url = `https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=${catFilter}&type=html5&amount=16&page=1&format=json&cb=${cacheBuster}`;
+    const url = `https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=${catFilter}&type=html5&amount=48&page=1&format=json&cb=${cacheBuster}`;
     const response = await axios.get(url, { timeout: 8000 });
     res.json(response.data);
   } catch (error: any) {
