@@ -13,7 +13,7 @@ let cachedTextures: CarteSucreeTextures | null = null;
 
 // Premium 3D Glossy SVG Data URIs for the Candies
 const SVG_ASSETS: Record<TileKind, string> = {
-  puck: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  puck: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradPuck" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#ff7eb3"/>
@@ -24,12 +24,12 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <circle cx="50" cy="50" r="42" fill="url(%23gradPuck)" filter="url(%23shadowPuck)"/>
+    <circle cx="50" cy="50" r="42" fill="url(#gradPuck)" filter="url(#shadowPuck)"/>
     <ellipse cx="50" cy="25" rx="20" ry="8" fill="#ffffff" opacity="0.6"/>
     <path d="M 20 50 Q 50 85 80 50" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.3" stroke-linecap="round"/>
   </svg>`,
   
-  leaf: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  leaf: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradLeaf" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#84ffc9"/>
@@ -40,12 +40,12 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <path d="M 50 10 L 90 50 L 50 90 L 10 50 Z" fill="url(%23gradLeaf)" filter="url(%23shadowLeaf)"/>
+    <path d="M 50 10 L 90 50 L 50 90 L 10 50 Z" fill="url(#gradLeaf)" filter="url(#shadowLeaf)"/>
     <path d="M 50 20 L 75 50 L 50 80 L 25 50 Z" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.4"/>
     <ellipse cx="50" cy="25" rx="15" ry="5" fill="#ffffff" opacity="0.7"/>
   </svg>`,
 
-  curd: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  curd: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradCurd" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#fff185"/>
@@ -56,12 +56,12 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <rect x="15" y="15" width="70" height="70" rx="20" fill="url(%23gradCurd)" filter="url(%23shadowCurd)"/>
+    <rect x="15" y="15" width="70" height="70" rx="20" fill="url(#gradCurd)" filter="url(#shadowCurd)"/>
     <rect x="25" y="25" width="50" height="50" rx="12" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.3"/>
     <ellipse cx="35" cy="30" rx="15" ry="6" fill="#ffffff" opacity="0.7"/>
   </svg>`,
 
-  lys: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  lys: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradLys" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#7bf2ff"/>
@@ -72,11 +72,11 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <path d="M 50 5 L 65 35 L 95 40 L 70 60 L 80 90 L 50 75 L 20 90 L 30 60 L 5 40 L 35 35 Z" fill="url(%23gradLys)" filter="url(%23shadowLys)" stroke-linejoin="round"/>
+    <path d="M 50 5 L 65 35 L 95 40 L 70 60 L 80 90 L 50 75 L 20 90 L 30 60 L 5 40 L 35 35 Z" fill="url(#gradLys)" filter="url(#shadowLys)" stroke-linejoin="round"/>
     <ellipse cx="50" cy="25" rx="10" ry="5" fill="#ffffff" opacity="0.8"/>
   </svg>`,
 
-  cone: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  cone: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradCone" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#ffb347"/>
@@ -87,12 +87,12 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <path d="M 50 15 L 85 80 Q 50 95 15 80 Z" fill="url(%23gradCone)" filter="url(%23shadowCone)"/>
+    <path d="M 50 15 L 85 80 Q 50 95 15 80 Z" fill="url(#gradCone)" filter="url(#shadowCone)"/>
     <path d="M 50 25 L 75 75 Q 50 85 25 75 Z" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.3"/>
     <ellipse cx="50" cy="30" rx="8" ry="12" fill="#ffffff" opacity="0.7"/>
   </svg>`,
 
-  mic: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  mic: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <defs>
       <radialGradient id="gradMic" cx="30%" cy="30%" r="70%">
         <stop offset="0%" stop-color="#e2a0ff"/>
@@ -103,13 +103,13 @@ const SVG_ASSETS: Record<TileKind, string> = {
         <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
       </filter>
     </defs>
-    <path d="M 30 15 A 25 25 0 1 1 70 15 A 25 25 0 1 1 85 50 A 25 25 0 1 1 70 85 A 25 25 0 1 1 30 85 A 25 25 0 1 1 15 50 A 25 25 0 1 1 30 15 Z" fill="url(%23gradMic)" filter="url(%23shadowMic)"/>
+    <path d="M 30 15 A 25 25 0 1 1 70 15 A 25 25 0 1 1 85 50 A 25 25 0 1 1 70 85 A 25 25 0 1 1 30 85 A 25 25 0 1 1 15 50 A 25 25 0 1 1 30 15 Z" fill="url(#gradMic)" filter="url(#shadowMic)"/>
     <circle cx="50" cy="50" r="20" fill="none" stroke="#ffffff" stroke-width="5" opacity="0.3"/>
     <ellipse cx="35" cy="30" rx="10" ry="10" fill="#ffffff" opacity="0.7"/>
   </svg>`
 };
 
-const STAR_SVG = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+const STAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <path d="M 50 5 L 65 35 L 95 40 L 70 60 L 80 90 L 50 75 L 20 90 L 30 60 L 5 40 L 35 35 Z" fill="#ffeb3b" filter="drop-shadow(0px 0px 8px #ffeb3b)"/>
 </svg>`;
 
@@ -126,11 +126,12 @@ export async function loadCarteSucreeAssets(): Promise<CarteSucreeTextures> {
 
   const tiles: Partial<Record<TileKind, PIXI.Texture>> = {};
   
-  // Load SVG Textures concurrently
+  // Load SVG Textures concurrently by converting raw SVG strings to base64 data URIs
   const entries = await Promise.all(
     (Object.entries(SVG_ASSETS) as [TileKind, string][]).map(
-      async ([kind, dataUri]) => {
-        const texture = await loadTexture(dataUri);
+      async ([kind, svgString]) => {
+        const b64 = btoa(unescape(encodeURIComponent(svgString)));
+        const texture = await loadTexture(`data:image/svg+xml;base64,${b64}`);
         return [kind, texture] as const;
       },
     ),
@@ -140,7 +141,8 @@ export async function loadCarteSucreeAssets(): Promise<CarteSucreeTextures> {
     if (texture) tiles[kind] = texture;
   }
 
-  const star = await loadTexture(STAR_SVG);
+  const b64Star = btoa(unescape(encodeURIComponent(STAR_SVG)));
+  const star = await loadTexture(`data:image/svg+xml;base64,${b64Star}`);
 
   cachedTextures = { tiles, star };
   return cachedTextures;
