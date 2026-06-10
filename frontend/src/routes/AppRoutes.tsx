@@ -64,8 +64,10 @@ const ArcadeHub = lazy(() => import("@/pages/ArcadeHub"));
 const GridRushLobby = lazy(() => import("@/pages/GridRushLobby"));
 const GridRushMatch = lazy(() => import("@/pages/GridRushMatch"));
 const PoutineLobby = lazy(() => import("@/pages/PoutineLobby"));
-const PoutineStackGame = lazy(
-  () => import("@/components/features/PoutineStackGame"),
+const PoutineStackGame = lazy(() =>
+  import("@/components/features/PoutineStackGame").then((m) => ({
+    default: m.default,
+  })),
 );
 const HiveTap = lazy(() => import("@/pages/HiveTap"));
 const ZyeuteQuiz = lazy(() => import("@/pages/ZyeuteQuiz"));

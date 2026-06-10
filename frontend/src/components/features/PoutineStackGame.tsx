@@ -213,10 +213,10 @@ export const PoutineStackGame: React.FC = () => {
   return (
     <ArcadeBackdrop
       scanlines={false}
-      className="h-screen relative flex flex-col overflow-hidden touch-none"
+      className="fixed inset-0 z-[100] h-[100dvh] w-full overflow-hidden touch-none"
     >
       <div
-        className="h-full relative flex flex-col overflow-hidden touch-none"
+        className="flex-1 min-h-0 relative flex flex-col overflow-hidden touch-none"
         onClick={handleTap}
       >
         {/* HUD */}

@@ -11,7 +11,7 @@ interface ArcadeLoadingProps {
 
 export function ArcadeLoading({ icon: Icon, label }: ArcadeLoadingProps) {
   return (
-    <ArcadeBackdrop className="flex flex-col items-center justify-center gap-5 min-h-screen">
+    <ArcadeBackdrop className="flex flex-col items-center justify-center gap-5 min-h-[60vh] py-16">
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}

@@ -15,9 +15,11 @@ export function ArcadeBackdrop({
 }: ArcadeBackdropProps) {
   return (
     <div
-      className={`arcade-room arcade-vignette arcade-font-body ${scanlines ? "arcade-crt" : ""} ${className}`}
+      className={`arcade-room arcade-vignette arcade-font-body flex flex-col ${scanlines ? "arcade-crt" : ""} ${className}`}
     >
-      <div className="relative z-20">{children}</div>
+      <div className="relative z-20 flex flex-col flex-1 min-h-0 w-full h-full">
+        {children}
+      </div>
     </div>
   );
 }

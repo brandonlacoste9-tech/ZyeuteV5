@@ -46,12 +46,29 @@ export interface RoyaleSubmitResult {
 
 /** Today's daily tournament (auto-created server-side). */
 export async function getTodayTournament(): Promise<RoyaleTournament | null> {
-  const { data, error } = await apiCall<RoyaleTournament>("/royale/today");
+  const { data, error, code } =
+    await apiCall<RoyaleTournament>("/royale/today");
+  if (data?.id) return data;
+
   if (error) {
-    console.warn("[Royale] /today failed:", error);
-    return null;
+    console.warn("[Royale] /today failed:", error, code);
   }
-  return data?.id ? data : null;
+
+  // Bypass apiCall dedupe/circuit-breaker for a direct retry (feed 429s must not brick arcade)
+  try {
+    const res = await fetch("/api/royale/today", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const body = (await res.json()) as RoyaleTournament;
+      if (body?.id) return body;
+    }
+  } catch (directErr) {
+    console.warn("[Royale] /today direct fetch failed:", directErr);
+  }
+
+  return null;
 }
 
 export async function getLeaderboard(

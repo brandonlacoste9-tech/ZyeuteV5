@@ -67,8 +67,13 @@ export default function PoutineLobby() {
     setLoadError(null);
     setLoadingTournament(true);
 
+    const tournamentPromise = getTodayTournament();
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 12000),
+    );
+
     try {
-      const t = await getTodayTournament();
+      const t = await Promise.race([tournamentPromise, timeoutPromise]);
       if (gen !== fetchGen.current) return;
 
       if (!t) {
