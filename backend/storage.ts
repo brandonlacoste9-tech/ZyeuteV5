@@ -321,6 +321,7 @@ function mapSupabaseUser(data: any): User {
     unlockedHives: data.unlocked_hives || ["quebec"],
     raisonBannissement: data.raison_bannissement || null,
     parentId: data.parent_id || null,
+    arcadePlaytime: data.arcade_playtime || 0,
   } as User;
 }
 
@@ -464,6 +465,8 @@ export class DatabaseStorage implements IStorage {
     if (updates.plan !== undefined) snakeUpdates.plan = updates.plan;
     if (updates.subscriptionTier !== undefined)
       snakeUpdates.subscription_tier = updates.subscriptionTier;
+    if (updates.arcadePlaytime !== undefined)
+      snakeUpdates.arcade_playtime = updates.arcadePlaytime;
 
     try {
       const result = await withTimeout(

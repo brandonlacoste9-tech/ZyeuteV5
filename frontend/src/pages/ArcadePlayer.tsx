@@ -19,11 +19,29 @@ export default function ArcadePlayer() {
   const [playtime, setPlaytime] = useState(() => {
     return parseInt(localStorage.getItem("zyeute_arcade_playtime") || "0", 10);
   });
+  const [accumulatedLocalSeconds, setAccumulatedLocalSeconds] = useState(0);
 
   const isPremium = user && (user as any).subscription_tier && (user as any).subscription_tier !== "gratuit";
   const TRIAL_LIMIT = 3600; // 1 hour in seconds
   const isPaywalled = !isPremium && playtime >= TRIAL_LIMIT;
 
+  // 1. Fetch current playtime from backend on mount
+  React.useEffect(() => {
+    if (!user) return;
+    apiCall<{ playtime: number }>("/gamedistribution/playtime")
+      .then((response) => {
+        if (response.data && typeof response.data.playtime === "number") {
+          const dbTime = response.data.playtime;
+          const localTime = parseInt(localStorage.getItem("zyeute_arcade_playtime") || "0", 10);
+          const finalTime = Math.max(dbTime, localTime);
+          setPlaytime(finalTime);
+          localStorage.setItem("zyeute_arcade_playtime", finalTime.toString());
+        }
+      })
+      .catch((err) => console.error("Error loading playtime:", err));
+  }, [user]);
+
+  // 2. Ticking interval for real-time countdown / UI enforcement
   React.useEffect(() => {
     if (isPaywalled || isPremium) return;
 
@@ -33,10 +51,38 @@ export default function ArcadePlayer() {
         localStorage.setItem("zyeute_arcade_playtime", newTime.toString());
         return newTime;
       });
+      setAccumulatedLocalSeconds((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [isPaywalled, isPremium]);
+
+  // 3. Periodic synchronization of accumulated playtime to backend (every 10s of play)
+  React.useEffect(() => {
+    if (accumulatedLocalSeconds >= 10 && user) {
+      const secondsToSync = accumulatedLocalSeconds;
+      setAccumulatedLocalSeconds(0); // reset immediately to avoid duplicate triggers
+      
+      apiCall<{ success: boolean; playtime: number }>("/gamedistribution/playtime", {
+        method: "POST",
+        body: JSON.stringify({ seconds: secondsToSync })
+      })
+        .then((response) => {
+          if (response.data?.success && typeof response.data.playtime === "number") {
+            const dbTime = response.data.playtime;
+            const localTime = parseInt(localStorage.getItem("zyeute_arcade_playtime") || "0", 10);
+            const finalTime = Math.max(dbTime, localTime);
+            setPlaytime(finalTime);
+            localStorage.setItem("zyeute_arcade_playtime", finalTime.toString());
+          }
+        })
+        .catch((err) => {
+          console.error("Error syncing playtime to DB:", err);
+          // Put the seconds back on sync failure so they can be retried
+          setAccumulatedLocalSeconds((prev) => prev + secondsToSync);
+        });
+    }
+  }, [accumulatedLocalSeconds, user]);
 
   let url = searchParams.get("url");
   const title = searchParams.get("title") || "Arcade Game";

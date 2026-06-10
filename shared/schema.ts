@@ -152,6 +152,7 @@ export const users = pgTable("user_profiles", {
   lastDailyBonus: timestamp("last_daily_bonus"),
   unlockedHives: jsonb("unlocked_hives").default(["quebec"]),
   raisonBannissement: text("raison_bannissement"),
+  arcadePlaytime: integer("arcade_playtime").default(0),
   parentId: uuid("parent_id").references((): AnyPgColumn => users.id, {
     onDelete: "set null",
   }), // For Parental Controls

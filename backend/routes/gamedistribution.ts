@@ -68,6 +68,12 @@ router.get("/rss", async (req, res) => {
   }
 });
 
+import { createClient } from "@supabase/supabase-js";
+
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseRest = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
 router.post("/claim", requireAuth, async (req: any, res: any) => {
   try {
     const userId = req.userId!;
@@ -94,6 +100,105 @@ router.post("/claim", requireAuth, async (req: any, res: any) => {
   } catch (error: any) {
     console.error("GameDistribution Claim Error:", error.message);
     res.status(500).json({ error: "Impossible de réclamer les jetons." });
+  }
+});
+
+router.get("/playtime", requireAuth, async (req: any, res: any) => {
+  try {
+    const userId = req.userId!;
+    let playtime = 0;
+
+    try {
+      // 1. Try Drizzle direct query
+      const result = await db
+        .select({ arcadePlaytime: users.arcadePlaytime })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      playtime = result[0]?.arcadePlaytime ?? 0;
+    } catch (dbErr) {
+      console.warn("[gamedistribution.getPlaytime] Drizzle failed, using Supabase REST fallback:", (dbErr as Error).message);
+      // 2. Fallback to Supabase REST client
+      if (supabaseRest) {
+        const { data, error } = await supabaseRest
+          .from("user_profiles")
+          .select("arcade_playtime")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!error && data) {
+          playtime = data.arcade_playtime ?? 0;
+        }
+      }
+    }
+
+    res.json({ playtime });
+  } catch (error: any) {
+    console.error("GameDistribution Get Playtime Error:", error.message);
+    res.status(500).json({ error: "Impossible de récupérer le temps de jeu." });
+  }
+});
+
+router.post("/playtime", requireAuth, async (req: any, res: any) => {
+  try {
+    const userId = req.userId!;
+    const { seconds } = req.body;
+    const increment = Math.min(Math.max(Number(seconds) || 0, 0), 60); // sanitize to avoid malicious jumps
+
+    let playtime = 0;
+    let updated = false;
+
+    try {
+      // 1. Try Drizzle update
+      await db
+        .update(users)
+        .set({ arcadePlaytime: sql`${users.arcadePlaytime} + ${increment}` })
+        .where(eq(users.id, userId));
+
+      const result = await db
+        .select({ arcadePlaytime: users.arcadePlaytime })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      playtime = result[0]?.arcadePlaytime ?? 0;
+      updated = true;
+    } catch (dbErr) {
+      console.warn("[gamedistribution.incrementPlaytime] Drizzle failed, using Supabase REST fallback:", (dbErr as Error).message);
+      // 2. Fallback to Supabase REST client
+      if (supabaseRest) {
+        // Fetch current playtime first
+        const { data: fetchResult, error: fetchErr } = await supabaseRest
+          .from("user_profiles")
+          .select("arcade_playtime")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!fetchErr && fetchResult) {
+          const currentPlaytime = fetchResult.arcade_playtime ?? 0;
+          const newPlaytime = currentPlaytime + increment;
+
+          const { data: updateResult, error: updateErr } = await supabaseRest
+            .from("user_profiles")
+            .update({ arcade_playtime: newPlaytime })
+            .eq("id", userId)
+            .select("arcade_playtime")
+            .maybeSingle();
+
+          if (!updateErr && updateResult) {
+            playtime = updateResult.arcade_playtime ?? 0;
+            updated = true;
+          }
+        }
+      }
+    }
+
+    if (updated) {
+      res.json({ success: true, playtime });
+    } else {
+      res.status(500).json({ error: "Impossible de mettre à jour le temps de jeu." });
+    }
+  } catch (error: any) {
+    console.error("GameDistribution Increment Playtime Error:", error.message);
+    res.status(500).json({ error: "Impossible de mettre à jour le temps de jeu." });
   }
 });
 
