@@ -19,7 +19,8 @@ export class PixiBoard {
   uiContainer: PIXI.Container;
   particleContainer: PIXI.Container;
   sprites = new Map<number, PIXI.Container>();
-  selectedPos: Pos | null = null;
+  dragStartPoint: { x: number; y: number } | null = null;
+  dragStartTilePos: Pos | null = null;
   onUpdateHUD: () => void;
   isAnimating = false;
 
@@ -125,10 +126,62 @@ export class PixiBoard {
     wrapper.interactive = true;
     wrapper.cursor = "pointer";
     wrapper.hitArea = new PIXI.Rectangle(0, 0, TILE_SIZE, TILE_SIZE);
-    wrapper.on("pointerdown", () => {
+    
+    wrapper.on("pointerdown", (e: PIXI.FederatedPointerEvent) => {
+      if (this.isAnimating) return;
       const pos = this.engine.findPosByTileId(tile.id);
-      if (pos) void this.handleTileClick(pos.r, pos.c);
+      if (!pos) return;
+      this.dragStartTilePos = pos;
+      this.dragStartPoint = { x: e.global.x, y: e.global.y };
+      wrapper.scale.set(1.15);
     });
+
+    wrapper.on("pointermove", (e: PIXI.FederatedPointerEvent) => {
+      if (!this.dragStartPoint || !this.dragStartTilePos) return;
+      if (this.isAnimating) {
+        this.resetDrag(wrapper);
+        return;
+      }
+      
+      const dx = e.global.x - this.dragStartPoint.x;
+      const dy = e.global.y - this.dragStartPoint.y;
+      
+      const threshold = 20;
+      if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+        let targetPos = { ...this.dragStartTilePos };
+        if (Math.abs(dx) > Math.abs(dy)) {
+          targetPos.c += dx > 0 ? 1 : -1;
+        } else {
+          targetPos.r += dy > 0 ? 1 : -1;
+        }
+        
+        const a = this.dragStartTilePos;
+        const b = targetPos;
+        this.resetDrag(wrapper);
+        
+        if (
+          b.r >= 0 && b.r < this.engine.rows &&
+          b.c >= 0 && b.c < this.engine.cols
+        ) {
+          void this.executeSwap(a, b);
+        }
+      }
+    });
+
+    const endDrag = () => this.resetDrag(wrapper);
+    wrapper.on("pointerup", endDrag);
+    wrapper.on("pointerupoutside", endDrag);
+  }
+
+  resetDrag(wrapper?: PIXI.Container) {
+    this.dragStartPoint = null;
+    this.dragStartTilePos = null;
+    if (wrapper) wrapper.scale.set(1);
+    else {
+      for (const s of this.sprites.values()) {
+        s.scale.set(1);
+      }
+    }
   }
 
   spawnTileSprite(tile: Tile, r: number, c: number, fromAbove = false) {
@@ -181,6 +234,10 @@ export class PixiBoard {
     const startY = sprite.y;
     let frames = 0;
     const ticker = (delta: number) => {
+      if (sprite.destroyed) {
+        this.app.ticker.remove(ticker);
+        return;
+      }
       frames += delta;
       const t = Math.min(1, frames / 12);
       sprite.y = startY + (targetY - startY) * t;
@@ -196,29 +253,8 @@ export class PixiBoard {
     this.app.ticker.add(ticker);
   }
 
-  async handleTileClick(r: number, c: number) {
-    if (this.isAnimating) return;
-
-    if (!this.selectedPos) {
-      this.selectedPos = { r, c };
-      const tile = this.engine.grid[r]![c];
-      const s = tile ? this.sprites.get(tile.id) : undefined;
-      if (s) s.scale.set(1.15);
-      return;
-    }
-
-    if (this.selectedPos.r === r && this.selectedPos.c === c) {
-      const tile = this.engine.grid[r]![c];
-      const s = tile ? this.sprites.get(tile.id) : undefined;
-      if (s) s.scale.set(1);
-      this.selectedPos = null;
-      return;
-    }
-
+  async executeSwap(a: Pos, b: Pos) {
     this.isAnimating = true;
-    const a = this.selectedPos;
-    const b = { r, c };
-    this.selectedPos = null;
 
     const tileA = this.engine.grid[a.r]![a.c];
     const sa = tileA ? this.sprites.get(tileA.id) : undefined;
@@ -274,7 +310,7 @@ export class PixiBoard {
         sb.y = rY(a.r);
       }
 
-      setTimeout(resolve, 180);
+      setTimeout(resolve, 120);
     });
   }
 
@@ -356,6 +392,10 @@ export class PixiBoard {
 
     let frames = 0;
     const ticker = (delta: number) => {
+      if (popup.destroyed) {
+        this.app.ticker.remove(ticker);
+        return;
+      }
       frames += delta;
       popup.y -= 1.2;
       popup.alpha -= 0.025;
@@ -389,7 +429,7 @@ export class PixiBoard {
           }
         }
       }
-      setTimeout(resolve, 220);
+      setTimeout(resolve, 160);
     });
   }
 
@@ -432,6 +472,10 @@ export class PixiBoard {
       let frames = 0;
       let currVy = vy;
       const ticker = (delta: number) => {
+        if (p.destroyed) {
+          this.app.ticker.remove(ticker);
+          return;
+        }
         frames += delta;
         currVy += gravity * delta;
         p.x += vx * delta;

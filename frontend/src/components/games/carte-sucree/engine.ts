@@ -28,26 +28,36 @@ export function playSFX(type: "swap" | "match" | "fail") {
 
   if (type === "swap") {
     osc.type = "sine";
-    osc.frequency.setValueAtTime(400, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(660, now + 0.05);
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     osc.start(now);
     osc.stop(now + 0.1);
   } else if (type === "match") {
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+    gain.gain.setValueAtTime(0.0, now);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = "triangle";
+    osc2.frequency.setValueAtTime(1200, now);
+    osc2.frequency.exponentialRampToValueAtTime(2400, now + 0.1);
+    osc2.connect(gain);
+    osc2.start(now);
+    osc2.stop(now + 0.3);
+    
     osc.start(now);
-    osc.stop(now + 0.2);
+    osc.stop(now + 0.3);
   } else {
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(200, now);
-    osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
-    gain.gain.setValueAtTime(0.1, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.15);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     osc.start(now);
     osc.stop(now + 0.15);
   }
