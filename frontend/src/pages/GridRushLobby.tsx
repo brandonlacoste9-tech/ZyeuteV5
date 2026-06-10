@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Zap, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -22,6 +22,7 @@ const STAKE_TIERS = [100, 250, 500] as const;
 
 export default function GridRushLobby() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [stake, setStake] = useState<(typeof STAKE_TIERS)[number]>(100);
   const [loading, setLoading] = useState<"queue" | "invite" | "bot" | null>(
@@ -39,7 +40,7 @@ export default function GridRushLobby() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [location.key]);
 
   const handleQuickMatch = async () => {
     if (!user) return navigate("/login");
@@ -83,14 +84,10 @@ export default function GridRushLobby() {
 
   const handlePlayBot = async () => {
     if (!user) return navigate("/login");
-    if (balance !== null && balance < stake) {
-      setError("Pas assez de jetons pour cette mise.");
-      return;
-    }
 
     setLoading("bot");
     setError(null);
-    const { data, error: apiError } = await createBotMatch(stake);
+    const { data, error: apiError } = await createBotMatch();
     setLoading(null);
 
     if (apiError || !data) {
@@ -178,17 +175,21 @@ export default function GridRushLobby() {
           onClick={handlePlayBot}
           className={`${arcadeBtnGhost} disabled:opacity-50`}
         >
-          {loading === "bot" ? "Lancement..." : "Jouer contre le bot (test)"}
+          {loading === "bot" ? "Lancement..." : "Jouer contre le bot — GRATUIT"}
         </motion.button>
 
         <section
           className={`${arcadeCard} p-4 text-sm arcade-text-muted space-y-2`}
         >
           <p>
+            <span className="arcade-text-yellow font-bold">Bot:</span>{" "}
+            entraînement gratuit, aucune mise. Les matchs PvP utilisent les
+            jetons sélectionnés ci-dessus.
+          </p>
+          <p>
             <span className="arcade-text-yellow font-bold">Règles:</span> Tape
             les chiffres 1→16 le plus vite possible. Chaque grille complétée =
-            +1 point. 45 secondes chrono. Le perdant envoie ses jetons en GG
-            Gift au gagnant.
+            +1 point. 45 secondes chrono.
           </p>
         </section>
       </div>

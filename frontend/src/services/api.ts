@@ -80,9 +80,11 @@ export async function apiCall<T>(
   }
 
   const requestKey = getRequestKey(endpoint, options);
+  const method = (options.method || "GET").toUpperCase();
+  const skipDedupe = isArcadeEndpoint(endpoint) && method !== "GET";
 
   // Return existing pending request if exists (prevents duplicate in-flight requests)
-  if (pendingRequests.has(requestKey)) {
+  if (!skipDedupe && pendingRequests.has(requestKey)) {
     apiLogger.debug(`Deduplicating request: ${endpoint}`);
     return pendingRequests.get(requestKey)!;
   }

@@ -77,11 +77,11 @@ export async function createInvite(stakeTokens: number) {
   });
 }
 
-export async function createBotMatch(stakeTokens: number) {
+export async function createBotMatch() {
   return arcadeFetch<GridRushMatch>("/grid-rush/bot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ stakeTokens }),
+    body: JSON.stringify({ practice: true }),
   });
 }
 

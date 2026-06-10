@@ -235,9 +235,15 @@ export default function GridRushGame({
           <div
             className={`text-sm font-semibold tracking-wider uppercase flex items-center gap-1 ${arcadeTextYellow}`}
           >
-            Mise:
-            <Star className="w-3.5 h-3.5 fill-current" />
-            {matchData.stakeTokens}
+            {matchData.stakeTokens > 0 ? (
+              <>
+                Mise:
+                <Star className="w-3.5 h-3.5 fill-current" />
+                {matchData.stakeTokens}
+              </>
+            ) : (
+              "Entraînement gratuit"
+            )}
           </div>
           <div className="text-2xl font-black tabular-nums bg-red-500/10 text-red-400 px-3 py-1 rounded-full border border-red-500/20">
             {timeLeft}s

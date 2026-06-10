@@ -60,10 +60,33 @@ export async function getTokenBalance(userId: string): Promise<number> {
   return Number(data.token_balance ?? DEFAULT_TOKEN_BALANCE);
 }
 
+/** Arcade pity refill — matches the "1000 jetons gratuits" copy when broke. */
+export async function ensurePlayableTokenBalance(
+  userId: string,
+  minBalance = 100,
+): Promise<number> {
+  const balance = await getTokenBalance(userId);
+  if (balance >= minBalance) return balance;
+
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("user_wallets")
+    .update({
+      token_balance: DEFAULT_TOKEN_BALANCE,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .select("token_balance")
+    .single();
+  if (error) throw new Error(error.message);
+  return Number(data?.token_balance ?? DEFAULT_TOKEN_BALANCE);
+}
+
 export async function deductTokenBalance(
   userId: string,
   amount: number,
 ): Promise<void> {
+  if (amount <= 0) return;
   await ensureTokenWallet(userId);
   const admin = getSupabaseAdmin();
   const { data: wallet, error: readErr } = await admin
@@ -95,6 +118,7 @@ export async function creditTokenBalance(
   userId: string,
   amount: number,
 ): Promise<number> {
+  if (amount <= 0) return getTokenBalance(userId);
   await ensureTokenWallet(userId);
   const admin = getSupabaseAdmin();
   const balance = await getTokenBalance(userId);

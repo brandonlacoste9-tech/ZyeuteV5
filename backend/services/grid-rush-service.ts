@@ -7,11 +7,14 @@ import { createDirectClient, type PgQueryable } from "../db-direct.js";
 import {
   creditTokenBalance,
   deductTokenBalance,
+  ensurePlayableTokenBalance,
 } from "../supabase-arcade-db.js";
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
 export const DEFAULT_WALLET_TOKENS = 1000;
+/** Bot practice matches never touch the wallet. */
+export const BOT_PRACTICE_STAKE = 0;
 // Minimum seconds between score submissions (tapping 1→16 at world-record speed ~3s)
 const MIN_SCORE_INTERVAL_MS = 2800;
 
@@ -51,22 +54,17 @@ function assertStake(stake: number): StakeTokens {
   return stake as StakeTokens;
 }
 
-async function createBotMatchDirect(
-  userId: string,
-  stake: StakeTokens,
-): Promise<GridRushMatch> {
+async function createBotMatchDirect(userId: string): Promise<GridRushMatch> {
   const now = new Date();
   const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
 
   const match = await withTx(async (client) => {
-    await deductTokens(client, userId, stake);
-
     const created = await client.query(
       `INSERT INTO grid_rush_matches
          (player_1_id, stake_tokens, status, is_bot, started_at, ends_at)
        VALUES ($1, $2, 'ACTIVE', true, $3, $4)
        RETURNING *`,
-      [userId, stake, now, endsAt],
+      [userId, BOT_PRACTICE_STAKE, now, endsAt],
     );
     return mapRow(created.rows[0]);
   });
@@ -233,20 +231,28 @@ async function cleanupBlockingMatchesForUser(
   if (botErr) throw new Error(botErr.message);
 
   for (const row of soloBots ?? []) {
-    await finishMatchAdmin(userId, row.id as string, { force: true }).catch(
-      (err) => {
-        console.warn("[GridRush] solo bot cleanup failed:", row.id, err);
-      },
-    );
+    const finished = await finishMatchAdmin(userId, row.id as string, {
+      force: true,
+    }).catch((err) => {
+      console.warn("[GridRush] solo bot cleanup failed:", row.id, err);
+      return null;
+    });
+    if (!finished && supabaseAdmin) {
+      clearBotTimer(row.id as string);
+      await supabaseAdmin
+        .from("grid_rush_matches")
+        .update({
+          status: "COMPLETED",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", row.id as string)
+        .eq("status", "ACTIVE");
+    }
   }
 }
 
-async function createBotMatchAdmin(
-  userId: string,
-  stake: StakeTokens,
-): Promise<GridRushMatch> {
+async function createBotMatchAdmin(userId: string): Promise<GridRushMatch> {
   await cleanupBlockingMatchesForUser(userId, { forceSoloBot: true });
-  await deductTokenBalance(userId, stake);
 
   const now = new Date();
   const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
@@ -255,8 +261,8 @@ async function createBotMatchAdmin(
     .from("grid_rush_matches")
     .insert({
       player_1_id: userId,
-      stake_tokens: stake,
-      stake_cennes: stake,
+      stake_tokens: BOT_PRACTICE_STAKE,
+      stake_cennes: BOT_PRACTICE_STAKE,
       status: "ACTIVE",
       started_at: now.toISOString(),
       ends_at: endsAt.toISOString(),
@@ -265,7 +271,6 @@ async function createBotMatchAdmin(
     .single();
 
   if (error) {
-    await creditTokenBalance(userId, stake).catch(() => {});
     if (error.code === "23505") {
       throw new Error(
         "Tu as déjà une manche en cours. Attends la fin ou réessaie dans un instant.",
@@ -373,12 +378,14 @@ async function finishMatchAdmin(
   if (error) throw new Error(error.message);
 
   const stake = Number(match.stake_tokens ?? 0);
-  if (winnerId) {
-    await creditTokenBalance(winnerId, stake * 2);
-  } else if (p1Score === p2Score) {
-    await creditTokenBalance(match.player_1_id as string, stake);
-    if (match.player_2_id) {
-      await creditTokenBalance(match.player_2_id as string, stake);
+  if (stake > 0) {
+    if (winnerId) {
+      await creditTokenBalance(winnerId, stake * 2);
+    } else if (p1Score === p2Score) {
+      await creditTokenBalance(match.player_1_id as string, stake);
+      if (match.player_2_id) {
+        await creditTokenBalance(match.player_2_id as string, stake);
+      }
     }
   }
 
@@ -709,19 +716,7 @@ export class GridRushService {
 
   static async getWalletBalance(userId: string): Promise<number> {
     if (supabaseAdmin) {
-      const { data: existing } = await supabaseAdmin
-        .from("user_wallets")
-        .select("token_balance")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (existing) return Number(existing.token_balance);
-
-      const { error: insertErr } = await supabaseAdmin
-        .from("user_wallets")
-        .insert({ user_id: userId, token_balance: DEFAULT_WALLET_TOKENS });
-      if (insertErr && insertErr.code !== "23505") throw insertErr;
-      return DEFAULT_WALLET_TOKENS;
+      return ensurePlayableTokenBalance(userId, ALLOWED_STAKES[0]);
     }
 
     await queryDirect(
@@ -740,15 +735,13 @@ export class GridRushService {
 
   static async createBotMatch(
     userId: string,
-    stakeTokens: number,
+    _stakeTokens?: number,
   ): Promise<GridRushMatch> {
-    const stake = assertStake(stakeTokens);
-
     if (supabaseAdmin) {
-      return createBotMatchAdmin(userId, stake);
+      return createBotMatchAdmin(userId);
     }
 
-    return createBotMatchDirect(userId, stake);
+    return createBotMatchDirect(userId);
   }
 
   static async createInvite(
@@ -904,12 +897,14 @@ export class GridRushService {
         [winnerId, matchId],
       );
 
-      if (winnerId) {
-        await creditTokens(client, winnerId, match.stake_tokens * 2);
-      } else if (isTie) {
-        await creditTokens(client, match.player_1_id, match.stake_tokens);
-        if (match.player_2_id) {
-          await creditTokens(client, match.player_2_id, match.stake_tokens);
+      if (Number(match.stake_tokens ?? 0) > 0) {
+        if (winnerId) {
+          await creditTokens(client, winnerId, match.stake_tokens * 2);
+        } else if (isTie) {
+          await creditTokens(client, match.player_1_id, match.stake_tokens);
+          if (match.player_2_id) {
+            await creditTokens(client, match.player_2_id, match.stake_tokens);
+          }
         }
       }
 
