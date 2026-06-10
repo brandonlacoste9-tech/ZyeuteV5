@@ -1751,15 +1751,15 @@ export const Zyeute: React.FC = () => {
                 </div>
               </button>
 
-              {/* Notifications */}
+              {/* Arcade */}
               <button
                 onClick={() => {
                   tap();
-                  navigate("/notifications");
+                  navigate("/arcade");
                 }}
                 className="flex flex-col items-center gap-1 press-scale relative"
               >
-                {location.pathname === "/notifications" && (
+                {location.pathname === "/arcade" && (
                   <span
                     className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
                     style={{
@@ -1773,13 +1773,9 @@ export const Zyeute: React.FC = () => {
                   width="24"
                   height="24"
                   viewBox="0 0 24 24"
-                  fill={
-                    location.pathname === "/notifications"
-                      ? edgeLighting
-                      : "none"
-                  }
+                  fill="none"
                   stroke={
-                    location.pathname === "/notifications"
+                    location.pathname === "/arcade"
                       ? edgeLighting
                       : "rgba(255,255,255,0.5)"
                   }
@@ -1787,7 +1783,7 @@ export const Zyeute: React.FC = () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   style={
-                    location.pathname === "/notifications"
+                    location.pathname === "/arcade"
                       ? {
                           filter:
                             "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
@@ -1795,19 +1791,19 @@ export const Zyeute: React.FC = () => {
                       : {}
                   }
                 >
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                  <rect x="2" y="6" width="20" height="12" rx="2" />
+                  <path d="M6 12h4m-2-2v4M15 12h.01M18 10h.01" />
                 </svg>
                 <span
                   className="text-[10px] font-medium"
                   style={{
                     color:
-                      location.pathname === "/notifications"
+                      location.pathname === "/arcade"
                         ? edgeLighting
                         : "rgba(255,255,255,0.5)",
                   }}
                 >
-                  Activité
+                  Arcade
                 </span>
               </button>
 

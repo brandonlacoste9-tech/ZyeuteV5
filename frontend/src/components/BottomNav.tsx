@@ -9,7 +9,6 @@ import { useHaptics } from "@/hooks/useHaptics";
 import { useTranslation } from "@/i18n";
 import { cn } from "../lib/utils";
 import { useMessaging } from "@/contexts/MessagingContext";
-import { getUnreadNotificationCount } from "@/services/api";
 
 interface NavItem {
   to: string;
@@ -110,26 +109,34 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    to: "/notifications",
-    labelKey: "nav.notifications_short",
+    to: "/arcade",
+    labelKey: "nav.arcade",
     icon: (
       <svg
         className="w-6 h-6"
         fill="none"
         stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         viewBox="0 0 24 24"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-        />
+        <line x1="6" x2="10" y1="12" y2="12" />
+        <line x1="8" x2="8" y1="10" y2="14" />
+        <line x1="15" x2="15.01" y1="13" y2="13" />
+        <line x1="18" x2="18.01" y1="11" y2="11" />
+        <rect width="20" height="12" x="2" y="6" rx="2" />
       </svg>
     ),
     activeIcon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+      <svg
+        className="w-6 h-6"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth={0}
+        viewBox="0 0 24 24"
+      >
+        <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
       </svg>
     ),
   },
@@ -164,24 +171,6 @@ export const BottomNav: React.FC = () => {
   const { tap } = useHaptics();
   const { t } = useTranslation();
   const { dmUnread } = useMessaging();
-  const [notifUnread, setNotifUnread] = React.useState(0);
-
-  React.useEffect(() => {
-    const checkUnread = async () => {
-      const guestMode = localStorage.getItem("zyeute_guest_mode") === "true";
-      if (guestMode) return;
-      try {
-        const count = await getUnreadNotificationCount();
-        setNotifUnread(count);
-      } catch (err) {
-        // fail silently
-      }
-    };
-    checkUnread();
-
-    const interval = setInterval(checkUnread, 30000);
-    return () => clearInterval(interval);
-  }, [location.pathname]);
 
   // Helper to check if a path is active (handles profile routes)
   const isActivePath = (path: string): boolean => {
@@ -307,19 +296,6 @@ export const BottomNav: React.FC = () => {
                               }}
                             >
                               {dmUnread > 9 ? "9+" : dmUnread}
-                            </span>
-                          )}
-                          {/* Notifications unread badge */}
-                          {item.to === "/notifications" && notifUnread > 0 && (
-                            <span
-                              className="absolute -top-1 -right-1 text-[9px] font-black rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 animate-pulse"
-                              style={{
-                                background: "#FF4444",
-                                color: "#FFF",
-                                boxShadow: "0 0 6px rgba(255,68,68,0.8)",
-                              }}
-                            >
-                              {notifUnread > 9 ? "9+" : notifUnread}
                             </span>
                           )}
                         </div>

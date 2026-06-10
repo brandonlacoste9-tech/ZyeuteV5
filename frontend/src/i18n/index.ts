@@ -16,6 +16,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.create": "Créer",
     "nav.notifications_short": "Notifs",
     "nav.messages": "Messages",
+    "nav.arcade": "Arcade",
 
     // Auth
     "auth.login": "Se connecter",
@@ -104,6 +105,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.discover": "Descobrir",
     "nav.create": "Criar",
     "nav.notifications_short": "Notifs",
+    "nav.arcade": "Arcade",
 
     // Auth
     "auth.login": "Entrar",
@@ -180,6 +182,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.create": "Crear",
     "nav.notifications_short": "Noti",
     "nav.messages": "Mensajes",
+    "nav.arcade": "Arcade",
 
     // Auth
     "auth.login": "Entrar",
@@ -254,6 +257,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.create": "Crear",
     "nav.notifications_short": "Notis",
     "nav.messages": "Mensajes",
+    "nav.arcade": "Arcade",
 
     // Auth
     "auth.login": "Iniciar Sesión",
