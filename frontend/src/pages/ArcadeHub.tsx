@@ -209,42 +209,35 @@ interface WebGame {
 
 function WebGamesCatalog() {
   const navigate = useNavigate();
-  
-  // A curated list of unblocked, high-quality HTML5 games.
-  const games: WebGame[] = [
-    {
-      Title: "Shell Shockers",
-      Md5: "shell-shockers",
-      Description: "Le jeu de tir multijoueur avec des œufs le plus populaire au monde!",
-      Url: "https://www.crazygames.com/embed/shell-shockers",
-      Asset: ["https://images.crazygames.com/shellshockersio/20210810173200/shellshockersio-cover?auto=format,compress&q=75&cs=strip&w=400"],
-      Category: ["Action"]
-    },
-    {
-      Title: "Smash Karts",
-      Md5: "smash-karts",
-      Description: "Combattez d'autres joueurs en ligne dans des courses de karts explosives.",
-      Url: "https://www.crazygames.com/embed/smash-karts",
-      Asset: ["https://images.crazygames.com/smash-karts/20200526084059/smash-karts-cover?auto=format,compress&q=75&cs=strip&w=400"],
-      Category: ["Course"]
-    },
-    {
-      Title: "Basket Random",
-      Md5: "basket-random",
-      Description: "Un jeu de basket hilarant basé sur la physique.",
-      Url: "https://www.crazygames.com/embed/basket-random",
-      Asset: ["https://images.crazygames.com/games/basket-random/cover-1608035100000.png?auto=format,compress&q=75&cs=strip&w=400"],
-      Category: ["Sports"]
-    },
-    {
-      Title: "Moto X3M",
-      Md5: "moto-x3m",
-      Description: "Affrontez des parcours d'obstacles intenses en moto.",
-      Url: "https://www.crazygames.com/embed/moto-x3m",
-      Asset: ["https://images.crazygames.com/games/moto-x3m/cover-1586173995801.jpeg?auto=format,compress&q=75&cs=strip&w=400"],
-      Category: ["Course"]
+  const [games, setGames] = useState<WebGame[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchGames() {
+      try {
+        const res = await fetch(
+          "https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=All&type=all&amount=12&page=1&format=json"
+        );
+        const data = await res.json();
+        if (data && Array.isArray(data)) {
+          setGames(data);
+        }
+      } catch (e) {
+        console.error("Failed to fetch games:", e);
+      } finally {
+        setLoading(false);
+      }
     }
-  ];
+    fetchGames();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="mt-20 flex justify-center opacity-50">
+        <div className="arcade-font-pixel">Chargement du catalogue...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-20">

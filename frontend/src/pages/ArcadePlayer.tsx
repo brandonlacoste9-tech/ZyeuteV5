@@ -15,7 +15,7 @@ export default function ArcadePlayer() {
   const { user } = useAuth();
   const [claimed, setClaimed] = useState(false);
 
-  const url = searchParams.get("url");
+  let url = searchParams.get("url");
   const title = searchParams.get("title") || "Arcade Game";
 
   if (!url) {
@@ -30,6 +30,18 @@ export default function ArcadePlayer() {
         </div>
       </ArcadeBackdrop>
     );
+  }
+
+  // Detect if this is a GameDistribution game that needs to be wrapped.
+  // GameDistribution links usually start with https://html5.gamedistribution.com/
+  // The documentation explicitly says to wrap it in the responsive embed player.
+  if (url.includes("gamedistribution.com")) {
+    const currentHost = typeof window !== "undefined" ? window.location.href : "https://zyeute.com";
+    url = `https://embed.gamedistribution.com/?url=${encodeURIComponent(
+      url
+    )}&width=100%25&height=100%25&language=fr&gdpr-tracking=1&gdpr-targeting=1&gd_sdk_referrer_url=${encodeURIComponent(
+      currentHost
+    )}`;
   }
 
   const handleClaim = () => {
