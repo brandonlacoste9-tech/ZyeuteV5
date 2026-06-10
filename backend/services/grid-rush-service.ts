@@ -221,7 +221,6 @@ async function createBotMatchAdmin(
       stake_tokens: stake,
       stake_cennes: stake,
       status: "ACTIVE",
-      is_bot: true,
       started_at: now.toISOString(),
       ends_at: endsAt.toISOString(),
     })
@@ -548,7 +547,8 @@ export async function recoverBotMatches(): Promise<void> {
         .from("grid_rush_matches")
         .select("id, ends_at, player_1_id")
         .eq("status", "ACTIVE")
-        .eq("is_bot", true);
+        .is("player_2_id", null)
+        .not("started_at", "is", null);
       if (error) throw error;
       rows = (data ?? []) as typeof rows;
     } else {
