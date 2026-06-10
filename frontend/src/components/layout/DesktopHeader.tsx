@@ -51,6 +51,32 @@ export const DesktopHeader: React.FC = () => {
 
       {/* Right: Actions & Profile */}
       <div className="flex items-center gap-5 w-[300px] justify-end">
+        {/* Arcade Button */}
+        <Link
+          to="/arcade"
+          className="p-2 rounded-full bg-[#1a0f2e] border border-cyan-500/50 hover:bg-cyan-900/40 hover:scale-110 transition-all group flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_15px_rgba(6,182,212,0.6)]"
+          title="Zyeuté Arcade"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]"
+          >
+            <line x1="6" x2="10" y1="12" y2="12" />
+            <line x1="8" x2="8" y1="10" y2="14" />
+            <line x1="15" x2="15.01" y1="13" y2="13" />
+            <line x1="18" x2="18.01" y1="11" y2="11" />
+            <rect width="20" height="12" x="2" y="6" rx="2" />
+          </svg>
+        </Link>
+
         <Link
           to="/upload"
           className="flex items-center gap-2 px-4 py-1.5 bg-leather-900 hover:bg-leather-800 border border-leather-700 rounded-sm text-white font-semibold transition-colors"
