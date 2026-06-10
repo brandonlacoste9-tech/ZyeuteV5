@@ -22,4 +22,5 @@ export const STARTUP_MIGRATIONS = [
   "20260609_poutine_royale_harden.sql",
   "20260609_quiz_daily.sql",
   "20260610_grid_rush_is_bot_column.sql",
+  "20260610_carte_sucree_completions.sql",
 ];

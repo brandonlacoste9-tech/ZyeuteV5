@@ -55,7 +55,7 @@ function getRequestKey(endpoint: string, options: RequestInit): string {
 
 const ARCADE_API_PREFIXES = [
   "/grid-rush",
-  "/quiz",
+  "/carte-sucree",
   "/royale",
   "/hive-tap",
 ] as const;

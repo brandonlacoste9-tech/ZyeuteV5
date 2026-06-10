@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Brain, Gamepad2, HelpCircle, Zap } from "lucide-react";
+import { ArrowLeft, Candy, Gamepad2, HelpCircle, Zap } from "lucide-react";
 import { FaHive } from "react-icons/fa";
 import { ArcadeBackdrop } from "@/components/arcade/ArcadeBackdrop";
 import {
@@ -55,12 +55,12 @@ export default function ArcadeHub() {
       iconClass: arcadeTextMagenta,
     },
     {
-      id: "quiz",
-      title: "Zyeuté Quiz",
-      description: "5 questions par jour sur le Québec. Piasses à gagner.",
-      icon: <Brain className="w-8 h-8" aria-hidden />,
+      id: "carte-sucree",
+      title: "Carte Sucrée",
+      description: "Match-3 québécois — aligne les bonbons, gagne des jetons.",
+      icon: <Candy className="w-8 h-8" aria-hidden />,
       status: "LIVE",
-      path: "/arcade/quiz",
+      path: "/arcade/carte-sucree",
       cardClass: arcadeCardYellow,
       iconClass: arcadeTextYellow,
     },
@@ -110,8 +110,8 @@ export default function ArcadeHub() {
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className={`text-sm max-w-lg ${arcadeTextMuted}`}>
-              Choisis ta machine. Grid Rush, Poutine, Quiz et Hive Tap — tout
-              est live dans la salle.
+              Choisis ta machine. Grid Rush, Poutine, Carte Sucrée et Hive Tap —
+              tout est live dans la salle.
             </p>
             <span className={arcadeLiveBadge}>
               <span className="arcade-live-dot" aria-hidden />

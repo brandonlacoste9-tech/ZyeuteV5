@@ -377,7 +377,7 @@ export const Explore: React.FC = () => {
               </span>
             </div>
             <p className="text-[#9eb4d8] text-sm mt-1">
-              INSERT COIN — Grid Rush, Poutine, Quiz & Hive Tap
+              INSERT COIN — Grid Rush, Poutine, Carte Sucrée & Hive Tap
             </p>
           </div>
           <svg
