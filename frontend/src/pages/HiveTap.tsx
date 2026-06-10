@@ -12,7 +12,15 @@ import { useNavigate } from "react-router-dom";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { arcadeBtnPrimary, arcadeCard } from "@/components/arcade/arcade-ui";
+import { ArcadeBackdrop } from "@/components/arcade/ArcadeBackdrop";
+import {
+  arcadeBtnPrimary,
+  arcadeCardLime,
+  arcadeTextCyan,
+  arcadeTextLime,
+  arcadeTextMuted,
+  arcadeTextYellow,
+} from "@/components/arcade/arcade-ui";
 import {
   createHiveTapToken,
   getCurrentLocation,
@@ -118,19 +126,19 @@ const HiveTap = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-black leather-overlay text-white p-4 pb-24">
+    <ArcadeBackdrop className="flex flex-col items-center justify-center p-4 pb-24 min-h-screen">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`z-10 w-full max-w-md ${arcadeCard} border-gold-500/25 rounded-3xl gold-glow overflow-hidden min-h-[560px] flex flex-col`}
+        className={`z-10 w-full max-w-md ${arcadeCardLime} overflow-hidden min-h-[560px] flex flex-col`}
       >
-        <div className="p-6 flex justify-between items-center border-b border-gold-500/15">
+        <div className="p-6 flex justify-between items-center border-b border-[rgba(57,255,20,0.25)]">
           <button
             type="button"
             onClick={() =>
               view === "menu" ? navigate("/arcade") : setView("menu")
             }
-            className="flex items-center gap-2 text-gold-400 cursor-pointer hover:text-gold-300 transition-colors"
+            className={`flex items-center gap-2 ${arcadeTextCyan} cursor-pointer hover:opacity-80 transition-opacity`}
           >
             <ChevronLeft size={20} />
             <span className="text-xs font-bold uppercase tracking-widest">
@@ -138,16 +146,20 @@ const HiveTap = () => {
             </span>
           </button>
           <div className="flex items-center gap-2">
-            <Zap size={18} className="text-gold-400" />
-            <span className="font-black text-gold-400 italic">HIVE TAP</span>
+            <Zap size={18} className={arcadeTextLime} />
+            <span
+              className={`font-black uppercase tracking-wider text-xs ${arcadeTextLime}`}
+            >
+              Hive Tap
+            </span>
           </div>
         </div>
 
         <div className="flex-1 flex flex-col px-6 py-6">
           {balance != null && (
-            <p className="text-xs text-leather-300 mb-4 text-center">
+            <p className={`text-xs mb-4 text-center ${arcadeTextMuted}`}>
               Solde:{" "}
-              <span className="text-gold-400 font-bold tabular-nums">
+              <span className={`font-bold tabular-nums ${arcadeTextYellow}`}>
                 {balance}
               </span>{" "}
               Piasses
@@ -169,8 +181,10 @@ const HiveTap = () => {
                 exit={{ opacity: 0 }}
                 className="flex-1 flex flex-col justify-center gap-4"
               >
-                <h1 className="text-3xl font-black text-gold-400">P2P Honey</h1>
-                <p className="text-leather-300 text-sm mb-4">
+                <h1 className={`text-2xl font-black ${arcadeTextLime}`}>
+                  P2P Honey
+                </h1>
+                <p className={`text-sm mb-4 ${arcadeTextMuted}`}>
                   Transfère des Piasses à proximité. Le receveur doit être à
                   moins de 15 m et coller ton token dans les 30 secondes.
                 </p>
@@ -196,10 +210,10 @@ const HiveTap = () => {
                     setError(null);
                     setPasteToken("");
                   }}
-                  className="p-5 min-h-[72px] rounded-2xl border border-gold-500/30 text-left hover:border-gold-500/60 cursor-pointer transition-colors duration-200"
+                  className="p-5 min-h-[72px] rounded-sm border-2 border-[rgba(0,243,255,0.35)] text-left hover:border-[rgba(0,243,255,0.6)] cursor-pointer transition-colors duration-200"
                 >
                   Recevoir (Tap)
-                  <span className="block text-sm text-leather-400 mt-1">
+                  <span className={`block text-sm mt-1 ${arcadeTextMuted}`}>
                     Colle le token de ton chum
                   </span>
                 </button>
@@ -216,14 +230,16 @@ const HiveTap = () => {
               >
                 <div className="flex justify-center mb-6">
                   {view === "giving" ? (
-                    <Smartphone className="w-16 h-16 text-gold-400" />
+                    <Smartphone className={`w-16 h-16 ${arcadeTextLime}`} />
                   ) : (
-                    <Zap className="w-16 h-16 text-gold-400" />
+                    <Zap className={`w-16 h-16 ${arcadeTextCyan}`} />
                   )}
                 </div>
 
                 <div className="mb-4">
-                  <span className="text-xs text-leather-400 uppercase tracking-widest">
+                  <span
+                    className={`text-xs uppercase tracking-widest ${arcadeTextMuted}`}
+                  >
                     Montant
                   </span>
                   <div className="grid grid-cols-4 gap-2 mt-2">
@@ -232,10 +248,10 @@ const HiveTap = () => {
                         key={a}
                         type="button"
                         onClick={() => setAmount(a)}
-                        className={`py-2 min-h-[44px] rounded-lg font-bold text-sm cursor-pointer transition-colors duration-200 ${
+                        className={`py-2 min-h-[44px] rounded-sm font-bold text-sm cursor-pointer transition-colors duration-200 ${
                           amount === a
-                            ? "bg-gold-500 text-black"
-                            : "border border-leather-700 text-leather-200 hover:border-gold-500/40"
+                            ? "bg-[#ffe600] text-black"
+                            : "border border-[rgba(158,180,216,0.35)] text-[#e8eeff] hover:border-[rgba(0,243,255,0.5)]"
                         }`}
                       >
                         {a}
@@ -249,7 +265,7 @@ const HiveTap = () => {
                     <Button
                       onClick={handleGenerateToken}
                       disabled={loading}
-                      className="w-full py-6 bg-gold-500 text-black font-black"
+                      className="w-full py-6 bg-[#ffe600] text-black font-black hover:bg-[#fff066]"
                     >
                       {loading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -258,17 +274,19 @@ const HiveTap = () => {
                       )}
                     </Button>
                     {handshakeToken && (
-                      <div className="p-3 rounded-xl bg-black/40 border border-gold-500/20">
-                        <p className="text-[10px] text-leather-400 uppercase mb-2">
+                      <div className="p-3 rounded-sm bg-black/40 border border-[rgba(57,255,20,0.3)]">
+                        <p
+                          className={`text-[10px] uppercase mb-2 ${arcadeTextMuted}`}
+                        >
                           Token (30s) — envoie à ton chum
                         </p>
-                        <p className="text-[10px] font-mono break-all text-gold-200 mb-2 max-h-20 overflow-y-auto">
+                        <p className="text-[10px] font-mono break-all text-[#39ff14] mb-2 max-h-20 overflow-y-auto">
                           {handshakeToken}
                         </p>
                         <button
                           type="button"
                           onClick={copyToken}
-                          className="flex items-center gap-2 text-xs text-gold-400 font-bold"
+                          className={`flex items-center gap-2 text-xs font-bold ${arcadeTextCyan}`}
                         >
                           <Copy className="w-3.5 h-3.5" />
                           {copied ? "Copié!" : "Copier le token"}
@@ -284,12 +302,12 @@ const HiveTap = () => {
                       value={pasteToken}
                       onChange={(e) => setPasteToken(e.target.value)}
                       placeholder="Colle le token ici..."
-                      className="w-full h-24 p-3 rounded-xl bg-black/50 border border-leather-700 text-xs font-mono resize-none"
+                      className="w-full h-24 p-3 rounded-sm bg-black/50 border border-[rgba(0,243,255,0.3)] text-xs font-mono resize-none text-[#e8eeff]"
                     />
                     <Button
                       onClick={handleReceive}
                       disabled={loading}
-                      className="w-full py-6 bg-gold-500 text-black font-black"
+                      className="w-full py-6 bg-[#ffe600] text-black font-black hover:bg-[#fff066]"
                     >
                       {loading ? (
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -309,20 +327,20 @@ const HiveTap = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex-1 flex flex-col items-center justify-center text-center"
               >
-                <CheckCircle2 className="w-16 h-16 text-gold-400 mb-4" />
-                <h2 className="text-2xl font-black text-gold-400 mb-2">
+                <CheckCircle2 className={`w-16 h-16 mb-4 ${arcadeTextLime}`} />
+                <h2 className={`text-2xl font-black mb-2 ${arcadeTextLime}`}>
                   Transfert réussi!
                 </h2>
-                <p className="text-leather-300 text-sm mb-2">
+                <p className={`text-sm mb-2 ${arcadeTextMuted}`}>
                   Les Piasses ont été créditées sur ton compte.
                 </p>
                 {successAmount > 0 && (
-                  <p className="text-gold-400 font-bold mb-6">
+                  <p className={`font-bold mb-6 ${arcadeTextYellow}`}>
                     +{successAmount} Piasses reçues
                   </p>
                 )}
                 {balance != null && (
-                  <p className="text-gold-400 font-bold mb-6">
+                  <p className={`font-bold mb-6 ${arcadeTextYellow}`}>
                     Nouveau solde: {balance} Piasses
                   </p>
                 )}
@@ -331,7 +349,7 @@ const HiveTap = () => {
                     setView("menu");
                     void refreshBalance();
                   }}
-                  className="w-full py-4 bg-gold-500 text-black font-black"
+                  className="w-full py-4 bg-[#ffe600] text-black font-black hover:bg-[#fff066]"
                 >
                   Retour au hub
                 </Button>
@@ -340,7 +358,7 @@ const HiveTap = () => {
           </AnimatePresence>
         </div>
       </motion.div>
-    </div>
+    </ArcadeBackdrop>
   );
 };
 

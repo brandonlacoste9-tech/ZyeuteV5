@@ -1,5 +1,11 @@
 import React from "react";
 import { Medal, Trophy } from "lucide-react";
+import {
+  arcadeTextCyan,
+  arcadeTextMagenta,
+  arcadeTextYellow,
+  arcadeTextDim,
+} from "./arcade-ui";
 
 interface ArcadeRankBadgeProps {
   rank: number;
@@ -13,7 +19,7 @@ export function ArcadeRankBadge({
   if (rank === 1) {
     return (
       <Trophy
-        className={`w-5 h-5 text-gold-400 ${className}`}
+        className={`w-5 h-5 ${arcadeTextYellow} ${className}`}
         aria-label="1er place"
       />
     );
@@ -21,7 +27,7 @@ export function ArcadeRankBadge({
   if (rank === 2) {
     return (
       <Medal
-        className={`w-5 h-5 text-zinc-300 ${className}`}
+        className={`w-5 h-5 ${arcadeTextCyan} ${className}`}
         aria-label="2e place"
       />
     );
@@ -29,14 +35,14 @@ export function ArcadeRankBadge({
   if (rank === 3) {
     return (
       <Medal
-        className={`w-5 h-5 text-amber-700 ${className}`}
+        className={`w-5 h-5 ${arcadeTextMagenta} ${className}`}
         aria-label="3e place"
       />
     );
   }
   return (
     <span
-      className={`font-black text-sm text-leather-400 tabular-nums ${className}`}
+      className={`font-bold text-sm ${arcadeTextDim} tabular-nums ${className}`}
     >
       #{rank}
     </span>

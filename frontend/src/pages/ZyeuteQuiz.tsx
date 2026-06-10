@@ -153,15 +153,17 @@ export default function ZyeuteQuiz() {
       subtitle={quiz?.title}
       icon={<Brain className="w-5 h-5 shrink-0" />}
       headerRight={
-        <span className="flex items-center gap-1 text-xs text-leather-300 shrink-0">
-          <Timer className="w-3.5 h-3.5 text-gold-400" />
+        <span className="flex items-center gap-1 text-xs arcade-text-muted shrink-0">
+          <Timer className="w-3.5 h-3.5 arcade-text-yellow" />
           {formatTimeRemaining(timeLeft)}
         </span>
       }
     >
       <div className="space-y-6 pb-6">
         {error && (
-          <div className="leather-card border border-red-500/40 rounded-xl p-4 text-red-300 text-sm">
+          <div
+            className={`${arcadeCard} border-red-500/40 p-4 text-red-300 text-sm`}
+          >
             {error}
           </div>
         )}
@@ -176,12 +178,12 @@ export default function ZyeuteQuiz() {
               className="space-y-6"
             >
               <section className={`${arcadeCard} p-6`}>
-                <p className="text-leather-200 text-sm mb-4">
+                <p className="arcade-text-muted text-sm mb-4">
                   {quiz.questions.length} questions sur le Québec. Un essai par
                   jour — bat ton record et gagne des jetons arcade.
                 </p>
                 {bestScore != null && (
-                  <p className="text-gold-400 font-bold mb-4">
+                  <p className="arcade-text-yellow font-bold mb-4">
                     Ton meilleur score aujourd&apos;hui: {bestScore}%
                   </p>
                 )}
@@ -195,8 +197,8 @@ export default function ZyeuteQuiz() {
               </section>
 
               {leaderboard.length > 0 && (
-                <section className={`${arcadeCard} p-4 border-leather-700`}>
-                  <h2 className="text-sm font-bold text-gold-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                <section className={`${arcadeCard} p-4`}>
+                  <h2 className="text-sm font-bold arcade-text-yellow uppercase tracking-wider mb-3 flex items-center gap-2">
                     <Trophy className="w-4 h-4" />
                     Classement du jour
                   </h2>
@@ -210,7 +212,7 @@ export default function ZyeuteQuiz() {
                           #{entry.rank}{" "}
                           {entry.displayName || entry.username || "Citoyen"}
                         </span>
-                        <span className="text-gold-400 font-bold">
+                        <span className="arcade-text-yellow font-bold">
                           {entry.score}%
                         </span>
                       </li>
@@ -229,7 +231,7 @@ export default function ZyeuteQuiz() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <p className="text-xs text-leather-400 uppercase tracking-widest">
+              <p className="text-xs arcade-text-dim uppercase tracking-widest">
                 Question {qIndex + 1} / {quiz?.questions.length}
               </p>
               <h2 className="text-xl font-black text-white">
@@ -270,18 +272,18 @@ export default function ZyeuteQuiz() {
               key="results"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className={`${arcadeCard} p-6 border-gold-500/30 text-center space-y-4 gold-glow`}
+              className={`${arcadeCard} p-6 text-center space-y-4`}
             >
-              <CheckCircle2 className="w-16 h-16 text-gold-400 mx-auto" />
-              <h2 className="text-3xl font-black text-gold-400">
+              <CheckCircle2 className="w-16 h-16 arcade-text-yellow mx-auto" />
+              <h2 className="text-3xl font-black arcade-text-yellow">
                 {result.score}%
               </h2>
-              <p className="text-leather-200">
+              <p className="arcade-text-muted">
                 {result.correctCount} bonnes réponses sur{" "}
                 {quiz?.questions.length}
               </p>
               {result.rank != null && (
-                <p className="text-sm text-leather-300">
+                <p className="text-sm arcade-text-muted">
                   Classement: #{result.rank}
                 </p>
               )}

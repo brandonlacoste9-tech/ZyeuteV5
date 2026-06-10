@@ -1,16 +1,22 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Brain,
-  Gamepad2,
-  HelpCircle,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { ArrowLeft, Brain, Gamepad2, HelpCircle, Zap } from "lucide-react";
 import { FaHive } from "react-icons/fa";
-import { arcadeBtnPrimary, arcadeCard } from "@/components/arcade/arcade-ui";
+import { ArcadeBackdrop } from "@/components/arcade/ArcadeBackdrop";
+import {
+  arcadeBtnPrimary,
+  arcadeCardCyan,
+  arcadeCardLime,
+  arcadeCardMagenta,
+  arcadeCardYellow,
+  arcadeLiveBadge,
+  arcadeTextCyan,
+  arcadeTextLime,
+  arcadeTextMagenta,
+  arcadeTextMuted,
+  arcadeTextYellow,
+} from "@/components/arcade/arcade-ui";
 
 interface ArcadeGame {
   id: string;
@@ -19,7 +25,8 @@ interface ArcadeGame {
   icon: React.ReactNode;
   status: "LIVE" | "COMING SOON";
   path: string | null;
-  accent: string;
+  cardClass: string;
+  iconClass: string;
 }
 
 export default function ArcadeHub() {
@@ -30,139 +37,161 @@ export default function ArcadeHub() {
       id: "grid-rush",
       title: "Grid Rush",
       description:
-        "Bataille de vitesse 1v1. Tape 1→16 avant ton adversaire. 45 secondes chrono.",
-      icon: <Zap className="w-9 h-9 text-gold-400" />,
+        "Bataille 1v1 — tape 1→16 avant ton adversaire. 45 secondes chrono.",
+      icon: <Zap className="w-8 h-8" aria-hidden />,
       status: "LIVE",
       path: "/arcade/grid-rush",
-      accent: "shadow-[0_0_28px_rgba(243,176,38,0.18)]",
+      cardClass: arcadeCardCyan,
+      iconClass: arcadeTextCyan,
     },
     {
       id: "poutine",
       title: "Poutine Royale",
-      description:
-        "Stacke ta poutine le plus haut possible. Compétition journalière.",
-      icon: <Gamepad2 className="w-9 h-9 text-gold-400" />,
+      description: "Stacke ta poutine. Tournoi journalière, classement live.",
+      icon: <Gamepad2 className="w-8 h-8" aria-hidden />,
       status: "LIVE",
       path: "/arcade/poutine",
-      accent: "shadow-[0_0_28px_rgba(212,175,55,0.15)]",
+      cardClass: arcadeCardMagenta,
+      iconClass: arcadeTextMagenta,
     },
     {
       id: "quiz",
       title: "Zyeuté Quiz",
-      description:
-        "Test tes connaissances sur le Québec. 5 questions par jour.",
-      icon: <Brain className="w-9 h-9 text-gold-400" />,
+      description: "5 questions par jour sur le Québec. Piasses à gagner.",
+      icon: <Brain className="w-8 h-8" aria-hidden />,
       status: "LIVE",
       path: "/arcade/quiz",
-      accent: "shadow-[0_0_28px_rgba(201,162,39,0.12)]",
+      cardClass: arcadeCardYellow,
+      iconClass: arcadeTextYellow,
     },
     {
       id: "hive-tap",
       title: "Hive Tap",
-      description:
-        "Transfère des Piasses à ton chum en tap — proximité requise.",
-      icon: <FaHive className="w-9 h-9 text-gold-400" />,
+      description: "Transfère des Piasses à ton chum — proximité requise.",
+      icon: <FaHive className="w-8 h-8" aria-hidden />,
       status: "LIVE",
       path: "/arcade/hive-tap",
-      accent: "shadow-[0_0_28px_rgba(184,134,11,0.14)]",
+      cardClass: arcadeCardLime,
+      iconClass: arcadeTextLime,
     },
   ];
 
   const liveCount = games.filter((g) => g.status === "LIVE").length;
 
   return (
-    <div className="min-h-screen bg-black leather-overlay text-white pb-24">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-gold-500/8 to-transparent" />
-
-      <header className="relative max-w-6xl mx-auto px-4 pt-6 pb-8 border-b border-gold-500/20">
+    <ArcadeBackdrop className="pb-24">
+      <div className="max-w-6xl mx-auto px-4 pt-6">
         <button
           type="button"
           onClick={() => navigate("/explore")}
-          className="flex items-center gap-2 text-gold-400 text-sm font-bold mb-6 hover:text-gold-300 transition-colors cursor-pointer"
+          className={`flex items-center gap-2 text-sm font-bold mb-6 ${arcadeTextCyan} hover:opacity-80 transition-opacity cursor-pointer`}
         >
           <ArrowLeft className="w-4 h-4" />
           Retour à Explorer
         </button>
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-leather-400 mb-2 flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-gold-500" />
-              Voyageur Arcade
-            </p>
-            <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-widest text-gold-gradient">
-              Zyeuté Arcade
+        <header className="mb-10">
+          <div className="arcade-marquee mb-6">
+            <div className="arcade-marquee-lights" aria-hidden>
+              {Array.from({ length: 12 }).map((_, i) => (
+                <span key={i} className="arcade-marquee-light" />
+              ))}
+            </div>
+            <p className="arcade-insert-coin text-center mb-3">INSERT COIN</p>
+            <h1 className="arcade-font-pixel text-center text-sm sm:text-base arcade-title-gradient leading-relaxed px-2">
+              ZYEUTÉ ARCADE
             </h1>
-            <p className="text-leather-300 text-sm mt-2 max-w-lg">
-              Grid Rush, Poutine Royale, Quiz et Hive Tap — défie la ruche en
-              mode cuir & or.
+            <p
+              className={`text-center text-xs mt-3 uppercase tracking-[0.2em] ${arcadeTextMuted}`}
+            >
+              Est. 1985 · Montréal QC
             </p>
           </div>
-          <div className="px-3 py-1.5 rounded-full border border-gold-500/35 bg-gold-500/10 text-gold-300 text-xs font-bold uppercase tracking-wider">
-            {liveCount} jeux live
-          </div>
-        </div>
-      </header>
 
-      <div className="relative max-w-6xl mx-auto px-4 pt-8 grid gap-5 md:grid-cols-2">
-        {games.map((game, index) => (
-          <motion.article
-            key={game.id}
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.07, duration: 0.35 }}
-            whileHover={{ y: -2 }}
-            className={`${arcadeCard} p-6 relative overflow-hidden cursor-pointer group ${
-              game.status === "LIVE"
-                ? `border-gold-500/35 ${game.accent}`
-                : "border-leather-700 opacity-60"
-            }`}
-            onClick={() => {
-              if (game.status === "LIVE" && game.path) navigate(game.path);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && game.path) navigate(game.path);
-            }}
-            role={game.status === "LIVE" ? "button" : undefined}
-            tabIndex={game.status === "LIVE" ? 0 : undefined}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-gold-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <div className="absolute top-4 right-4 text-[10px] font-bold px-2.5 py-1 rounded-full border border-gold-500/35 text-gold-400 uppercase tracking-wider bg-black/30">
-              {game.status}
-            </div>
-
-            <div className="relative mb-5 w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/25 flex items-center justify-center group-hover:border-gold-400/50 transition-colors">
-              {game.icon}
-            </div>
-
-            <h2 className="relative text-2xl font-black text-white mb-2">
-              {game.title}
-            </h2>
-            <p className="relative text-leather-300 text-sm mb-6 min-h-[40px] leading-relaxed">
-              {game.description}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className={`text-sm max-w-lg ${arcadeTextMuted}`}>
+              Choisis ta machine. Grid Rush, Poutine, Quiz et Hive Tap — tout
+              est live dans la salle.
             </p>
+            <span className={arcadeLiveBadge}>
+              <span className="arcade-live-dot" aria-hidden />
+              {liveCount} LIVE
+            </span>
+          </div>
+        </header>
 
-            {game.status === "LIVE" && game.path ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(game.path!);
-                }}
-                className={`${arcadeBtnPrimary} relative`}
+        <div className="grid gap-5 md:grid-cols-2">
+          {games.map((game, index) => (
+            <motion.article
+              key={game.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.08, duration: 0.3 }}
+              className={`${game.cardClass} p-6 relative overflow-hidden cursor-pointer group ${
+                game.status !== "LIVE" ? "opacity-50 pointer-events-none" : ""
+              }`}
+              onClick={() => {
+                if (game.status === "LIVE" && game.path) navigate(game.path);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && game.path) navigate(game.path);
+              }}
+              role={game.status === "LIVE" ? "button" : undefined}
+              tabIndex={game.status === "LIVE" ? 0 : undefined}
+            >
+              <div
+                className={`absolute top-4 right-4 text-[9px] font-bold px-2 py-1 uppercase tracking-wider arcade-live-badge ${
+                  game.status !== "LIVE" ? "opacity-60" : ""
+                }`}
               >
-                Jouer maintenant
-              </button>
-            ) : (
-              <div className="w-full py-3 text-center text-leather-500 text-sm flex items-center justify-center gap-2">
-                <HelpCircle className="w-4 h-4" />
-                Bientôt
+                {game.status === "LIVE" && (
+                  <span className="arcade-live-dot" aria-hidden />
+                )}
+                {game.status}
               </div>
-            )}
-          </motion.article>
-        ))}
+
+              <div
+                className={`arcade-icon-well mb-5 ${game.iconClass} group-hover:opacity-100 transition-opacity`}
+              >
+                {game.icon}
+              </div>
+
+              <h2 className="arcade-font-pixel text-[10px] sm:text-xs text-white mb-3 leading-relaxed">
+                {game.title.toUpperCase()}
+              </h2>
+              <p
+                className={`text-sm mb-6 min-h-[40px] leading-relaxed ${arcadeTextMuted}`}
+              >
+                {game.description}
+              </p>
+
+              {game.status === "LIVE" && game.path ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(game.path!);
+                  }}
+                  className={arcadeBtnPrimary}
+                >
+                  Player 1 Start
+                </button>
+              ) : (
+                <div
+                  className={`w-full py-3 text-center text-sm flex items-center justify-center gap-2 ${arcadeTextMuted}`}
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Bientôt
+                </div>
+              )}
+            </motion.article>
+          ))}
+        </div>
+
+        <p className={`text-center arcade-insert-coin mt-12 opacity-70`}>
+          CREDIT 00
+        </p>
       </div>
-    </div>
+    </ArcadeBackdrop>
   );
 }

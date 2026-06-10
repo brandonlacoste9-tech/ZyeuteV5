@@ -3,6 +3,7 @@
  * Discover trending content with leather grid and gold filters
  */
 
+import "@/components/arcade/arcade-retro.css";
 import React, { useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Header } from "@/components/Header";
@@ -360,27 +361,27 @@ export const Explore: React.FC = () => {
             tap();
             navigate("/arcade");
           }}
-          className="w-full mb-6 leather-card stitched rounded-2xl p-4 border border-gold-500/30 flex items-center gap-4 text-left hover:border-gold-500/60 transition-colors duration-200 cursor-pointer group gold-glow"
+          className="w-full mb-6 rounded-md p-4 flex items-center gap-4 text-left transition-colors duration-200 cursor-pointer group arcade-explore-teaser"
           aria-label="Ouvrir l'Arcade Zyeuté"
         >
-          <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center group-hover:border-gold-400/50 transition-colors">
-            <Gamepad2 className="w-7 h-7 text-gold-400" aria-hidden />
+          <div className="flex-shrink-0 w-14 h-14 rounded-sm border-2 border-[#00f3ff]/50 bg-black/50 flex items-center justify-center group-hover:border-[#ff2bd6]/60 transition-colors shadow-[0_0_16px_rgba(0,243,255,0.2)]">
+            <Gamepad2 className="w-7 h-7 text-[#00f3ff]" aria-hidden />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-gold-400">
+              <h2 className="arcade-font-pixel text-[#ffe600] uppercase tracking-wider text-[0.65rem] leading-relaxed">
                 Arcade Zyeuté
               </h2>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full border border-red-500/20">
-                Nouveau
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-[#39ff14]/10 text-[#39ff14] px-2 py-0.5 rounded-sm border border-[#39ff14]/40">
+                LIVE
               </span>
             </div>
-            <p className="text-leather-300 text-sm">
-              Grid Rush, Poutine Royale, Quiz et Hive Tap — défie tes chums.
+            <p className="text-[#9eb4d8] text-sm mt-1">
+              INSERT COIN — Grid Rush, Poutine, Quiz & Hive Tap
             </p>
           </div>
           <svg
-            className="w-5 h-5 text-gold-400 flex-shrink-0"
+            className="w-5 h-5 text-[#ff2bd6] flex-shrink-0"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -19,6 +19,8 @@ import { ArcadeRankBadge } from "@/components/arcade/ArcadeRankBadge";
 import {
   arcadeBtnPrimary,
   arcadeCard,
+  arcadeTextCyan,
+  arcadeTextYellow,
   arcadeTokenChip,
 } from "@/components/arcade/arcade-ui";
 import {
@@ -42,9 +44,9 @@ function formatTimeRemaining(ms: number): string {
 }
 
 const RANK_COLORS: Record<number, string> = {
-  1: "text-gold-400",
-  2: "text-zinc-300",
-  3: "text-amber-600",
+  1: arcadeTextYellow,
+  2: arcadeTextCyan,
+  3: "arcade-text-magenta",
 };
 
 export default function PoutineLobby() {
@@ -121,12 +123,12 @@ export default function PoutineLobby() {
         <div className="flex items-center gap-2 shrink-0">
           {user && wallet != null && (
             <span className={arcadeTokenChip}>
-              <Coins className="w-3.5 h-3.5 text-gold-400" />
+              <Coins className="w-3.5 h-3.5 arcade-text-yellow" />
               {wallet}
             </span>
           )}
-          <span className="flex items-center gap-1 text-xs text-leather-300">
-            <Clock className="w-3.5 h-3.5 text-gold-400" />
+          <span className="flex items-center gap-1 text-xs arcade-text-muted">
+            <Clock className="w-3.5 h-3.5 arcade-text-yellow" />
             <span className="tabular-nums font-mono">
               {formatTimeRemaining(timeLeft)}
             </span>
@@ -138,11 +140,11 @@ export default function PoutineLobby() {
         {/* Load error */}
         {loadError && !tournament && (
           <div className={`${arcadeCard} border-red-500/30 p-6 text-center`}>
-            <Wrench className="w-10 h-10 text-gold-400 mx-auto mb-3" />
-            <p className="text-leather-200 font-bold mb-1">
+            <Wrench className="w-10 h-10 arcade-text-yellow mx-auto mb-3" />
+            <p className="arcade-text-muted font-bold mb-1">
               Le tournoi est en pause technique
             </p>
-            <p className="text-leather-400 text-sm mb-4">
+            <p className="arcade-text-dim text-sm mb-4">
               Impossible de charger le tournoi du jour. Réessaie dans un
               instant.
             </p>
@@ -152,7 +154,7 @@ export default function PoutineLobby() {
                 setLoading(true);
                 fetchAll();
               }}
-              className="px-6 py-2 rounded-full border border-gold-500/40 text-gold-400 text-sm font-bold hover:bg-gold-500/10 transition-colors cursor-pointer"
+              className="px-6 py-2 rounded-sm border border-[rgba(255,230,0,0.4)] arcade-text-yellow text-sm font-bold hover:bg-[rgba(255,230,0,0.1)] transition-colors cursor-pointer"
             >
               Réessayer
             </button>
@@ -164,23 +166,23 @@ export default function PoutineLobby() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`${arcadeCard} border-gold-500/25 p-5`}
+            className={`${arcadeCard} p-5`}
           >
             {myRank?.score != null ? (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-leather-400 uppercase tracking-wider mb-1">
+                  <p className="text-xs arcade-text-dim uppercase tracking-wider mb-1">
                     Ton meilleur score aujourd'hui
                   </p>
-                  <p className="text-4xl font-black text-gold-400 tabular-nums">
+                  <p className="text-4xl font-black arcade-text-yellow tabular-nums">
                     {myRank.score}
                   </p>
-                  <p className="text-sm text-leather-400 mt-1">
+                  <p className="text-sm arcade-text-dim mt-1">
                     {myRank.layers} couches empilées
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-leather-400 mb-1">Classement</p>
+                  <p className="text-xs arcade-text-dim mb-1">Classement</p>
                   <p
                     className={`text-4xl font-black ${RANK_COLORS[myRank.rank!] ?? "text-white"}`}
                   >
@@ -190,10 +192,10 @@ export default function PoutineLobby() {
               </div>
             ) : (
               <div className="text-center py-2">
-                <p className="text-leather-300 text-sm mb-1">
+                <p className="arcade-text-muted text-sm mb-1">
                   Tu n'as pas encore joué aujourd'hui
                 </p>
-                <p className="text-leather-500 text-xs">
+                <p className="arcade-text-dim text-xs">
                   Joue pour apparaître dans le classement!
                 </p>
               </div>
@@ -207,7 +209,7 @@ export default function PoutineLobby() {
             type="button"
             whileTap={{ scale: 0.97 }}
             onClick={handlePlay}
-            className={`${arcadeBtnPrimary} py-5 text-xl flex items-center justify-center gap-3 gold-glow`}
+            className={`${arcadeBtnPrimary} py-5 text-xl flex items-center justify-center gap-3`}
           >
             <Flame className="w-6 h-6" />
             {myRank?.score != null ? "Réessayer" : "Jouer maintenant"}
@@ -218,26 +220,26 @@ export default function PoutineLobby() {
         {/* Stats row */}
         {tournament && (
           <div className="grid grid-cols-3 gap-3">
-            <div className={`${arcadeCard} border-leather-700 p-3 text-center`}>
-              <Users className="w-4 h-4 text-leather-400 mx-auto mb-1" />
+            <div className={`${arcadeCard} p-3 text-center`}>
+              <Users className="w-4 h-4 arcade-text-dim mx-auto mb-1" />
               <p className="text-lg font-black tabular-nums">
                 {tournament.entryCount}
               </p>
-              <p className="text-xs text-leather-400">joueurs</p>
+              <p className="text-xs arcade-text-dim">joueurs</p>
             </div>
-            <div className={`${arcadeCard} border-leather-700 p-3 text-center`}>
-              <Star className="w-4 h-4 text-gold-400 mx-auto mb-1 fill-gold-400" />
-              <p className="text-lg font-black tabular-nums text-gold-400">
+            <div className={`${arcadeCard} p-3 text-center`}>
+              <Star className="w-4 h-4 arcade-text-yellow mx-auto mb-1 fill-[#ffe600]" />
+              <p className="text-lg font-black tabular-nums arcade-text-yellow">
                 {tournament.topScore ?? "—"}
               </p>
-              <p className="text-xs text-leather-400">record du jour</p>
+              <p className="text-xs arcade-text-dim">record du jour</p>
             </div>
-            <div className={`${arcadeCard} border-leather-700 p-3 text-center`}>
-              <Clock className="w-4 h-4 text-leather-400 mx-auto mb-1" />
+            <div className={`${arcadeCard} p-3 text-center`}>
+              <Clock className="w-4 h-4 arcade-text-dim mx-auto mb-1" />
               <p className="text-lg font-black tabular-nums">
                 {formatTimeRemaining(timeLeft)}
               </p>
-              <p className="text-xs text-leather-400">restant</p>
+              <p className="text-xs arcade-text-dim">restant</p>
             </div>
           </div>
         )}
@@ -245,7 +247,7 @@ export default function PoutineLobby() {
         {/* Leaderboard */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <Trophy className="w-5 h-5 text-gold-400" />
+            <Trophy className="w-5 h-5 arcade-text-yellow" />
             <h2 className="font-black text-lg uppercase tracking-wide">
               Classement du jour
             </h2>
@@ -253,8 +255,8 @@ export default function PoutineLobby() {
 
           {leaderboard.length === 0 ? (
             <div className={`${arcadeCard} p-8 text-center`}>
-              <Layers className="w-10 h-10 text-gold-400 mx-auto mb-3" />
-              <p className="text-leather-300 text-sm">
+              <Layers className="w-10 h-10 arcade-text-yellow mx-auto mb-3" />
+              <p className="arcade-text-muted text-sm">
                 Aucun score encore — sois le premier!
               </p>
             </div>
@@ -271,8 +273,8 @@ export default function PoutineLobby() {
                       transition={{ delay: i * 0.04 }}
                       className={`flex items-center gap-3 p-3 rounded-xl border transition-colors duration-200 ${
                         isMe
-                          ? "bg-gold-500/10 border-gold-500/40"
-                          : "bg-leather-900/40 border-leather-700/50"
+                          ? "bg-[rgba(255,230,0,0.1)] border-[rgba(255,230,0,0.4)]"
+                          : "bg-[rgba(10,8,20,0.6)] border-[rgba(0,243,255,0.2)]"
                       }`}
                     >
                       {/* Rank */}
@@ -281,7 +283,7 @@ export default function PoutineLobby() {
                       </div>
 
                       {/* Avatar */}
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold-600 to-leather-800 flex-shrink-0 overflow-hidden border border-gold-500/30">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2bd6] to-[#1a1430] flex-shrink-0 overflow-hidden border border-[rgba(255,43,214,0.4)]">
                         {entry.avatarUrl ? (
                           <img
                             src={entry.avatarUrl}
@@ -300,16 +302,16 @@ export default function PoutineLobby() {
                       {/* Name */}
                       <div className="flex-1 min-w-0">
                         <p
-                          className={`font-bold text-sm truncate ${isMe ? "text-gold-300" : ""}`}
+                          className={`font-bold text-sm truncate ${isMe ? "arcade-text-yellow" : ""}`}
                         >
                           {entry.displayName ?? entry.username ?? "Anonyme"}
                           {isMe && (
-                            <span className="ml-1 text-xs text-gold-400">
+                            <span className="ml-1 text-xs arcade-text-yellow">
                               (toi)
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-leather-500">
+                        <p className="text-xs arcade-text-dim">
                           {entry.layers} couches
                         </p>
                       </div>
@@ -319,7 +321,7 @@ export default function PoutineLobby() {
                         <p
                           className={`font-black text-lg tabular-nums ${
                             entry.rank === 1
-                              ? "text-gold-400"
+                              ? "arcade-text-yellow"
                               : entry.rank === 2
                                 ? "text-zinc-300"
                                 : entry.rank === 3
@@ -339,8 +341,10 @@ export default function PoutineLobby() {
         </div>
 
         {/* Rules */}
-        <div className={`${arcadeCard} p-4 text-sm text-leather-300 space-y-1`}>
-          <p className="text-gold-400 font-bold mb-2">Comment jouer</p>
+        <div
+          className={`${arcadeCard} p-4 text-sm arcade-text-muted space-y-1`}
+        >
+          <p className="arcade-text-yellow font-bold mb-2">Comment jouer</p>
           <p>• Tape pour lâcher chaque couche de poutine</p>
           <p>• Stack le plus haut possible sans rater</p>
           <p>• Les pièces deviennent plus petites à mesure que tu montes</p>

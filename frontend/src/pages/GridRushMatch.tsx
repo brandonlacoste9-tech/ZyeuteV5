@@ -11,12 +11,16 @@ import {
   cancelMatch,
   type GridRushMatch,
 } from "@/services/gridRushService";
+import { ArcadeBackdrop } from "@/components/arcade/ArcadeBackdrop";
 import { ArcadeLoading } from "@/components/arcade/ArcadeLoading";
 import {
   arcadeBtnGhost,
   arcadeBtnPrimary,
   arcadeBtnSecondary,
   arcadeCard,
+  arcadeTextCyan,
+  arcadeTextMuted,
+  arcadeTextYellow,
 } from "@/components/arcade/arcade-ui";
 
 export default function GridRushMatchPage() {
@@ -122,7 +126,7 @@ export default function GridRushMatchPage() {
 
   if (error && !match) {
     return (
-      <div className="min-h-screen bg-black leather-overlay flex flex-col items-center justify-center p-6 text-center">
+      <ArcadeBackdrop className="flex flex-col items-center justify-center p-6 text-center min-h-screen">
         <p className="text-red-400 mb-4">{error}</p>
         <button
           type="button"
@@ -131,7 +135,7 @@ export default function GridRushMatchPage() {
         >
           Retour au lobby
         </button>
-      </div>
+      </ArcadeBackdrop>
     );
   }
 
@@ -144,16 +148,21 @@ export default function GridRushMatchPage() {
 
   if (isWaiting) {
     return (
-      <div className="min-h-screen bg-black leather-overlay text-white p-6 flex flex-col items-center justify-center pb-24">
+      <ArcadeBackdrop className="p-6 flex flex-col items-center justify-center pb-24 min-h-screen">
         <div
-          className={`max-w-md w-full ${arcadeCard} p-8 text-center space-y-6 gold-glow`}
+          className={`max-w-md w-full ${arcadeCard} p-8 text-center space-y-6`}
         >
-          <Users className="w-12 h-12 text-gold-400 mx-auto" />
-          <h1 className="text-2xl font-black text-gold-gradient uppercase tracking-wide">
-            {isHost ? "En attente d'un adversaire" : "Partie ouverte"}
+          <Users className={`w-12 h-12 mx-auto ${arcadeTextCyan}`} />
+          <h1
+            className={`text-lg font-black uppercase tracking-wide arcade-font-pixel leading-relaxed ${arcadeTextYellow}`}
+          >
+            {isHost ? "En attente P2" : "Partie ouverte"}
           </h1>
-          <p className="text-leather-300 text-sm flex items-center justify-center gap-1">
-            Mise: <Star className="w-3.5 h-3.5 fill-gold-400 text-gold-400" />
+          <p
+            className={`text-sm flex items-center justify-center gap-1 ${arcadeTextMuted}`}
+          >
+            Mise:{" "}
+            <Star className={`w-3.5 h-3.5 fill-current ${arcadeTextYellow}`} />
             {match.stakeTokens} · Partage le lien à ton chum
           </p>
 
@@ -195,34 +204,36 @@ export default function GridRushMatchPage() {
             </button>
           )}
         </div>
-      </div>
+      </ArcadeBackdrop>
     );
   }
 
   if (match.status === "ACTIVE" || match.status === "COMPLETED") {
     if (!isHost && !isGuest && !match.isBot) {
       return (
-        <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-leather-300 p-6 text-center">
-          Accès refusé — tu n&apos;es pas dans cette partie.
-        </div>
+        <ArcadeBackdrop className="flex items-center justify-center p-6 text-center min-h-screen">
+          <p className={arcadeTextMuted}>
+            Accès refusé — tu n&apos;es pas dans cette partie.
+          </p>
+        </ArcadeBackdrop>
       );
     }
 
     return (
-      <div className="min-h-screen bg-black leather-overlay pb-24">
+      <ArcadeBackdrop className="pb-24 min-h-screen">
         <GridRushGame
           matchId={match.id}
           currentUserId={user.id}
           initialMatch={match}
           onExit={() => navigate("/arcade/grid-rush")}
         />
-      </div>
+      </ArcadeBackdrop>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-leather-300">
-      Partie {match.status.toLowerCase()}
-    </div>
+    <ArcadeBackdrop className="flex items-center justify-center min-h-screen">
+      <p className={arcadeTextMuted}>Partie {match.status.toLowerCase()}</p>
+    </ArcadeBackdrop>
   );
 }

@@ -108,15 +108,16 @@ export default function GridRushLobby() {
       icon={<Zap className="w-5 h-5 shrink-0" />}
       headerRight={
         <span className={arcadeTokenChip}>
-          <Star className="w-3.5 h-3.5 fill-gold-400 text-gold-400" />
+          <Star className="w-3.5 h-3.5 fill-[#ffe600] arcade-text-yellow" />
           {balance ?? "…"}
         </span>
       }
     >
       <div className="space-y-6 pb-6">
         <section className={`${arcadeCard} p-5`}>
-          <h2 className="text-sm font-semibold text-leather-300 uppercase tracking-wider mb-4 flex items-center gap-1">
-            Mise <Star className="w-3.5 h-3.5 fill-gold-400 text-gold-400" />{" "}
+          <h2 className="text-sm font-semibold arcade-text-muted uppercase tracking-wider mb-4 flex items-center gap-1">
+            Mise{" "}
+            <Star className="w-3.5 h-3.5 fill-[#ffe600] arcade-text-yellow" />{" "}
             jetons
           </h2>
           <div className="grid grid-cols-3 gap-3">
@@ -125,20 +126,20 @@ export default function GridRushLobby() {
                 key={tier}
                 type="button"
                 onClick={() => setStake(tier)}
-                className={`py-3 min-h-[48px] rounded-xl font-black text-lg transition-colors duration-200 cursor-pointer flex items-center justify-center gap-1 ${
+                className={`py-3 min-h-[48px] rounded-sm font-black text-lg transition-colors duration-200 cursor-pointer flex items-center justify-center gap-1 ${
                   stake === tier
-                    ? "bg-gold-500 text-black shadow-[0_0_16px_rgba(201,162,39,0.4)]"
-                    : "bg-leather-800 border border-leather-600 text-leather-200 hover:border-gold-500/40"
+                    ? "bg-[#ffe600] text-black shadow-[0_0_16px_rgba(255,230,0,0.35)]"
+                    : "bg-[#1a1430] border border-[rgba(0,243,255,0.3)] arcade-text-muted hover:border-[rgba(0,243,255,0.55)]"
                 }`}
               >
                 <Star
-                  className={`w-3.5 h-3.5 ${stake === tier ? "fill-black" : "fill-gold-400 text-gold-400"}`}
+                  className={`w-3.5 h-3.5 ${stake === tier ? "fill-black" : "fill-[#ffe600] arcade-text-yellow"}`}
                 />
                 {tier}
               </button>
             ))}
           </div>
-          <p className="text-xs text-leather-400 mt-3 text-center">
+          <p className="text-xs arcade-text-dim mt-3 text-center">
             Gagnant reçoit un GG Gift de {stake * 2} étoiles · Égalité =
             remboursement
           </p>
@@ -181,13 +182,13 @@ export default function GridRushLobby() {
         </motion.button>
 
         <section
-          className={`${arcadeCard} p-4 text-sm text-leather-300 space-y-2`}
+          className={`${arcadeCard} p-4 text-sm arcade-text-muted space-y-2`}
         >
           <p>
-            <span className="text-gold-400 font-bold">Règles:</span> Tape les
-            chiffres 1→16 le plus vite possible. Chaque grille complétée = +1
-            point. 45 secondes chrono. Le perdant envoie ses jetons en GG Gift
-            au gagnant.
+            <span className="arcade-text-yellow font-bold">Règles:</span> Tape
+            les chiffres 1→16 le plus vite possible. Chaque grille complétée =
+            +1 point. 45 secondes chrono. Le perdant envoie ses jetons en GG
+            Gift au gagnant.
           </p>
         </section>
       </div>
