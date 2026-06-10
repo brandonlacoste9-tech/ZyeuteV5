@@ -81,7 +81,7 @@ export class PixiBoard {
       .endFill();
 
     // Top border highlight for glossy effect
-    tray.beginFill(0xffffff, 0.15)
+    tray.beginFill(0xffffff, 0.2)
       .drawRoundedRect(8, 2, boardWidth - 16, 6, 4)
       .endFill();
 
@@ -95,23 +95,41 @@ export class PixiBoard {
         const x = c * (TILE_SIZE + PADDING) + PADDING;
         const y = r * (TILE_SIZE + PADDING) + PADDING;
         
+        // Deep inset glass slot
         slot
-          .beginFill(isAlternate ? 0x3d2b5e : 0x4d3b6e, 0.7)
+          .beginFill(isAlternate ? 0x221340 : 0x2b1850, 0.9)
           .drawRoundedRect(x, y, TILE_SIZE, TILE_SIZE, 12)
           .endFill();
           
-        // Inner shadow effect
-        slot.lineStyle(2, 0x000000, 0.25)
-          .drawRoundedRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2, 11)
+        // Inner shadow effect (top/left)
+        slot.lineStyle(2, 0x000000, 0.4)
+          .moveTo(x + 2, y + TILE_SIZE - 2)
+          .lineTo(x + 2, y + 2)
+          .lineTo(x + TILE_SIZE - 2, y + 2)
+          .lineStyle(0);
+          
+        // Inner highlight (bottom/right)
+        slot.lineStyle(2, 0xffffff, 0.1)
+          .moveTo(x + 2, y + TILE_SIZE - 2)
+          .lineTo(x + TILE_SIZE - 2, y + TILE_SIZE - 2)
+          .lineTo(x + TILE_SIZE - 2, y + 2)
           .lineStyle(0);
           
         this.boardContainer.addChild(slot);
       }
     }
+
+    // Huge global glass reflection over the entire board
+    const glassReflection = new PIXI.Graphics();
+    glassReflection.beginFill(0xffffff, 0.05)
+      .drawRoundedRect(8, 8, boardWidth - 16, boardHeight / 2.5, 16)
+      .endFill();
+    this.boardContainer.addChild(glassReflection);
   }
 
   drawBoard() {
     this.tileContainer.removeChildren();
+    this.tileContainer.sortableChildren = true;
     this.sprites.clear();
 
     for (let r = 0; r < this.engine.rows; r++) {
@@ -134,6 +152,7 @@ export class PixiBoard {
       this.dragStartTilePos = pos;
       this.dragStartPoint = { x: e.global.x, y: e.global.y };
       wrapper.scale.set(1.15);
+      wrapper.zIndex = 100;
     });
 
     wrapper.on("pointermove", (e: PIXI.FederatedPointerEvent) => {
@@ -146,13 +165,28 @@ export class PixiBoard {
       const dx = e.global.x - this.dragStartPoint.x;
       const dy = e.global.y - this.dragStartPoint.y;
       
-      const threshold = 20;
-      if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+      const maxDrag = TILE_SIZE;
+      const clampedDx = Math.max(-maxDrag, Math.min(maxDrag, dx));
+      const clampedDy = Math.max(-maxDrag, Math.min(maxDrag, dy));
+
+      const originalX = cX(this.dragStartTilePos.c);
+      const originalY = rY(this.dragStartTilePos.r);
+
+      if (Math.abs(clampedDx) > Math.abs(clampedDy)) {
+        wrapper.x = originalX + clampedDx;
+        wrapper.y = originalY;
+      } else {
+        wrapper.x = originalX;
+        wrapper.y = originalY + clampedDy;
+      }
+      
+      const threshold = TILE_SIZE * 0.5;
+      if (Math.abs(clampedDx) > threshold || Math.abs(clampedDy) > threshold) {
         let targetPos = { ...this.dragStartTilePos };
-        if (Math.abs(dx) > Math.abs(dy)) {
-          targetPos.c += dx > 0 ? 1 : -1;
+        if (Math.abs(clampedDx) > Math.abs(clampedDy)) {
+          targetPos.c += clampedDx > 0 ? 1 : -1;
         } else {
-          targetPos.r += dy > 0 ? 1 : -1;
+          targetPos.r += clampedDy > 0 ? 1 : -1;
         }
         
         const a = this.dragStartTilePos;
@@ -164,11 +198,22 @@ export class PixiBoard {
           b.c >= 0 && b.c < this.engine.cols
         ) {
           void this.executeSwap(a, b);
+        } else {
+          this.animateBounceBack(wrapper, originalX, originalY);
         }
       }
     });
 
-    const endDrag = () => this.resetDrag(wrapper);
+    const endDrag = () => {
+      if (!this.dragStartTilePos) return;
+      const originalX = cX(this.dragStartTilePos.c);
+      const originalY = rY(this.dragStartTilePos.r);
+      this.resetDrag(wrapper);
+      
+      if (!this.isAnimating && (wrapper.x !== originalX || wrapper.y !== originalY)) {
+        this.animateBounceBack(wrapper, originalX, originalY);
+      }
+    };
     wrapper.on("pointerup", endDrag);
     wrapper.on("pointerupoutside", endDrag);
   }
@@ -176,12 +221,37 @@ export class PixiBoard {
   resetDrag(wrapper?: PIXI.Container) {
     this.dragStartPoint = null;
     this.dragStartTilePos = null;
-    if (wrapper) wrapper.scale.set(1);
-    else {
+    if (wrapper) {
+      wrapper.scale.set(1);
+      wrapper.zIndex = 0;
+    } else {
       for (const s of this.sprites.values()) {
         s.scale.set(1);
+        s.zIndex = 0;
       }
     }
+  }
+
+  animateBounceBack(sprite: PIXI.Container, targetX: number, targetY: number) {
+    const startX = sprite.x;
+    const startY = sprite.y;
+    let frames = 0;
+    const ticker = (delta: number) => {
+      if (sprite.destroyed) {
+        this.app.ticker.remove(ticker);
+        return;
+      }
+      frames += delta;
+      const t = Math.min(1, frames / 6);
+      sprite.x = startX + (targetX - startX) * t;
+      sprite.y = startY + (targetY - startY) * t;
+      if (t >= 1) {
+        sprite.x = targetX;
+        sprite.y = targetY;
+        this.app.ticker.remove(ticker);
+      }
+    };
+    this.app.ticker.add(ticker);
   }
 
   spawnTileSprite(tile: Tile, r: number, c: number, fromAbove = false) {
