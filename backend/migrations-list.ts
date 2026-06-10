@@ -18,4 +18,7 @@ export const STARTUP_MIGRATIONS = [
   "20260608_grid_rush_rpc_postgrest_sig.sql",
   "20260608_grid_rush_rpc_wallet_update.sql",
   "20260608_poutine_royale.sql",
+  "20260609_grid_rush_rpc_perform_lock.sql",
+  "20260609_poutine_royale_harden.sql",
+  "20260609_quiz_daily.sql",
 ];

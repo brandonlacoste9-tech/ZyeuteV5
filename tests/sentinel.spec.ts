@@ -145,11 +145,10 @@ test.describe("Zyeuté Sentinel: Critical Path", () => {
     const arcadeTitle = page.locator("h1").filter({ hasText: /Arcade|Jeux/i });
     await expect(arcadeTitle).toBeVisible({ timeout: 10000 });
 
-    // Check for Poutine Royale
-    const poutineGame = page
-      .locator("text=Poutine Royale")
-      .or(page.getByText("Poutine Stack"));
-    await expect(poutineGame.first()).toBeVisible();
+    await expect(page.getByText("Grid Rush").first()).toBeVisible();
+    await expect(page.getByText("Poutine Royale").first()).toBeVisible();
+    await expect(page.getByText("Zyeuté Quiz").first()).toBeVisible();
+    await expect(page.getByText("Hive Tap").first()).toBeVisible();
 
     await takeAuditScreenshot(page, "arcade-ready");
     console.log("✅ Arcade Readiness Verified.");

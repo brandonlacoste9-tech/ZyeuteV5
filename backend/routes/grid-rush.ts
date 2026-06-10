@@ -33,9 +33,13 @@ router.get("/match/:matchId", requireAuth, async (req: any, res) => {
   }
 });
 
+function parseStakeTokens(body: Record<string, unknown> | undefined): number {
+  return Number(body?.stakeTokens ?? body?.stakeCennes ?? 500);
+}
+
 router.post("/queue", requireAuth, async (req: any, res) => {
   try {
-    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const stakeTokens = parseStakeTokens(req.body);
     const match = await GridRushService.quickMatch(req.userId!, stakeTokens);
     res.json(match);
   } catch (error: any) {
@@ -45,7 +49,7 @@ router.post("/queue", requireAuth, async (req: any, res) => {
 
 router.post("/invite", requireAuth, async (req: any, res) => {
   try {
-    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const stakeTokens = parseStakeTokens(req.body);
     const match = await GridRushService.createInvite(req.userId!, stakeTokens);
     res.json(match);
   } catch (error: any) {
@@ -56,7 +60,7 @@ router.post("/invite", requireAuth, async (req: any, res) => {
 router.post("/bot", requireAuth, async (req: any, res) => {
   try {
     // userId comes from verified JWT; RPC is service_role-only and trusts this id.
-    const stakeTokens = Number(req.body?.stakeTokens ?? 500);
+    const stakeTokens = parseStakeTokens(req.body);
     const match = await GridRushService.createBotMatch(
       req.userId!,
       stakeTokens,

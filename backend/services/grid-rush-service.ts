@@ -544,6 +544,14 @@ export class GridRushService {
         throw new Error("Cette partie ne peut pas être annulée");
       }
 
+      const createdAt = new Date(match.created_at as string);
+      const ageMs = Date.now() - createdAt.getTime();
+      if (ageMs > 5 * 60 * 1000) {
+        throw new Error(
+          "Invitation expirée (plus de 5 minutes). Crée une nouvelle partie.",
+        );
+      }
+
       await creditTokens(client, userId, match.stake_tokens);
 
       const updated = await client.query(

@@ -31,7 +31,9 @@ export class HiveTapService {
 
   constructor() {
     this.secretKey =
-      process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "zyeute_default_secret_key";
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SESSION_SECRET ||
+      "zyeute_dev_hive_tap_key";
   }
 
   /**
@@ -76,6 +78,10 @@ export class HiveTapService {
   ) {
     const rawPayload = this.decryptPayload(encryptedPayload);
     const payload: TapPayload = JSON.parse(rawPayload);
+
+    if (payload.senderId === receiverId) {
+      throw new Error("Tu ne peux pas t'envoyer des Piasses à toi-même.");
+    }
 
     // 1. Biometric/Security Guard (Mocking a biometric check on the client)
     // In production, the client app ensures FaceID/Fingerprint passed before sending to server.
@@ -152,8 +158,9 @@ export class HiveTapService {
 
       return {
         success: true,
+        amount,
         transactionId: crypto.randomUUID(),
-        hapticPattern: "STING_IMPACT", // Signal to frontend to play the "Success" vibration
+        hapticPattern: "STING_IMPACT",
       };
     } catch (error: any) {
       tapLogger.error("Execute shadow transfer failed:", error);

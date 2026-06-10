@@ -56,6 +56,7 @@ import economyRoutes from "./routes/economy.js";
 import utilRoutes from "./routes/utils.js";
 import royaleRoutes from "./routes/royale.js";
 import gridRushRoutes from "./routes/grid-rush.js";
+import quizRoutes from "./routes/quiz.js";
 import storyRoutes from "./routes/stories.js";
 import trendingRoutes from "./routes/trending.js";
 import notificationRoutes from "./routes/notifications.js";
@@ -321,7 +322,7 @@ export async function registerRoutes(
   app.use("/api/parental", familyRoutes);
 
   // ============ ECONOMY & PAYOUT ROUTES ============
-  app.use("/api", economyRoutes);
+  app.use("/api", attachBearerUserId, economyRoutes);
 
   // ============ UTILS & DICTIONARY ROUTES ============
   app.use("/api", utilRoutes);
@@ -346,6 +347,7 @@ export async function registerRoutes(
   // ============ POUTINE ROYALE ARCADE ROUTES ============
   app.use("/api/royale", attachBearerUserId, royaleRoutes);
   app.use("/api/grid-rush", attachBearerUserId, gridRushRoutes);
+  app.use("/api/quiz", attachBearerUserId, quizRoutes);
 
   // ============ VERTEX AI ROUTES ============
   app.use("/api/ai/vertex", aiVertexRoutes);

@@ -387,7 +387,7 @@ export const PoutineStackGame: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate(`/games/poutine`)}
+                  onClick={() => navigate(`/arcade/poutine`)}
                   className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3"
                 >
                   VOIR LE CLASSEMENT <ChevronRight className="w-6 h-6" />

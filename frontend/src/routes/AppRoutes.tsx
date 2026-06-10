@@ -68,6 +68,7 @@ const PoutineStackGame = lazy(
   () => import("@/components/features/PoutineStackGame"),
 );
 const HiveTap = lazy(() => import("@/pages/HiveTap"));
+const ZyeuteQuiz = lazy(() => import("@/pages/ZyeuteQuiz"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -621,12 +622,54 @@ export function AppRoutes() {
               </RequireRealAccount>
             }
           />
-          <Route path="/games/poutine" element={<PoutineLobby />} />
+          <Route
+            path="/arcade/poutine"
+            element={
+              <RequireRealAccount>
+                <PoutineLobby />
+              </RequireRealAccount>
+            }
+          />
+          <Route
+            path="/games/poutine"
+            element={<Navigate to="/arcade/poutine" replace />}
+          />
+          <Route
+            path="/arcade/poutine/play/:tournamentId"
+            element={
+              <RequireRealAccount>
+                <PoutineStackGame />
+              </RequireRealAccount>
+            }
+          />
           <Route
             path="/royale/play/:tournamentId"
-            element={<PoutineStackGame />}
+            element={
+              <RequireRealAccount>
+                <PoutineStackGame />
+              </RequireRealAccount>
+            }
           />
-          <Route path="/hive-tap" element={<HiveTap />} />
+          <Route
+            path="/arcade/hive-tap"
+            element={
+              <RequireRealAccount>
+                <HiveTap />
+              </RequireRealAccount>
+            }
+          />
+          <Route
+            path="/hive-tap"
+            element={<Navigate to="/arcade/hive-tap" replace />}
+          />
+          <Route
+            path="/arcade/quiz"
+            element={
+              <RequireRealAccount>
+                <ZyeuteQuiz />
+              </RequireRealAccount>
+            }
+          />
 
           <Route path="/" element={<Navigate to="/feed" replace />} />
         </Routes>

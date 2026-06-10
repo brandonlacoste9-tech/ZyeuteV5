@@ -1,19 +1,28 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FaGamepad, FaHive, FaQuestionCircle } from "react-icons/fa";
-import { Zap } from "lucide-react";
+import { ArrowLeft, Brain, Gamepad2, HelpCircle, Zap } from "lucide-react";
+import { FaHive } from "react-icons/fa";
+
+interface ArcadeGame {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  status: "LIVE" | "COMING SOON";
+  path: string | null;
+}
 
 export default function ArcadeHub() {
   const navigate = useNavigate();
 
-  const games = [
+  const games: ArcadeGame[] = [
     {
       id: "grid-rush",
       title: "Grid Rush",
       description:
         "Bataille de vitesse 1v1. Tape 1→16 avant ton adversaire. 45 secondes chrono.",
-      icon: <Zap className="w-12 h-12 text-amber-400" />,
+      icon: <Zap className="w-10 h-10 text-gold-400" />,
       status: "LIVE",
       path: "/arcade/grid-rush",
     },
@@ -22,67 +31,92 @@ export default function ArcadeHub() {
       title: "Poutine Royale",
       description:
         "Stacke ta poutine le plus haut possible. Compétition journalière.",
-      icon: <FaGamepad className="w-12 h-12 text-yellow-500" />,
+      icon: <Gamepad2 className="w-10 h-10 text-gold-400" />,
       status: "LIVE",
-      path: "/games/poutine",
+      path: "/arcade/poutine",
+    },
+    {
+      id: "quiz",
+      title: "Zyeuté Quiz",
+      description:
+        "Test tes connaissances sur le Québec. 5 questions par jour.",
+      icon: <Brain className="w-10 h-10 text-gold-400" />,
+      status: "LIVE",
+      path: "/arcade/quiz",
     },
     {
       id: "hive-tap",
       title: "Hive Tap",
-      description: "Check-in rapide NFC pour domination territoriale.",
-      icon: <FaHive className="w-12 h-12 text-purple-500" />,
+      description:
+        "Transfère des Piasses à ton chum en tap — proximité requise.",
+      icon: <FaHive className="w-10 h-10 text-gold-400" />,
       status: "LIVE",
-      path: "/hive-tap",
-    },
-    {
-      id: "trivia",
-      title: "Zyeuté Quiz",
-      description: "Test tes connaissances sur le Québec.",
-      icon: <FaQuestionCircle className="w-12 h-12 text-blue-500" />,
-      status: "COMING SOON",
-      path: null,
+      path: "/arcade/hive-tap",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 font-mono">
-      <header className="flex justify-between items-center mb-12 border-b-2 border-purple-600 pb-4">
-        <h1 className="text-4xl font-black uppercase tracking-widest flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-black leather-overlay text-white p-4 pb-24">
+      <header className="max-w-6xl mx-auto mb-10 border-b border-gold-500/30 pb-4">
+        <button
+          type="button"
+          onClick={() => navigate("/explore")}
+          className="flex items-center gap-2 text-gold-400 text-sm font-bold mb-4 hover:text-gold-300"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Retour à Explorer
+        </button>
+        <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-widest text-gold-400">
           Zyeuté Arcade
         </h1>
+        <p className="text-leather-300 text-sm mt-2">
+          Grid Rush, Poutine Royale, Quiz et Hive Tap — tout en un hub.
+        </p>
       </header>
 
-      <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        {games.map((game) => (
-          <motion.div
+      <div className="max-w-6xl mx-auto grid gap-6 md:grid-cols-2">
+        {games.map((game, index) => (
+          <motion.article
             key={game.id}
-            className={`bg-gray-900 border-2 rounded-xl p-6 relative overflow-hidden group ${
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.06 }}
+            className={`leather-card stitched rounded-2xl p-6 relative overflow-hidden ${
               game.status === "LIVE"
-                ? "border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)]"
-                : "border-gray-700 opacity-60 grayscale"
+                ? "border border-gold-500/30 shadow-[0_0_24px_rgba(201,162,39,0.12)]"
+                : "border border-leather-700 opacity-60"
             }`}
           >
-            <div className="absolute top-4 right-4 text-xs font-bold px-2 py-1 bg-black rounded border border-white/20">
+            <div className="absolute top-4 right-4 text-[10px] font-bold px-2 py-1 rounded-full border border-gold-500/30 text-gold-400 uppercase tracking-wider">
               {game.status}
             </div>
 
-            <div className="mb-6 bg-black/50 p-6 rounded-full inline-block group-hover:bg-black/80 transition-colors">
+            <div className="mb-5 w-16 h-16 rounded-2xl bg-gold-500/10 border border-gold-500/25 flex items-center justify-center">
               {game.icon}
             </div>
 
-            <h2 className="text-2xl font-black italic mb-2">{game.title}</h2>
-            <p className="text-gray-400 text-sm mb-6">{game.description}</p>
+            <h2 className="text-2xl font-black text-white mb-2">
+              {game.title}
+            </h2>
+            <p className="text-leather-300 text-sm mb-6 min-h-[40px]">
+              {game.description}
+            </p>
 
-            {game.status === "LIVE" && game.path && (
+            {game.status === "LIVE" && game.path ? (
               <button
                 type="button"
                 onClick={() => navigate(game.path!)}
-                className="w-full bg-yellow-500 text-black font-black py-3 uppercase tracking-wider rounded hover:bg-yellow-400 transition-colors"
+                className="w-full bg-gold-500 text-black font-black py-3 uppercase tracking-wider rounded-xl hover:bg-gold-400 transition-colors"
               >
-                JOUER MAINTENANT
+                Jouer maintenant
               </button>
+            ) : (
+              <div className="w-full py-3 text-center text-leather-500 text-sm flex items-center justify-center gap-2">
+                <HelpCircle className="w-4 h-4" />
+                Bientôt
+              </div>
             )}
-          </motion.div>
+          </motion.article>
         ))}
       </div>
     </div>

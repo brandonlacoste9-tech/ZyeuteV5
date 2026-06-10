@@ -375,7 +375,7 @@ export const Explore: React.FC = () => {
               </span>
             </div>
             <p className="text-leather-300 text-sm">
-              Grid Rush, Poutine Royale et plus — défie tes chums en 1v1.
+              Grid Rush, Poutine Royale, Quiz et Hive Tap — défie tes chums.
             </p>
           </div>
           <svg

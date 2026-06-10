@@ -16,6 +16,7 @@ ZyeuteV5-*/
 
 # MCP (local agent tooling config; may contain secrets)
 .mcp.json
+.cursor/mcp.json
 
 .vercel
 

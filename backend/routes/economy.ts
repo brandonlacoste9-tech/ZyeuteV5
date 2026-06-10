@@ -1,5 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { storage } from "../storage.js";
+import { z } from "zod";
+import { eq } from "drizzle-orm";
+import { db, storage } from "../storage.js";
+import { users } from "../../shared/schema.js";
 import { hiveTapService } from "../services/hive-tap-service.js";
 import { giftbitService } from "../services/giftbit-service.js";
 
@@ -10,32 +13,84 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
 const router = Router();
 
+const LocationSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
+const HiveTapTokenSchema = z.object({
+  amount: z.number().int().min(1).max(5000),
+  location: LocationSchema,
+});
+
+const HiveTapProcessSchema = z.object({
+  token: z.string().min(8),
+  location: LocationSchema,
+});
+
 // --- HIVE TAP ROUTES (Shadow Ledger) ---
+router.get("/hive-tap/balance", requireAuth, async (req, res) => {
+  try {
+    const userId = req.userId!;
+    const [row] = await db
+      .select({ cashCredits: users.cashCredits })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    res.json({ balance: row?.cashCredits ?? 0 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post("/hive-tap/token", requireAuth, async (req, res) => {
+  const parsed = HiveTapTokenSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
   try {
     const senderId = req.userId!;
-    const { amount, location } = req.body;
+    const { amount, location } = parsed.data;
+    const [sender] = await db
+      .select({ cashCredits: users.cashCredits })
+      .from(users)
+      .where(eq(users.id, senderId))
+      .limit(1);
+    if ((sender?.cashCredits ?? 0) < amount) {
+      return res.status(400).json({ error: "Solde insuffisant pour ce tap." });
+    }
     const token = await hiveTapService.generateHandshakeToken(
       senderId,
       amount,
       location,
     );
-    res.json({ token });
+    res.json({ token, expiresInMs: 30000 });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
 router.post("/hive-tap/process", requireAuth, async (req, res) => {
+  const parsed = HiveTapProcessSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+
   try {
     const receiverId = req.userId!;
-    const { token, location } = req.body;
+    const { token, location } = parsed.data;
     const result = await hiveTapService.processIncomingTap(
       receiverId,
       token,
       location,
     );
-    res.json(result);
+    const [row] = await db
+      .select({ cashCredits: users.cashCredits })
+      .from(users)
+      .where(eq(users.id, receiverId))
+      .limit(1);
+    res.json({ ...result, balance: row?.cashCredits ?? 0 });
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

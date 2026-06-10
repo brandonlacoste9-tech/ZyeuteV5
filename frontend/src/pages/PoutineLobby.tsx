@@ -97,7 +97,7 @@ export default function PoutineLobby() {
   const handlePlay = () => {
     if (!user) return navigate("/login");
     if (!tournament) return;
-    navigate(`/royale/play/${tournament.id}`);
+    navigate(`/arcade/poutine/play/${tournament.id}`);
   };
 
   if (loading) {
