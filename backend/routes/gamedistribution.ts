@@ -6,17 +6,17 @@ const router = Router();
 router.get("/rss", async (req, res) => {
   try {
     const category = (req.query.category as string) || "action";
-    let tags = "";
+    let catFilter = "";
     
-    if (category === "puzzle") tags = "puzzle,cards,board";
-    else if (category === "action") tags = "action,shooter,fighting";
-    else if (category === "casual") tags = "casual,bubble,block";
-    else if (category === "course") tags = "racing,cars,driving";
-    else tags = "action,shooter"; // fallback
+    if (category === "puzzle") catFilter = "Puzzle,Cards,Board,Jigsaw,Match-3";
+    else if (category === "action") catFilter = "Action,Shooter,Battle,Adventure";
+    else if (category === "casual") catFilter = "Casual,Bubble Shooter,Merge,.IO";
+    else if (category === "course") catFilter = "Racing %26 Driving";
+    else catFilter = "Action,Shooter"; // fallback
 
     // Add a cache buster timestamp so Vercel doesn't heavily cache across tabs
     const cacheBuster = Date.now();
-    const url = `https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&tags=${tags}&type=html5&amount=16&page=1&format=json&cb=${cacheBuster}`;
+    const url = `https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=${catFilter}&type=html5&amount=16&page=1&format=json&cb=${cacheBuster}`;
     const response = await axios.get(url, { timeout: 8000 });
     res.json(response.data);
   } catch (error: any) {
