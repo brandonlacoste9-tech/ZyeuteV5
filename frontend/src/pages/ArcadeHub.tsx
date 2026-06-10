@@ -209,35 +209,42 @@ interface WebGame {
 
 function WebGamesCatalog() {
   const navigate = useNavigate();
-  const [games, setGames] = useState<WebGame[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchGames() {
-      try {
-        const res = await fetch(
-          "https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=All&type=all&amount=12&page=1&format=json"
-        );
-        const data = await res.json();
-        if (data && Array.isArray(data)) {
-          setGames(data);
-        }
-      } catch (e) {
-        console.error("Failed to fetch games:", e);
-      } finally {
-        setLoading(false);
-      }
+  // Hardcoded GameDistribution catalog to bypass CORS issues on Vercel
+  const games: WebGame[] = [
+    {
+      Title: "Bubble Blasters",
+      Md5: "5d8d11e9919245939a57378a02b8fc8b",
+      Description: "Bubble Blasters is a colorful side-scrolling adventure where you blast bubbles to clear levels.",
+      Url: "https://html5.gamedistribution.com/5d8d11e9919245939a57378a02b8fc8b/",
+      Asset: ["https://img.gamedistribution.com/5d8d11e9919245939a57378a02b8fc8b-512x384.jpg"],
+      Category: ["Adventure"]
+    },
+    {
+      Title: "Tank Strike",
+      Md5: "31f1a27db10a462fb893319e8266cdb9",
+      Description: "Enter a brutal wasteland battlefield and control a powerful tank.",
+      Url: "https://html5.gamedistribution.com/31f1a27db10a462fb893319e8266cdb9/",
+      Asset: ["https://img.gamedistribution.com/31f1a27db10a462fb893319e8266cdb9-512x384.jpg"],
+      Category: ["Action"]
+    },
+    {
+      Title: "Hole Puzzle",
+      Md5: "7697f626f5224cb284cf463ce1275495",
+      Description: "Hole Puzzle is a fun casual game where a hungry cat eats everything in sight!",
+      Url: "https://html5.gamedistribution.com/7697f626f5224cb284cf463ce1275495/",
+      Asset: ["https://img.gamedistribution.com/7697f626f5224cb284cf463ce1275495-512x384.jpg"],
+      Category: ["Casual"]
+    },
+    {
+      Title: "Magic Brick Wars",
+      Md5: "a9964948ad434acfb106811d323e6464",
+      Description: "Fight wars with your favorite characters using your own Raskulls!",
+      Url: "https://html5.gamedistribution.com/a9964948ad434acfb106811d323e6464/",
+      Asset: ["https://img.gamedistribution.com/a9964948ad434acfb106811d323e6464-512x384.jpg"],
+      Category: ["Strategy"]
     }
-    fetchGames();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="mt-20 flex justify-center opacity-50">
-        <div className="arcade-font-pixel">Chargement du catalogue...</div>
-      </div>
-    );
-  }
+  ];
 
   return (
     <div className="mt-20">
