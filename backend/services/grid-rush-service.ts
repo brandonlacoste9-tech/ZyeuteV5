@@ -51,10 +51,6 @@ function assertStake(stake: number): StakeTokens {
   return stake as StakeTokens;
 }
 
-function isRpcMissingError(message: string): boolean {
-  return /schema cache|could not find the function/i.test(message);
-}
-
 async function createBotMatchDirect(
   userId: string,
   stake: StakeTokens,
@@ -171,13 +167,28 @@ function activateMatch(now: Date) {
   return { startedAt: now, endsAt, status: "ACTIVE" as const };
 }
 
+/** Explicit columns — prod may lack is_bot; PostgREST rejects select("*") when cache is stale. */
+const GRID_RUSH_MATCH_COLUMNS =
+  "id, status, player_1_id, player_2_id, player_1_score, player_2_score, stake_cennes, stake_tokens, winner_id, started_at, ends_at, created_at, updated_at";
+
 type MatchRow = Record<string, unknown>;
+
+function inferIsBot(row: Record<string, unknown>): boolean {
+  if (row.is_bot != null || row.isBot != null) {
+    return Boolean(row.is_bot ?? row.isBot);
+  }
+  return (
+    row.status === "ACTIVE" &&
+    (row.player_2_id == null || row.player2Id == null) &&
+    (row.started_at != null || row.startedAt != null)
+  );
+}
 
 async function fetchMatchRow(matchId: string): Promise<MatchRow | null> {
   if (!supabaseAdmin) return null;
   const { data, error } = await supabaseAdmin
     .from("grid_rush_matches")
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .eq("id", matchId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -224,7 +235,7 @@ async function createBotMatchAdmin(
       started_at: now.toISOString(),
       ends_at: endsAt.toISOString(),
     })
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
 
   if (error) {
@@ -237,7 +248,7 @@ async function createBotMatchAdmin(
     throw new Error(error.message);
   }
 
-  const match = mapRow(data);
+  const match = mapRow({ ...data, is_bot: true });
   scheduleBotTick(match.id, endsAt, userId);
   return match;
 }
@@ -286,7 +297,7 @@ async function incrementScoreAdmin(
     .update(updatePayload)
     .eq("id", matchId)
     .eq("status", "ACTIVE")
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Le temps est écoulé");
@@ -328,7 +339,7 @@ async function finishMatchAdmin(
       updated_at: now.toISOString(),
     })
     .eq("id", matchId)
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
 
@@ -360,7 +371,7 @@ async function createInviteAdmin(
       stake_cennes: stake,
       status: "WAITING",
     })
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
   if (error) {
     await creditTokenBalance(userId, stake).catch(() => {});
@@ -377,7 +388,7 @@ async function quickMatchAdmin(
   const now = new Date();
   const { data: waiting } = await supabaseAdmin!
     .from("grid_rush_matches")
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .eq("status", "WAITING")
     .is("player_2_id", null)
     .eq("stake_tokens", stake)
@@ -400,7 +411,7 @@ async function quickMatchAdmin(
       .eq("id", waiting.id)
       .eq("status", "WAITING")
       .is("player_2_id", null)
-      .select("*")
+      .select(GRID_RUSH_MATCH_COLUMNS)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (joined) {
@@ -418,7 +429,7 @@ async function quickMatchAdmin(
       stake_cennes: stake,
       status: "WAITING",
     })
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
   if (createErr) {
     await creditTokenBalance(userId, stake).catch(() => {});
@@ -455,7 +466,7 @@ async function joinMatchAdmin(
     .eq("id", matchId)
     .eq("status", "WAITING")
     .is("player_2_id", null)
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   await deductTokenBalance(userId, Number(match.stake_tokens ?? 0));
@@ -486,7 +497,7 @@ async function cancelMatchAdmin(
     .from("grid_rush_matches")
     .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
     .eq("id", matchId)
-    .select("*")
+    .select(GRID_RUSH_MATCH_COLUMNS)
     .single();
   if (error) throw new Error(error.message);
   return mapRow(data);
@@ -697,33 +708,6 @@ export class GridRushService {
     const stake = assertStake(stakeTokens);
 
     if (supabaseAdmin) {
-      await cleanupStaleMatchesForUser(userId);
-
-      const { data, error } = await supabaseAdmin.rpc(
-        "grid_rush_create_bot_match",
-        { p_stake: stake, p_user_id: userId },
-      );
-      if (!error && data) {
-        const row = (Array.isArray(data) ? data[0] : data) as Record<
-          string,
-          unknown
-        >;
-        const match = mapRow(row);
-        scheduleBotTick(
-          match.id,
-          match.endsAt ?? new Date(Date.now() + GRID_RUSH_DURATION_SEC * 1000),
-          userId,
-        );
-        return match;
-      }
-
-      if (error && !isRpcMissingError(error.message)) {
-        console.warn(
-          "[GridRush] RPC bot match failed, using admin path:",
-          error.message,
-        );
-      }
-
       return createBotMatchAdmin(userId, stake);
     }
 
@@ -952,7 +936,7 @@ function mapRow(row: Record<string, unknown>): GridRushMatch {
     player2Score: Number(row.player_2_score ?? 0),
     stakeCennes: Number(row.stake_cennes ?? row.stakeCennes ?? 500),
     stakeTokens: Number(row.stake_tokens ?? row.stakeTokens ?? 500),
-    isBot: Boolean(row.is_bot ?? row.isBot ?? false),
+    isBot: inferIsBot(row),
     winnerId: (row.winner_id as string) ?? null,
     startedAt: row.started_at ? new Date(row.started_at as string) : null,
     endsAt: row.ends_at ? new Date(row.ends_at as string) : null,
