@@ -38,7 +38,7 @@ export class PixiBoard {
       width: engine.cols * (TILE_SIZE + PADDING) + PADDING,
       height: engine.rows * (TILE_SIZE + PADDING) + PADDING,
       backgroundAlpha: 0,
-      resolution: window.devicePixelRatio || 1,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
       autoDensity: true,
     });
 
@@ -89,21 +89,59 @@ export class PixiBoard {
     }
   }
 
+  bindTileClick(wrapper: PIXI.Container, tile: Tile) {
+    wrapper.interactive = true;
+    wrapper.cursor = "pointer";
+    wrapper.hitArea = new PIXI.Rectangle(0, 0, TILE_SIZE, TILE_SIZE);
+    wrapper.on("pointerdown", () => {
+      const pos = this.engine.findPosByTileId(tile.id);
+      if (pos) void this.handleTileClick(pos.r, pos.c);
+    });
+  }
+
   spawnTileSprite(tile: Tile, r: number, c: number, fromAbove = false) {
     const wrapper = createTileDisplay(tile, TILE_SIZE, this.textures);
     wrapper.x = cX(c);
     wrapper.y = fromAbove ? rY(-2) : rY(r);
     wrapper.pivot.set(TILE_SIZE / 2, TILE_SIZE / 2);
 
-    wrapper.interactive = true;
-    wrapper.cursor = "pointer";
-    wrapper.on("pointerdown", () => void this.handleTileClick(r, c));
-
+    this.bindTileClick(wrapper, tile);
     this.tileContainer.addChild(wrapper);
     this.sprites.set(tile.id, wrapper);
 
     if (fromAbove) {
       this.animateDrop(wrapper, rY(r));
+    }
+  }
+
+  syncSpritesToGrid() {
+    const liveIds = new Set<number>();
+
+    for (let r = 0; r < this.engine.rows; r++) {
+      for (let c = 0; c < this.engine.cols; c++) {
+        const tile = this.engine.grid[r]![c];
+        if (!tile) continue;
+        liveIds.add(tile.id);
+
+        let sprite = this.sprites.get(tile.id);
+        if (!sprite) {
+          this.spawnTileSprite(tile, r, c);
+          sprite = this.sprites.get(tile.id);
+        }
+        if (sprite) {
+          sprite.x = cX(c);
+          sprite.y = rY(r);
+          sprite.scale.set(1);
+        }
+      }
+    }
+
+    for (const [id, sprite] of this.sprites.entries()) {
+      if (!liveIds.has(id)) {
+        this.tileContainer.removeChild(sprite);
+        this.sprites.delete(id);
+        sprite.destroy();
+      }
     }
   }
 
@@ -134,40 +172,66 @@ export class PixiBoard {
       const tile = this.engine.grid[r]![c];
       const s = tile ? this.sprites.get(tile.id) : undefined;
       if (s) s.scale.set(1.15);
-    } else {
-      this.isAnimating = true;
-      const a = this.selectedPos;
-      const b = { r, c };
+      return;
+    }
+
+    if (this.selectedPos.r === r && this.selectedPos.c === c) {
+      const tile = this.engine.grid[r]![c];
+      const s = tile ? this.sprites.get(tile.id) : undefined;
+      if (s) s.scale.set(1);
       this.selectedPos = null;
+      return;
+    }
 
-      const tileA = this.engine.grid[a.r]![a.c];
-      const sa = tileA ? this.sprites.get(tileA.id) : undefined;
-      if (sa) sa.scale.set(1);
+    this.isAnimating = true;
+    const a = this.selectedPos;
+    const b = { r, c };
+    this.selectedPos = null;
 
-      const results = this.engine.trySwap(a, b);
-      if (results) {
-        playSFX("swap");
-        await this.animateSwap(a, b);
-        await this.processMatchResults(results);
-      } else {
-        playSFX("fail");
-        if (sa) {
-          const tileB = this.engine.grid[b.r]![b.c];
-          const sb = tileB ? this.sprites.get(tileB.id) : undefined;
-          this.animateBounce(sa, sb);
-        }
+    const tileA = this.engine.grid[a.r]![a.c];
+    const sa = tileA ? this.sprites.get(tileA.id) : undefined;
+    if (sa) sa.scale.set(1);
+
+    const swapped = this.engine.commitSwap(a, b);
+    if (swapped) {
+      playSFX("swap");
+      await this.animateSwap(a, b);
+      const firstWave = this.engine.processFirstWave();
+      if (firstWave) {
+        await this.runCascade(firstWave);
       }
-      this.isAnimating = false;
+    } else {
+      playSFX("fail");
+      if (sa) {
+        const tileB = this.engine.grid[b.r]![b.c];
+        const sb = tileB ? this.sprites.get(tileB.id) : undefined;
+        this.animateBounce(sa, sb);
+      }
+    }
+
+    this.isAnimating = false;
+    this.syncSpritesToGrid();
+    this.onUpdateHUD();
+  }
+
+  async runCascade(firstWave: MatchResult) {
+    let wave: MatchResult | null = firstWave;
+    let nextCombo = 2;
+
+    while (wave) {
+      await this.processMatchWave(wave);
       this.onUpdateHUD();
+      wave = this.engine.stepCascade(nextCombo);
+      nextCombo++;
     }
   }
 
   animateSwap(a: Pos, b: Pos): Promise<void> {
     return new Promise((resolve) => {
-      const ta = this.engine.grid[b.r]![b.c];
-      const tb = this.engine.grid[a.r]![a.c];
-      const sa = ta ? this.sprites.get(ta.id) : undefined;
-      const sb = tb ? this.sprites.get(tb.id) : undefined;
+      const tileAtA = this.engine.grid[a.r]![a.c];
+      const tileAtB = this.engine.grid[b.r]![b.c];
+      const sa = tileAtA ? this.sprites.get(tileAtA.id) : undefined;
+      const sb = tileAtB ? this.sprites.get(tileAtB.id) : undefined;
 
       if (sa) {
         sa.x = cX(b.c);
@@ -178,7 +242,7 @@ export class PixiBoard {
         sb.y = rY(a.r);
       }
 
-      setTimeout(resolve, 200);
+      setTimeout(resolve, 180);
     });
   }
 
@@ -197,46 +261,44 @@ export class PixiBoard {
     }, 50);
   }
 
-  async processMatchResults(results: MatchResult[]) {
-    for (const res of results) {
-      playSFX("match");
-      this.shakeScreen(res.cleared.length);
+  async processMatchWave(res: MatchResult) {
+    playSFX("match");
+    this.shakeScreen(res.cleared.length);
 
-      let midX = 0;
-      let midY = 0;
+    let midX = 0;
+    let midY = 0;
+    let count = 0;
 
-      res.cleared.forEach((p) => {
-        const id = this.getSpriteIdAt(p);
-        if (id) {
-          const s = this.sprites.get(id);
-          if (s) {
-            midX += s.x;
-            midY += s.y;
-            this.spawnParticles(s.x, s.y);
-            this.tileContainer.removeChild(s);
-            this.sprites.delete(id);
-          }
-        }
-      });
-
-      if (res.cleared.length > 0) {
-        midX /= res.cleared.length;
-        midY /= res.cleared.length;
-        let textStr = `${res.scoreGained}`;
-        if (res.combo > 1) {
-          textStr = `Super!\n${textStr} (x${res.combo})`;
-        }
-        this.spawnFloatingText(
-          midX,
-          midY,
-          textStr,
-          res.combo > 1 ? "#fbbf24" : "#ffffff",
-        );
+    for (const tileId of res.clearedTileIds) {
+      const s = this.sprites.get(tileId);
+      if (s) {
+        midX += s.x;
+        midY += s.y;
+        count++;
+        this.spawnParticles(s.x, s.y);
+        this.tileContainer.removeChild(s);
+        this.sprites.delete(tileId);
+        s.destroy();
       }
-
-      await new Promise<void>((r) => setTimeout(r, 200));
-      await this.animateGravityDrop();
     }
+
+    if (count > 0) {
+      midX /= count;
+      midY /= count;
+      let textStr = `${res.scoreGained}`;
+      if (res.combo > 1) {
+        textStr = `Super!\n${textStr} (x${res.combo})`;
+      }
+      this.spawnFloatingText(
+        midX,
+        midY,
+        textStr,
+        res.combo > 1 ? "#fbbf24" : "#ffffff",
+      );
+    }
+
+    await new Promise<void>((r) => setTimeout(r, 180));
+    await this.animateGravityDrop();
   }
 
   spawnFloatingText(x: number, y: number, text: string, color: string) {
@@ -336,19 +398,6 @@ export class PixiBoard {
       };
       this.app.ticker.add(ticker);
     }
-  }
-
-  getSpriteIdAt(p: Pos): number | null {
-    for (const [id, s] of this.sprites.entries()) {
-      const c = Math.round(
-        (s.x - PADDING - TILE_SIZE / 2) / (TILE_SIZE + PADDING),
-      );
-      const r = Math.round(
-        (s.y - PADDING - TILE_SIZE / 2) / (TILE_SIZE + PADDING),
-      );
-      if (r === p.r && c === p.c) return id;
-    }
-    return null;
   }
 
   destroy() {

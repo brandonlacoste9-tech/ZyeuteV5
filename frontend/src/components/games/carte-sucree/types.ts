@@ -14,6 +14,7 @@ export interface Tile {
 
 export interface MatchResult {
   cleared: Pos[];
+  clearedTileIds: number[];
   scoreGained: number;
   combo: number;
 }

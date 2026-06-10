@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Match3Engine } from "./engine";
 import { loadCarteSucreeAssets } from "./asset-loader";
 import type { CarteSucreeTextures } from "./asset-loader";
@@ -33,9 +39,11 @@ export default function CarteSucreeGame({
   onComplete,
 }: CarteSucreeGameProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [canvasMounted, setCanvasMounted] = useState(false);
   const boardRef = useRef<PixiBoard | null>(null);
   const engineRef = useRef<Match3Engine | null>(null);
   const texturesRef = useRef<CarteSucreeTextures | null>(null);
+  const winHandledRef = useRef(false);
 
   const [phase, setPhase] = useState<GamePhase>("map");
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig | null>(null);
@@ -64,6 +72,8 @@ export default function CarteSucreeGame({
 
   const finishWin = useCallback(
     async (eng: Match3Engine, lvl: LevelConfig) => {
+      if (winHandledRef.current) return;
+      winHandledRef.current = true;
       setPhase("won");
       boardRef.current?.destroy();
       boardRef.current = null;
@@ -94,11 +104,21 @@ export default function CarteSucreeGame({
     [finishWin],
   );
 
-  useEffect(() => {
-    if (phase !== "playing" || !canvasRef.current || !engineRef.current) {
+  const assignCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
+    canvasRef.current = node;
+    setCanvasMounted(Boolean(node));
+  }, []);
+
+  useLayoutEffect(() => {
+    if (phase !== "playing" || !canvasMounted || !engineRef.current) {
       return;
     }
-    if (!texturesRef.current || boardRef.current) return;
+    if (!texturesRef.current) return;
+
+    boardRef.current?.destroy();
+    boardRef.current = null;
+
+    if (!canvasRef.current) return;
 
     boardRef.current = new PixiBoard(
       canvasRef.current,
@@ -116,11 +136,12 @@ export default function CarteSucreeGame({
       boardRef.current?.destroy();
       boardRef.current = null;
     };
-  }, [phase, selectedLevel, updateHud]);
+  }, [phase, canvasMounted, selectedLevel, updateHud]);
 
   function startLevel(lvl: LevelConfig) {
     boardRef.current?.destroy();
     boardRef.current = null;
+    winHandledRef.current = false;
     const eng = new Match3Engine(8, 8, lvl.moves, lvl.goalKind, lvl.goalCount);
     engineRef.current = eng;
     setSelectedLevel(lvl);
@@ -237,8 +258,12 @@ export default function CarteSucreeGame({
         </div>
       </div>
 
-      <div className={`relative ${arcadeCard} p-2`}>
-        <canvas ref={canvasRef} className="block rounded-sm max-w-full" />
+      <div className={`relative ${arcadeCard} p-2 overflow-x-auto max-w-full`}>
+        <canvas
+          ref={assignCanvasRef}
+          className="block rounded-sm touch-none"
+          style={{ maxWidth: "100%", height: "auto" }}
+        />
 
         {phase === "won" && (
           <div className="absolute inset-0 bg-black/75 flex flex-col justify-center items-center rounded-sm z-10 p-4 text-center">

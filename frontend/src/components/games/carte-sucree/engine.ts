@@ -131,8 +131,9 @@ export class Match3Engine {
     return false;
   }
 
-  trySwap(a: Pos, b: Pos): MatchResult[] | null {
-    if (!this.isAdjacent(a, b)) return null;
+  /** Swap tiles and consume a move if the swap creates a match. Grid stays swapped until waves clear. */
+  commitSwap(a: Pos, b: Pos): boolean {
+    if (!this.isAdjacent(a, b)) return false;
 
     const temp = this.grid[a.r]![a.c];
     this.grid[a.r]![a.c] = this.grid[b.r]![b.c];
@@ -143,11 +144,33 @@ export class Match3Engine {
       const temp2 = this.grid[a.r]![a.c];
       this.grid[a.r]![a.c] = this.grid[b.r]![b.c];
       this.grid[b.r]![b.c] = temp2;
-      return null;
+      return false;
     }
 
     this.movesLeft--;
-    return this.processMatches(matches);
+    return true;
+  }
+
+  processFirstWave(): MatchResult | null {
+    const matches = this.findMatches();
+    if (matches.size === 0) return null;
+    return this.processOneWave(matches, 1);
+  }
+
+  /** Run the next auto-cascade wave (combo 2+) after animations finish. */
+  stepCascade(combo: number): MatchResult | null {
+    const matches = this.findMatches();
+    if (matches.size === 0) return null;
+    return this.processOneWave(matches, combo);
+  }
+
+  findPosByTileId(tileId: number): Pos | null {
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.grid[r]![c]?.id === tileId) return { r, c };
+      }
+    }
+    return null;
   }
 
   isAdjacent(a: Pos, b: Pos): boolean {
@@ -192,71 +215,64 @@ export class Match3Engine {
     return matched;
   }
 
-  processMatches(matches: Set<string>): MatchResult[] {
-    const results: MatchResult[] = [];
-    let combo = 1;
-    let currentMatches = matches;
+  processOneWave(matches: Set<string>, combo: number): MatchResult {
+    const clearedSet = new Set<string>();
 
-    while (currentMatches.size > 0) {
-      const clearedSet = new Set<string>();
+    const triggerExplosion = (r: number, c: number) => {
+      const key = `${r},${c}`;
+      if (clearedSet.has(key)) return;
 
-      const triggerExplosion = (r: number, c: number) => {
-        const key = `${r},${c}`;
-        if (clearedSet.has(key)) return;
+      const tile = this.grid[r]?.[c];
+      if (!tile) return;
 
-        const tile = this.grid[r]?.[c];
-        if (!tile) return;
+      clearedSet.add(key);
 
-        clearedSet.add(key);
-
-        if (tile.special === "rowClear") {
+      if (tile.special === "rowClear") {
+        for (let cc = 0; cc < this.cols; cc++) {
+          if (this.grid[r]![cc]) triggerExplosion(r, cc);
+        }
+      } else if (tile.special === "colClear") {
+        for (let rr = 0; rr < this.rows; rr++) {
+          if (this.grid[rr]![c]) triggerExplosion(rr, c);
+        }
+      } else if (tile.special === "colorBomb") {
+        const targetKind = tile.kind;
+        for (let rr = 0; rr < this.rows; rr++) {
           for (let cc = 0; cc < this.cols; cc++) {
-            if (this.grid[r]![cc]) triggerExplosion(r, cc);
-          }
-        } else if (tile.special === "colClear") {
-          for (let rr = 0; rr < this.rows; rr++) {
-            if (this.grid[rr]![c]) triggerExplosion(rr, c);
-          }
-        } else if (tile.special === "colorBomb") {
-          const targetKind = tile.kind;
-          for (let rr = 0; rr < this.rows; rr++) {
-            for (let cc = 0; cc < this.cols; cc++) {
-              if (this.grid[rr]![cc]?.kind === targetKind) {
-                triggerExplosion(rr, cc);
-              }
+            if (this.grid[rr]![cc]?.kind === targetKind) {
+              triggerExplosion(rr, cc);
             }
           }
         }
-      };
+      }
+    };
 
-      currentMatches.forEach((posStr) => {
-        const [r, c] = posStr.split(",").map(Number);
-        triggerExplosion(r!, c!);
-      });
+    matches.forEach((posStr) => {
+      const [r, c] = posStr.split(",").map(Number);
+      triggerExplosion(r!, c!);
+    });
 
-      const cleared: Pos[] = [];
-      clearedSet.forEach((posStr) => {
-        const [r, c] = posStr.split(",").map(Number);
-        const tile = this.grid[r!]![c!];
-        if (tile) {
-          if (tile.kind === this.goalKind) this.collected++;
-          cleared.push({ r: r!, c: c! });
-          this.grid[r!]![c!] = null;
-        }
-      });
+    const cleared: Pos[] = [];
+    const clearedTileIds: number[] = [];
 
-      const scoreGained = cleared.length * 10 * combo;
-      this.score += scoreGained;
-      results.push({ cleared, scoreGained, combo });
+    clearedSet.forEach((posStr) => {
+      const [r, c] = posStr.split(",").map(Number);
+      const tile = this.grid[r!]![c!];
+      if (tile) {
+        if (tile.kind === this.goalKind) this.collected++;
+        cleared.push({ r: r!, c: c! });
+        clearedTileIds.push(tile.id);
+        this.grid[r!]![c!] = null;
+      }
+    });
 
-      this.applyGravity();
-      this.fillGrid();
+    const scoreGained = cleared.length * 10 * combo;
+    this.score += scoreGained;
 
-      currentMatches = this.findMatches();
-      combo++;
-    }
+    this.applyGravity();
+    this.fillGrid();
 
-    return results;
+    return { cleared, clearedTileIds, scoreGained, combo };
   }
 
   applyGravity() {
