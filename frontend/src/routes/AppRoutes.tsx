@@ -263,6 +263,14 @@ export function AppRoutes() {
               </OnboardingGate>
             }
           />
+          <Route
+            path="/lazyeute"
+            element={
+              <OnboardingGate>
+                <Zyeute />
+              </OnboardingGate>
+            }
+          />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/feed/grid" element={<FeedGrid />} />
           <Route path="/search" element={<SearchResults />} />
@@ -694,6 +702,7 @@ export function AppRoutes() {
           />
 
           <Route path="/" element={<Navigate to="/feed" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </RouteErrorBoundary>

@@ -173,7 +173,7 @@ test.describe('Navigation & UX', () => {
         const navigation = page.goto('/feed');
 
         // Look for loading indicator
-        const spinner = page.locator('[data-testid="spinner"], .spinner, .loading, text="Chargement"');
+        const spinner = page.locator('[data-testid="spinner"], .spinner, .loading').or(page.locator('text=Chargement'));
 
         // Loading indicator may appear briefly
         const hadSpinner = await spinner.count() > 0;
