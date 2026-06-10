@@ -5,8 +5,8 @@ const router = Router();
 
 router.get("/rss", async (req, res) => {
   try {
-    // Fetch high-quality Action, Racing, and Shooter games
-    const url = "https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&categories=Action,Racing,Shooter&type=html5&amount=12&page=1&format=json";
+    // Fetch high-quality puzzle, bubble, block, and card games based on user preference
+    const url = "https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&tags=bubble,block,puzzle,cards&type=html5&amount=16&page=1&format=json";
     const response = await axios.get(url, { timeout: 8000 });
     res.json(response.data);
   } catch (error: any) {
