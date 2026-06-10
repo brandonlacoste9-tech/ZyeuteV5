@@ -178,47 +178,54 @@ export default function CarteSucreeGame({
 
   if (phase === "map") {
     return (
-      <div className="space-y-4 pb-6">
-        <p className={`text-sm text-center ${arcadeTextMuted}`}>
+      <div className="space-y-6 pb-6 bg-gradient-to-b from-indigo-900 via-purple-900 to-pink-900 p-6 rounded-3xl shadow-2xl border-4 border-purple-500/50">
+        <h2 className="text-3xl font-black text-center text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-400 drop-shadow-sm">
+          Carte des Niveaux
+        </h2>
+        <p className={`text-sm text-center text-purple-200 font-medium`}>
           Match-3 québécois — gagne des jetons une fois par niveau par jour.
         </p>
-        <div className="grid gap-3">
-          {levels.map((lvl) => {
+        <div className="grid gap-4 relative">
+          <div className="absolute left-1/2 top-0 bottom-0 w-2 bg-pink-500/30 rounded-full -translate-x-1/2 z-0 blur-sm" />
+          {levels.map((lvl, index) => {
             const prog = progressFor(lvl.id);
             const claimed = prog?.rewardClaimed;
+            const isRight = index % 2 === 1;
             return (
               <button
                 key={lvl.id}
                 type="button"
                 onClick={() => startLevel(lvl)}
-                className={`${arcadeCardYellow} p-4 text-left w-full transition-opacity ${
-                  claimed ? "opacity-75" : ""
+                className={`relative z-10 bg-gradient-to-br from-[#2d1b4e] to-[#1a0f2e] border-4 ${
+                  claimed ? "border-purple-500/50 opacity-80" : "border-pink-500 hover:border-yellow-400 hover:scale-105 shadow-[0_0_15px_rgba(236,72,153,0.5)]"
+                } p-4 rounded-3xl w-[85%] transition-all shadow-xl ${
+                  isRight ? "ml-auto" : "mr-auto"
                 }`}
               >
-                <div className="flex justify-between items-start gap-3">
-                  <div>
+                <div className="flex justify-between items-center gap-3">
+                  <div className="text-left">
                     <span
-                      className={`text-xs uppercase font-bold ${arcadeTextMuted}`}
+                      className={`text-xs uppercase font-black text-pink-400 tracking-wider`}
                     >
                       {lvl.region}
                     </span>
-                    <h4 className="font-black text-lg text-white mt-1">
+                    <h4 className="font-black text-xl text-white mt-1 drop-shadow-md">
                       {lvl.name}
                     </h4>
-                    <p className={`text-xs mt-1 ${arcadeTextMuted}`}>
+                    <p className={`text-sm mt-1 text-purple-200 font-medium`}>
                       But: {lvl.goalCount} {EMOJI_MAP[lvl.goalKind]}
                     </p>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className={`font-black ${arcadeTextYellow}`}>
-                      +{lvl.rewardTokens} jetons
+                  <div className="text-right shrink-0 bg-black/40 p-3 rounded-2xl border border-white/10">
+                    <div className={`font-black text-yellow-400 text-lg`}>
+                      +{lvl.rewardTokens} 🪙
                     </div>
                     {claimed ? (
-                      <span className="text-xs text-emerald-400 font-bold">
+                      <span className="text-xs text-emerald-400 font-bold uppercase tracking-wider block mt-1">
                         Réclamé
                       </span>
                     ) : (
-                      <span className={`text-xs ${arcadeTextMuted}`}>
+                      <span className={`text-xs text-pink-300 font-bold block mt-1`}>
                         {lvl.moves} coups
                       </span>
                     )}
@@ -235,26 +242,28 @@ export default function CarteSucreeGame({
   return (
     <div className="flex flex-col items-center gap-4 pb-6 w-full max-w-lg mx-auto">
       <div
-        className={`w-full ${arcadeCard} p-3 grid grid-cols-3 gap-2 text-center`}
+        className={`w-full bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 p-1 rounded-3xl shadow-lg mb-2`}
       >
-        <div>
-          <p className={`text-[10px] uppercase ${arcadeTextMuted}`}>Score</p>
-          <p className={`text-2xl font-black ${arcadeTextYellow}`}>
-            {hud.score}
-          </p>
-        </div>
-        <div>
-          <p className={`text-[10px] uppercase ${arcadeTextMuted}`}>
-            Objectif {EMOJI_MAP[hud.target]}
-          </p>
-          <p className="text-2xl font-black text-white">
-            {hud.collected}{" "}
-            <span className={`text-base ${arcadeTextMuted}`}>/ {hud.goal}</span>
-          </p>
-        </div>
-        <div>
-          <p className={`text-[10px] uppercase ${arcadeTextMuted}`}>Coups</p>
-          <p className="text-2xl font-black text-white">{hud.moves}</p>
+        <div className="bg-[#1a0f2e] rounded-[22px] p-3 grid grid-cols-3 gap-2 text-center items-center">
+          <div className="bg-[#2d1b4e] rounded-2xl p-2 border-2 border-[#4d3b6e] shadow-inner">
+            <p className={`text-[10px] uppercase text-pink-300 font-bold tracking-wider`}>Score</p>
+            <p className={`text-2xl font-black text-yellow-400 drop-shadow-md`}>
+              {hud.score}
+            </p>
+          </div>
+          <div className="bg-[#2d1b4e] rounded-2xl p-2 border-2 border-[#4d3b6e] shadow-inner scale-110 z-10 bg-gradient-to-b from-[#3d2b5e] to-[#2d1b4e]">
+            <p className={`text-[10px] uppercase text-purple-300 font-bold tracking-wider`}>
+              Objectif {EMOJI_MAP[hud.target]}
+            </p>
+            <p className="text-3xl font-black text-white drop-shadow-lg">
+              {hud.collected}{" "}
+              <span className={`text-lg text-purple-200`}>/ {hud.goal}</span>
+            </p>
+          </div>
+          <div className="bg-[#2d1b4e] rounded-2xl p-2 border-2 border-[#4d3b6e] shadow-inner">
+            <p className={`text-[10px] uppercase text-indigo-300 font-bold tracking-wider`}>Coups</p>
+            <p className="text-2xl font-black text-white drop-shadow-md">{hud.moves}</p>
+          </div>
         </div>
       </div>
 

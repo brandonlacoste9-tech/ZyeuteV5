@@ -58,20 +58,52 @@ export class PixiBoard {
 
   drawBackground() {
     this.boardContainer.removeChildren();
+    
+    const boardWidth = this.engine.cols * (TILE_SIZE + PADDING) + PADDING;
+    const boardHeight = this.engine.rows * (TILE_SIZE + PADDING) + PADDING;
+
+    const tray = new PIXI.Graphics();
+    
+    // Tray outer border shadow
+    tray.beginFill(0x000000, 0.4)
+      .drawRoundedRect(0, 4, boardWidth, boardHeight, 20)
+      .endFill();
+      
+    // Tray main border (rich purple)
+    tray.beginFill(0x2d1b4e)
+      .drawRoundedRect(0, 0, boardWidth, boardHeight, 20)
+      .endFill();
+      
+    // Tray inner area (darker background)
+    tray.beginFill(0x1a0f2e)
+      .drawRoundedRect(8, 8, boardWidth - 16, boardHeight - 16, 16)
+      .endFill();
+
+    // Top border highlight for glossy effect
+    tray.beginFill(0xffffff, 0.15)
+      .drawRoundedRect(8, 2, boardWidth - 16, 6, 4)
+      .endFill();
+
+    this.boardContainer.addChild(tray);
+
     for (let r = 0; r < this.engine.rows; r++) {
       for (let c = 0; c < this.engine.cols; c++) {
         const slot = new PIXI.Graphics();
         const isAlternate = (r + c) % 2 === 0;
+        
+        const x = c * (TILE_SIZE + PADDING) + PADDING;
+        const y = r * (TILE_SIZE + PADDING) + PADDING;
+        
         slot
-          .beginFill(isAlternate ? 0x000000 : 0xffffff, isAlternate ? 0.2 : 0.1)
-          .drawRoundedRect(
-            c * (TILE_SIZE + PADDING) + PADDING,
-            r * (TILE_SIZE + PADDING) + PADDING,
-            TILE_SIZE,
-            TILE_SIZE,
-            16,
-          )
+          .beginFill(isAlternate ? 0x3d2b5e : 0x4d3b6e, 0.7)
+          .drawRoundedRect(x, y, TILE_SIZE, TILE_SIZE, 12)
           .endFill();
+          
+        // Inner shadow effect
+        slot.lineStyle(2, 0x000000, 0.25)
+          .drawRoundedRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2, 11)
+          .lineStyle(0);
+          
         this.boardContainer.addChild(slot);
       }
     }
@@ -303,11 +335,19 @@ export class PixiBoard {
 
   spawnFloatingText(x: number, y: number, text: string, color: string) {
     const popup = new PIXI.Text(text, {
-      fontFamily: "sans-serif",
-      fontSize: 22,
+      fontFamily: "'Fredoka One', 'Varela Round', 'Comic Sans MS', sans-serif",
+      fontSize: 28,
       fontWeight: "900",
       fill: color,
       align: "center",
+      stroke: "#000000",
+      strokeThickness: 5,
+      dropShadow: true,
+      dropShadowColor: "#000000",
+      dropShadowBlur: 4,
+      dropShadowAngle: Math.PI / 3,
+      dropShadowDistance: 4,
+      lineJoin: "round",
     });
     popup.anchor.set(0.5);
     popup.x = x;
@@ -364,33 +404,43 @@ export class PixiBoard {
 
   spawnParticles(x: number, y: number) {
     const starTex = this.textures.star;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 15; i++) {
       let p: PIXI.Container;
       if (starTex) {
         const sprite = new PIXI.Sprite(starTex);
         sprite.anchor.set(0.5);
-        sprite.width = 12;
-        sprite.height = 12;
+        sprite.width = 16;
+        sprite.height = 16;
         p = sprite;
       } else {
         const g = new PIXI.Graphics();
-        g.beginFill(0xffffff).drawCircle(0, 0, 4).endFill();
+        const colors = [0xffd700, 0xff69b4, 0x00ffff, 0xffffff, 0x7fff00];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        g.beginFill(color).drawCircle(0, 0, Math.random() * 5 + 3).endFill();
         p = g;
       }
       p.x = x;
       p.y = y;
       this.particleContainer.addChild(p);
 
-      const vx = (Math.random() - 0.5) * 6;
-      const vy = (Math.random() - 0.5) * 6;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 3;
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      const gravity = 0.2;
 
       let frames = 0;
+      let currVy = vy;
       const ticker = (delta: number) => {
         frames += delta;
-        p.x += vx;
-        p.y += vy;
-        p.alpha -= 0.06;
-        if (frames > 18) {
+        currVy += gravity * delta;
+        p.x += vx * delta;
+        p.y += currVy * delta;
+        
+        const scale = 1 - frames / 40;
+        p.scale.set(Math.max(0, scale));
+        
+        if (frames > 40) {
           this.particleContainer.removeChild(p);
           this.app.ticker.remove(ticker);
           p.destroy();
@@ -403,8 +453,8 @@ export class PixiBoard {
   destroy() {
     this.app.destroy(true, {
       children: true,
-      texture: true,
-      baseTexture: true,
+      texture: false,
+      baseTexture: false,
     });
   }
 }
