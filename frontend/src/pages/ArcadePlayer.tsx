@@ -77,7 +77,6 @@ export default function ArcadePlayer() {
           title={title}
           className="absolute inset-0 w-full h-full border-0"
           allow="autoplay; fullscreen; focus-without-user-activation; gamepad; keyboard-map *; camera; microphone"
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         />
       </main>
     </div>
