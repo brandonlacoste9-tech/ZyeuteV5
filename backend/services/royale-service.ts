@@ -112,31 +112,139 @@ async function getWalletBalanceDirect(
   return Number(result.rows[0]?.token_balance ?? DEFAULT_WALLET_TOKENS);
 }
 
-/**
- * Get or auto-create today's daily Poutine Royale tournament.
- * One tournament per calendar day (America/Toronto timezone).
- */
-export async function getOrCreateDailyTournament(): Promise<TournamentWithStats> {
-  const now = new Date();
+interface TournamentRow {
+  id: string;
+  title: string;
+  entry_fee: number;
+  prize_pool: number;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
+function mapTournamentRow(
+  row: TournamentRow,
+  entryCount: number,
+  topScore: number | null,
+): TournamentWithStats {
+  const expiresAt = new Date(row.expires_at);
+  return {
+    id: row.id,
+    title: row.title,
+    entryFee: Number(row.entry_fee),
+    prizePool: Number(row.prize_pool),
+    status: row.status,
+    expiresAt: expiresAt.toISOString(),
+    createdAt: new Date(row.created_at).toISOString(),
+    entryCount,
+    topScore,
+    timeRemainingMs: Math.max(0, expiresAt.getTime() - Date.now()),
+  };
+}
+
+async function loadTournamentStats(tournamentId: string): Promise<{
+  entryCount: number;
+  topScore: number | null;
+}> {
+  if (supabaseAdmin) {
+    const { data: scores, error } = await supabaseAdmin
+      .from("royale_scores")
+      .select("user_id, score")
+      .eq("tournament_id", tournamentId);
+    if (error) throw new Error(error.message);
+    const rows = scores ?? [];
+    const entryCount = new Set(rows.map((r) => r.user_id)).size;
+    const topScore =
+      rows.length > 0
+        ? Math.max(...rows.map((r) => Number(r.score ?? 0)))
+        : null;
+    return { entryCount, topScore };
+  }
+
   const client = createDirectClient();
   await client.connect();
   try {
-    // Drizzle pool updates fail on Supabase pooler — use dedicated pg.Client
+    const stats = await client.query<{
+      entry_count: number;
+      top_score: number | null;
+    }>(
+      `SELECT COUNT(DISTINCT user_id)::int AS entry_count,
+              MAX(score) AS top_score
+       FROM royale_scores
+       WHERE tournament_id = $1`,
+      [tournamentId],
+    );
+    const s = stats.rows[0];
+    return {
+      entryCount: s?.entry_count ?? 0,
+      topScore: s?.top_score != null ? Number(s.top_score) : null,
+    };
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function getOrCreateDailyTournamentViaAdmin(
+  now: Date,
+): Promise<TournamentWithStats> {
+  if (!supabaseAdmin) {
+    throw new Error("Supabase admin client not configured");
+  }
+
+  await supabaseAdmin
+    .from("tournaments")
+    .update({ status: "completed" })
+    .eq("status", "active")
+    .lt("expires_at", now.toISOString());
+
+  const { data: existing, error: selectErr } = await supabaseAdmin
+    .from("tournaments")
+    .select("id, title, entry_fee, prize_pool, status, expires_at, created_at")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (selectErr) throw new Error(selectErr.message);
+
+  let row = existing as TournamentRow | null;
+  if (!row) {
+    const midnight = new Date(now);
+    midnight.setHours(23, 59, 59, 999);
+    const { data: created, error: insertErr } = await supabaseAdmin
+      .from("tournaments")
+      .insert({
+        title: formatDailyTitle(now),
+        entry_fee: DAILY_ENTRY_FEE,
+        prize_pool: DAILY_PRIZE_POOL,
+        status: "active",
+        expires_at: midnight.toISOString(),
+      })
+      .select(
+        "id, title, entry_fee, prize_pool, status, expires_at, created_at",
+      )
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+    row = created as TournamentRow;
+  }
+
+  const stats = await loadTournamentStats(row.id);
+  return mapTournamentRow(row, stats.entryCount, stats.topScore);
+}
+
+async function getOrCreateDailyTournamentViaSql(
+  now: Date,
+): Promise<TournamentWithStats> {
+  const client = createDirectClient();
+  await client.connect();
+  try {
     await client.query(
       `UPDATE tournaments SET status = 'completed'
        WHERE status = 'active' AND expires_at < $1`,
       [now],
     );
 
-    const existing = await client.query<{
-      id: string;
-      title: string;
-      entry_fee: number;
-      prize_pool: number;
-      status: string;
-      expires_at: Date;
-      created_at: Date;
-    }>(
+    const existing = await client.query<TournamentRow>(
       `SELECT id, title, entry_fee, prize_pool, status, expires_at, created_at
        FROM tournaments
        WHERE status = 'active'
@@ -148,44 +256,36 @@ export async function getOrCreateDailyTournament(): Promise<TournamentWithStats>
     if (!row) {
       const midnight = new Date(now);
       midnight.setHours(23, 59, 59, 999);
-      const title = formatDailyTitle(now);
-      const created = await client.query<typeof row>(
+      const created = await client.query<TournamentRow>(
         `INSERT INTO tournaments (title, entry_fee, prize_pool, status, expires_at)
          VALUES ($1, $2, $3, 'active', $4)
          RETURNING id, title, entry_fee, prize_pool, status, expires_at, created_at`,
-        [title, DAILY_ENTRY_FEE, DAILY_PRIZE_POOL, midnight],
+        [formatDailyTitle(now), DAILY_ENTRY_FEE, DAILY_PRIZE_POOL, midnight],
       );
       row = created.rows[0];
     }
 
-    const stats = await client.query<{
-      entry_count: number;
-      top_score: number | null;
-    }>(
-      `SELECT COUNT(DISTINCT user_id)::int AS entry_count,
-              MAX(score) AS top_score
-       FROM royale_scores
-       WHERE tournament_id = $1`,
-      [row.id],
-    );
-    const s = stats.rows[0];
-    const expiresAt = new Date(row.expires_at);
-
-    return {
-      id: row.id,
-      title: row.title,
-      entryFee: Number(row.entry_fee),
-      prizePool: Number(row.prize_pool),
-      status: row.status,
-      expiresAt: expiresAt.toISOString(),
-      createdAt: new Date(row.created_at).toISOString(),
-      entryCount: s?.entry_count ?? 0,
-      topScore: s?.top_score != null ? Number(s.top_score) : null,
-      timeRemainingMs: Math.max(0, expiresAt.getTime() - Date.now()),
-    };
+    const stats = await loadTournamentStats(row.id);
+    return mapTournamentRow(row, stats.entryCount, stats.topScore);
   } finally {
     await client.end().catch(() => {});
   }
+}
+
+/**
+ * Get or auto-create today's daily Poutine Royale tournament.
+ * Prefer Supabase HTTP (service role) — Render often has pooler DATABASE_URL issues.
+ */
+export async function getOrCreateDailyTournament(): Promise<TournamentWithStats> {
+  const now = new Date();
+  if (supabaseAdmin) {
+    try {
+      return await getOrCreateDailyTournamentViaAdmin(now);
+    } catch (err) {
+      console.warn("[Royale] supabaseAdmin tournament path failed:", err);
+    }
+  }
+  return getOrCreateDailyTournamentViaSql(now);
 }
 
 function formatDailyTitle(date: Date): string {
@@ -350,6 +450,34 @@ export async function getLeaderboard(
   tournamentId: string,
   limit = 50,
 ): Promise<LeaderboardEntry[]> {
+  if (supabaseAdmin) {
+    const { data: rows, error } = await supabaseAdmin
+      .from("royale_scores")
+      .select(
+        "user_id, score, layers, created_at, user_profiles(username, display_name, avatar_url)",
+      )
+      .eq("tournament_id", tournamentId)
+      .order("score", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+
+    return (rows ?? []).map((r, i) => {
+      const profile = Array.isArray(r.user_profiles)
+        ? r.user_profiles[0]
+        : r.user_profiles;
+      return {
+        rank: i + 1,
+        userId: r.user_id,
+        username: profile?.username ?? null,
+        displayName: profile?.display_name ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
+        score: Number(r.score),
+        layers: Number(r.layers),
+        submittedAt: r.created_at,
+      };
+    });
+  }
+
   const rows = await db
     .select({
       userId: royaleScores.userId,
@@ -382,6 +510,30 @@ export async function getMyRank(
   userId: string,
   tournamentId: string,
 ): Promise<{ rank: number; score: number; layers: number } | null> {
+  if (supabaseAdmin) {
+    const { data: entry, error } = await supabaseAdmin
+      .from("royale_scores")
+      .select("score, layers")
+      .eq("user_id", userId)
+      .eq("tournament_id", tournamentId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!entry) return null;
+
+    const { count, error: rankErr } = await supabaseAdmin
+      .from("royale_scores")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId)
+      .gt("score", entry.score);
+    if (rankErr) throw new Error(rankErr.message);
+
+    return {
+      rank: (count ?? 0) + 1,
+      score: Number(entry.score),
+      layers: Number(entry.layers),
+    };
+  }
+
   const [entry] = await db
     .select()
     .from(royaleScores)
