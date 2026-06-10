@@ -213,16 +213,45 @@ function WebGamesCatalog() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch("/api/gamedistribution/rss")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setGames(data);
-        setLoading(false);
-      })
-      .catch(e => {
-        console.error(e);
-        setLoading(false);
-      });
+    // Instead of relying on strict third-party APIs that block live websites,
+    // we use a curated list of unblocked, high-quality HTML5 games.
+    const curatedGames: GDGame[] = [
+      {
+        Title: "Shell Shockers",
+        Md5: "shell-shockers",
+        Description: "Le jeu de tir multijoueur avec des œufs le plus populaire au monde!",
+        Url: "https://www.crazygames.com/embed/shell-shockers",
+        Asset: ["https://images.crazygames.com/shellshockersio/20210810173200/shellshockersio-cover?auto=format,compress&q=75&cs=strip&w=400"],
+        Category: ["Action"]
+      },
+      {
+        Title: "Smash Karts",
+        Md5: "smash-karts",
+        Description: "Combattez d'autres joueurs en ligne dans des courses de karts explosives.",
+        Url: "https://www.crazygames.com/embed/smash-karts",
+        Asset: ["https://images.crazygames.com/smash-karts/20200526084059/smash-karts-cover?auto=format,compress&q=75&cs=strip&w=400"],
+        Category: ["Course"]
+      },
+      {
+        Title: "Basket Random",
+        Md5: "basket-random",
+        Description: "Un jeu de basket hilarant basé sur la physique.",
+        Url: "https://www.crazygames.com/embed/basket-random",
+        Asset: ["https://images.crazygames.com/games/basket-random/cover-1608035100000.png?auto=format,compress&q=75&cs=strip&w=400"],
+        Category: ["Sports"]
+      },
+      {
+        Title: "Moto X3M",
+        Md5: "moto-x3m",
+        Description: "Affrontez des parcours d'obstacles intenses en moto.",
+        Url: "https://www.crazygames.com/embed/moto-x3m",
+        Asset: ["https://images.crazygames.com/games/moto-x3m/cover-1586173995801.jpeg?auto=format,compress&q=75&cs=strip&w=400"],
+        Category: ["Course"]
+      }
+    ];
+    
+    setGames(curatedGames);
+    setLoading(false);
   }, []);
 
   if (loading) {
