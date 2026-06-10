@@ -57,6 +57,7 @@ import utilRoutes from "./routes/utils.js";
 import royaleRoutes from "./routes/royale.js";
 import gridRushRoutes from "./routes/grid-rush.js";
 import carteSucreeRoutes from "./routes/carte-sucree.js";
+import gamedistributionRoutes from "./routes/gamedistribution.js";
 import storyRoutes from "./routes/stories.js";
 import trendingRoutes from "./routes/trending.js";
 import notificationRoutes from "./routes/notifications.js";
@@ -348,6 +349,7 @@ export async function registerRoutes(
   app.use("/api/royale", attachBearerUserId, royaleRoutes);
   app.use("/api/grid-rush", attachBearerUserId, gridRushRoutes);
   app.use("/api/carte-sucree", attachBearerUserId, carteSucreeRoutes);
+  app.use("/api/gamedistribution", gamedistributionRoutes);
 
   // ============ VERTEX AI ROUTES ============
   app.use("/api/ai/vertex", aiVertexRoutes);

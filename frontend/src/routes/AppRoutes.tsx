@@ -72,6 +72,7 @@ const PoutineStackGame = lazy(() =>
 );
 const HiveTap = lazy(() => import("@/pages/HiveTap"));
 const CarteSucree = lazy(() => import("@/pages/CarteSucree"));
+const ArcadePlayer = lazy(() => import("@/pages/ArcadePlayer"));
 
 const TagsSettings = lazy(() => import("@/pages/settings/TagsSettings"));
 const CommentsSettings = lazy(
@@ -682,6 +683,14 @@ export function AppRoutes() {
           <Route
             path="/arcade/quiz"
             element={<Navigate to="/arcade/carte-sucree" replace />}
+          />
+          <Route
+            path="/arcade/play"
+            element={
+              <RequireRealAccount>
+                <ArcadePlayer />
+              </RequireRealAccount>
+            }
           />
 
           <Route path="/" element={<Navigate to="/feed" replace />} />

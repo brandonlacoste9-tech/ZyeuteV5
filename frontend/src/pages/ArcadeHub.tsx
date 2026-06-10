@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Candy, Gamepad2, HelpCircle, Zap } from "lucide-react";
+import { ArrowLeft, Candy, Gamepad2, HelpCircle, Zap, Globe, Play } from "lucide-react";
 import { FaHive } from "react-icons/fa";
 import { ArcadeBackdrop } from "@/components/arcade/ArcadeBackdrop";
 import {
@@ -188,10 +188,85 @@ export default function ArcadeHub() {
           ))}
         </div>
 
+        <WebGamesCatalog />
+
         <p className={`text-center arcade-insert-coin mt-12 opacity-70`}>
           CREDIT 00
         </p>
       </div>
     </ArcadeBackdrop>
+  );
+}
+
+interface GDGame {
+  Title: string;
+  Md5: string;
+  Description: string;
+  Url: string;
+  Asset: string[];
+  Category: string[];
+}
+
+function WebGamesCatalog() {
+  const [games, setGames] = useState<GDGame[]>([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch("/api/gamedistribution/rss")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setGames(data);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error(e);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return <div className={`text-center p-8 mt-12 ${arcadeTextMuted}`}>Chargement du catalogue HTML5...</div>;
+  }
+
+  if (games.length === 0) return null;
+
+  return (
+    <div className="mt-20">
+      <div className="flex items-center gap-3 mb-8">
+        <Globe className="w-6 h-6 text-cyan-400" />
+        <h2 className="text-xl sm:text-2xl font-bold arcade-title-gradient arcade-font-pixel">
+          NOUVEAUTÉS DU WEB
+        </h2>
+      </div>
+
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {games.map((g) => (
+          <motion.div
+            key={g.Md5}
+            whileHover={{ y: -4 }}
+            className="bg-[#2d1b4e]/80 rounded-xl overflow-hidden border border-[#3d2b5e] flex flex-col group cursor-pointer"
+            onClick={() => navigate(`/arcade/play?url=${encodeURIComponent(g.Url)}&title=${encodeURIComponent(g.Title)}`)}
+          >
+            <div className="relative aspect-video overflow-hidden bg-black/50">
+              <img 
+                src={g.Asset?.[0] || ""} 
+                alt={g.Title} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center pl-1 shadow-[0_0_15px_rgba(6,182,212,0.6)]">
+                  <Play className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </div>
+            <div className="p-3">
+              <h3 className="font-bold text-sm text-white truncate mb-1">{g.Title}</h3>
+              <p className="text-xs text-purple-300/70 truncate">{g.Category?.[0] || "Casual"}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
 }
