@@ -134,6 +134,26 @@ const CreateButton: React.FC = () => (
   </div>
 );
 
+const ArcadeIcon = ({ active }: { active: boolean }) => (
+  <svg
+    className="w-6 h-6"
+    fill={active ? "currentColor" : "none"}
+    stroke="currentColor"
+    strokeWidth={active ? 0 : 2}
+    viewBox="0 0 24 24"
+  >
+    {active ? (
+      <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
+    ) : (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+      />
+    )}
+  </svg>
+);
+
 const navItems: NavItem[] = [
   {
     to: "/",
@@ -155,10 +175,10 @@ const navItems: NavItem[] = [
     isCreate: true,
   },
   {
-    to: "/notifications",
-    label: "Activité",
-    icon: <BellIcon active={false} />,
-    activeIcon: <BellIcon active={true} />,
+    to: "/arcade",
+    label: "Arcade",
+    icon: <ArcadeIcon active={false} />,
+    activeIcon: <ArcadeIcon active={true} />,
   },
   {
     to: "/profile/me",
