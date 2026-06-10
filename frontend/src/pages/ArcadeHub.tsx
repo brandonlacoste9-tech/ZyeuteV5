@@ -66,12 +66,21 @@ function WebGamesCatalog() {
   const navigate = useNavigate();
   const [games, setGames] = useState<WebGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("puzzle");
+
+  const categories = [
+    { id: "puzzle", label: "Casse-tête & Cartes" },
+    { id: "action", label: "Action & Shooter" },
+    { id: "casual", label: "Casual & Bulles" },
+    { id: "course", label: "Course & Voitures" },
+  ];
 
   useEffect(() => {
     async function fetchGames() {
+      setLoading(true);
       try {
-        // Fetch from our backend proxy to avoid CORS and get curated games
-        const res = await fetch("/api/gamedistribution/rss");
+        // Fetch from our backend proxy with the selected category
+        const res = await fetch(`/api/gamedistribution/rss?category=${activeCategory}`);
         const data = await res.json();
         if (data && Array.isArray(data)) {
           setGames(data);
@@ -83,23 +92,38 @@ function WebGamesCatalog() {
       }
     }
     fetchGames();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="mt-20 flex justify-center opacity-50">
-        <div className="arcade-font-pixel">Chargement du catalogue...</div>
-      </div>
-    );
-  }
+  }, [activeCategory]);
 
   return (
-    <div className="mt-20">
-      <div className="flex items-center gap-3 mb-8">
+    <div className="mt-12">
+      <div className="flex flex-col items-center gap-6 mb-8">
         <h2 className="text-xl sm:text-2xl font-bold arcade-title-gradient arcade-font-pixel">
-          NOUVEAUTÉS DU WEB
+          CATALOGUE WEB
         </h2>
+        
+        {/* Neon Tabs Menu */}
+        <div className="flex flex-wrap justify-center gap-3">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold uppercase tracking-wider transition-all duration-300 border ${
+                activeCategory === cat.id
+                  ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+                  : "bg-transparent border-[#3d2b5e] text-[#a586d6] hover:border-[#5a4282] hover:text-[#d4c3f0]"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {loading ? (
+        <div className="mt-20 flex justify-center opacity-50 min-h-[300px]">
+          <div className="arcade-font-pixel animate-pulse text-cyan-400">Chargement...</div>
+        </div>
+      ) : (
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
         {games.map((g) => (
@@ -123,6 +147,7 @@ function WebGamesCatalog() {
           </motion.div>
         ))}
       </div>
+      )}
     </div>
   );
 }

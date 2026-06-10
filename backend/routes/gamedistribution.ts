@@ -5,8 +5,18 @@ const router = Router();
 
 router.get("/rss", async (req, res) => {
   try {
-    // Fetch high-quality puzzle, bubble, block, and card games based on user preference
-    const url = "https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&tags=bubble,block,puzzle,cards&type=html5&amount=16&page=1&format=json";
+    const category = (req.query.category as string) || "action";
+    let tags = "";
+    
+    if (category === "puzzle") tags = "puzzle,cards,board";
+    else if (category === "action") tags = "action,shooter,fighting";
+    else if (category === "casual") tags = "casual,bubble,block";
+    else if (category === "course") tags = "racing,cars,driving";
+    else tags = "action,shooter"; // fallback
+
+    // Add a cache buster timestamp so Vercel doesn't heavily cache across tabs
+    const cacheBuster = Date.now();
+    const url = `https://catalog.api.gamedistribution.com/api/v2.0/rss/All/?collection=all&tags=${tags}&type=html5&amount=16&page=1&format=json&cb=${cacheBuster}`;
     const response = await axios.get(url, { timeout: 8000 });
     res.json(response.data);
   } catch (error: any) {
