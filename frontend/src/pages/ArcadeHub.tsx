@@ -188,11 +188,94 @@ export default function ArcadeHub() {
           ))}
         </div>
 
+        <WebGamesCatalog />
 
         <p className={`text-center arcade-insert-coin mt-12 opacity-70`}>
           CREDIT 00
         </p>
       </div>
     </ArcadeBackdrop>
+  );
+}
+
+interface WebGame {
+  Title: string;
+  Md5: string;
+  Description: string;
+  Url: string;
+  Asset: string[];
+  Category: string[];
+}
+
+function WebGamesCatalog() {
+  const navigate = useNavigate();
+  
+  // A curated list of unblocked, high-quality HTML5 games.
+  const games: WebGame[] = [
+    {
+      Title: "Shell Shockers",
+      Md5: "shell-shockers",
+      Description: "Le jeu de tir multijoueur avec des œufs le plus populaire au monde!",
+      Url: "https://www.crazygames.com/embed/shell-shockers",
+      Asset: ["https://images.crazygames.com/shellshockersio/20210810173200/shellshockersio-cover?auto=format,compress&q=75&cs=strip&w=400"],
+      Category: ["Action"]
+    },
+    {
+      Title: "Smash Karts",
+      Md5: "smash-karts",
+      Description: "Combattez d'autres joueurs en ligne dans des courses de karts explosives.",
+      Url: "https://www.crazygames.com/embed/smash-karts",
+      Asset: ["https://images.crazygames.com/smash-karts/20200526084059/smash-karts-cover?auto=format,compress&q=75&cs=strip&w=400"],
+      Category: ["Course"]
+    },
+    {
+      Title: "Basket Random",
+      Md5: "basket-random",
+      Description: "Un jeu de basket hilarant basé sur la physique.",
+      Url: "https://www.crazygames.com/embed/basket-random",
+      Asset: ["https://images.crazygames.com/games/basket-random/cover-1608035100000.png?auto=format,compress&q=75&cs=strip&w=400"],
+      Category: ["Sports"]
+    },
+    {
+      Title: "Moto X3M",
+      Md5: "moto-x3m",
+      Description: "Affrontez des parcours d'obstacles intenses en moto.",
+      Url: "https://www.crazygames.com/embed/moto-x3m",
+      Asset: ["https://images.crazygames.com/games/moto-x3m/cover-1586173995801.jpeg?auto=format,compress&q=75&cs=strip&w=400"],
+      Category: ["Course"]
+    }
+  ];
+
+  return (
+    <div className="mt-20">
+      <div className="flex items-center gap-3 mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold arcade-title-gradient arcade-font-pixel">
+          NOUVEAUTÉS DU WEB
+        </h2>
+      </div>
+
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+        {games.map((g) => (
+          <motion.div
+            key={g.Md5}
+            whileHover={{ y: -4 }}
+            className="bg-[#2d1b4e]/80 rounded-xl overflow-hidden border border-[#3d2b5e] flex flex-col group cursor-pointer"
+            onClick={() => navigate(`/arcade/play?url=${encodeURIComponent(g.Url)}&title=${encodeURIComponent(g.Title)}`)}
+          >
+            <div className="relative aspect-[4/3] overflow-hidden bg-black/50">
+              <img 
+                src={g.Asset[0]} 
+                alt={g.Title} 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+              />
+            </div>
+            <div className="p-3">
+              <h3 className="font-bold text-sm text-white truncate mb-1">{g.Title}</h3>
+              <p className="text-xs text-purple-300/70 line-clamp-2">{g.Description}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
   );
 }
