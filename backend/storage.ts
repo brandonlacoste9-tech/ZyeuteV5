@@ -1585,6 +1585,12 @@ export class DatabaseStorage implements IStorage {
   ): Promise<boolean> {
     return traceDatabase("TRANSACTION", "execute_transfer", async () => {
       try {
+        const { transferCashCredits } = await import("./supabase-arcade-db.js");
+        const { supabaseAdmin } = await import("./supabase-auth.js");
+        if (supabaseAdmin) {
+          return await transferCashCredits(senderId, receiverId, amount);
+        }
+
         return await db.transaction(async (tx) => {
           // 1. Check Sender Balance
           const sender = await tx

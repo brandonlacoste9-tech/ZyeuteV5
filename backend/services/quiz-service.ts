@@ -4,6 +4,12 @@ import {
   QUEBEC_QUIZ_QUESTIONS,
   type QuebecQuizQuestion,
 } from "../data/quebec-quiz-questions.js";
+import { supabaseAdmin } from "../supabase-auth.js";
+import {
+  creditTokenBalance,
+  fetchProfilesByIds,
+  getTokenBalance,
+} from "../supabase-arcade-db.js";
 
 export const QUIZ_QUESTIONS_PER_DAY = 5;
 const REWARD_PER_CORRECT = 25;
@@ -152,6 +158,92 @@ export function computeQuizReward(correctCount: number): number {
   return Math.min(correctCount * REWARD_PER_CORRECT, MAX_DAILY_REWARD);
 }
 
+async function submitDailyQuizViaAdmin(
+  userId: string,
+  answers: Record<string, number>,
+): Promise<QuizSubmitResult> {
+  if (!supabaseAdmin) throw new Error("Supabase admin client not configured");
+
+  const quizDate = torontoQuizDate();
+  const { score, correctCount } = scoreAnswers(quizDate, answers);
+  const totalQuestions = QUIZ_QUESTIONS_PER_DAY;
+  const reward = computeQuizReward(correctCount);
+
+  const { data: existing, error: existingErr } = await supabaseAdmin
+    .from("quiz_daily_attempts")
+    .select("score, correct_count, reward_claimed")
+    .eq("user_id", userId)
+    .eq("quiz_date", quizDate)
+    .maybeSingle();
+  if (existingErr) throw new Error(existingErr.message);
+
+  let isNewBest = false;
+  let tokensGranted = 0;
+  let tokenBalance: number;
+
+  if (!existing) {
+    isNewBest = true;
+    const { error: insertErr } = await supabaseAdmin
+      .from("quiz_daily_attempts")
+      .insert({
+        user_id: userId,
+        quiz_date: quizDate,
+        score,
+        correct_count: correctCount,
+        total_questions: totalQuestions,
+        reward_claimed: reward > 0,
+      });
+    if (insertErr) throw new Error(insertErr.message);
+    tokensGranted = reward;
+    tokenBalance =
+      reward > 0
+        ? await creditTokenBalance(userId, reward)
+        : await getTokenBalance(userId);
+  } else {
+    const prevReward = computeQuizReward(Number(existing.correct_count));
+    if (score > Number(existing.score)) {
+      isNewBest = true;
+      const extraReward = Math.max(0, reward - prevReward);
+      tokensGranted = extraReward;
+      const { error: updateErr } = await supabaseAdmin
+        .from("quiz_daily_attempts")
+        .update({
+          score,
+          correct_count: correctCount,
+          total_questions: totalQuestions,
+          reward_claimed: Boolean(existing.reward_claimed) || extraReward > 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+        .eq("quiz_date", quizDate);
+      if (updateErr) throw new Error(updateErr.message);
+      tokenBalance =
+        extraReward > 0
+          ? await creditTokenBalance(userId, extraReward)
+          : await getTokenBalance(userId);
+    } else {
+      tokenBalance = await getTokenBalance(userId);
+    }
+  }
+
+  const { count, error: rankErr } = await supabaseAdmin
+    .from("quiz_daily_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("quiz_date", quizDate)
+    .gt("score", score);
+  if (rankErr) throw new Error(rankErr.message);
+
+  return {
+    score,
+    correctCount,
+    totalQuestions,
+    isNewBest,
+    reward: tokensGranted,
+    tokenBalance,
+    rank: (count ?? 0) + 1,
+  };
+}
+
 export async function submitDailyQuiz(
   userId: string,
   answers: Record<string, number>,
@@ -160,6 +252,10 @@ export async function submitDailyQuiz(
   const { score, correctCount } = scoreAnswers(quizDate, answers);
   const totalQuestions = QUIZ_QUESTIONS_PER_DAY;
   const reward = computeQuizReward(correctCount);
+
+  if (supabaseAdmin) {
+    return submitDailyQuizViaAdmin(userId, answers);
+  }
 
   return withTx(async (client) => {
     const existing = await client.query<{
@@ -257,10 +353,26 @@ export async function submitDailyQuiz(
 export async function getMyQuizAttempt(
   userId: string,
 ): Promise<{ score: number; correctCount: number } | null> {
+  const quizDate = torontoQuizDate();
+
+  if (supabaseAdmin) {
+    const { data, error } = await supabaseAdmin
+      .from("quiz_daily_attempts")
+      .select("score, correct_count")
+      .eq("user_id", userId)
+      .eq("quiz_date", quizDate)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return {
+      score: Number(data.score),
+      correctCount: Number(data.correct_count),
+    };
+  }
+
   const client = createDirectClient();
   await client.connect();
   try {
-    const quizDate = torontoQuizDate();
     const result = await client.query<{
       score: number;
       correct_count: number;
@@ -280,10 +392,39 @@ export async function getMyQuizAttempt(
 export async function getQuizLeaderboard(
   limit = 10,
 ): Promise<QuizLeaderboardEntry[]> {
+  const quizDate = torontoQuizDate();
+
+  if (supabaseAdmin) {
+    const { data: rows, error } = await supabaseAdmin
+      .from("quiz_daily_attempts")
+      .select("user_id, score, correct_count, updated_at")
+      .eq("quiz_date", quizDate)
+      .order("score", { ascending: false })
+      .order("correct_count", { ascending: false })
+      .order("updated_at", { ascending: true })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+
+    const profiles = await fetchProfilesByIds(
+      (rows ?? []).map((r) => r.user_id as string),
+    );
+
+    return (rows ?? []).map((row, i) => {
+      const profile = profiles.get(row.user_id as string);
+      return {
+        rank: i + 1,
+        userId: row.user_id as string,
+        username: profile?.username ?? null,
+        displayName: profile?.display_name ?? null,
+        score: Number(row.score),
+        correctCount: Number(row.correct_count),
+      };
+    });
+  }
+
   const client = createDirectClient();
   await client.connect();
   try {
-    const quizDate = torontoQuizDate();
     const result = await client.query<{
       user_id: string;
       username: string | null;

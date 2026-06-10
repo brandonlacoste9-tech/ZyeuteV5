@@ -3,6 +3,11 @@ import { royaleScores, users } from "../../shared/schema.js";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { supabaseAdmin } from "../supabase-auth.js";
 import { createDirectClient, type PgQueryable } from "../db-direct.js";
+import {
+  creditTokenBalance,
+  fetchProfilesByIds,
+  getTokenBalance,
+} from "../supabase-arcade-db.js";
 
 export interface LeaderboardEntry {
   rank: number;
@@ -329,6 +334,99 @@ export interface SubmitResult {
  * Drizzle's db.transaction()). The score upsert + wallet credit are atomic:
  * the row is locked FOR UPDATE so the reward can never double-settle.
  */
+async function submitScoreViaAdmin(
+  userId: string,
+  tournamentId: string,
+  score: number,
+  layers: number,
+  metadata: Record<string, unknown>,
+): Promise<Omit<SubmitResult, "rank">> {
+  if (!supabaseAdmin) throw new Error("Supabase admin client not configured");
+
+  const { data: tournament, error: tourErr } = await supabaseAdmin
+    .from("tournaments")
+    .select("status")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (tourErr) throw new Error(tourErr.message);
+  if (!tournament) throw new Error("Tournoi introuvable");
+  if (tournament.status !== "active") throw new Error("Ce tournoi est terminé");
+
+  const { data: existing, error: existingErr } = await supabaseAdmin
+    .from("royale_scores")
+    .select("id, score, layers")
+    .eq("user_id", userId)
+    .eq("tournament_id", tournamentId)
+    .maybeSingle();
+  if (existingErr) throw new Error(existingErr.message);
+
+  let entryId: string;
+  let bestScore: number;
+  let bestLayers: number;
+  let isNewBest = false;
+
+  if (existing) {
+    if (score <= Number(existing.score)) {
+      entryId = existing.id;
+      bestScore = Number(existing.score);
+      bestLayers = Number(existing.layers);
+    } else {
+      const { data: updated, error: updateErr } = await supabaseAdmin
+        .from("royale_scores")
+        .update({
+          score,
+          layers,
+          metadata,
+          created_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("id, layers")
+        .single();
+      if (updateErr) throw new Error(updateErr.message);
+      entryId = updated.id;
+      bestScore = score;
+      bestLayers = Number(updated.layers);
+      isNewBest = true;
+    }
+  } else {
+    const { data: created, error: insertErr } = await supabaseAdmin
+      .from("royale_scores")
+      .insert({
+        user_id: userId,
+        tournament_id: tournamentId,
+        score,
+        layers,
+        metadata,
+      })
+      .select("id, layers")
+      .single();
+    if (insertErr) throw new Error(insertErr.message);
+    entryId = created.id;
+    bestScore = score;
+    bestLayers = Number(created.layers);
+    isNewBest = true;
+  }
+
+  const reward = isNewBest ? computeReward(score) : 0;
+  const tokenBalance =
+    reward > 0
+      ? await creditTokenBalance(userId, reward)
+      : await getTokenBalance(userId);
+
+  return {
+    entry: {
+      id: entryId,
+      userId,
+      tournamentId,
+      score: bestScore,
+      layers: bestLayers,
+    },
+    isNewBest,
+    reward,
+    tokenBalance,
+  };
+}
+
 export async function submitScore(
   userId: string,
   tournamentId: string,
@@ -339,6 +437,18 @@ export async function submitScore(
   // Basic anti-cheat validation
   if (score < 0 || score > 200) throw new Error("Score invalide");
   if (layers < 0 || layers > score + 5) throw new Error("Données invalides");
+
+  if (supabaseAdmin) {
+    const result = await submitScoreViaAdmin(
+      userId,
+      tournamentId,
+      score,
+      layers,
+      metadata ?? {},
+    );
+    const rank = await getPlayerRank(userId, tournamentId, result.entry.score);
+    return { ...result, rank };
+  }
 
   const metadataJson = JSON.stringify(metadata ?? {});
 
@@ -430,10 +540,20 @@ export async function submitScore(
 }
 
 async function getPlayerRank(
-  userId: string,
+  _userId: string,
   tournamentId: string,
   playerScore: number,
 ): Promise<number> {
+  if (supabaseAdmin) {
+    const { count, error } = await supabaseAdmin
+      .from("royale_scores")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId)
+      .gt("score", playerScore);
+    if (error) throw new Error(error.message);
+    return (count ?? 0) + 1;
+  }
+
   const result = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(royaleScores)
@@ -453,27 +573,27 @@ export async function getLeaderboard(
   if (supabaseAdmin) {
     const { data: rows, error } = await supabaseAdmin
       .from("royale_scores")
-      .select(
-        "user_id, score, layers, created_at, user_profiles(username, display_name, avatar_url)",
-      )
+      .select("user_id, score, layers, created_at")
       .eq("tournament_id", tournamentId)
       .order("score", { ascending: false })
       .limit(limit);
     if (error) throw new Error(error.message);
 
+    const profiles = await fetchProfilesByIds(
+      (rows ?? []).map((r) => r.user_id as string),
+    );
+
     return (rows ?? []).map((r, i) => {
-      const profile = Array.isArray(r.user_profiles)
-        ? r.user_profiles[0]
-        : r.user_profiles;
+      const profile = profiles.get(r.user_id as string);
       return {
         rank: i + 1,
-        userId: r.user_id,
+        userId: r.user_id as string,
         username: profile?.username ?? null,
         displayName: profile?.display_name ?? null,
         avatarUrl: profile?.avatar_url ?? null,
         score: Number(r.score),
         layers: Number(r.layers),
-        submittedAt: r.created_at,
+        submittedAt: r.created_at as string,
       };
     });
   }

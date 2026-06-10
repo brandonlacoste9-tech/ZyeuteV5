@@ -4,6 +4,10 @@ import { gridRushMatches } from "../../shared/schema.js";
 import { eq } from "drizzle-orm";
 import { supabaseAdmin } from "../supabase-auth.js";
 import { createDirectClient, type PgQueryable } from "../db-direct.js";
+import {
+  creditTokenBalance,
+  deductTokenBalance,
+} from "../supabase-arcade-db.js";
 
 export const GRID_RUSH_DURATION_SEC = 45;
 export const ALLOWED_STAKES = [100, 250, 500] as const;
@@ -167,6 +171,256 @@ function activateMatch(now: Date) {
   return { startedAt: now, endsAt, status: "ACTIVE" as const };
 }
 
+type MatchRow = Record<string, unknown>;
+
+async function fetchMatchRow(matchId: string): Promise<MatchRow | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from("grid_rush_matches")
+    .select("*")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function incrementBotScoreAdmin(matchId: string): Promise<void> {
+  if (!supabaseAdmin) return;
+  const match = await fetchMatchRow(matchId);
+  if (!match || match.status !== "ACTIVE") return;
+  await supabaseAdmin!
+    .from("grid_rush_matches")
+    .update({
+      player_2_score: Number(match.player_2_score ?? 0) + 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", matchId)
+    .eq("status", "ACTIVE");
+}
+
+async function incrementScoreAdmin(
+  userId: string,
+  matchId: string,
+): Promise<GridRushMatch> {
+  const match = await fetchMatchRow(matchId);
+  if (!match) throw new Error("Partie introuvable");
+  if (match.player_1_id !== userId && match.player_2_id !== userId) {
+    throw new Error("Tu n'es pas dans cette partie");
+  }
+  if (match.status !== "ACTIVE") throw new Error("La partie n'est pas active");
+  if (match.ends_at && new Date(match.ends_at as string) <= new Date()) {
+    throw new Error("Le temps est écoulé");
+  }
+
+  const isPlayer1 = match.player_1_id === userId;
+  const updatePayload = isPlayer1
+    ? {
+        player_1_score: Number(match.player_1_score ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      }
+    : {
+        player_2_score: Number(match.player_2_score ?? 0) + 1,
+        updated_at: new Date().toISOString(),
+      };
+
+  const { data, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .update(updatePayload)
+    .eq("id", matchId)
+    .eq("status", "ACTIVE")
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Le temps est écoulé");
+  return mapRow(data);
+}
+
+async function finishMatchAdmin(
+  userId: string,
+  matchId: string,
+): Promise<GridRushMatch> {
+  const now = new Date();
+  const match = await fetchMatchRow(matchId);
+  if (!match) throw new Error("Partie introuvable");
+  if (match.status === "COMPLETED") return mapRow(match);
+  if (match.status !== "ACTIVE") {
+    throw new Error("La partie ne peut pas être terminée");
+  }
+  if (match.player_1_id !== userId && match.player_2_id !== userId) {
+    throw new Error("Tu n'es pas dans cette partie");
+  }
+  if (match.ends_at && new Date(match.ends_at as string) > now) {
+    throw new Error("La partie n'est pas encore terminée");
+  }
+
+  const p1Score = Number(match.player_1_score ?? 0);
+  const p2Score = Number(match.player_2_score ?? 0);
+  let winnerId: string | null = null;
+  if (p1Score > p2Score) winnerId = match.player_1_id as string;
+  else if (p2Score > p1Score) winnerId = match.player_2_id as string | null;
+
+  const { data: updated, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .update({
+      status: "COMPLETED",
+      winner_id: winnerId,
+      updated_at: now.toISOString(),
+    })
+    .eq("id", matchId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  const stake = Number(match.stake_tokens ?? 0);
+  if (winnerId) {
+    await creditTokenBalance(winnerId, stake * 2);
+  } else if (p1Score === p2Score) {
+    await creditTokenBalance(match.player_1_id as string, stake);
+    if (match.player_2_id) {
+      await creditTokenBalance(match.player_2_id as string, stake);
+    }
+  }
+
+  cleanScoreRateLimit(matchId);
+  return mapRow(updated);
+}
+
+async function createInviteAdmin(
+  userId: string,
+  stake: StakeTokens,
+): Promise<GridRushMatch> {
+  await deductTokenBalance(userId, stake);
+  const { data, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .insert({
+      player_1_id: userId,
+      stake_tokens: stake,
+      status: "WAITING",
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapRow(data);
+}
+
+async function quickMatchAdmin(
+  userId: string,
+  stake: StakeTokens,
+): Promise<GridRushMatch> {
+  const now = new Date();
+  const { data: waiting } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .select("*")
+    .eq("status", "WAITING")
+    .is("player_2_id", null)
+    .eq("stake_tokens", stake)
+    .neq("player_1_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (waiting) {
+    const { startedAt, endsAt, status } = activateMatch(now);
+    const { data: joined, error } = await supabaseAdmin!
+      .from("grid_rush_matches")
+      .update({
+        player_2_id: userId,
+        status,
+        started_at: startedAt.toISOString(),
+        ends_at: endsAt.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq("id", waiting.id)
+      .eq("status", "WAITING")
+      .is("player_2_id", null)
+      .select("*")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (joined) {
+      await deductTokenBalance(userId, stake);
+      return mapRow(joined);
+    }
+  }
+
+  await deductTokenBalance(userId, stake);
+  const { data: created, error: createErr } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .insert({
+      player_1_id: userId,
+      stake_tokens: stake,
+      status: "WAITING",
+    })
+    .select("*")
+    .single();
+  if (createErr) throw new Error(createErr.message);
+  return mapRow(created);
+}
+
+async function joinMatchAdmin(
+  userId: string,
+  matchId: string,
+): Promise<GridRushMatch> {
+  const now = new Date();
+  const match = await fetchMatchRow(matchId);
+  if (!match) throw new Error("Partie introuvable");
+  if (match.status !== "WAITING") {
+    throw new Error("Cette partie n'est plus disponible");
+  }
+  if (match.player_2_id) throw new Error("Cette partie est déjà pleine");
+  if (match.player_1_id === userId) {
+    throw new Error("Tu ne peux pas rejoindre ta propre partie");
+  }
+
+  const { startedAt, endsAt, status } = activateMatch(now);
+  const { data, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .update({
+      player_2_id: userId,
+      status,
+      started_at: startedAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq("id", matchId)
+    .eq("status", "WAITING")
+    .is("player_2_id", null)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  await deductTokenBalance(userId, Number(match.stake_tokens ?? 0));
+  return mapRow(data);
+}
+
+async function cancelMatchAdmin(
+  userId: string,
+  matchId: string,
+): Promise<GridRushMatch> {
+  const match = await fetchMatchRow(matchId);
+  if (!match) throw new Error("Partie introuvable");
+  if (match.player_1_id !== userId) {
+    throw new Error("Seul l'hôte peut annuler");
+  }
+  if (match.status !== "WAITING" || match.player_2_id) {
+    throw new Error("Cette partie ne peut pas être annulée");
+  }
+  const createdAt = new Date(match.created_at as string);
+  if (Date.now() - createdAt.getTime() > 5 * 60 * 1000) {
+    throw new Error(
+      "Invitation expirée (plus de 5 minutes). Crée une nouvelle partie.",
+    );
+  }
+
+  await creditTokenBalance(userId, Number(match.stake_tokens ?? 0));
+  const { data, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
+    .eq("id", matchId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapRow(data);
+}
+
 // ─── Bot opponent ─────────────────────────────────────────────────────────────
 const BOT_MIN_TICK_MS = 6000;
 const BOT_MAX_TICK_MS = 10000;
@@ -189,12 +443,16 @@ function scheduleBotTick(
         return;
       }
 
-      await queryDirect(
-        `UPDATE grid_rush_matches
-         SET player_2_score = player_2_score + 1, updated_at = NOW()
-         WHERE id = $1 AND status = 'ACTIVE'`,
-        [matchId],
-      );
+      if (supabaseAdmin) {
+        await incrementBotScoreAdmin(matchId);
+      } else {
+        await queryDirect(
+          `UPDATE grid_rush_matches
+           SET player_2_score = player_2_score + 1, updated_at = NOW()
+           WHERE id = $1 AND status = 'ACTIVE'`,
+          [matchId],
+        );
+      }
       scheduleBotTick(matchId, endsAt, player1Id);
     } catch {
       botTimers.delete(matchId);
@@ -211,13 +469,26 @@ function scheduleBotTick(
  */
 export async function recoverBotMatches(): Promise<void> {
   try {
-    const result = await queryDirect(
-      `SELECT id, ends_at, player_1_id
-       FROM grid_rush_matches
-       WHERE status = 'ACTIVE' AND is_bot = true`,
-    );
+    let rows: Array<{ id: string; ends_at: string; player_1_id: string }> = [];
 
-    for (const row of result.rows) {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("grid_rush_matches")
+        .select("id, ends_at, player_1_id")
+        .eq("status", "ACTIVE")
+        .eq("is_bot", true);
+      if (error) throw error;
+      rows = (data ?? []) as typeof rows;
+    } else {
+      const result = await queryDirect(
+        `SELECT id, ends_at, player_1_id
+         FROM grid_rush_matches
+         WHERE status = 'ACTIVE' AND is_bot = true`,
+      );
+      rows = result.rows as typeof rows;
+    }
+
+    for (const row of rows) {
       const matchId = row.id as string;
       const endsAt = new Date(row.ends_at as string);
       const player1Id = row.player_1_id as string;
@@ -231,9 +502,9 @@ export async function recoverBotMatches(): Promise<void> {
       }
     }
 
-    if (result.rows.length > 0) {
+    if (rows.length > 0) {
       console.log(
-        `[GridRush] Recovered ${result.rows.length} active bot match(es) after restart.`,
+        `[GridRush] Recovered ${rows.length} active bot match(es) after restart.`,
       );
     }
   } catch (err) {
@@ -243,6 +514,11 @@ export async function recoverBotMatches(): Promise<void> {
 
 export class GridRushService {
   static async getMatch(matchId: string): Promise<GridRushMatch | null> {
+    if (supabaseAdmin) {
+      const row = await fetchMatchRow(matchId);
+      return row ? mapRow(row) : null;
+    }
+
     const [match] = await db
       .select()
       .from(gridRushMatches)
@@ -256,6 +532,10 @@ export class GridRushService {
     stakeTokens: number,
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
+    if (supabaseAdmin) {
+      return quickMatchAdmin(userId, stake);
+    }
+
     const now = new Date();
 
     return withTx(async (client) => {
@@ -381,6 +661,9 @@ export class GridRushService {
     stakeTokens: number,
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
+    if (supabaseAdmin) {
+      return createInviteAdmin(userId, stake);
+    }
 
     return withTx(async (client) => {
       await deductTokens(client, userId, stake);
@@ -399,6 +682,10 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
+    if (supabaseAdmin) {
+      return joinMatchAdmin(userId, matchId);
+    }
+
     const now = new Date();
 
     return withTx(async (client) => {
@@ -437,6 +724,10 @@ export class GridRushService {
     // Rate limit: one completed grid takes at least ~3s even for a fast player
     checkScoreRateLimit(matchId, userId);
 
+    if (supabaseAdmin) {
+      return incrementScoreAdmin(userId, matchId);
+    }
+
     const result = await queryDirect(
       `UPDATE grid_rush_matches
        SET player_1_score = player_1_score + (CASE WHEN player_1_id = $1 THEN 1 ELSE 0 END),
@@ -472,6 +763,10 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
+    if (supabaseAdmin) {
+      return finishMatchAdmin(userId, matchId);
+    }
+
     const now = new Date();
 
     return withTx(async (client) => {
@@ -529,6 +824,10 @@ export class GridRushService {
     userId: string,
     matchId: string,
   ): Promise<GridRushMatch> {
+    if (supabaseAdmin) {
+      return cancelMatchAdmin(userId, matchId);
+    }
+
     return withTx(async (client) => {
       const sel = await client.query(
         `SELECT * FROM grid_rush_matches WHERE id = $1 LIMIT 1 FOR UPDATE`,
