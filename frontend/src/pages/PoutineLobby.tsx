@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -56,45 +56,79 @@ export default function PoutineLobby() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [myRank, setMyRank] = useState<MyRank | null>(null);
   const [wallet, setWallet] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadingTournament, setLoadingTournament] = useState(true);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
+  const fetchGen = useRef(0);
 
   const fetchAll = useCallback(async () => {
-    setLoadError(false);
+    const gen = ++fetchGen.current;
+    setLoadError(null);
+    setLoadingTournament(true);
+
     try {
       const t = await getTodayTournament();
+      if (gen !== fetchGen.current) return;
+
       if (!t) {
-        setLoadError(true);
+        setTournament(null);
+        setLoadError("Impossible de charger le tournoi du jour.");
         return;
       }
+
       setTournament(t);
       setTimeLeft(t.timeRemainingMs);
+      setLoadingTournament(false);
 
-      const board = await getLeaderboard(t.id, 10);
-      setLeaderboard(board);
+      setLoadingLeaderboard(true);
+      void getLeaderboard(t.id, 10)
+        .then((board) => {
+          if (gen !== fetchGen.current) return;
+          setLeaderboard(board);
+        })
+        .catch((e) => {
+          console.error("[PoutineLobby] leaderboard failed", e);
+        })
+        .finally(() => {
+          if (gen === fetchGen.current) setLoadingLeaderboard(false);
+        });
 
       if (user) {
-        const [rank, balance] = await Promise.all([
-          getMyRank(t.id),
-          getWallet(),
-        ]);
-        setMyRank(rank);
-        setWallet(balance);
+        void getMyRank(t.id)
+          .then((rank) => {
+            if (gen === fetchGen.current) setMyRank(rank);
+          })
+          .catch((e) => {
+            console.error("[PoutineLobby] my-rank failed", e);
+          });
+
+        void getWallet()
+          .then((balance) => {
+            if (gen === fetchGen.current) setWallet(balance);
+          })
+          .catch((e) => {
+            console.error("[PoutineLobby] wallet failed", e);
+          });
+      } else {
+        setMyRank(null);
+        setWallet(null);
       }
     } catch (e) {
       console.error("Failed to load royale data", e);
-      setLoadError(true);
+      if (gen === fetchGen.current) {
+        setTournament(null);
+        setLoadError("Le tournoi est temporairement indisponible.");
+      }
     } finally {
-      setLoading(false);
+      if (gen === fetchGen.current) setLoadingTournament(false);
     }
   }, [user]);
 
   useEffect(() => {
-    fetchAll();
+    void fetchAll();
   }, [fetchAll]);
 
-  // Countdown timer
   useEffect(() => {
     if (timeLeft <= 0) return;
     const interval = setInterval(
@@ -110,7 +144,7 @@ export default function PoutineLobby() {
     navigate(`/arcade/poutine/play/${tournament.id}`);
   };
 
-  if (loading) {
+  if (loadingTournament && !tournament) {
     return <ArcadeLoading icon={Layers} label="Chargement du tournoi…" />;
   }
 
@@ -137,23 +171,16 @@ export default function PoutineLobby() {
       }
     >
       <div className="space-y-6 pb-6">
-        {/* Load error */}
         {loadError && !tournament && (
           <div className={`${arcadeCard} border-red-500/30 p-6 text-center`}>
             <Wrench className="w-10 h-10 arcade-text-yellow mx-auto mb-3" />
             <p className="arcade-text-muted font-bold mb-1">
               Le tournoi est en pause technique
             </p>
-            <p className="arcade-text-dim text-sm mb-4">
-              Impossible de charger le tournoi du jour. Réessaie dans un
-              instant.
-            </p>
+            <p className="arcade-text-dim text-sm mb-4">{loadError}</p>
             <button
               type="button"
-              onClick={() => {
-                setLoading(true);
-                fetchAll();
-              }}
+              onClick={() => void fetchAll()}
               className="px-6 py-2 rounded-sm border border-[rgba(255,230,0,0.4)] arcade-text-yellow text-sm font-bold hover:bg-[rgba(255,230,0,0.1)] transition-colors cursor-pointer"
             >
               Réessayer
@@ -161,7 +188,6 @@ export default function PoutineLobby() {
           </div>
         )}
 
-        {/* My rank card */}
         {user && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -184,7 +210,7 @@ export default function PoutineLobby() {
                 <div className="text-right">
                   <p className="text-xs arcade-text-dim mb-1">Classement</p>
                   <p
-                    className={`text-4xl font-black ${RANK_COLORS[myRank.rank!] ?? "text-white"}`}
+                    className={`text-4xl font-black ${RANK_COLORS[myRank.rank ?? 0] ?? "text-white"}`}
                   >
                     #{myRank.rank}
                   </p>
@@ -203,7 +229,6 @@ export default function PoutineLobby() {
           </motion.div>
         )}
 
-        {/* Play button */}
         {tournament && (
           <motion.button
             type="button"
@@ -217,7 +242,6 @@ export default function PoutineLobby() {
           </motion.button>
         )}
 
-        {/* Stats row */}
         {tournament && (
           <div className="grid grid-cols-3 gap-3">
             <div className={`${arcadeCard} p-3 text-center`}>
@@ -244,20 +268,26 @@ export default function PoutineLobby() {
           </div>
         )}
 
-        {/* Leaderboard */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="w-5 h-5 arcade-text-yellow" />
             <h2 className="font-black text-lg uppercase tracking-wide">
               Classement du jour
             </h2>
+            {loadingLeaderboard && (
+              <span className="text-xs arcade-text-dim animate-pulse">
+                sync…
+              </span>
+            )}
           </div>
 
           {leaderboard.length === 0 ? (
             <div className={`${arcadeCard} p-8 text-center`}>
               <Layers className="w-10 h-10 arcade-text-yellow mx-auto mb-3" />
               <p className="arcade-text-muted text-sm">
-                Aucun score encore — sois le premier!
+                {loadingLeaderboard
+                  ? "Chargement du classement…"
+                  : "Aucun score encore — sois le premier!"}
               </p>
             </div>
           ) : (
@@ -277,12 +307,10 @@ export default function PoutineLobby() {
                           : "bg-[rgba(10,8,20,0.6)] border-[rgba(0,243,255,0.2)]"
                       }`}
                     >
-                      {/* Rank */}
                       <div className="w-8 text-center flex-shrink-0">
                         <ArcadeRankBadge rank={entry.rank} />
                       </div>
 
-                      {/* Avatar */}
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff2bd6] to-[#1a1430] flex-shrink-0 overflow-hidden border border-[rgba(255,43,214,0.4)]">
                         {entry.avatarUrl ? (
                           <img
@@ -299,7 +327,6 @@ export default function PoutineLobby() {
                         )}
                       </div>
 
-                      {/* Name */}
                       <div className="flex-1 min-w-0">
                         <p
                           className={`font-bold text-sm truncate ${isMe ? "arcade-text-yellow" : ""}`}
@@ -316,7 +343,6 @@ export default function PoutineLobby() {
                         </p>
                       </div>
 
-                      {/* Score */}
                       <div className="text-right flex-shrink-0">
                         <p
                           className={`font-black text-lg tabular-nums ${
@@ -340,7 +366,6 @@ export default function PoutineLobby() {
           )}
         </div>
 
-        {/* Rules */}
         <div
           className={`${arcadeCard} p-4 text-sm arcade-text-muted space-y-1`}
         >

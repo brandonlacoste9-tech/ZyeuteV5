@@ -46,7 +46,11 @@ export interface RoyaleSubmitResult {
 
 /** Today's daily tournament (auto-created server-side). */
 export async function getTodayTournament(): Promise<RoyaleTournament | null> {
-  const { data } = await apiCall<RoyaleTournament>("/royale/today");
+  const { data, error } = await apiCall<RoyaleTournament>("/royale/today");
+  if (error) {
+    console.warn("[Royale] /today failed:", error);
+    return null;
+  }
   return data?.id ? data : null;
 }
 
@@ -70,8 +74,17 @@ export async function getMyRank(
 }
 
 export async function getWallet(): Promise<number | null> {
-  const { data } = await apiCall<{ tokenBalance: number }>("/royale/wallet");
-  return data ? data.tokenBalance : null;
+  const { data, error } = await apiCall<{ tokenBalance: number }>(
+    "/royale/wallet",
+  );
+  if (data) return data.tokenBalance;
+  if (error) {
+    const fallback = await apiCall<{ tokenBalance: number }>(
+      "/grid-rush/wallet",
+    );
+    if (fallback.data) return fallback.data.tokenBalance;
+  }
+  return null;
 }
 
 export async function submitScore(params: {

@@ -17,7 +17,7 @@ export function ArcadeBackdrop({
     <div
       className={`arcade-room arcade-vignette arcade-font-body ${scanlines ? "arcade-crt" : ""} ${className}`}
     >
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-20">{children}</div>
     </div>
   );
 }

@@ -211,7 +211,10 @@ export const PoutineStackGame: React.FC = () => {
   };
 
   return (
-    <ArcadeBackdrop className="h-screen relative flex flex-col overflow-hidden touch-none">
+    <ArcadeBackdrop
+      scanlines={false}
+      className="h-screen relative flex flex-col overflow-hidden touch-none"
+    >
       <div
         className="h-full relative flex flex-col overflow-hidden touch-none"
         onClick={handleTap}

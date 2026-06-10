@@ -202,17 +202,16 @@ async function getOrCreateDailyTournamentViaAdmin(
     .eq("status", "active")
     .lt("expires_at", now.toISOString());
 
-  const { data: existing, error: selectErr } = await supabaseAdmin
+  const { data: existingRows, error: selectErr } = await supabaseAdmin
     .from("tournaments")
     .select("id, title, entry_fee, prize_pool, status, expires_at, created_at")
     .eq("status", "active")
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
   if (selectErr) throw new Error(selectErr.message);
 
-  let row = existing as TournamentRow | null;
+  let row = (existingRows?.[0] as TournamentRow | undefined) ?? null;
   if (!row) {
     const midnight = new Date(now);
     midnight.setHours(23, 59, 59, 999);
@@ -674,18 +673,7 @@ export async function getMyRank(
 /** Read (auto-seeding) the player's virtual-token wallet balance. */
 export async function getWalletBalance(userId: string): Promise<number> {
   if (supabaseAdmin) {
-    const { data: existing } = await supabaseAdmin
-      .from("user_wallets")
-      .select("token_balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (existing) return Number(existing.token_balance);
-
-    const { error: insertErr } = await supabaseAdmin
-      .from("user_wallets")
-      .insert({ user_id: userId, token_balance: DEFAULT_WALLET_TOKENS });
-    if (insertErr && insertErr.code !== "23505") throw insertErr;
-    return DEFAULT_WALLET_TOKENS;
+    return getTokenBalance(userId);
   }
 
   const client = createDirectClient();
