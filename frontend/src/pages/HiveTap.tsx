@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useHaptics } from "@/hooks/useHaptics";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { arcadeBtnPrimary, arcadeCard } from "@/components/arcade/arcade-ui";
 import {
   createHiveTapToken,
   getCurrentLocation,
@@ -121,7 +122,7 @@ const HiveTap = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="z-10 w-full max-w-md leather-card stitched border border-gold-500/25 rounded-3xl shadow-2xl overflow-hidden min-h-[560px] flex flex-col"
+        className={`z-10 w-full max-w-md ${arcadeCard} border-gold-500/25 rounded-3xl gold-glow overflow-hidden min-h-[560px] flex flex-col`}
       >
         <div className="p-6 flex justify-between items-center border-b border-gold-500/15">
           <button
@@ -129,7 +130,7 @@ const HiveTap = () => {
             onClick={() =>
               view === "menu" ? navigate("/arcade") : setView("menu")
             }
-            className="flex items-center gap-2 text-gold-400"
+            className="flex items-center gap-2 text-gold-400 cursor-pointer hover:text-gold-300 transition-colors"
           >
             <ChevronLeft size={20} />
             <span className="text-xs font-bold uppercase tracking-widest">
@@ -180,7 +181,7 @@ const HiveTap = () => {
                     setView("giving");
                     setError(null);
                   }}
-                  className="p-5 rounded-2xl bg-gold-500 text-black font-black text-left"
+                  className={`${arcadeBtnPrimary} p-5 text-left`}
                 >
                   Donner (Honey)
                   <span className="block text-sm font-semibold opacity-70 mt-1">
@@ -195,7 +196,7 @@ const HiveTap = () => {
                     setError(null);
                     setPasteToken("");
                   }}
-                  className="p-5 rounded-2xl border border-gold-500/30 text-left hover:border-gold-500/60"
+                  className="p-5 min-h-[72px] rounded-2xl border border-gold-500/30 text-left hover:border-gold-500/60 cursor-pointer transition-colors duration-200"
                 >
                   Recevoir (Tap)
                   <span className="block text-sm text-leather-400 mt-1">
@@ -231,10 +232,10 @@ const HiveTap = () => {
                         key={a}
                         type="button"
                         onClick={() => setAmount(a)}
-                        className={`py-2 rounded-lg font-bold text-sm ${
+                        className={`py-2 min-h-[44px] rounded-lg font-bold text-sm cursor-pointer transition-colors duration-200 ${
                           amount === a
                             ? "bg-gold-500 text-black"
-                            : "border border-leather-700 text-leather-200"
+                            : "border border-leather-700 text-leather-200 hover:border-gold-500/40"
                         }`}
                       >
                         {a}

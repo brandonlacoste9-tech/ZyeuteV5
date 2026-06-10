@@ -1,17 +1,24 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Star, Gift } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Star, Gift, Trophy } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
   submitRoundScore,
   finishMatch,
   type GridRushMatch,
 } from "@/services/gridRushService";
+import {
+  arcadeBtnPrimary,
+  arcadeBtnSecondary,
+  arcadeCard,
+} from "@/components/arcade/arcade-ui";
 
 interface GridRushGameProps {
   matchId: string;
   currentUserId: string;
   initialMatch: GridRushMatch;
+  onExit?: () => void;
 }
 
 type GamePhase = "STARTING" | "PLAYING" | "FINISHED";
@@ -57,7 +64,10 @@ export default function GridRushGame({
   matchId,
   currentUserId,
   initialMatch,
+  onExit,
 }: GridRushGameProps) {
+  const navigate = useNavigate();
+  const exit = onExit ?? (() => navigate("/arcade/grid-rush"));
   const [matchData, setMatchData] = useState<GridRushMatch>(initialMatch);
   const [gridNumbers, setGridNumbers] = useState<number[]>(() =>
     initialMatch.status === "ACTIVE" ? shuffleGrid() : [],
@@ -205,8 +215,19 @@ export default function GridRushGame({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] text-white p-4">
-      <div className="w-full max-w-md leather-card border border-gold-500/20 rounded-2xl p-4 mb-6 stitched">
+    <div className="flex flex-col items-center justify-center min-h-[70vh] text-white p-4 pt-6">
+      <div className="w-full max-w-md flex items-center mb-4">
+        <button
+          type="button"
+          onClick={exit}
+          className="p-2.5 min-w-[44px] min-h-[44px] rounded-xl border border-leather-700 text-gold-400 hover:border-gold-500/50 cursor-pointer transition-colors"
+          aria-label="Quitter la partie"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className={`w-full max-w-md ${arcadeCard} p-4 mb-6`}>
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm font-semibold tracking-wider text-gold-400 uppercase flex items-center gap-1">
             Mise:
@@ -227,7 +248,7 @@ export default function GridRushGame({
           </div>
           <div className="bg-black/40 p-3 rounded-xl border border-leather-700">
             <p className="text-xs text-leather-400 font-medium">Adversaire</p>
-            <p className="text-3xl font-extrabold text-purple-400">
+            <p className="text-3xl font-extrabold text-amber-500/90">
               {opponentScore}
             </p>
           </div>
@@ -235,7 +256,9 @@ export default function GridRushGame({
       </div>
 
       {gameState === "PLAYING" && (
-        <div className="w-full max-w-md aspect-square leather-card border border-gold-500/20 rounded-2xl p-4 flex flex-col justify-between stitched">
+        <div
+          className={`w-full max-w-md aspect-square ${arcadeCard} p-4 flex flex-col justify-between gold-glow`}
+        >
           <div className="text-center text-sm font-medium text-leather-300 mb-2">
             Tape:{" "}
             <span className="text-gold-400 font-bold text-lg">
@@ -253,7 +276,7 @@ export default function GridRushGame({
                   whileTap={isTapped ? undefined : { scale: 0.92 }}
                   onClick={() => handleNumberClick(num)}
                   disabled={isTapped}
-                  className={`w-full aspect-square font-black text-xl rounded-xl transition-all duration-100 flex items-center justify-center ${
+                  className={`w-full aspect-square min-h-[44px] font-black text-xl rounded-xl transition-colors duration-150 flex items-center justify-center cursor-pointer ${
                     isTapped
                       ? "bg-black/60 text-leather-600 border border-leather-800 cursor-not-allowed"
                       : "bg-leather-800 text-white border border-leather-600 hover:border-gold-500/50 active:bg-gold-500/20"
@@ -268,30 +291,37 @@ export default function GridRushGame({
       )}
 
       {gameState === "FINISHED" && (
-        <div className="w-full max-w-md leather-card border border-gold-500/20 rounded-2xl p-8 text-center stitched">
-          <h2 className="text-3xl font-black mb-2 tracking-tight text-gold-400">
+        <div
+          className={`w-full max-w-md ${arcadeCard} p-8 text-center space-y-5 gold-glow`}
+        >
+          <Trophy className="w-12 h-12 text-gold-400 mx-auto" />
+          <h2 className="text-3xl font-black tracking-tight text-gold-gradient">
             FIN DE PARTIE
           </h2>
-          <p className="text-leather-300 mb-6">
+          <p className="text-leather-300">
             Score final: {localScore} vs {opponentScore}
           </p>
 
           {matchData.winnerId === currentUserId ? (
-            <div className="bg-gold-500/10 text-gold-400 font-bold p-4 rounded-xl border border-gold-500/20 text-xl flex items-center justify-center gap-2">
-              <Star className="w-6 h-6 fill-gold-400" />
+            <div className="bg-gold-500/10 text-gold-400 font-bold p-4 rounded-xl border border-gold-500/20 text-lg flex items-center justify-center gap-2">
+              <Star className="w-6 h-6 fill-gold-400 shrink-0" />
               Victoire! GG Gift de {matchData.stakeTokens * 2} étoiles reçu!
             </div>
           ) : matchData.winnerId === null &&
             matchData.player1Score === matchData.player2Score ? (
-            <div className="bg-leather-800 text-leather-200 font-bold p-4 rounded-xl text-xl">
+            <div className="bg-leather-800 text-leather-200 font-bold p-4 rounded-xl text-lg border border-leather-600">
               Égalité — jetons remboursés
             </div>
           ) : (
-            <div className="bg-red-500/10 text-red-400 font-bold p-4 rounded-xl border border-red-500/20 text-xl flex items-center justify-center gap-2">
-              <Gift className="w-6 h-6" />
+            <div className="bg-red-500/10 text-red-400 font-bold p-4 rounded-xl border border-red-500/20 text-lg flex items-center justify-center gap-2">
+              <Gift className="w-6 h-6 shrink-0" />
               GG Gift de {matchData.stakeTokens} étoiles envoyé au gagnant.
             </div>
           )}
+
+          <button type="button" onClick={exit} className={arcadeBtnSecondary}>
+            Retour au lobby
+          </button>
         </div>
       )}
     </div>

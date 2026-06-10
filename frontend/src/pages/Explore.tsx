@@ -21,6 +21,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { QuebecHashtags } from "@/components/trending/QuebecHashtags";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
+import { Gamepad2 } from "lucide-react";
 
 const exploreLogger = logger.withContext("Explore");
 
@@ -359,11 +360,11 @@ export const Explore: React.FC = () => {
             tap();
             navigate("/arcade");
           }}
-          className="w-full mb-6 leather-card stitched rounded-2xl p-4 border border-gold-500/30 flex items-center gap-4 text-left hover:border-gold-500/60 transition-all group"
+          className="w-full mb-6 leather-card stitched rounded-2xl p-4 border border-gold-500/30 flex items-center gap-4 text-left hover:border-gold-500/60 transition-colors duration-200 cursor-pointer group gold-glow"
           aria-label="Ouvrir l'Arcade Zyeuté"
         >
-          <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center text-3xl group-hover:scale-105 transition-transform">
-            🎮
+          <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gold-500/15 border border-gold-500/30 flex items-center justify-center group-hover:border-gold-400/50 transition-colors">
+            <Gamepad2 className="w-7 h-7 text-gold-400" aria-hidden />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

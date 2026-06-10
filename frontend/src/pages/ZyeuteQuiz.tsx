@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { Brain, CheckCircle2, Coins, Trophy, Timer } from "lucide-react";
+import { ArcadeShell } from "@/components/arcade/ArcadeShell";
+import { ArcadeLoading } from "@/components/arcade/ArcadeLoading";
 import {
-  ArrowLeft,
-  Brain,
-  CheckCircle2,
-  Coins,
-  Trophy,
-  Timer,
-} from "lucide-react";
+  arcadeBtnPrimary,
+  arcadeBtnSecondary,
+  arcadeCard,
+  arcadeChoiceBtn,
+} from "@/components/arcade/arcade-ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { useHaptics } from "@/hooks/useHaptics";
 import {
@@ -143,44 +144,22 @@ export default function ZyeuteQuiz() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-black leather-overlay flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-          className="text-4xl"
-        >
-          🧠
-        </motion.div>
-      </div>
-    );
+    return <ArcadeLoading icon={Brain} label="Chargement du quiz…" />;
   }
 
   return (
-    <div className="min-h-screen bg-black leather-overlay text-white pb-24">
-      <header className="sticky top-0 z-20 bg-black/90 backdrop-blur-md border-b border-gold-500/20 px-4 py-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate("/arcade")}
-          className="p-2 rounded-lg border border-leather-700 text-gold-400"
-          aria-label="Retour"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="font-black text-lg text-gold-400 flex items-center gap-2">
-            <Brain className="w-5 h-5" />
-            Zyeuté Quiz
-          </h1>
-          <p className="text-xs text-leather-300">{quiz?.title}</p>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-leather-300">
+    <ArcadeShell
+      title="Zyeuté Quiz"
+      subtitle={quiz?.title}
+      icon={<Brain className="w-5 h-5 shrink-0" />}
+      headerRight={
+        <span className="flex items-center gap-1 text-xs text-leather-300 shrink-0">
           <Timer className="w-3.5 h-3.5 text-gold-400" />
           {formatTimeRemaining(timeLeft)}
-        </div>
-      </header>
-
-      <main className="max-w-md mx-auto p-4 space-y-6">
+        </span>
+      }
+    >
+      <div className="space-y-6 pb-6">
         {error && (
           <div className="leather-card border border-red-500/40 rounded-xl p-4 text-red-300 text-sm">
             {error}
@@ -196,7 +175,7 @@ export default function ZyeuteQuiz() {
               exit={{ opacity: 0, y: -12 }}
               className="space-y-6"
             >
-              <section className="leather-card stitched rounded-2xl p-6 border border-gold-500/20">
+              <section className={`${arcadeCard} p-6`}>
                 <p className="text-leather-200 text-sm mb-4">
                   {quiz.questions.length} questions sur le Québec. Un essai par
                   jour — bat ton record et gagne des jetons arcade.
@@ -209,14 +188,14 @@ export default function ZyeuteQuiz() {
                 <button
                   type="button"
                   onClick={startQuiz}
-                  className="w-full py-4 rounded-xl bg-gold-500 text-black font-black uppercase tracking-wider hover:bg-gold-400"
+                  className={arcadeBtnPrimary}
                 >
                   {user ? "Commencer le quiz" : "Connexion requise"}
                 </button>
               </section>
 
               {leaderboard.length > 0 && (
-                <section className="leather-card rounded-2xl p-4 border border-leather-700">
+                <section className={`${arcadeCard} p-4 border-leather-700`}>
                   <h2 className="text-sm font-bold text-gold-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                     <Trophy className="w-4 h-4" />
                     Classement du jour
@@ -265,11 +244,7 @@ export default function ZyeuteQuiz() {
                       tap();
                       setSelected(idx);
                     }}
-                    className={`w-full text-left p-4 rounded-xl border transition-all ${
-                      selected === idx
-                        ? "border-gold-500 bg-gold-500/15 text-gold-100"
-                        : "border-leather-700 bg-leather-900/50 hover:border-gold-500/40"
-                    }`}
+                    className={arcadeChoiceBtn(selected === idx)}
                   >
                     {choice}
                   </button>
@@ -279,7 +254,7 @@ export default function ZyeuteQuiz() {
                 type="button"
                 disabled={selected === null || submitting}
                 onClick={confirmAnswer}
-                className="w-full py-4 rounded-xl bg-gold-500 text-black font-black disabled:opacity-40"
+                className={`${arcadeBtnPrimary} disabled:opacity-40`}
               >
                 {submitting
                   ? "Envoi..."
@@ -295,7 +270,7 @@ export default function ZyeuteQuiz() {
               key="results"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="leather-card stitched rounded-2xl p-6 border border-gold-500/30 text-center space-y-4"
+              className={`${arcadeCard} p-6 border-gold-500/30 text-center space-y-4 gold-glow`}
             >
               <CheckCircle2 className="w-16 h-16 text-gold-400 mx-auto" />
               <h2 className="text-3xl font-black text-gold-400">
@@ -319,14 +294,14 @@ export default function ZyeuteQuiz() {
               <button
                 type="button"
                 onClick={() => navigate("/arcade")}
-                className="w-full py-3 rounded-xl border border-gold-500/40 text-gold-400 font-bold"
+                className={arcadeBtnSecondary}
               >
                 Retour à l&apos;arcade
               </button>
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
-    </div>
+      </div>
+    </ArcadeShell>
   );
 }

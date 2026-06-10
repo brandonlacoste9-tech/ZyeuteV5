@@ -8,7 +8,14 @@ import {
   ChevronRight,
   AlertCircle,
   Coins,
+  Layers,
+  ArrowLeft,
 } from "lucide-react";
+import {
+  arcadeBtnPrimary,
+  arcadeBtnSecondary,
+  arcadeCard,
+} from "@/components/arcade/arcade-ui";
 import { useAuth } from "@/contexts/AuthContext";
 import { ParentalService } from "@/services/parental-service";
 import { useHaptics } from "@/hooks/useHaptics";
@@ -43,6 +50,7 @@ export const PoutineStackGame: React.FC = () => {
   const [reward, setReward] = useState(0);
   const [tokenBalance, setTokenBalance] = useState<number | null>(null);
   const [restriction, setRestriction] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [visualBuzz, setVisualBuzz] = useState(false);
   const { user } = useAuth();
   const { tap, impact, error: hapticError } = useHaptics();
@@ -77,6 +85,7 @@ export const PoutineStackGame: React.FC = () => {
     setFinalRank(null);
     setIsNewBest(false);
     setReward(0);
+    setSubmitError(null);
     tap();
   };
 
@@ -157,6 +166,7 @@ export const PoutineStackGame: React.FC = () => {
   const submitScore = async () => {
     if (submitted) return;
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
       // Get today's tournament if tournamentId not provided via URL
       let tid = tournamentId;
@@ -182,11 +192,12 @@ export const PoutineStackGame: React.FC = () => {
       setReward(result.reward);
       setTokenBalance(result.tokenBalance);
       setSubmitted(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to submit score:", error);
-      alert(
-        error.message ||
-          "Erreur lors de la soumission. Réessaie dans un instant.",
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de la soumission. Réessaie dans un instant.",
       );
     } finally {
       setIsSubmitting(false);
@@ -195,20 +206,20 @@ export const PoutineStackGame: React.FC = () => {
 
   return (
     <div
-      className="h-screen bg-black text-white relative flex flex-col overflow-hidden touch-none"
+      className="h-screen bg-black leather-overlay text-white relative flex flex-col overflow-hidden touch-none"
       onClick={handleTap}
     >
       {/* HUD */}
-      <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-start z-30 bg-gradient-to-b from-black/80 to-transparent">
+      <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-30 bg-gradient-to-b from-black/90 via-black/60 to-transparent">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Trophy className="text-gold-400 w-5 h-5" />
-            <span className="text-zinc-500 font-bold tracking-widest text-xs uppercase">
+            <span className="text-leather-400 font-bold tracking-widest text-xs uppercase">
               Score
             </span>
           </div>
           <div
-            className={`text-5xl font-black italic tracking-tighter tabular-nums transition-all duration-300 ${visualBuzz ? "text-yellow-400 scale-125 shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "text-white"}`}
+            className={`text-5xl font-black tracking-tighter tabular-nums transition-all duration-300 ${visualBuzz ? "text-gold-400 scale-110 gold-glow" : "text-white"}`}
           >
             {score}
           </div>
@@ -216,8 +227,8 @@ export const PoutineStackGame: React.FC = () => {
 
         <div className="text-right">
           <div className="flex items-center gap-2 justify-end mb-1">
-            <Timer className="text-purple-400 w-5 h-5" />
-            <span className="text-zinc-500 font-bold tracking-widest text-xs uppercase">
+            <Timer className="text-gold-400 w-5 h-5" />
+            <span className="text-leather-400 font-bold tracking-widest text-xs uppercase">
               Temps
             </span>
           </div>
@@ -230,7 +241,7 @@ export const PoutineStackGame: React.FC = () => {
       </div>
 
       {/* Game Area */}
-      <div className="flex-1 relative bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900 to-black">
+      <div className="flex-1 relative bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-leather-900/80 to-black">
         {/* Dynamic Background Grid */}
         <div
           className="absolute inset-0 opacity-10"
@@ -307,67 +318,69 @@ export const PoutineStackGame: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-8"
+            className="absolute inset-0 z-50 bg-black/92 backdrop-blur-xl flex flex-col items-center justify-center p-8"
           >
-            <div className="w-24 h-24 bg-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_rgba(239,68,68,0.5)]">
-              <AlertCircle className="w-12 h-12 text-white" />
+            <div className="w-20 h-20 rounded-2xl bg-red-500/15 border border-red-500/40 flex items-center justify-center mb-6">
+              <AlertCircle className="w-10 h-10 text-red-400" />
             </div>
 
-            <h2 className="text-5xl font-black italic tracking-tighter mb-2">
+            <h2 className="text-4xl font-black tracking-tight mb-2 text-gold-gradient">
               OUPELAYE!
             </h2>
-            <p className="text-zinc-500 font-bold mb-12 text-center text-xl">
+            <p className="text-leather-300 font-medium mb-10 text-center text-lg max-w-sm">
               Ta poutine a revollé.{" "}
               {score > 10 ? "Pas pire pentoute!" : "Y'en a manqué un boute."}
             </p>
 
-            <div className="bg-zinc-900 border border-white/10 p-8 rounded-[40px] w-full max-w-sm mb-12">
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
-                  Score Final
+            <div
+              className={`${arcadeCard} p-6 w-full max-w-sm mb-10 space-y-4`}
+            >
+              <div className="flex justify-between items-center">
+                <span className="text-leather-400 font-bold uppercase tracking-widest text-xs">
+                  Score final
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="text-3xl font-black text-gold-400">
+                  <span className="text-3xl font-black text-gold-400 tabular-nums">
                     {score}
                   </span>
                   {isNewBest && submitted && (
-                    <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold">
-                      RECORD!
+                    <span className="text-[10px] bg-gold-500/20 text-gold-400 border border-gold-500/30 px-2 py-0.5 rounded-full font-bold uppercase">
+                      Record
                     </span>
                   )}
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                <span className="text-leather-400 font-bold uppercase tracking-widest text-xs">
                   Classement
                 </span>
-                <span className="text-3xl font-black text-purple-400">
+                <span className="text-3xl font-black text-gold-400 tabular-nums">
                   {finalRank != null ? `#${finalRank}` : "—"}
                 </span>
               </div>
 
               {submitted && (
-                <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="pt-4 border-t border-gold-500/15 space-y-2">
                   {reward > 0 ? (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="flex items-center justify-between"
                     >
-                      <span className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
-                        Cadeau GG 🪙
+                      <span className="text-leather-400 font-bold uppercase tracking-widest text-xs">
+                        Cadeau GG
                       </span>
-                      <span className="flex items-center gap-1.5 text-2xl font-black text-yellow-400">
+                      <span className="flex items-center gap-1.5 text-xl font-black text-gold-400">
                         <Coins className="w-5 h-5" />+{reward}
                       </span>
                     </motion.div>
                   ) : (
-                    <p className="text-center text-zinc-500 text-xs">
+                    <p className="text-center text-leather-400 text-xs">
                       Bats ton record du jour pour gagner des jetons!
                     </p>
                   )}
                   {tokenBalance != null && (
-                    <p className="text-center text-zinc-600 text-xs mt-2 tabular-nums">
+                    <p className="text-center text-leather-500 text-xs tabular-nums">
                       Solde : {tokenBalance} jetons
                     </p>
                   )}
@@ -375,29 +388,48 @@ export const PoutineStackGame: React.FC = () => {
               )}
             </div>
 
-            <div className="flex flex-col gap-4 w-full max-w-sm">
+            {submitError && (
+              <p className="text-red-400 text-sm text-center mb-4 max-w-sm px-4">
+                {submitError}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-3 w-full max-w-sm">
               {!submitted ? (
                 <button
-                  onClick={submitScore}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void submitScore();
+                  }}
                   disabled={isSubmitting}
-                  className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
+                  className={`${arcadeBtnPrimary} flex items-center justify-center gap-2 disabled:opacity-50`}
                 >
-                  {isSubmitting ? "SOUCOUPAGE..." : "SOUMETTRE LE SCORE"}{" "}
-                  <ChevronRight className="w-6 h-6" />
+                  {isSubmitting ? "Soumission..." : "Soumettre le score"}
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate(`/arcade/poutine`)}
-                  className="bg-purple-600 h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-purple-500 transition-colors flex items-center justify-center gap-3"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/arcade/poutine");
+                  }}
+                  className={`${arcadeBtnPrimary} flex items-center justify-center gap-2`}
                 >
-                  VOIR LE CLASSEMENT <ChevronRight className="w-6 h-6" />
+                  Voir le classement
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               )}
               <button
-                onClick={startNewGame}
-                className="bg-white text-black h-16 rounded-[24px] font-black italic tracking-tighter text-xl hover:bg-zinc-200 transition-colors"
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startNewGame();
+                }}
+                className={arcadeBtnSecondary}
               >
-                RÉESSAYER
+                Réessayer
               </button>
             </div>
           </motion.div>
@@ -406,59 +438,73 @@ export const PoutineStackGame: React.FC = () => {
 
       {/* Start Screen */}
       {!isPlaying && !isGameOver && !restriction && (
-        <div className="absolute inset-0 z-40 bg-black flex flex-col items-center justify-center p-8">
-          <motion.div
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 4 }}
-            className="text-8xl mb-8"
+        <div className="absolute inset-0 z-40 bg-black/95 leather-overlay flex flex-col items-center justify-center p-8">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate("/arcade/poutine");
+            }}
+            className="absolute top-6 left-6 p-2.5 rounded-xl border border-leather-700 text-gold-400 hover:border-gold-500/50 cursor-pointer"
+            aria-label="Retour au lobby"
           >
-            🍟
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+            className="w-20 h-20 rounded-2xl leather-card border border-gold-500/30 flex items-center justify-center mb-8 gold-glow"
+          >
+            <Layers className="w-10 h-10 text-gold-400" />
           </motion.div>
-          <h1 className="text-6xl font-black italic tracking-tighter mb-4 text-center">
-            POUTINE STACK
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight mb-3 text-center text-gold-gradient">
+            Poutine Stack
           </h1>
-          <div className="bg-purple-600/20 border border-purple-500/50 px-4 py-1 rounded-full mb-6">
-            <span className="text-purple-400 font-bold text-xs tracking-[0.2em] uppercase">
-              Édition "Piège à Touristes" 🇨🇦
+          <div className="border border-gold-500/35 bg-gold-500/10 px-4 py-1 rounded-full mb-6">
+            <span className="text-gold-400 font-bold text-[10px] tracking-[0.2em] uppercase">
+              Tournoi du jour
             </span>
           </div>
-          <p className="text-zinc-500 font-bold mb-12 text-center max-w-xs">
-            Stack le plus haut possible sans tout faire revollé par terre.
-            <br />
-            <span className="text-zinc-600 text-[10px] italic">
-              (Les vrais savent que c'est pas là qu'on mange la meilleure)
-            </span>
+          <p className="text-leather-300 text-sm mb-10 text-center max-w-xs leading-relaxed">
+            Stack le plus haut possible sans tout faire revollé par terre. 60
+            secondes chrono.
           </p>
           <button
-            onClick={startNewGame}
-            className="bg-gold-500 text-black px-12 py-5 rounded-[24px] font-black italic tracking-tighter text-2xl hover:scale-105 transition-transform shadow-[0_0_30px_rgba(255,191,0,0.4)]"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              startNewGame();
+            }}
+            className={`${arcadeBtnPrimary} max-w-xs px-10`}
           >
-            START GAME
+            Commencer
           </button>
         </div>
       )}
 
       {/* Parental Restriction Screen */}
       {restriction && (
-        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center p-8 text-center">
-          <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mb-8 border border-yellow-500/50">
-            <AlertCircle className="w-12 h-12 text-yellow-500" />
+        <div className="absolute inset-0 z-50 bg-black leather-overlay flex flex-col items-center justify-center p-8 text-center">
+          <div className="w-20 h-20 bg-gold-500/10 rounded-2xl flex items-center justify-center mb-8 border border-gold-500/40">
+            <AlertCircle className="w-10 h-10 text-gold-400" />
           </div>
-          <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">
-            Accès Bloqué
+          <h2 className="text-3xl font-black tracking-tight mb-4 uppercase text-gold-400">
+            Accès bloqué
           </h2>
-          <p className="text-yellow-500 font-mono text-xl mb-12 p-4 border border-yellow-500/20 bg-yellow-500/5 rounded-xl">
+          <p className="text-gold-300 text-sm mb-8 p-4 border border-gold-500/20 bg-gold-500/5 rounded-xl max-w-sm">
             {restriction}
           </p>
-          <p className="text-zinc-500 max-w-xs mb-12">
-            Tes parents ont mis en place des limites de sécurité pour ton
-            bien-être. Reviens plus tard ou déplace-toi vers un endroit sûr!
+          <p className="text-leather-400 text-sm max-w-xs mb-10">
+            Tes parents ont mis en place des limites de sécurité. Reviens plus
+            tard!
           </p>
           <button
+            type="button"
             onClick={() => navigate("/arcade")}
-            className="bg-white text-black px-12 py-4 rounded-full font-bold uppercase tracking-widest text-sm"
+            className={`${arcadeBtnSecondary} max-w-xs`}
           >
-            Retour à l'Arcade
+            Retour à l&apos;arcade
           </button>
         </div>
       )}

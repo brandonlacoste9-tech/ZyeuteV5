@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Copy, Loader2, Users, Star } from "lucide-react";
+import { Copy, Users, Star, Zap } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import GridRushGame from "@/components/games/GridRushGame";
@@ -11,6 +11,13 @@ import {
   cancelMatch,
   type GridRushMatch,
 } from "@/services/gridRushService";
+import { ArcadeLoading } from "@/components/arcade/ArcadeLoading";
+import {
+  arcadeBtnGhost,
+  arcadeBtnPrimary,
+  arcadeBtnSecondary,
+  arcadeCard,
+} from "@/components/arcade/arcade-ui";
 
 export default function GridRushMatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -109,20 +116,8 @@ export default function GridRushMatchPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-gold-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-gold-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
+  if (!user || loading) {
+    return <ArcadeLoading icon={Zap} label="Chargement de la partie…" />;
   }
 
   if (error && !match) {
@@ -132,7 +127,7 @@ export default function GridRushMatchPage() {
         <button
           type="button"
           onClick={() => navigate("/arcade/grid-rush")}
-          className="text-gold-400 underline"
+          className={`${arcadeBtnSecondary} max-w-xs`}
         >
           Retour au lobby
         </button>
@@ -149,10 +144,12 @@ export default function GridRushMatchPage() {
 
   if (isWaiting) {
     return (
-      <div className="min-h-screen bg-black leather-overlay text-white p-6 flex flex-col items-center justify-center">
-        <div className="max-w-md w-full leather-card rounded-2xl p-8 stitched border border-gold-500/20 text-center space-y-6">
+      <div className="min-h-screen bg-black leather-overlay text-white p-6 flex flex-col items-center justify-center pb-24">
+        <div
+          className={`max-w-md w-full ${arcadeCard} p-8 text-center space-y-6 gold-glow`}
+        >
           <Users className="w-12 h-12 text-gold-400 mx-auto" />
-          <h1 className="text-2xl font-black text-gold-400 uppercase">
+          <h1 className="text-2xl font-black text-gold-gradient uppercase tracking-wide">
             {isHost ? "En attente d'un adversaire" : "Partie ouverte"}
           </h1>
           <p className="text-leather-300 text-sm flex items-center justify-center gap-1">
@@ -165,7 +162,7 @@ export default function GridRushMatchPage() {
               type="button"
               whileTap={{ scale: 0.97 }}
               onClick={copyInviteLink}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gold-500/40 text-gold-400 font-bold"
+              className={`${arcadeBtnSecondary} flex items-center justify-center gap-2 py-3`}
             >
               <Copy className="w-4 h-4" />
               {copied ? "Copié!" : "Copier le lien d'invitation"}
@@ -178,7 +175,7 @@ export default function GridRushMatchPage() {
               whileTap={{ scale: 0.97 }}
               disabled={joining}
               onClick={handleJoin}
-              className="w-full py-4 rounded-xl bg-gold-500 text-black font-black uppercase disabled:opacity-50"
+              className={`${arcadeBtnPrimary} disabled:opacity-50`}
             >
               {joining
                 ? "Connexion..."
@@ -192,7 +189,7 @@ export default function GridRushMatchPage() {
             <button
               type="button"
               onClick={handleCancel}
-              className="text-leather-400 text-sm hover:text-white"
+              className={`${arcadeBtnGhost} py-2 text-xs`}
             >
               Annuler et récupérer ma mise
             </button>
@@ -203,20 +200,21 @@ export default function GridRushMatchPage() {
   }
 
   if (match.status === "ACTIVE" || match.status === "COMPLETED") {
-    if (!isHost && !isGuest) {
+    if (!isHost && !isGuest && !match.isBot) {
       return (
-        <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-leather-300">
-          Accès refusé
+        <div className="min-h-screen bg-black leather-overlay flex items-center justify-center text-leather-300 p-6 text-center">
+          Accès refusé — tu n&apos;es pas dans cette partie.
         </div>
       );
     }
 
     return (
-      <div className="min-h-screen bg-black leather-overlay">
+      <div className="min-h-screen bg-black leather-overlay pb-24">
         <GridRushGame
           matchId={match.id}
           currentUserId={user.id}
           initialMatch={match}
+          onExit={() => navigate("/arcade/grid-rush")}
         />
       </div>
     );
