@@ -159,10 +159,22 @@ export default function GridRushGame({
         !finishCalled.current
       ) {
         finishCalled.current = true;
-        void finishMatch(matchId).then(({ data }) => {
-          if (data) setMatchData(data);
-          setGameState("FINISHED");
-        });
+        void (async () => {
+          for (let attempt = 0; attempt < 4; attempt++) {
+            const { data, error } = await finishMatch(matchId);
+            if (data) {
+              setMatchData(data);
+              setGameState("FINISHED");
+              return;
+            }
+            if (error?.includes("pas encore terminée") && attempt < 3) {
+              await new Promise((r) => setTimeout(r, 500));
+              continue;
+            }
+            finishCalled.current = false;
+            return;
+          }
+        })();
       }
     };
 

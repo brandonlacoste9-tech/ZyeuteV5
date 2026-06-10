@@ -184,6 +184,65 @@ async function fetchMatchRow(matchId: string): Promise<MatchRow | null> {
   return data;
 }
 
+/** Close expired ACTIVE matches so the per-player unique index does not block new games. */
+async function cleanupStaleMatchesForUser(userId: string): Promise<void> {
+  if (!supabaseAdmin) return;
+
+  const nowIso = new Date().toISOString();
+  const { data: expired, error } = await supabaseAdmin
+    .from("grid_rush_matches")
+    .select("id")
+    .eq("player_1_id", userId)
+    .eq("status", "ACTIVE")
+    .lt("ends_at", nowIso);
+  if (error) throw new Error(error.message);
+
+  for (const row of expired ?? []) {
+    await finishMatchAdmin(userId, row.id as string).catch((err) => {
+      console.warn("[GridRush] stale match cleanup failed:", row.id, err);
+    });
+  }
+}
+
+async function createBotMatchAdmin(
+  userId: string,
+  stake: StakeTokens,
+): Promise<GridRushMatch> {
+  await cleanupStaleMatchesForUser(userId);
+  await deductTokenBalance(userId, stake);
+
+  const now = new Date();
+  const endsAt = new Date(now.getTime() + GRID_RUSH_DURATION_SEC * 1000);
+
+  const { data, error } = await supabaseAdmin!
+    .from("grid_rush_matches")
+    .insert({
+      player_1_id: userId,
+      stake_tokens: stake,
+      stake_cennes: stake,
+      status: "ACTIVE",
+      is_bot: true,
+      started_at: now.toISOString(),
+      ends_at: endsAt.toISOString(),
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    await creditTokenBalance(userId, stake).catch(() => {});
+    if (error.code === "23505") {
+      throw new Error(
+        "Tu as déjà une manche en cours. Attends la fin ou réessaie dans un instant.",
+      );
+    }
+    throw new Error(error.message);
+  }
+
+  const match = mapRow(data);
+  scheduleBotTick(match.id, endsAt, userId);
+  return match;
+}
+
 async function incrementBotScoreAdmin(matchId: string): Promise<void> {
   if (!supabaseAdmin) return;
   const match = await fetchMatchRow(matchId);
@@ -249,7 +308,10 @@ async function finishMatchAdmin(
   if (match.player_1_id !== userId && match.player_2_id !== userId) {
     throw new Error("Tu n'es pas dans cette partie");
   }
-  if (match.ends_at && new Date(match.ends_at as string) > now) {
+  const endsMs = match.ends_at
+    ? new Date(match.ends_at as string).getTime()
+    : 0;
+  if (endsMs > now.getTime() + 1500) {
     throw new Error("La partie n'est pas encore terminée");
   }
 
@@ -289,17 +351,22 @@ async function createInviteAdmin(
   userId: string,
   stake: StakeTokens,
 ): Promise<GridRushMatch> {
+  await cleanupStaleMatchesForUser(userId);
   await deductTokenBalance(userId, stake);
   const { data, error } = await supabaseAdmin!
     .from("grid_rush_matches")
     .insert({
       player_1_id: userId,
       stake_tokens: stake,
+      stake_cennes: stake,
       status: "WAITING",
     })
     .select("*")
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    await creditTokenBalance(userId, stake).catch(() => {});
+    throw new Error(error.message);
+  }
   return mapRow(data);
 }
 
@@ -307,6 +374,7 @@ async function quickMatchAdmin(
   userId: string,
   stake: StakeTokens,
 ): Promise<GridRushMatch> {
+  await cleanupStaleMatchesForUser(userId);
   const now = new Date();
   const { data: waiting } = await supabaseAdmin!
     .from("grid_rush_matches")
@@ -348,11 +416,15 @@ async function quickMatchAdmin(
     .insert({
       player_1_id: userId,
       stake_tokens: stake,
+      stake_cennes: stake,
       status: "WAITING",
     })
     .select("*")
     .single();
-  if (createErr) throw new Error(createErr.message);
+  if (createErr) {
+    await creditTokenBalance(userId, stake).catch(() => {});
+    throw new Error(createErr.message);
+  }
   return mapRow(created);
 }
 
@@ -624,14 +696,14 @@ export class GridRushService {
   ): Promise<GridRushMatch> {
     const stake = assertStake(stakeTokens);
 
-    // Prefer RPC (Supabase HTTP). Fall back to direct SQL when PostgREST's
-    // schema cache doesn't know the function yet (migration not applied/reloaded).
     if (supabaseAdmin) {
+      await cleanupStaleMatchesForUser(userId);
+
       const { data, error } = await supabaseAdmin.rpc(
         "grid_rush_create_bot_match",
         { p_stake: stake, p_user_id: userId },
       );
-      if (!error) {
+      if (!error && data) {
         const row = (Array.isArray(data) ? data[0] : data) as Record<
           string,
           unknown
@@ -644,13 +716,15 @@ export class GridRushService {
         );
         return match;
       }
-      if (!isRpcMissingError(error.message)) {
-        throw new Error(error.message);
+
+      if (error && !isRpcMissingError(error.message)) {
+        console.warn(
+          "[GridRush] RPC bot match failed, using admin path:",
+          error.message,
+        );
       }
-      console.warn(
-        "[GridRush] RPC not in schema cache — using direct SQL fallback:",
-        error.message,
-      );
+
+      return createBotMatchAdmin(userId, stake);
     }
 
     return createBotMatchDirect(userId, stake);
@@ -786,7 +860,10 @@ export class GridRushService {
         match.player_1_id === userId || match.player_2_id === userId;
       if (!isParticipant) throw new Error("Tu n'es pas dans cette partie");
 
-      if (match.ends_at && new Date(match.ends_at) > now) {
+      const endsMs = match.ends_at
+        ? new Date(match.ends_at as string).getTime()
+        : 0;
+      if (endsMs > now.getTime() + 1500) {
         throw new Error("La partie n'est pas encore terminée");
       }
 

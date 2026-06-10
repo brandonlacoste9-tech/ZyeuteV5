@@ -15,7 +15,7 @@ const STAKE_TIERS = [100, 250, 500] as const;
 export default function GridRushLobby() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [stake, setStake] = useState<(typeof STAKE_TIERS)[number]>(500);
+  const [stake, setStake] = useState<(typeof STAKE_TIERS)[number]>(100);
   const [loading, setLoading] = useState<"queue" | "invite" | "bot" | null>(
     null,
   );
