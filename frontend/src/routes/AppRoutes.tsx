@@ -10,6 +10,7 @@ import {
   Navigate,
   useNavigate,
   useLocation,
+  useParams,
 } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { RequireModerator } from "@/components/auth/RequireModerator";
@@ -173,6 +174,12 @@ function RequireRealAccount({ children }: { children: ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+/** Remount match page when :matchId changes so stale game state cannot leak. */
+function KeyedGridRushMatch() {
+  const { matchId } = useParams<{ matchId: string }>();
+  return <GridRushMatch key={matchId} />;
 }
 
 /** Infra marketing placeholders (kept for existing deep links). */
@@ -620,7 +627,7 @@ export function AppRoutes() {
             path="/arcade/grid-rush/:matchId"
             element={
               <RequireRealAccount>
-                <GridRushMatch />
+                <KeyedGridRushMatch />
               </RequireRealAccount>
             }
           />

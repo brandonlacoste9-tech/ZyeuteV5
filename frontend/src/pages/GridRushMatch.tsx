@@ -139,7 +139,9 @@ export default function GridRushMatchPage() {
     );
   }
 
-  if (!match) return null;
+  if (!match || match.id !== matchId) {
+    return <ArcadeLoading icon={Zap} label="Chargement de la partie…" />;
+  }
 
   const isHost = match.player1Id === user.id;
   const isGuest = match.player2Id === user.id;
@@ -222,6 +224,7 @@ export default function GridRushMatchPage() {
     return (
       <ArcadeBackdrop className="pb-24 min-h-screen">
         <GridRushGame
+          key={match.id}
           matchId={match.id}
           currentUserId={user.id}
           initialMatch={match}

@@ -53,13 +53,24 @@ function getRequestKey(endpoint: string, options: RequestInit): string {
   return `${options.method || "GET"}:${endpoint}:${JSON.stringify(options.body || "")}`;
 }
 
+const ARCADE_API_PREFIXES = [
+  "/grid-rush",
+  "/quiz",
+  "/royale",
+  "/hive-tap",
+] as const;
+
+function isArcadeEndpoint(endpoint: string): boolean {
+  return ARCADE_API_PREFIXES.some((prefix) => endpoint.startsWith(prefix));
+}
+
 // Base API call helper with deduplication and circuit breaker
 export async function apiCall<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<{ data: T | null; error: string | null; code?: string | number }> {
-  // Check circuit breaker (back off if rate limited)
-  if (circuitBreaker.isOpen()) {
+  // Arcade routes must not inherit feed circuit-breaker backoff
+  if (!isArcadeEndpoint(endpoint) && circuitBreaker.isOpen()) {
     apiLogger.warn(`Circuit breaker open, rejecting request to ${endpoint}`);
     return {
       data: null,

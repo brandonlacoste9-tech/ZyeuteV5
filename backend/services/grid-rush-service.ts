@@ -195,23 +195,49 @@ async function fetchMatchRow(matchId: string): Promise<MatchRow | null> {
   return data;
 }
 
-/** Close expired ACTIVE matches so the per-player unique index does not block new games. */
-async function cleanupStaleMatchesForUser(userId: string): Promise<void> {
+/** Close blocking ACTIVE matches so the per-player unique index does not block replays. */
+async function cleanupBlockingMatchesForUser(
+  userId: string,
+  opts?: { forceSoloBot?: boolean },
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   const nowIso = new Date().toISOString();
-  const { data: expired, error } = await supabaseAdmin
+
+  const { data: expired, error: expiredErr } = await supabaseAdmin
     .from("grid_rush_matches")
-    .select("id")
-    .eq("player_1_id", userId)
+    .select("id, player_1_id")
     .eq("status", "ACTIVE")
-    .lt("ends_at", nowIso);
-  if (error) throw new Error(error.message);
+    .lt("ends_at", nowIso)
+    .or(`player_1_id.eq.${userId},player_2_id.eq.${userId}`);
+  if (expiredErr) throw new Error(expiredErr.message);
 
   for (const row of expired ?? []) {
-    await finishMatchAdmin(userId, row.id as string).catch((err) => {
-      console.warn("[GridRush] stale match cleanup failed:", row.id, err);
-    });
+    const finisherId = (row.player_1_id as string) ?? userId;
+    await finishMatchAdmin(finisherId, row.id as string, { force: true }).catch(
+      (err) => {
+        console.warn("[GridRush] expired match cleanup failed:", row.id, err);
+      },
+    );
+  }
+
+  if (!opts?.forceSoloBot) return;
+
+  const { data: soloBots, error: botErr } = await supabaseAdmin
+    .from("grid_rush_matches")
+    .select("id")
+    .eq("status", "ACTIVE")
+    .eq("player_1_id", userId)
+    .is("player_2_id", null)
+    .not("started_at", "is", null);
+  if (botErr) throw new Error(botErr.message);
+
+  for (const row of soloBots ?? []) {
+    await finishMatchAdmin(userId, row.id as string, { force: true }).catch(
+      (err) => {
+        console.warn("[GridRush] solo bot cleanup failed:", row.id, err);
+      },
+    );
   }
 }
 
@@ -219,7 +245,7 @@ async function createBotMatchAdmin(
   userId: string,
   stake: StakeTokens,
 ): Promise<GridRushMatch> {
-  await cleanupStaleMatchesForUser(userId);
+  await cleanupBlockingMatchesForUser(userId, { forceSoloBot: true });
   await deductTokenBalance(userId, stake);
 
   const now = new Date();
@@ -307,6 +333,7 @@ async function incrementScoreAdmin(
 async function finishMatchAdmin(
   userId: string,
   matchId: string,
+  opts?: { force?: boolean },
 ): Promise<GridRushMatch> {
   const now = new Date();
   const match = await fetchMatchRow(matchId);
@@ -321,9 +348,11 @@ async function finishMatchAdmin(
   const endsMs = match.ends_at
     ? new Date(match.ends_at as string).getTime()
     : 0;
-  if (endsMs > now.getTime() + 1500) {
+  if (!opts?.force && endsMs > now.getTime() + 1500) {
     throw new Error("La partie n'est pas encore terminée");
   }
+
+  clearBotTimer(matchId);
 
   const p1Score = Number(match.player_1_score ?? 0);
   const p2Score = Number(match.player_2_score ?? 0);
@@ -361,7 +390,7 @@ async function createInviteAdmin(
   userId: string,
   stake: StakeTokens,
 ): Promise<GridRushMatch> {
-  await cleanupStaleMatchesForUser(userId);
+  await cleanupBlockingMatchesForUser(userId, { forceSoloBot: true });
   await deductTokenBalance(userId, stake);
   const { data, error } = await supabaseAdmin!
     .from("grid_rush_matches")
@@ -384,7 +413,7 @@ async function quickMatchAdmin(
   userId: string,
   stake: StakeTokens,
 ): Promise<GridRushMatch> {
-  await cleanupStaleMatchesForUser(userId);
+  await cleanupBlockingMatchesForUser(userId, { forceSoloBot: true });
   const now = new Date();
   const { data: waiting } = await supabaseAdmin!
     .from("grid_rush_matches")
@@ -508,6 +537,14 @@ const BOT_MIN_TICK_MS = 6000;
 const BOT_MAX_TICK_MS = 10000;
 const botTimers = new Map<string, NodeJS.Timeout>();
 
+function clearBotTimer(matchId: string): void {
+  const timer = botTimers.get(matchId);
+  if (timer) {
+    clearTimeout(timer);
+    botTimers.delete(matchId);
+  }
+}
+
 function scheduleBotTick(
   matchId: string,
   endsAt: Date,
@@ -519,7 +556,7 @@ function scheduleBotTick(
   const timer = setTimeout(async () => {
     try {
       if (Date.now() >= endsAt.getTime()) {
-        botTimers.delete(matchId);
+        clearBotTimer(matchId);
         cleanScoreRateLimit(matchId);
         await GridRushService.finishMatch(player1Id, matchId).catch(() => {});
         return;
@@ -537,7 +574,7 @@ function scheduleBotTick(
       }
       scheduleBotTick(matchId, endsAt, player1Id);
     } catch {
-      botTimers.delete(matchId);
+      clearBotTimer(matchId);
     }
   }, delay);
 

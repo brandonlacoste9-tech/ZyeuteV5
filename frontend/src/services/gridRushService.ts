@@ -1,4 +1,45 @@
 import { apiCall } from "./api";
+import { getSessionWithTimeout } from "@/lib/supabase";
+
+async function arcadeFetch<T>(
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<{ data: T | null; error: string | null }> {
+  const { data, error } = await apiCall<T>(endpoint, options);
+  if (data) return { data, error: null };
+  if (error) {
+    console.warn(`[GridRush] ${endpoint} failed via apiCall:`, error);
+  }
+
+  try {
+    const {
+      data: { session },
+    } = await getSessionWithTimeout(3000);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...((options.headers as Record<string, string>) || {}),
+    };
+    if (session?.access_token) {
+      headers.Authorization = `Bearer ${session.access_token}`;
+    }
+
+    const res = await fetch(`/api${endpoint}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      return {
+        data: null,
+        error: body?.error || `Request failed (${res.status})`,
+      };
+    }
+    return { data: body as T, error: null };
+  } catch {
+    return { data: null, error: error || "Network error" };
+  }
+}
 
 export interface GridRushMatch {
   id: string;
@@ -21,7 +62,7 @@ export async function getWallet() {
 }
 
 export async function quickMatch(stakeTokens: number) {
-  return apiCall<GridRushMatch>("/grid-rush/queue", {
+  return arcadeFetch<GridRushMatch>("/grid-rush/queue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeTokens }),
@@ -29,7 +70,7 @@ export async function quickMatch(stakeTokens: number) {
 }
 
 export async function createInvite(stakeTokens: number) {
-  return apiCall<GridRushMatch>("/grid-rush/invite", {
+  return arcadeFetch<GridRushMatch>("/grid-rush/invite", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeTokens }),
@@ -37,7 +78,7 @@ export async function createInvite(stakeTokens: number) {
 }
 
 export async function createBotMatch(stakeTokens: number) {
-  return apiCall<GridRushMatch>("/grid-rush/bot", {
+  return arcadeFetch<GridRushMatch>("/grid-rush/bot", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stakeTokens }),
