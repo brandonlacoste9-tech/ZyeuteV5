@@ -1,7 +1,15 @@
 import { Router } from "express";
 import axios from "axios";
+import { db } from "../storage.js";
+import { users } from "../../shared/schema.js";
+import { eq, sql } from "drizzle-orm";
 
 const router = Router();
+
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.userId) return res.status(401).json({ error: "Non autorisé" });
+  next();
+};
 
 router.get("/rss", async (req, res) => {
   try {
@@ -57,6 +65,35 @@ router.get("/rss", async (req, res) => {
         Category: ["Adventure"]
       }
     ]);
+  }
+});
+
+router.post("/claim", requireAuth, async (req: any, res: any) => {
+  try {
+    const userId = req.userId!;
+    
+    // Credit 10 Piasses (cashCredits)
+    await db
+      .update(users)
+      .set({ cashCredits: sql`${users.cashCredits} + 10` })
+      .where(eq(users.id, userId));
+
+    const result = await db
+      .select({ cashCredits: users.cashCredits })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const newBalance = result[0]?.cashCredits ?? 0;
+
+    res.json({
+      success: true,
+      amount: 10,
+      newBalance
+    });
+  } catch (error: any) {
+    console.error("GameDistribution Claim Error:", error.message);
+    res.status(500).json({ error: "Impossible de réclamer les jetons." });
   }
 });
 

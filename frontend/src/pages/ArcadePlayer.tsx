@@ -8,6 +8,8 @@ import {
   arcadeTextYellow,
 } from "@/components/arcade/arcade-ui";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiCall } from "@/services/api";
+import { toast } from "@/components/Toast";
 
 export default function ArcadePlayer() {
   const [searchParams] = useSearchParams();
@@ -65,10 +67,26 @@ export default function ArcadePlayer() {
     )}`;
   }
 
-  const handleClaim = () => {
-    setClaimed(true);
-    // In a real implementation, we would call an API here to credit the user
-    // e.g., await apiCall("/arcade/claim", { method: "POST" });
+  const handleClaim = async () => {
+    if (!user) {
+      toast.error("Connecte-toi pour réclamer des jetons.");
+      return;
+    }
+    try {
+      const response = await apiCall<{ success: boolean; amount: number; newBalance: number }>(
+        "/gamedistribution/claim",
+        { method: "POST" }
+      );
+      if (response.data?.success) {
+        setClaimed(true);
+        toast.success(`Succès ! +${response.data.amount} Piasses créditées.`);
+      } else if (response.error) {
+        toast.error(response.error.message || "Erreur lors de la réclamation.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Une erreur est survenue.");
+    }
   };
 
   return (
