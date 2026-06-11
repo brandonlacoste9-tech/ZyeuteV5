@@ -48,4 +48,12 @@ Set these in the Render dashboard for **zyeutev5-1** (production API behind Verc
 | `WEBHOOK_SECRET`  | HLS worker cache invalidation |
 | `HIVE_SECRET_KEY` | Colony / n8n events           |
 
+## Error monitoring (Sentry)
+
+| Variable                    | Notes                                                                 |
+| --------------------------- | --------------------------------------------------------------------- |
+| `SENTRY_DSN`                | Backend DSN from Sentry → Project Settings → Client Keys (DSN)        |
+| `SENTRY_TRACES_SAMPLE_RATE` | Optional; defaults to `0.1`                                           |
+| `DEBUG_SENTRY_SECRET`       | Random secret to enable `GET /api/debug-sentry?secret=...` (test)     |
+
 See also [docs/SEED_KEYS_VERCEL_AND_RENDER.md](docs/SEED_KEYS_VERCEL_AND_RENDER.md).
