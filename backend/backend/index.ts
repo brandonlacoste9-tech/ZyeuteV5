@@ -34,16 +34,27 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Video proxy endpoint
 app.get("/api/video/proxy", async (req, res) => {
   try {
-    const videoUrl = req.query.url as string;
+    const videoUrl = req.query.url;
 
-    if (!videoUrl) {
+    if (typeof videoUrl !== "string" || !videoUrl) {
       return res.status(400).json({ error: "URL parameter is required" });
+    }
+
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(videoUrl);
+    } catch {
+      return res.status(400).json({ error: "Invalid URL parameter" });
     }
 
     console.log(`📹 Proxying video: ${videoUrl}`);
 
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const isPexels =
+      hostname === "pexels.com" || hostname.endsWith(".pexels.com");
+
     // For Pexels videos, we need to handle them differently
-    if (videoUrl.includes("pexels.com")) {
+    if (isPexels) {
       // Pexels might block direct streaming, so we'll redirect to a CORS-friendly alternative
       const googleVideoUrl =
         "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
