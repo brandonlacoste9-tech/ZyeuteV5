@@ -16,6 +16,7 @@ if (
 }
 import express from "express";
 import cors from "cors";
+import { buildCorsOptions, resolveAllowedOrigins } from "./lib/cors.js";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes.js";
@@ -51,41 +52,17 @@ const app = express();
 // Trust proxy (Railway, Vercel) - required for express-rate-limit to work behind reverse proxy
 app.set("trust proxy", 1);
 
-// CORS: allow frontend (Vercel / localhost) to call this backend
-const allowedOrigins = [
-  "https://www.zyeute.com",
-  "https://zyeute.com",
-  "https://zyeute.vercel.app",
-  "https://zyeutev5-production.up.railway.app",
-  "https://zyeutev5-1.onrender.com",
-  "http://localhost:12000",
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "http://127.0.0.1:3000",
-  "http://127.0.0.1:5173",
-];
+// CORS: allow frontend (Vercel / localhost) to call this backend.
+// Origin allowlist + options live in ./lib/cors.ts. A disallowed Origin is
+// denied cleanly (no CORS headers) rather than throwing, so it can never bubble
+// into Express's default handler as a 500.
+const allowedOrigins = resolveAllowedOrigins();
+const corsOptions = buildCorsOptions(allowedOrigins);
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        console.log(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    exposedHeaders: ["Content-Range", "X-Content-Range"],
-  }),
-);
+app.use(cors(corsOptions));
 
 // Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
-app.options(/.*/, cors());
+app.options(/.*/, cors(corsOptions));
 
 // helmet: baseline security headers (nosniff, HSTS, frameguard, etc.).
 // CSP is disabled because the API serves cross-origin JSON to the Vercel SPA and
@@ -226,7 +203,11 @@ io.use(async (socket, next) => {
     const headerAuth = socket.handshake.headers?.authorization;
     const queryToken = socket.handshake.query?.token;
     let token: string | undefined = auth.token;
-    if (!token && typeof headerAuth === "string" && headerAuth.startsWith("Bearer ")) {
+    if (
+      !token &&
+      typeof headerAuth === "string" &&
+      headerAuth.startsWith("Bearer ")
+    ) {
       token = headerAuth.slice("Bearer ".length).trim();
     }
     if (!token && typeof queryToken === "string") {
@@ -249,10 +230,7 @@ io.use(async (socket, next) => {
 // Strip HTML-significant characters so chat text can never be rendered as markup.
 function sanitizeChatText(input: unknown): string {
   if (typeof input !== "string") return "";
-  return input
-    .replace(/[<>]/g, "")
-    .slice(0, 200)
-    .trim();
+  return input.replace(/[<>]/g, "").slice(0, 200).trim();
 }
 
 io.on("connection", (socket) => {
