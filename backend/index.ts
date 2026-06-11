@@ -1,4 +1,7 @@
 import "./preload.js";
+// Initialize Sentry early (after env is loaded via preload, before Express/HTTP
+// are imported) so auto-instrumentation can patch them. No-op if SENTRY_DSN unset.
+import { Sentry } from "./sentry.js";
 // [SECURITY] SSL certificate validation bypass for local development.
 // This is required when connecting to certain Supabase/Railway endpoints with self-signed certs.
 // WARNING: Never enable this in production.
@@ -574,6 +577,11 @@ app.use((req, res, next) => {
     const { default: seedRouter } = await import("./routes/seed.js");
     app.use("/api/seed", seedRouter);
 
+    // Guarded Sentry verification endpoint (404 unless ?secret matches env).
+    const { default: debugSentryRouter } =
+      await import("./routes/debug-sentry.js");
+    app.use("/api/debug-sentry", debugSentryRouter);
+
     console.log("🛠️  Step 2: Registering bulk routes...");
     await registerRoutes(httpServer, app);
 
@@ -598,6 +606,11 @@ app.use((req, res, next) => {
         );
       }
     }
+
+    // Sentry Express error handler — must be registered AFTER all routes so
+    // it captures errors thrown by them (e.g. /api/debug-sentry). No-op when
+    // Sentry was not initialized (SENTRY_DSN unset).
+    Sentry.setupExpressErrorHandler(app);
 
     // 3. Mark System Ready
     isSystemReady = true;
