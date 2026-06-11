@@ -9,6 +9,7 @@ import type { Post, User, Story, Comment, Notification } from "@/types";
 const apiLogger = logger.withContext("API");
 
 import { getSessionWithTimeout } from "@/lib/supabase";
+import { getOrCreateFeedSessionId } from "@/lib/feedSession";
 import {
   AIImageResponseSchema,
   AIVideoResponseSchema,
@@ -255,8 +256,12 @@ export async function getFeedPosts(
   limit: number = 20,
 ): Promise<Post[]> {
   try {
+    // Stable per-session seed → feed order varies between sessions but stays
+    // consistent across paginated requests (no dupes/skips). Rotated on reload
+    // / pull-to-refresh via feedSession helpers.
+    const session = encodeURIComponent(getOrCreateFeedSessionId());
     const { data, error } = await apiCall<{ posts: Post[] }>(
-      `/feed?page=${page}&limit=${limit}`,
+      `/feed?page=${page}&limit=${limit}&session=${session}`,
     );
 
     if (error || !data) {

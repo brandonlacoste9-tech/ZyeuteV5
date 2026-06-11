@@ -71,6 +71,31 @@ export function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
   return a;
 }
 
+/**
+ * Quality-preserving seeded shuffle: keep the ranked pool's bias toward viral/
+ * fresh content by splitting it into fixed-size tiers (top-ranked items first)
+ * and shuffling only *within* each tier with the seed. Same seed → same order
+ * (pagination-safe); different seed → different order. Viral content stays near
+ * the top across sessions; only the intra-tier ordering varies.
+ *
+ * The input is expected to be pre-sorted best-first (e.g. by viral_score).
+ */
+export function seededTierShuffle<T>(
+  ranked: T[],
+  seed: number,
+  tierSize = 10,
+): T[] {
+  if (ranked.length <= 1) return [...ranked];
+  const size = Math.max(1, Math.floor(tierSize));
+  const out: T[] = [];
+  for (let start = 0; start < ranked.length; start += size) {
+    const tier = ranked.slice(start, start + size);
+    // Offset the seed per tier so tiers don't all permute identically.
+    out.push(...shuffleWithSeed(tier, (seed + start * 2654435761) >>> 0));
+  }
+  return out;
+}
+
 /** Round-robin across creators so one account cannot dominate consecutive slots. */
 export function interleaveByAuthor<T extends Record<string, unknown>>(
   posts: T[],
