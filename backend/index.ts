@@ -621,6 +621,17 @@ app.use((req, res, next) => {
       console.error("🚨 [Scoring] Engine setup failed:", err);
     }
 
+    // [FEED RECONCILER] Flip stuck 'processing'/'pending' publications with an
+    // hls_url to 'completed' via the Supabase HTTP client (the Mux webhook's
+    // direct-DB pool times out in prod). Fail-safe — never crashes boot.
+    try {
+      const { startFeedStatusReconciler } =
+        await import("./services/feed-status-reconciler.js");
+      startFeedStatusReconciler();
+    } catch (err) {
+      console.warn("⚠️ [Startup] Feed reconciler setup skipped:", err);
+    }
+
     app.use("/api/tiguy", tiGuyRouter);
     app.use("/api/hive", hiveRouter);
     app.use("/api/messaging", messagingRouter);

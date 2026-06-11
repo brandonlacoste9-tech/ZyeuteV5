@@ -289,11 +289,15 @@ async function getPostsViaSupabase(
     .eq("visibility", "public")
     .eq("est_masque", false)
     .is("deleted_at", null)
-    .eq("processing_status", "completed")
-    .not("media_url", "is", null)
-    // Only serve permanent video sources (Mux HLS, Supabase storage, reliable CDNs) and TikTok
     .or(
-      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%tiktok%,media_url.ilike.%tiktokv.com%,media_url.ilike.%tiktokcdn%,media_url.ilike.%tikcdn%,media_url.ilike.%byteoversea%,media_url.ilike.%muscdn%,media_url.ilike.%v16-webapp%,media_url.ilike.%v19-webapp%,media_url.ilike.%googleapis.com%",
+      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+    )
+    .not("media_url", "is", null)
+    // Exclude expired media-proxy URLs (signed TikTok CDN links that 403)
+    .not("media_url", "ilike", "/api/media-proxy%")
+    // Only serve permanent video sources (Mux HLS, Supabase storage, stock CDNs)
+    .or(
+      "media_url.ilike.%mux.com%,media_url.ilike.%supabase.co%,media_url.ilike.%.m3u8,media_url.ilike.%image.mux.com%,media_url.ilike.%pexels.com%,media_url.ilike.%videos.pexels.com%,media_url.ilike.%pixabay.com%,media_url.ilike.%cdn.pixabay.com%,media_url.ilike.%commondatastorage.googleapis.com%,media_url.ilike.%googleapis.com%",
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
