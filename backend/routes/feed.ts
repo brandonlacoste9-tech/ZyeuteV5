@@ -16,6 +16,7 @@ import {
   prepareShuffledFeed,
   seededTierShuffle,
   shuffleWithSeed,
+  unseenFirst,
 } from "../../shared/utils/feedDedup.js";
 
 /**
@@ -56,6 +57,26 @@ async function attachOptionalUser(
     if (userId) (req as any).userId = userId;
   }
   next();
+}
+
+/** Max guest seen ids honored per request (mirrors the client cap). */
+const GUEST_SEEN_LIMIT = 50;
+
+/**
+ * Recently-watched post ids supplied by a guest client. Read from the
+ * `x-seen-ids` header (preferred — keeps the URL short) or the `seen` query
+ * param as a fallback. Comma-separated, capped to the most recent ids.
+ */
+function parseSeenIds(req: Request): string[] {
+  const raw =
+    (req.headers["x-seen-ids"] as string | undefined) ||
+    (typeof req.query.seen === "string" ? (req.query.seen as string) : "");
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, GUEST_SEEN_LIMIT);
 }
 
 function isTikTokStylePost(p: Record<string, unknown>): boolean {
@@ -268,12 +289,42 @@ async function fetchTikTokExploreSupabase(
  */
 const FEED_BLOCK_SIZE = 120;
 
+/** Cap on how many recently-watched ids we pull from video_views per request. */
+const WATCHED_LOOKBACK = 500;
+
+/**
+ * Recently-watched publication ids for an authenticated viewer, newest first.
+ * Uses the Supabase JS client (service role) — the drizzle/pg pool times out
+ * in production, so all reads here go through Supabase HTTP.
+ */
+async function fetchWatchedPostIds(
+  supabase: SupabaseClient,
+  viewerId: string,
+): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from("video_views")
+      .select("publication_id")
+      .eq("user_id", viewerId)
+      .order("watched_at", { ascending: false })
+      .limit(WATCHED_LOOKBACK);
+    if (error || !data) return [];
+    return data
+      .map((r: { publication_id: string | null }) => r.publication_id)
+      .filter((id): id is string => !!id);
+  } catch {
+    return [];
+  }
+}
+
 /** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
 async function getPostsViaSupabase(
   limit: number,
   page: number,
   _hiveId = "quebec",
   seed = 0,
+  viewerId?: string,
+  guestSeenIds: string[] = [],
 ) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -282,6 +333,14 @@ async function getPostsViaSupabase(
   const blockIndex = Math.floor(absoluteOffset / FEED_BLOCK_SIZE);
   const offsetInBlock = absoluteOffset % FEED_BLOCK_SIZE;
   const blockStart = blockIndex * FEED_BLOCK_SIZE;
+
+  // Watched-video knowledge: authed users from video_views, guests from the
+  // client-supplied list. Unseen posts are surfaced before watched ones.
+  const seen = new Set<string>(guestSeenIds.map(String));
+  if (viewerId) {
+    const watchedIds = await fetchWatchedPostIds(supabase, viewerId);
+    for (const id of watchedIds) seen.add(id);
+  }
 
   const { data, error } = await supabase
     .from("publications")
@@ -305,16 +364,22 @@ async function getPostsViaSupabase(
 
   if (error) throw new Error(error.message);
 
-  const block = data || [];
-  if (seed === 0) return block.slice(offsetInBlock, offsetInBlock + limit);
+  const block = (data || []) as Record<string, unknown>[];
+  if (seed === 0) {
+    const ordered = unseenFirst(block, seen);
+    return ordered.slice(offsetInBlock, offsetInBlock + limit);
+  }
 
   // Quality-preserving seeded shuffle: viral content stays near top, order
   // varies per session. Tier offset by block keeps blocks from aligning.
   const shuffled = seededTierShuffle(
-    block as Record<string, unknown>[],
+    block,
     (seed + blockIndex * 2654435761) >>> 0,
   );
-  return shuffled.slice(offsetInBlock, offsetInBlock + limit);
+  // Promote unseen posts ahead of watched ones while keeping the tier-shuffled
+  // order within each group. Falls back to the full list when all are watched.
+  const ordered = unseenFirst(shuffled, seen);
+  return ordered.slice(offsetInBlock, offsetInBlock + limit);
 }
 
 const router = Router();
@@ -350,11 +415,23 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 0;
     const limit = parseInt(req.query.limit as string) || 20;
     const hive = (req.query.hive as string) || "quebec";
-    const seed = resolveFeedSeed(req.query.session, (req as any).userId);
+    const viewerId = (req as any).userId as string | undefined;
+    const seed = resolveFeedSeed(req.query.session, viewerId);
+
+    // Guests have no video_views rows; the client sends its recently-watched ids
+    // (capped, last ~50) so we can deprioritize them. Header keeps the URL short.
+    const guestSeenIds = viewerId ? [] : parseSeenIds(req);
 
     // Try Supabase HTTP first (always works)
     if (SUPABASE_URL && SUPABASE_KEY) {
-      const posts = await getPostsViaSupabase(limit, page, hive, seed);
+      const posts = await getPostsViaSupabase(
+        limit,
+        page,
+        hive,
+        seed,
+        viewerId,
+        guestSeenIds,
+      );
       return res.json({
         posts,
         nextCursor: posts.length === limit ? String(page + 1) : null,

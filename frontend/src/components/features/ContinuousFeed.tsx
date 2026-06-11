@@ -55,6 +55,8 @@ import {
 } from "@/services/api";
 import { triggerBadgeCheck } from "@/services/gamificationService";
 import { pourToiRank, fetchWatchHistory } from "@/lib/pourToiRanker";
+import { recordWatch } from "@/lib/watchTracking";
+import { useAuth } from "@/hooks/useAuth";
 
 function allowDemoVideos(): boolean {
   return (
@@ -308,6 +310,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { tap } = useHaptics();
   const { getFeedState, saveFeedState } = useNavigationState();
   const { isOnline, addToQueue } = useNetworkQueue();
+  const { user } = useAuth();
 
   const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
   const isFetchingRef = useRef(false); // Prevent concurrent fetches
@@ -395,6 +398,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   useEffect(() => {
     postsRef.current = posts;
   }, [posts]);
+
+  // Record the active video as watched after a 2s dwell so the feed can surface
+  // unseen videos first on the next visit. Fire-and-forget; fast scroll-through
+  // (< 2s) is not counted as a watch. Guests are tracked in localStorage,
+  // authenticated users additionally persist to video_views.
+  useEffect(() => {
+    const active = posts[currentIndex];
+    if (!active?.id || String(active.id).startsWith("demo-")) return;
+    const postId = String(active.id);
+    const isAuthed = !!user;
+    const timer = setTimeout(() => {
+      recordWatch(postId, { isAuthenticated: isAuthed });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [currentIndex, posts, user]);
 
   // Save state on unmount
   useEffect(() => {

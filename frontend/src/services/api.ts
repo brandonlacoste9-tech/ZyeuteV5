@@ -10,6 +10,7 @@ const apiLogger = logger.withContext("API");
 
 import { getSessionWithTimeout } from "@/lib/supabase";
 import { getOrCreateFeedSessionId } from "@/lib/feedSession";
+import { getGuestSeenForRequest } from "@/lib/watchTracking";
 import {
   AIImageResponseSchema,
   AIVideoResponseSchema,
@@ -260,8 +261,15 @@ export async function getFeedPosts(
     // consistent across paginated requests (no dupes/skips). Rotated on reload
     // / pull-to-refresh via feedSession helpers.
     const session = encodeURIComponent(getOrCreateFeedSessionId());
+    // Guests have no server-side video_views; send their recently-watched ids so
+    // the backend can surface unseen videos first. Authed users are read from
+    // video_views server-side and don't need this. Sent via header to keep the
+    // URL short. (apiCall attaches a Bearer token only when signed in.)
+    const seenIds = getGuestSeenForRequest();
+    const headers = seenIds.length ? { "x-seen-ids": seenIds.join(",") } : undefined;
     const { data, error } = await apiCall<{ posts: Post[] }>(
       `/feed?page=${page}&limit=${limit}&session=${session}`,
+      headers ? { headers } : {},
     );
 
     if (error || !data) {
