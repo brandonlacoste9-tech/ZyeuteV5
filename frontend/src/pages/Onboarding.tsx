@@ -31,7 +31,7 @@ const INTERESTS = [
   { emoji: "🏔️", label: "Nature" },
   { emoji: "✨", label: "Mode" },
   { emoji: "📱", label: "Tech" },
-  { emoji: "🌙", label: "Nightlife" },
+  { emoji: "🌙", label: "Vie nocturne" },
   { emoji: "🎨", label: "Art" },
   { emoji: "🎮", label: "Gaming" },
   { emoji: "🎭", label: "Arts & spectacles" },
@@ -193,12 +193,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
   };
 
   const completeOnboarding = () => {
+    // Persist the completion flag under both keys so neither onboarding surface
+    // (this 5-step page and the feed overlay) re-triggers after completion.
     localStorage.setItem("zyeute_onboarded", "true");
+    localStorage.setItem("zyeute_onboarding_complete", "true");
+    // Always land on the feed. In overlay mode also close the sheet.
     if (overlay && onClose) {
       onClose();
-    } else {
-      navigate("/feed", { replace: true });
     }
+    navigate("/feed", { replace: true });
   };
 
   const handleSkip = () => {
@@ -261,8 +264,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
     }
   };
 
-  const handleFinish = async () => {
-    await savePreferences();
+  const handleFinish = () => {
+    // Persist preferences in the background — a slow/cold backend must never
+    // block (or fail) onboarding completion, otherwise the final CTA appears
+    // to do nothing and the user is stuck on the wizard.
+    void savePreferences();
     completeOnboarding();
   };
 
