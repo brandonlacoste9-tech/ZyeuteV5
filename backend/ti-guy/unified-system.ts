@@ -1,6 +1,6 @@
 import { QuebecContextEngine } from "./context-engine.js";
 import { TiGuyPromptBuilder } from "./prompt-builder.js";
-import { MemoryService } from "../../packages/kernel-node/src/lib/agents/MemoryService.js";
+import { MemoryService } from "./memory-service.js";
 import { getMemoryQueue } from "../queue.js";
 
 export class TiGuyUnified {
