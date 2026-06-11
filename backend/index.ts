@@ -13,8 +13,11 @@ if (
 }
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes.js";
+import { verifyAuthToken } from "./supabase-auth.js";
+import { storage } from "./storage.js";
 import { recoverBotMatches } from "./services/grid-rush-service.js";
 import { serveStatic } from "./static.js";
 import tiGuyRouter from "./routes/tiguy.js";
@@ -80,6 +83,21 @@ app.use(
 
 // Handle OPTIONS preflight for all routes - use regex pattern to avoid path-to-regexp issues
 app.options(/.*/, cors());
+
+// helmet: baseline security headers (nosniff, HSTS, frameguard, etc.).
+// CSP is disabled because the API serves cross-origin JSON to the Vercel SPA and
+// a restrictive default policy would break it; the explicit headers below keep
+// the previously-set behavior (notably X-Frame-Options: DENY).
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    hsts: {
+      maxAge: 63072000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  }),
+);
 
 // Security Headers Middleware
 app.use((req, res, next) => {
@@ -195,8 +213,48 @@ const io = new SocketIOServer(httpServer, {
 
 app.set("io", io);
 
+// Authenticate every socket at the handshake. The Supabase JWT may arrive via
+// auth.token (preferred), the Authorization header, or a query param. We derive
+// userId server-side from the verified token and never trust client-supplied
+// identity on subsequent events. See audit §2/§5.2.
+io.use(async (socket, next) => {
+  try {
+    const auth = (socket.handshake.auth || {}) as { token?: string };
+    const headerAuth = socket.handshake.headers?.authorization;
+    const queryToken = socket.handshake.query?.token;
+    let token: string | undefined = auth.token;
+    if (!token && typeof headerAuth === "string" && headerAuth.startsWith("Bearer ")) {
+      token = headerAuth.slice("Bearer ".length).trim();
+    }
+    if (!token && typeof queryToken === "string") {
+      token = queryToken;
+    }
+    if (!token) {
+      return next(new Error("Unauthorized: missing token"));
+    }
+    const userId = await verifyAuthToken(token);
+    if (!userId) {
+      return next(new Error("Unauthorized: invalid token"));
+    }
+    (socket.data as { userId?: string }).userId = userId;
+    return next();
+  } catch (err) {
+    return next(new Error("Unauthorized"));
+  }
+});
+
+// Strip HTML-significant characters so chat text can never be rendered as markup.
+function sanitizeChatText(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input
+    .replace(/[<>]/g, "")
+    .slice(0, 200)
+    .trim();
+}
+
 io.on("connection", (socket) => {
-  console.log("🔌 Socket.IO Client Connected:", socket.id);
+  const socketUserId = (socket.data as { userId?: string }).userId;
+  console.log("🔌 Socket.IO Client Connected:", socket.id, socketUserId);
 
   // ─── LIVE CHAT ────────────────────────────────────────────────────────────
   // Join a live stream room to receive/send chat messages
@@ -227,24 +285,40 @@ io.on("connection", (socket) => {
     io.to(room).emit("live:viewer_count", { count });
   });
 
-  // Chat message in a live room
-  socket.on(
-    "live:message",
-    ({ streamId, userId, username, avatarUrl, text, tier }: any) => {
-      if (!streamId || !text?.trim()) return;
-      const room = `live:${streamId}`;
-      const message = {
-        id: `${Date.now()}-${socket.id}`,
-        userId,
-        username: username || "Anonyme",
-        avatarUrl,
-        text: text.slice(0, 200),
-        tier: tier || "free", // bronze/silver/gold — used for coloured name
-        timestamp: Date.now(),
-      };
-      io.to(room).emit("live:message", message);
-    },
-  );
+  // Chat message in a live room. Identity is resolved server-side from the
+  // verified socket userId — client-supplied userId/username/tier/avatarUrl are
+  // ignored to prevent impersonation, and text is HTML-stripped + length-capped.
+  socket.on("live:message", async ({ streamId, text }: any) => {
+    if (!streamId || !socketUserId) return;
+    const cleanText = sanitizeChatText(text);
+    if (!cleanText) return;
+    const room = `live:${streamId}`;
+
+    let username = "Anonyme";
+    let avatarUrl: string | null | undefined;
+    let tier = "free";
+    try {
+      const user = await storage.getUser(socketUserId);
+      if (user) {
+        username = user.username || username;
+        avatarUrl = user.avatarUrl;
+        tier = user.subscriptionTier || tier;
+      }
+    } catch (err) {
+      console.warn("[Live] failed to resolve user for chat message:", err);
+    }
+
+    const message = {
+      id: `${Date.now()}-${socket.id}`,
+      userId: socketUserId,
+      username,
+      avatarUrl,
+      text: cleanText,
+      tier, // bronze/silver/gold — used for coloured name
+      timestamp: Date.now(),
+    };
+    io.to(room).emit("live:message", message);
+  });
 
   // Gift sent during a live
   socket.on(

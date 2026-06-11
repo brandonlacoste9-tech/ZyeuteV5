@@ -13,6 +13,7 @@ declare global {
 import { storage } from "./storage.js";
 // [NEW] Import the JWT verifier + Supabase admin client (for auto-provisioning)
 import { verifyAuthToken } from "./supabase-auth.js";
+import { timingSafeEqualStr } from "./utils/timing-safe-equal.js";
 import aiRoutes from "./routes/ai.routes.js";
 
 import adminRoutes from "./routes/admin.js";
@@ -147,7 +148,7 @@ export async function registerRoutes(
     if (!expected) {
       return res.status(503).json({ error: "WEBHOOK_SECRET not configured" });
     }
-    if (secret !== expected) {
+    if (!timingSafeEqualStr(secret, expected)) {
       return res.status(401).json({ error: "Invalid webhook secret" });
     }
     const { videoId } = req.body || {};
@@ -166,7 +167,7 @@ export async function registerRoutes(
       return res.status(500).json({ error: "HIVE_SECRET_KEY not configured" });
     }
 
-    if (secret !== expected) {
+    if (!timingSafeEqualStr(secret, expected)) {
       return res.status(401).json({ error: "Hive Secret Invalid" });
     }
 
