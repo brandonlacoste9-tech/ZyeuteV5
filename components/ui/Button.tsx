@@ -59,6 +59,6 @@ export { Button };
 // Secondary button:
 // <Button variant="secondary">Annuler</Button>
 //
-// ❌ WRONG - Don't use English:
-// <Button>Submit</Button>  // Use "Envoyer" instead!
-// <Button variant="destructive">Delete</Button>  // Use "Sacrer ça aux vidanges"!
+// ❌ WRONG - Don't use English button labels:
+//   - English submit-label → use Envoyer instead!
+//   - English delete-label → use Sacrer ça aux vidanges!
