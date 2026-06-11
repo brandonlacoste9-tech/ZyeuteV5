@@ -203,6 +203,7 @@ export const Profile: React.FC = () => {
   };
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [reloadKey, setReloadKey] = React.useState(0);
   const [gamification, setGamification] =
     React.useState<GamificationProfile | null>(null);
   const [activeTab, setActiveTab] = React.useState<"posts" | "fires" | "saved">(
@@ -361,16 +362,14 @@ export const Profile: React.FC = () => {
             setUser(profileUser);
             setError(null);
           } else {
-            // User not found, redirect home
-            navigate("/");
+            // User not found (404) or fetch failed — show an actionable error
+            // instead of a silent redirect that looks like an infinite skeleton.
+            setError("Profil introuvable. Réessaye!");
           }
         }
       } catch (error) {
         profileLogger.error("[Profile] Error fetching user:", error);
         setError("Impossible de charger le profil. Réessaye!");
-        if (username !== "me") {
-          navigate("/");
-        }
       } finally {
         setIsLoading(false);
       }
@@ -378,9 +377,23 @@ export const Profile: React.FC = () => {
 
     if (!username) return;
 
+    // Safety net: the skeleton must never be permanent. If the profile fetch
+    // somehow never settles (hung network, stalled session lookup), surface an
+    // error state with retry after a hard timeout.
+    const watchdog = setTimeout(() => {
+      setIsLoading((stillLoading) => {
+        if (stillLoading) {
+          setError("Le profil a mis trop de temps à charger. Réessaye!");
+        }
+        return false;
+      });
+    }, 12000);
+
     // Fetch immediately once auth is loaded
-    fetchUser();
-  }, [username, navigate, authUser, authLoading, isGuest]);
+    void fetchUser().finally(() => clearTimeout(watchdog));
+
+    return () => clearTimeout(watchdog);
+  }, [username, navigate, authUser, authLoading, isGuest, reloadKey]);
 
   // Fetch user posts + subscribe to Realtime for processing status updates
   React.useEffect(() => {
@@ -563,9 +576,24 @@ export const Profile: React.FC = () => {
           <p className="text-gray-400 mb-6">
             {error || "Impossible de charger le profil"}
           </p>
-          <GoldButton onClick={() => navigate("/")} size="md">
-            Retour à l'accueil
-          </GoldButton>
+          <div className="flex flex-col gap-3 items-center">
+            <GoldButton
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                setReloadKey((k) => k + 1);
+              }}
+              size="md"
+            >
+              Réessayer
+            </GoldButton>
+            <button
+              onClick={() => navigate("/")}
+              className="text-sm text-gold-500/70 hover:text-gold-400 transition"
+            >
+              Retour à l'accueil
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -631,7 +659,7 @@ export const Profile: React.FC = () => {
                     });
                   } else {
                     await navigator.clipboard.writeText(profileUrl);
-                    alert("Lien du profil copié! 📋");
+                    toast.success("Lien copié!");
                   }
                 } catch (error) {
                   profileLogger.error("Error sharing:", error);

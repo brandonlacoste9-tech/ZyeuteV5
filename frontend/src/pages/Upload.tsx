@@ -691,8 +691,8 @@ export const Upload: React.FC = () => {
             <span>Conseils Zyeuté</span>
           </h3>
           <ul className="space-y-2 text-leather-200 text-sm">
-            <li>⚜️ Use #Quebec #MTL for local reach</li>
-            <li>🔥 Vertical videos (9:16) perform best</li>
+            <li>⚜️ Utilise #Quebec #MTL pour rejoindre ta région</li>
+            <li>🔥 Les vidéos verticales (9:16) marchent le mieux</li>
           </ul>
         </div>
       </main>
