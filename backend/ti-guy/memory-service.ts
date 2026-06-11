@@ -1,7 +1,21 @@
-import { db } from "../db.js";
-import { agentMemories, agentFacts } from "../../../../../shared/schema.js";
-import { getEmbeddings } from "../../../../../backend/ai/google.js";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { eq, and, sql, desc } from "drizzle-orm";
+import * as schema from "../../shared/schema.js";
+import { agentMemories, agentFacts } from "../../shared/schema.js";
+import { getEmbeddings } from "../ai/google.js";
+
+if (!process.env.DATABASE_URL) {
+  console.warn(
+    "⚠️ [Synapse] Warning: DATABASE_URL missing. The Hive Mind will be unable to remember.",
+  );
+}
+
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+const db = drizzle(pool, { schema });
 
 /**
  * MemoryService - "The Elephant" (Semantic Long-term Memory)
@@ -72,9 +86,7 @@ export class MemoryService {
       ]);
 
       const memories = vectorResults.map((r) => r.content);
-      const facts = factResults.map(
-        (r) => `[FAIT: ${r.category}] ${r.content}`,
-      );
+      const facts = factResults.map((r) => `[FAIT: ${r.category}] ${r.content}`);
 
       return [...facts, ...memories];
     } catch (err) {

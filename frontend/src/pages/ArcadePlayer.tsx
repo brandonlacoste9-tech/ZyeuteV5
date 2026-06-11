@@ -127,7 +127,7 @@ export default function ArcadePlayer() {
         setClaimed(true);
         toast.success(`Succès ! +${response.data.amount} Piasses créditées.`);
       } else if (response.error) {
-        toast.error(response.error.message || "Erreur lors de la réclamation.");
+        toast.error(response.error || "Erreur lors de la réclamation.");
       }
     } catch (err) {
       console.error(err);

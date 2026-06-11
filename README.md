@@ -1,7 +1,7 @@
 # 🐝 Zyeuté - L'app sociale du Québec ⚜️
 
 [![Vercel Deployment](https://img.shields.io/badge/Vercel-Deployed-success?logo=vercel)](https://zyeute.com)
-[![Railway Backend](https://img.shields.io/badge/Railway-Backend-blueviolet?logo=railway)](https://railway.app)
+[![Render Backend](https://img.shields.io/badge/Render-Backend-46E3B7?logo=render)](https://zyeutev5-1.onrender.com)
 [![Supabase DB](https://img.shields.io/badge/Supabase-Database-3ECF8E?logo=supabase)](https://supabase.com)
 
 **Zyeuté** is the premier social video platform dedicated to Quebec culture. Built with high-performance tech and deep AI integration, it brings the "TikTok" experience to the Fleur-de-lis province.
@@ -48,7 +48,7 @@ A premium design system inspired by Quebec's heritage, utilizing "Antique Gold" 
 - **Database**: Supabase (PostgreSQL) + Drizzle ORM
 - **Queue/Cache**: Redis + BullMQ (Video Processing)
 - **AI**: Google Vertex AI (Gemini 2.0) + OpenAI + DeepSeek
-- **Hosting**: Vercel (Frontend) + Railway (Backend/Workers)
+- **Hosting**: Vercel (Frontend) + Render (Backend/Workers)
 
 ---
 
