@@ -31,6 +31,32 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// SSRF protection: only media hosts the app legitimately serves are allowed
+// to be proxied. Mirrors the allowlist in backend/routes/media-proxy.ts.
+const ALLOWED_PROXY_HOSTS = [
+  "videos.pexels.com",
+  "images.pexels.com",
+  "www.pexels.com",
+  "pexels.com",
+  "assets.mixkit.co",
+  "mixkit.co",
+  "images.unsplash.com",
+  "unsplash.com",
+  "player.vimeo.com",
+  "storage.googleapis.com",
+  "commondatastorage.googleapis.com",
+  "api.apify.com",
+  "fal.media",
+];
+
+function isAllowedProxyTarget(parsed: URL): boolean {
+  if (parsed.protocol !== "https:") return false;
+  const hostname = parsed.hostname.toLowerCase();
+  return ALLOWED_PROXY_HOSTS.some(
+    (host) => hostname === host || hostname.endsWith(`.${host}`),
+  );
+}
+
 // Video proxy endpoint
 app.get("/api/video/proxy", async (req, res) => {
   try {
@@ -45,6 +71,12 @@ app.get("/api/video/proxy", async (req, res) => {
       parsedUrl = new URL(videoUrl);
     } catch {
       return res.status(400).json({ error: "Invalid URL parameter" });
+    }
+
+    // Enforce the host allowlist BEFORE any outbound request (SSRF guard).
+    if (!isAllowedProxyTarget(parsedUrl)) {
+      console.error(`⛔ Blocked proxy target not on allowlist: ${videoUrl}`);
+      return res.status(403).json({ error: "URL host not allowed" });
     }
 
     console.log(`📹 Proxying video: ${videoUrl}`);
