@@ -96,6 +96,28 @@ export function seededTierShuffle<T>(
   return out;
 }
 
+/**
+ * Stable partition that surfaces unwatched posts before watched ones. Posts
+ * whose id is NOT in `seen` keep their relative order and come first; watched
+ * posts keep their relative order and follow. When every post is watched (or
+ * `seen` is empty) the input order is returned unchanged, so the feed is never
+ * emptied or reordered without reason.
+ */
+export function unseenFirst<T extends { id?: unknown }>(
+  posts: T[],
+  seen: Set<string>,
+): T[] {
+  if (seen.size === 0) return posts;
+  const unseen: T[] = [];
+  const watched: T[] = [];
+  for (const p of posts) {
+    if (seen.has(String(p.id))) watched.push(p);
+    else unseen.push(p);
+  }
+  if (unseen.length === 0) return posts;
+  return [...unseen, ...watched];
+}
+
 /** Round-robin across creators so one account cannot dominate consecutive slots. */
 export function interleaveByAuthor<T extends Record<string, unknown>>(
   posts: T[],
