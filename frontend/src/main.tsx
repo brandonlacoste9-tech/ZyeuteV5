@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import "./index.css";
 import { captureReferralFromUrl } from "./lib/referralCapture";
+import { initSentry, maybeRunSentryTest } from "./lib/sentry";
 
+initSentry();
+maybeRunSentryTest();
 captureReferralFromUrl();
 
 const APP_VERSION = "20260605-1";

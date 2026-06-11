@@ -21,7 +21,10 @@ export default function ArcadePlayer() {
   });
   const [accumulatedLocalSeconds, setAccumulatedLocalSeconds] = useState(0);
 
-  const isPremium = user && (user as any).subscription_tier && (user as any).subscription_tier !== "gratuit";
+  const isPremium =
+    user &&
+    (user as any).subscription_tier &&
+    (user as any).subscription_tier !== "gratuit";
   const TRIAL_LIMIT = 3600; // 1 hour in seconds
   const isPaywalled = !isPremium && playtime >= TRIAL_LIMIT;
 
@@ -32,7 +35,10 @@ export default function ArcadePlayer() {
       .then((response) => {
         if (response.data && typeof response.data.playtime === "number") {
           const dbTime = response.data.playtime;
-          const localTime = parseInt(localStorage.getItem("zyeute_arcade_playtime") || "0", 10);
+          const localTime = parseInt(
+            localStorage.getItem("zyeute_arcade_playtime") || "0",
+            10,
+          );
           const finalTime = Math.max(dbTime, localTime);
           setPlaytime(finalTime);
           localStorage.setItem("zyeute_arcade_playtime", finalTime.toString());
@@ -62,18 +68,30 @@ export default function ArcadePlayer() {
     if (accumulatedLocalSeconds >= 10 && user) {
       const secondsToSync = accumulatedLocalSeconds;
       setAccumulatedLocalSeconds(0); // reset immediately to avoid duplicate triggers
-      
-      apiCall<{ success: boolean; playtime: number }>("/gamedistribution/playtime", {
-        method: "POST",
-        body: JSON.stringify({ seconds: secondsToSync })
-      })
+
+      apiCall<{ success: boolean; playtime: number }>(
+        "/gamedistribution/playtime",
+        {
+          method: "POST",
+          body: JSON.stringify({ seconds: secondsToSync }),
+        },
+      )
         .then((response) => {
-          if (response.data?.success && typeof response.data.playtime === "number") {
+          if (
+            response.data?.success &&
+            typeof response.data.playtime === "number"
+          ) {
             const dbTime = response.data.playtime;
-            const localTime = parseInt(localStorage.getItem("zyeute_arcade_playtime") || "0", 10);
+            const localTime = parseInt(
+              localStorage.getItem("zyeute_arcade_playtime") || "0",
+              10,
+            );
             const finalTime = Math.max(dbTime, localTime);
             setPlaytime(finalTime);
-            localStorage.setItem("zyeute_arcade_playtime", finalTime.toString());
+            localStorage.setItem(
+              "zyeute_arcade_playtime",
+              finalTime.toString(),
+            );
           }
         })
         .catch((err) => {
@@ -93,7 +111,10 @@ export default function ArcadePlayer() {
         <div className="text-center p-8 bg-black/50 border-2 border-red-500 rounded">
           <h2 className="text-xl font-bold text-red-500 mb-4">Erreur</h2>
           <p className="text-white mb-6">L'URL du jeu est manquante.</p>
-          <button onClick={() => navigate("/arcade")} className={arcadeBtnPrimary}>
+          <button
+            onClick={() => navigate("/arcade")}
+            className={arcadeBtnPrimary}
+          >
             Retour à l'Arcade
           </button>
         </div>
@@ -105,11 +126,14 @@ export default function ArcadePlayer() {
   // GameDistribution links usually start with https://html5.gamedistribution.com/
   // The documentation explicitly says to wrap it in the responsive embed player.
   if (url.includes("gamedistribution.com")) {
-    const currentHost = typeof window !== "undefined" ? window.location.href : "https://zyeute.com";
+    const currentHost =
+      typeof window !== "undefined"
+        ? window.location.href
+        : "https://zyeute.com";
     url = `https://embed.gamedistribution.com/?url=${encodeURIComponent(
-      url
+      url,
     )}&width=100%25&height=100%25&language=fr&gdpr-tracking=1&gdpr-targeting=1&gd_sdk_referrer_url=${encodeURIComponent(
-      currentHost
+      currentHost,
     )}`;
   }
 
@@ -119,10 +143,11 @@ export default function ArcadePlayer() {
       return;
     }
     try {
-      const response = await apiCall<{ success: boolean; amount: number; newBalance: number }>(
-        "/gamedistribution/claim",
-        { method: "POST" }
-      );
+      const response = await apiCall<{
+        success: boolean;
+        amount: number;
+        newBalance: number;
+      }>("/gamedistribution/claim", { method: "POST" });
       if (response.data?.success) {
         setClaimed(true);
         toast.success(`Succès ! +${response.data.amount} Piasses créditées.`);
@@ -172,7 +197,18 @@ export default function ArcadePlayer() {
         {isPaywalled ? (
           <div className="flex flex-col items-center justify-center text-center p-8 bg-[#1a0f2e]/80 border-2 border-[#5a4282] rounded-xl shadow-[0_0_30px_rgba(165,134,214,0.3)] max-w-lg mx-4 z-10">
             <div className="w-16 h-16 bg-[#3d2b5e] rounded-full flex items-center justify-center mb-6 shadow-[0_0_20px_rgba(212,195,240,0.5)]">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#d4c3f0]">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[#d4c3f0]"
+              >
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
@@ -181,7 +217,9 @@ export default function ArcadePlayer() {
               TEMPS ÉCOULÉ !
             </h2>
             <p className="text-gray-300 mb-8 leading-relaxed">
-              Votre essai gratuit d'une heure est terminé. Pour continuer à jouer en illimité et accéder à tout notre catalogue de jeux premium, passez à l'abonnement Zyeuté.
+              Votre essai gratuit d'une heure est terminé. Pour continuer à
+              jouer en illimité et accéder à tout notre catalogue de jeux
+              premium, passez à l'abonnement Zyeuté.
             </p>
             <button
               onClick={() => navigate("/premium")}

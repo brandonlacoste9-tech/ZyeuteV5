@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import { storage } from "../storage.js";
 import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
-import { verifyAuthToken } from "../supabase-auth.js";
+import { requireAuth } from "../supabase-auth.js";
 import crypto from "crypto";
 import { inferMediaType } from "../../shared/utils/validatePostType.js";
 
@@ -33,6 +33,7 @@ if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
  */
 surgicalUploadRouter.post(
   "/simple",
+  requireAuth,
   upload.single("video"),
   async (req: Request, res: Response) => {
     try {
@@ -45,18 +46,9 @@ surgicalUploadRouter.post(
         });
       }
 
-      // 1. Authenticate
-      let userId: string | null = null;
-      const authHeader = req.headers.authorization;
-      if (authHeader?.startsWith("Bearer ")) {
-        userId = await verifyAuthToken(authHeader.split(" ")[1]);
-      }
-
-      if (!userId) {
-        // Allow explicit userId in body for testing only
-        userId = req.body.userId || null;
-      }
-
+      // Identity comes from the verified bearer token (requireAuth). Never trust
+      // a client-supplied userId — see audit §2.2 (upload IDOR / impersonation).
+      const userId = (req as Request & { userId?: string }).userId;
       if (!userId)
         return res.status(401).json({ error: "Unauthorized credentials" });
 
@@ -73,7 +65,7 @@ surgicalUploadRouter.post(
         .from("zyeute-videos")
         .upload(fileName, buffer, {
           contentType: mimetype,
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) {

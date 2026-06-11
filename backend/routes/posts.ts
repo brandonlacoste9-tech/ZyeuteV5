@@ -690,9 +690,13 @@ router.post(
       const comment = {
         id: commentData.id,
         postId: commentData.publication_id,
+        // Dual snake/camel so any frontend consumer can read either field.
+        publication_id: commentData.publication_id,
         userId: commentData.user_id,
+        user_id: commentData.user_id,
         content: commentData.content,
         created_at: commentData.created_at,
+        createdAt: commentData.created_at,
       };
       // If user profile fetch failed, return a minimal stub so the frontend
       // can at least display something instead of falling back to "Utilisateur".
@@ -704,44 +708,55 @@ router.post(
         username_color: "#FFFFFF",
       };
 
-      // Fire-and-forget push notification for new comment
-      try {
-        const { data: pubData } = await supabaseRest!
-          .from("publications")
-          .select("user_id")
-          .eq("id", req.params.id)
-          .single();
-        const postAuthorId = pubData?.user_id;
-        const commenterUsername = (user as any)?.username || "";
-        const postId = req.params.id as string;
-        if (postAuthorId && postAuthorId !== req.userId && commenterUsername) {
-          const { notifyNewComment } =
-            await import("../services/pushNotify.js");
-          notifyNewComment(postAuthorId, commenterUsername, postId).catch(
-            () => {},
-          );
-        }
-      } catch (_e) {
-        /* non-critical */
-      }
-
-      // Fire-and-forget moderation check
-      try {
-        const { getModerationQueue } = await import("../queue.js");
-        const moderationQueue = getModerationQueue();
-        await moderationQueue.add("moderate-comment", {
-          contentType: "comment",
-          contentId: comment.id,
-          userId: req.userId!,
-          text: req.body.content,
-        });
-      } catch (modErr: any) {
-        console.warn("[Moderation] Comment queue failed:", modErr.message);
-      }
-
+      // Respond immediately — the comment is persisted. Notification and
+      // moderation are non-critical side-effects and must never block (or fail)
+      // the response, otherwise a slow Redis/queue makes the client time out
+      // and surface "Impossible d'envoyer le commentaire" for a saved comment.
       res.status(201).json({
         comment: { ...comment, user, isFired: false },
       });
+
+      // Push notification for new comment (best-effort, after response)
+      void (async () => {
+        try {
+          const { data: pubData } = await supabaseRest!
+            .from("publications")
+            .select("user_id")
+            .eq("id", req.params.id)
+            .single();
+          const postAuthorId = pubData?.user_id;
+          const commenterUsername = (user as any)?.username || "";
+          const postId = req.params.id as string;
+          if (
+            postAuthorId &&
+            postAuthorId !== req.userId &&
+            commenterUsername
+          ) {
+            const { notifyNewComment } =
+              await import("../services/pushNotify.js");
+            await notifyNewComment(postAuthorId, commenterUsername, postId);
+          }
+        } catch {
+          /* non-critical */
+        }
+      })();
+
+      // Moderation check (best-effort, after response)
+      void (async () => {
+        try {
+          const { getModerationQueue } = await import("../queue.js");
+          const moderationQueue = getModerationQueue();
+          await moderationQueue.add("moderate-comment", {
+            contentType: "comment",
+            contentId: comment.id,
+            userId: req.userId!,
+            text: content,
+          });
+        } catch (modErr: any) {
+          console.warn("[Moderation] Comment queue failed:", modErr?.message);
+        }
+      })();
+      return;
     } catch (error) {
       console.error("Create comment error:", error);
       res.status(500).json({ error: "Failed to create comment" });

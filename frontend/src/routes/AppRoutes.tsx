@@ -22,6 +22,7 @@ function LoadingScreen({ message }: { message?: string }) {
 }
 
 const LoginPage = lazy(() => import("@/pages/Login"));
+const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 const OnboardingPage = lazy(() => import("@/pages/Onboarding"));
 const AuthCallbackPage = lazy(() => import("@/pages/AuthCallback"));
 const Zyeute = lazy(() => import("@/pages/LaZyeute"));
@@ -140,10 +141,18 @@ function OnboardingGate({ children }: { children: ReactNode }) {
 
 /** Session or guest mode — required for account-style surfaces (not for public /feed). */
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, session, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
+    return <LoadingScreen message="Chargement..." />;
+  }
+
+  // A Supabase session exists but the profile is still hydrating (the emergency
+  // loading timeout can fire before enhanceUser resolves). Treat the session as
+  // authenticated so a hard navigation to a protected route does not bounce to
+  // /login before the profile arrives.
+  if (!isAuthenticated && session?.user) {
     return <LoadingScreen message="Chargement..." />;
   }
 
@@ -702,7 +711,7 @@ export function AppRoutes() {
           />
 
           <Route path="/" element={<Navigate to="/feed" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </RouteErrorBoundary>
