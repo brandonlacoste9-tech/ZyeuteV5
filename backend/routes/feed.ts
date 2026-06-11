@@ -14,8 +14,26 @@ import {
   interleaveQueues,
   mergeFeedWithDedup,
   prepareShuffledFeed,
+  seededTierShuffle,
   shuffleWithSeed,
 } from "../../shared/utils/feedDedup.js";
+
+/**
+ * Resolve a stable numeric shuffle seed for the feed. A client-supplied session
+ * token (persisted in sessionStorage) keeps order stable across paginated
+ * requests; absence of one yields a fresh random order per request.
+ */
+function resolveFeedSeed(sessionParam: unknown, viewerId?: string): number {
+  const session = typeof sessionParam === "string" ? sessionParam : "";
+  if (!session) return Math.floor(Math.random() * 1e9) >>> 0;
+  const base = `${session}:${viewerId ?? ""}`;
+  let h = 2166136261;
+  for (let i = 0; i < base.length; i++) {
+    h ^= base.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0 || 1;
+}
 
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
@@ -242,14 +260,28 @@ async function fetchTikTokExploreSupabase(
     .slice(0, limit);
 }
 
+/**
+ * Block size for seeded-shuffle pagination. We fetch one ranked block, shuffle
+ * within quality tiers using the session seed, then slice the requested page out
+ * of it. Pages within the same block + seed are stable (no dupes / skips); the
+ * single block read keeps perf on par with the previous per-page query.
+ */
+const FEED_BLOCK_SIZE = 120;
+
 /** Fetch feed directly via Supabase HTTP — no DATABASE_URL needed */
 async function getPostsViaSupabase(
   limit: number,
   page: number,
   _hiveId = "quebec",
+  seed = 0,
 ) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-  const offset = page * limit;
+
+  // Map the requested page onto a ranked block, then shuffle within that block.
+  const absoluteOffset = page * limit;
+  const blockIndex = Math.floor(absoluteOffset / FEED_BLOCK_SIZE);
+  const offsetInBlock = absoluteOffset % FEED_BLOCK_SIZE;
+  const blockStart = blockIndex * FEED_BLOCK_SIZE;
 
   const { data, error } = await supabase
     .from("publications")
@@ -265,10 +297,20 @@ async function getPostsViaSupabase(
     )
     .order("viral_score", { ascending: false })
     .order("reactions_count", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .range(blockStart, blockStart + FEED_BLOCK_SIZE - 1);
 
   if (error) throw new Error(error.message);
-  return data || [];
+
+  const block = data || [];
+  if (seed === 0) return block.slice(offsetInBlock, offsetInBlock + limit);
+
+  // Quality-preserving seeded shuffle: viral content stays near top, order
+  // varies per session. Tier offset by block keeps blocks from aligning.
+  const shuffled = seededTierShuffle(
+    block as Record<string, unknown>[],
+    (seed + blockIndex * 2654435761) >>> 0,
+  );
+  return shuffled.slice(offsetInBlock, offsetInBlock + limit);
 }
 
 const router = Router();
@@ -304,13 +346,15 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 0;
     const limit = parseInt(req.query.limit as string) || 20;
     const hive = (req.query.hive as string) || "quebec";
+    const seed = resolveFeedSeed(req.query.session, (req as any).userId);
 
     // Try Supabase HTTP first (always works)
     if (SUPABASE_URL && SUPABASE_KEY) {
-      const posts = await getPostsViaSupabase(limit, page, hive);
+      const posts = await getPostsViaSupabase(limit, page, hive, seed);
       return res.json({
         posts,
         nextCursor: posts.length === limit ? String(page + 1) : null,
+        seed,
         isGuestMode: !(req as any).userId,
         source: "supabase",
       });
