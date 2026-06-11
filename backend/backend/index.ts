@@ -90,7 +90,11 @@ app.get("/api/video/proxy", async (req, res) => {
 
     console.log(`📹 Proxying video: ${safeUrl}`);
 
-    const isPexels = matchedHost.endsWith("pexels.com");
+    const isPexels =
+      matchedHost === "pexels.com" ||
+      matchedHost === "www.pexels.com" ||
+      matchedHost === "videos.pexels.com" ||
+      matchedHost === "images.pexels.com";
 
     // For Pexels videos, we need to handle them differently
     if (isPexels) {
