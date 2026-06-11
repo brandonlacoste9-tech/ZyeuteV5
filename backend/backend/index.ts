@@ -31,31 +31,25 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// SSRF protection: only media hosts the app legitimately serves are allowed
-// to be proxied. Mirrors the allowlist in backend/routes/media-proxy.ts.
-const ALLOWED_PROXY_HOSTS = [
+// SSRF protection: only exact media hostnames the app legitimately serves
+// may be proxied. Subdomains are enumerated explicitly (no suffix matching)
+// so the host that flows into axios provably comes from this constant set,
+// never from the user-supplied string. Mirrors backend/routes/media-proxy.ts.
+const ALLOWED_PROXY_HOSTS = new Set<string>([
+  "pexels.com",
+  "www.pexels.com",
   "videos.pexels.com",
   "images.pexels.com",
-  "www.pexels.com",
-  "pexels.com",
-  "assets.mixkit.co",
   "mixkit.co",
-  "images.unsplash.com",
+  "assets.mixkit.co",
   "unsplash.com",
+  "images.unsplash.com",
   "player.vimeo.com",
   "storage.googleapis.com",
   "commondatastorage.googleapis.com",
   "api.apify.com",
   "fal.media",
-];
-
-function isAllowedProxyTarget(parsed: URL): boolean {
-  if (parsed.protocol !== "https:") return false;
-  const hostname = parsed.hostname.toLowerCase();
-  return ALLOWED_PROXY_HOSTS.some(
-    (host) => hostname === host || hostname.endsWith(`.${host}`),
-  );
-}
+]);
 
 // Video proxy endpoint
 app.get("/api/video/proxy", async (req, res) => {
@@ -73,17 +67,30 @@ app.get("/api/video/proxy", async (req, res) => {
       return res.status(400).json({ error: "Invalid URL parameter" });
     }
 
-    // Enforce the host allowlist BEFORE any outbound request (SSRF guard).
-    if (!isAllowedProxyTarget(parsedUrl)) {
+    if (parsedUrl.protocol !== "https:") {
+      return res.status(403).json({ error: "URL host not allowed" });
+    }
+
+    // Resolve the host against the constant allowlist. matchedHost is an
+    // element of ALLOWED_PROXY_HOSTS (a constant), not the user string, so
+    // the value flowing into axios below is not tainted on the host portion.
+    const requestedHost = parsedUrl.hostname.toLowerCase();
+    const matchedHost = [...ALLOWED_PROXY_HOSTS].find(
+      (host) => host === requestedHost,
+    );
+
+    if (!matchedHost) {
       console.error(`⛔ Blocked proxy target not on allowlist: ${videoUrl}`);
       return res.status(403).json({ error: "URL host not allowed" });
     }
 
-    console.log(`📹 Proxying video: ${videoUrl}`);
+    // Rebuild the outbound URL from the constant host + parsed path/query.
+    // Never pass videoUrl or parsedUrl.href downstream.
+    const safeUrl = `https://${matchedHost}${parsedUrl.pathname}${parsedUrl.search}`;
 
-    const hostname = parsedUrl.hostname.toLowerCase();
-    const isPexels =
-      hostname === "pexels.com" || hostname.endsWith(".pexels.com");
+    console.log(`📹 Proxying video: ${safeUrl}`);
+
+    const isPexels = matchedHost.endsWith("pexels.com");
 
     // For Pexels videos, we need to handle them differently
     if (isPexels) {
@@ -115,7 +122,7 @@ app.get("/api/video/proxy", async (req, res) => {
     }
 
     // For other URLs, try direct streaming
-    const response = await axios.get(videoUrl, {
+    const response = await axios.get(safeUrl, {
       responseType: "stream",
       headers: {
         "User-Agent":
