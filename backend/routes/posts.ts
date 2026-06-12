@@ -476,21 +476,45 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// Delete post
+// Delete post (soft-delete via Supabase — the direct pool times out in prod)
 router.delete(
   "/posts/:id",
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const post = await storage.getPost(req.params.id as string);
+      if (!supabaseRest) throw new Error("Supabase not configured");
+
+      const postId = req.params.id as string;
+      const userId = req.userId!;
+      const isAdmin =
+        req.userRole === "admin" ||
+        req.userRole === "moderator" ||
+        req.userRole === "founder";
+
+      // Fetch owner to enforce author-or-admin authorization.
+      const { data: post, error: fetchError } = await supabaseRest
+        .from("publications")
+        .select("id, user_id")
+        .eq("id", postId)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
       if (!post) {
         return res.status(404).json({ error: "Post not found" });
       }
-      if (post.userId !== req.userId) {
+      if (post.user_id !== userId && !isAdmin) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      await storage.deletePost(req.params.id as string);
+      // Soft-delete: mark deleted_at + hide (est_masque) so it drops from feeds.
+      const { error: updateError } = await supabaseRest
+        .from("publications")
+        .update({ deleted_at: new Date().toISOString(), est_masque: true })
+        .eq("id", postId);
+
+      if (updateError) throw new Error(updateError.message);
+
       res.json({ success: true });
     } catch (error) {
       console.error("Delete post error:", error);

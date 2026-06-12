@@ -4,6 +4,7 @@
  */
 
 import { Router } from "express";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   diagnoseVideo,
   fixVideo,
@@ -13,6 +14,29 @@ import {
 import { logger } from "../utils/logger.js";
 
 const router = Router();
+
+/**
+ * Supabase service-role client. The direct Postgres pool times out in
+ * production, so these admin endpoints go through the Supabase HTTP client.
+ */
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url =
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      "";
+    if (!url || !key) {
+      throw new Error(
+        "Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
+      );
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 // Admin middleware
 const requireAdmin = (req: any, res: any, next: any) => {
@@ -135,36 +159,28 @@ router.post("/auto-fix", requireAdmin, async (req, res) => {
  */
 router.post("/fix-pending", requireAdmin, async (req, res) => {
   try {
-    const { pool } = await import("../storage.js");
+    const supabase = getSupabase();
 
-    // Count pending videos
-    const countResult = await pool.query(`
-      SELECT COUNT(*) as pending_count
-      FROM publications 
-      WHERE type = 'video' AND processing_status = 'pending'
-    `);
+    // Flip all pending videos to completed and return the affected rows so we
+    // can report how many were fixed.
+    const { data, error } = await supabase
+      .from("publications")
+      .update({ processing_status: "completed" })
+      .eq("type", "video")
+      .eq("processing_status", "pending")
+      .select("id");
 
-    const pendingCount = parseInt(countResult.rows[0].pending_count);
+    if (error) throw new Error(error.message);
 
-    if (pendingCount === 0) {
+    const fixedCount = data?.length ?? 0;
+
+    if (fixedCount === 0) {
       return res.json({
         success: true,
         message: "No pending videos to fix",
         fixed: 0,
       });
     }
-
-    // Fix all pending videos
-    const result = await pool.query(`
-      UPDATE publications 
-      SET processing_status = 'completed',
-          updated_at = NOW()
-      WHERE type = 'video' 
-        AND processing_status = 'pending'
-      RETURNING id
-    `);
-
-    const fixedCount = result.rowCount;
 
     logger.info(`[VideoDoctor] Fixed ${fixedCount} pending videos`);
 
@@ -189,24 +205,31 @@ router.post("/fix-pending", requireAdmin, async (req, res) => {
  */
 router.get("/stats", async (req, res) => {
   try {
-    const { pool } = await import("../storage.js");
+    // PostgREST can't express conditional COUNT(FILTER) aggregates, so fetch the
+    // relevant columns for video rows and aggregate in TS.
+    const { data: rows, error } = await getSupabase()
+      .from("publications")
+      .select("processing_status, thumbnail_url, media_url")
+      .eq("type", "video");
 
-    const stats = await pool.query(`
-      SELECT 
-        COUNT(*) as total_videos,
-        COUNT(CASE WHEN processing_status = 'completed' THEN 1 END) as completed,
-        COUNT(CASE WHEN processing_status = 'processing' THEN 1 END) as processing,
-        COUNT(CASE WHEN processing_status = 'pending' THEN 1 END) as pending,
-        COUNT(CASE WHEN processing_status = 'failed' THEN 1 END) as failed,
-        COUNT(CASE WHEN thumbnail_url IS NULL THEN 1 END) as missing_thumbnails,
-        COUNT(CASE WHEN media_url IS NULL THEN 1 END) as missing_source
-      FROM publications 
-      WHERE type = 'video'
-    `);
+    if (error) throw new Error(error.message);
+
+    const videos = rows ?? [];
+    const stats = {
+      total_videos: videos.length,
+      completed: videos.filter((v) => v.processing_status === "completed")
+        .length,
+      processing: videos.filter((v) => v.processing_status === "processing")
+        .length,
+      pending: videos.filter((v) => v.processing_status === "pending").length,
+      failed: videos.filter((v) => v.processing_status === "failed").length,
+      missing_thumbnails: videos.filter((v) => v.thumbnail_url == null).length,
+      missing_source: videos.filter((v) => v.media_url == null).length,
+    };
 
     res.json({
       success: true,
-      stats: stats.rows[0],
+      stats,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -224,42 +247,8 @@ router.get("/stats", async (req, res) => {
  */
 router.post("/bulk-repair", async (req, res) => {
   try {
-    const { pool } = await import("../storage.js");
-    const { readFileSync } = await import("fs");
-    const { join } = await import("path");
-
-    const migrationPath = join(
-      process.cwd(),
-      "backend/migrations/20260225_bulk_repair_videos.sql",
-    );
-    const sql = readFileSync(migrationPath, "utf-8");
-
-    const client = await pool.connect();
-    try {
-      await client.query(sql);
-    } finally {
-      client.release();
-    }
-
-    // Get updated stats after repair
-    const statsClient = await pool.connect();
-    let stats: any = {};
-    try {
-      const result = await statsClient.query(`
-        SELECT
-          COUNT(*) FILTER (WHERE processing_status = 'completed' AND COALESCE(est_masque, false) = false) as visible_completed,
-          COUNT(*) FILTER (WHERE processing_status = 'failed') as failed,
-          COUNT(*) FILTER (WHERE COALESCE(est_masque, false) = true) as hidden,
-          COUNT(*) FILTER (WHERE mux_playback_id IS NOT NULL AND hls_url IS NOT NULL) as mux_with_hls,
-          COUNT(*) FILTER (WHERE thumbnail_url IS NOT NULL) as with_thumbnail,
-          COUNT(*) as total
-        FROM publications
-        WHERE type = 'video' AND deleted_at IS NULL
-      `);
-      stats = result.rows[0];
-    } finally {
-      statsClient.release();
-    }
+    const { bulkRepairVideos } = await import("../services/video-doctor.js");
+    const stats = await bulkRepairVideos();
 
     res.json({
       success: true,

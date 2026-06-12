@@ -5,9 +5,6 @@
 
 import { Router, Request, Response } from "express";
 import Mux from "@mux/mux-node";
-import { eq } from "drizzle-orm";
-import { db } from "../storage.js";
-import { posts } from "../../shared/schema.js";
 import { supabaseAdmin, requireAuth } from "../supabase-auth.js";
 
 const router = Router();
@@ -159,72 +156,105 @@ router.post("/webhooks", async (req: Request, res: Response) => {
     }
   }
 
-  const { type, data } = req.body;
-
   try {
-    switch (type) {
-      case "video.asset.ready": {
-        const assetId = data?.id;
-        if (!assetId || !Video) break;
-
-        const asset = await Video.assets.retrieve(assetId);
-        const playbackId = asset?.playback_ids?.[0]?.id;
-        const duration = asset?.duration;
-        const maxStorageDuration = asset?.max_stored_resolution;
-
-        if (!playbackId) {
-          console.warn(
-            "[MUX] video.asset.ready: pas de playback_id pour",
-            assetId,
-          );
-          break;
-        }
-
-        // Update post by mux_asset_id
-        const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
-        const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
-
-        await db
-          .update(posts)
-          .set({
-            muxPlaybackId: playbackId,
-            mediaUrl: hlsUrl,
-            hlsUrl,
-            thumbnailUrl: posterUrl,
-            duration: duration ? Math.round(duration) : null,
-            processingStatus: "completed",
-            enhanceFinishedAt: new Date(),
-          })
-          .where(eq(posts.muxAssetId, assetId));
-
-        console.log(
-          "[MUX] Post mis à jour:",
-          assetId,
-          "playbackId:",
-          playbackId,
-        );
-        break;
-      }
-
-      case "video.asset.errored":
-        console.error("[MUX] Erreur traitement vidéo:", data?.id, data?.errors);
-        await db
-          .update(posts)
-          .set({ processingStatus: "failed" })
-          .where(eq(posts.muxAssetId, data?.id || ""));
-        break;
-
-      case "video.asset.created":
-        console.log("[MUX] Vidéo créée:", data?.id);
-        break;
-    }
-
+    await applyMuxWebhookEvent(req.body, Video);
     return res.status(200).json({ received: true });
   } catch (error) {
     console.error("[MUX] Erreur webhook:", error);
     return res.status(500).json({ error: "Erreur traitement webhook" });
   }
 });
+
+/**
+ * Apply a verified Mux webhook event to the publications table.
+ *
+ * Writes go through the Supabase JS client (service role) because the direct
+ * Postgres pool times out in production, so the previous Drizzle `db.update`
+ * calls never landed and status flips were lost. Signature verification stays
+ * in the route handler; this function assumes the event is already trusted.
+ *
+ * Exported for unit testing. `video` is the Mux video API (`mux.video`) or null.
+ */
+export async function applyMuxWebhookEvent(
+  body: { type?: string; data?: any },
+  video: NonNullable<Mux["video"]> | null,
+): Promise<void> {
+  const { type, data } = body;
+
+  switch (type) {
+    case "video.asset.ready": {
+      const assetId = data?.id;
+      if (!assetId || !video) break;
+
+      const asset = await video.assets.retrieve(assetId);
+      const playbackId = asset?.playback_ids?.[0]?.id;
+      const duration = asset?.duration;
+
+      if (!playbackId) {
+        console.warn(
+          "[MUX] video.asset.ready: pas de playback_id pour",
+          assetId,
+        );
+        break;
+      }
+
+      const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+      const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
+
+      if (!supabaseAdmin) {
+        console.warn("[MUX] Supabase non configuré — skip update ready");
+        break;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("publications")
+        .update({
+          mux_playback_id: playbackId,
+          media_url: hlsUrl,
+          hls_url: hlsUrl,
+          thumbnail_url: posterUrl,
+          duration: duration ? Math.round(duration) : null,
+          processing_status: "completed",
+          enhance_finished_at: new Date().toISOString(),
+        })
+        .eq("mux_asset_id", assetId);
+
+      if (error) {
+        throw new Error(`Supabase update (ready) failed: ${error.message}`);
+      }
+
+      console.log(
+        "[MUX] Post mis à jour:",
+        assetId,
+        "playbackId:",
+        playbackId,
+      );
+      break;
+    }
+
+    case "video.asset.errored": {
+      console.error("[MUX] Erreur traitement vidéo:", data?.id, data?.errors);
+      if (!supabaseAdmin) {
+        console.warn("[MUX] Supabase non configuré — skip update errored");
+        break;
+      }
+
+      const { error } = await supabaseAdmin
+        .from("publications")
+        .update({ processing_status: "failed" })
+        .eq("mux_asset_id", data?.id || "");
+
+      if (error) {
+        throw new Error(`Supabase update (errored) failed: ${error.message}`);
+      }
+      break;
+    }
+
+    case "video.asset.created":
+      console.log("[MUX] Vidéo créée:", data?.id);
+      break;
+  }
+}
 
 // ─── LIVE STREAM ROUTES ────────────────────────────────────────────────────
 

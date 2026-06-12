@@ -4,9 +4,33 @@
  * Monitors video health, detects problems, applies fixes
  */
 
-import { pool } from "../storage.js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "../utils/logger.js";
 import Mux from "@mux/mux-node";
+
+/**
+ * Supabase service-role client. The direct Postgres pool times out in
+ * production, so all Video Doctor reads/writes go through the Supabase HTTP
+ * client instead (same pattern as the feed status reconciler from #203).
+ */
+let _supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const url =
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      "";
+    if (!url || !key) {
+      throw new Error(
+        "Supabase not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
+      );
+    }
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
 
 export interface VideoHealthReport {
   postId: string;
@@ -50,20 +74,20 @@ export async function diagnoseVideo(
 
   try {
     // Get video data
-    const result = await pool.query(
-      `
-      SELECT
-        p.id, p.type, p.media_url, p.thumbnail_url,
-        p.processing_status, p.duration, p.mux_playback_id,
-        p.hls_url, p.enhanced_url, p.original_url,
-        p.created_at
-      FROM publications p
-      WHERE p.id = $1 AND p.type = 'video'
-    `,
-      [postId],
-    );
+    const { data: video, error } = await getSupabase()
+      .from("publications")
+      .select(
+        "id, type, media_url, thumbnail_url, processing_status, duration, mux_playback_id, mux_asset_id, hls_url, enhanced_url, original_url, created_at",
+      )
+      .eq("id", postId)
+      .eq("type", "video")
+      .maybeSingle();
 
-    if (result.rows.length === 0) {
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!video) {
       return {
         postId,
         status: "dead",
@@ -80,7 +104,6 @@ export async function diagnoseVideo(
       };
     }
 
-    const video = result.rows[0];
     const issues: VideoIssue[] = [];
 
     // Check 1: Does video have any source?
@@ -297,16 +320,18 @@ export async function fixVideo(postId: string): Promise<VideoDoctorFix> {
 async function fix403Error(postId: string): Promise<VideoDoctorFix> {
   logger.info(`[VideoDoctor] Fixing 403 error for ${postId}`);
 
-  const result = await pool.query(
-    `SELECT media_url FROM publications WHERE id = $1`,
-    [postId],
-  );
+  const supabase = getSupabase();
+  const { data: row } = await supabase
+    .from("publications")
+    .select("media_url")
+    .eq("id", postId)
+    .maybeSingle();
 
-  if (result.rows.length === 0) {
+  if (!row) {
     return { success: false, action: "proxy", message: "Video not found" };
   }
 
-  const originalUrl = result.rows[0].media_url;
+  const originalUrl = row.media_url;
 
   // Check if already proxied
   if (originalUrl.includes("/api/media-proxy")) {
@@ -320,10 +345,10 @@ async function fix403Error(postId: string): Promise<VideoDoctorFix> {
   // Update to use media proxy
   const proxiedUrl = `/api/media-proxy?url=${encodeURIComponent(originalUrl)}`;
 
-  await pool.query(
-    `UPDATE publications SET media_url = $1 WHERE id = $2`,
-    [proxiedUrl, postId],
-  );
+  await supabase
+    .from("publications")
+    .update({ media_url: proxiedUrl })
+    .eq("id", postId);
 
   logger.info(`[VideoDoctor] Applied proxy fix for ${postId}`);
 
@@ -352,10 +377,10 @@ async function fixDeadSource(postId: string): Promise<VideoDoctorFix> {
   ];
   const newUrl = googleCdnVideos[Math.floor(Math.random() * googleCdnVideos.length)];
 
-  await pool.query(
-    `UPDATE publications SET media_url = $1, original_url = $1 WHERE id = $2`,
-    [newUrl, postId],
-  );
+  await getSupabase()
+    .from("publications")
+    .update({ media_url: newUrl, original_url: newUrl })
+    .eq("id", postId);
 
   return {
     success: true,
@@ -382,12 +407,14 @@ async function fixMuxPlayback(postId: string): Promise<VideoDoctorFix> {
     };
   }
 
-  const result = await pool.query(
-    `SELECT mux_asset_id FROM publications WHERE id = $1`,
-    [postId],
-  );
+  const supabase = getSupabase();
+  const { data: row } = await supabase
+    .from("publications")
+    .select("mux_asset_id")
+    .eq("id", postId)
+    .maybeSingle();
 
-  if (result.rows.length === 0 || !result.rows[0].mux_asset_id) {
+  if (!row || !row.mux_asset_id) {
     return {
       success: false,
       action: "mux_fix",
@@ -395,7 +422,7 @@ async function fixMuxPlayback(postId: string): Promise<VideoDoctorFix> {
     };
   }
 
-  const assetId = result.rows[0].mux_asset_id;
+  const assetId = row.mux_asset_id;
 
   try {
     const mux = new Mux({
@@ -416,18 +443,16 @@ async function fixMuxPlayback(postId: string): Promise<VideoDoctorFix> {
     const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
     const posterUrl = `https://image.mux.com/${playbackId}/thumbnail.jpg`;
 
-    // Note: publications table does NOT have an updated_at column in the db schema yet,
-    // so we omit it to prevent column does not exist errors.
-    await pool.query(
-      `UPDATE publications
-       SET mux_playback_id = $1,
-           media_url = $2,
-           hls_url = $2,
-           thumbnail_url = $3,
-           processing_status = 'completed'
-       WHERE id = $4`,
-      [playbackId, hlsUrl, posterUrl, postId],
-    );
+    await supabase
+      .from("publications")
+      .update({
+        mux_playback_id: playbackId,
+        media_url: hlsUrl,
+        hls_url: hlsUrl,
+        thumbnail_url: posterUrl,
+        processing_status: "completed",
+      })
+      .eq("id", postId);
 
     return {
       success: true,
@@ -448,13 +473,10 @@ async function restartProcessing(postId: string): Promise<VideoDoctorFix> {
   logger.info(`[VideoDoctor] Restarting processing for ${postId}`);
 
   // Reset processing status to pending
-  await pool.query(
-    `UPDATE publications 
-     SET processing_status = 'pending', 
-         processing_error = NULL
-     WHERE id = $1`,
-    [postId],
-  );
+  await getSupabase()
+    .from("publications")
+    .update({ processing_status: "pending", processing_error: null })
+    .eq("id", postId);
 
   // Trigger re-processing (would connect to your video processing queue)
   // For now, just mark it for retry
@@ -472,16 +494,17 @@ async function restartProcessing(postId: string): Promise<VideoDoctorFix> {
 async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
   logger.info(`[VideoDoctor] Generating thumbnail for ${postId}`);
 
-  const result = await pool.query(
-    `SELECT media_url, thumbnail_url FROM publications WHERE id = $1`,
-    [postId],
-  );
+  const { data: row } = await getSupabase()
+    .from("publications")
+    .select("media_url, thumbnail_url, mux_playback_id")
+    .eq("id", postId)
+    .maybeSingle();
 
-  if (result.rows.length === 0) {
+  if (!row) {
     return { success: false, action: "thumbnail", message: "Video not found" };
   }
 
-  const { media_url, thumbnail_url, mux_playback_id } = result.rows[0];
+  const { media_url, thumbnail_url, mux_playback_id } = row;
 
   if (thumbnail_url) {
     return {
@@ -508,10 +531,10 @@ async function generateThumbnail(postId: string): Promise<VideoDoctorFix> {
     return { success: false, action: "thumbnail", message: "Could not determine thumbnail URL" };
   }
 
-  await pool.query(
-    `UPDATE publications SET thumbnail_url = $1 WHERE id = $2`,
-    [fallbackThumbnail, postId],
-  );
+  await getSupabase()
+    .from("publications")
+    .update({ thumbnail_url: fallbackThumbnail })
+    .eq("id", postId);
 
   return {
     success: true,
@@ -615,19 +638,21 @@ export async function healthCheckAllVideos(
 ): Promise<VideoHealthReport[]> {
   logger.info(`[VideoDoctor] Running health check on ${limit} videos`);
 
-  const result = await pool.query(
-    `
-    SELECT id FROM publications
-    WHERE type = 'video'
-    ORDER BY created_at DESC
-    LIMIT $1
-  `,
-    [limit],
-  );
+  const { data: rows, error } = await getSupabase()
+    .from("publications")
+    .select("id")
+    .eq("type", "video")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    logger.error("[VideoDoctor] healthCheckAllVideos query failed:", error);
+    return [];
+  }
 
   const reports: VideoHealthReport[] = [];
 
-  for (const row of result.rows) {
+  for (const row of rows ?? []) {
     const report = await diagnoseVideo(row.id);
     reports.push(report);
   }
@@ -653,27 +678,26 @@ export async function autoFixVideos(
 ): Promise<{ fixed: number; failed: number; reports: VideoDoctorFix[] }> {
   logger.info(`[VideoDoctor] Auto-fixing up to ${limit} videos`);
 
-  const result = await pool.query(
-    `
-    SELECT id FROM publications
-    WHERE type = 'video'
-      AND (
-        processing_status = 'failed'
-        OR processing_status = 'pending'
-        OR media_url LIKE '%mixkit.co%'
-        OR thumbnail_url IS NULL
-      )
-    ORDER BY created_at DESC
-    LIMIT $1
-  `,
-    [limit],
-  );
+  const { data: rows, error } = await getSupabase()
+    .from("publications")
+    .select("id")
+    .eq("type", "video")
+    .or(
+      "processing_status.eq.failed,processing_status.eq.pending,media_url.like.*mixkit.co*,thumbnail_url.is.null",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    logger.error("[VideoDoctor] autoFixVideos query failed:", error);
+    return { fixed: 0, failed: 0, reports: [] };
+  }
 
   let fixed = 0;
   let failed = 0;
   const reports: VideoDoctorFix[] = [];
 
-  for (const row of result.rows) {
+  for (const row of rows ?? []) {
     const diagnosis = await diagnoseVideo(row.id);
 
     if (diagnosis.canAutoFix) {
@@ -693,4 +717,192 @@ export async function autoFixVideos(
   );
 
   return { fixed, failed, reports };
+}
+
+export interface BulkRepairStats {
+  visible_completed: number;
+  failed: number;
+  hidden: number;
+  mux_with_hls: number;
+  with_thumbnail: number;
+  total: number;
+}
+
+/**
+ * 🧰 Bulk-repair broken videos in the publications table.
+ *
+ * This is the Supabase-client port of backend/migrations/20260225_bulk_repair_videos.sql.
+ * The original ran the SQL file over the direct Postgres pool, which times out
+ * in production. Fixes that PostgREST can express as plain filters use a single
+ * `.update().filter()`; fixes that rely on column-to-column expressions, time
+ * windows, or OR clauses across columns are done by fetching candidate rows and
+ * applying batched per-row updates. Safe to call repeatedly (idempotent).
+ */
+export async function bulkRepairVideos(): Promise<BulkRepairStats> {
+  const supabase = getSupabase();
+  const TWO_HOURS_AGO = new Date(
+    Date.now() - 2 * 60 * 60 * 1000,
+  ).toISOString();
+
+  // FIX 1: Repair truncated Pexels URLs (append .mp4 where missing).
+  // Column-to-column write (media_url || '.mp4') → fetch + per-row update.
+  {
+    const { data } = await supabase
+      .from("publications")
+      .select("id, media_url")
+      .is("deleted_at", null)
+      .ilike("media_url", "%videos.pexels.com/video-files/%");
+    for (const row of data ?? []) {
+      const url: string = row.media_url || "";
+      if (
+        url &&
+        !/\.mp4$/i.test(url) &&
+        !/\.webm$/i.test(url) &&
+        !/\.m3u8$/i.test(url)
+      ) {
+        await supabase
+          .from("publications")
+          .update({ media_url: url + ".mp4", processing_status: "completed" })
+          .eq("id", row.id);
+      }
+    }
+  }
+
+  // FIX 2: Hide unplayable social-embed page URLs (no Mux / hls fallback).
+  {
+    const socialPatterns = [
+      "%tiktok.com/%/video/%",
+      "%instagram.com/reel/%",
+      "%instagram.com/p/%",
+      "%youtube.com/watch%",
+      "%youtu.be/%",
+    ];
+    for (const pattern of socialPatterns) {
+      await supabase
+        .from("publications")
+        .update({ est_masque: true, processing_status: "failed" })
+        .is("deleted_at", null)
+        .eq("est_masque", false)
+        .is("mux_playback_id", null)
+        .is("hls_url", null)
+        .ilike("media_url", pattern);
+    }
+  }
+
+  // FIX 3: Unstick rows stuck pending/processing for >2h.
+  // 3a: has a playable URL → completed; 3b: no URL at all → hide.
+  {
+    const { data } = await supabase
+      .from("publications")
+      .select("id, media_url, original_url, mux_playback_id, hls_url")
+      .in("processing_status", ["pending", "processing"])
+      .is("deleted_at", null)
+      .lt("created_at", TWO_HOURS_AGO);
+    for (const row of data ?? []) {
+      const hasUrl =
+        row.media_url || row.original_url || row.mux_playback_id || row.hls_url;
+      if (hasUrl) {
+        await supabase
+          .from("publications")
+          .update({ processing_status: "completed" })
+          .eq("id", row.id);
+      } else {
+        await supabase
+          .from("publications")
+          .update({ est_masque: true, processing_status: "failed" })
+          .eq("id", row.id);
+      }
+    }
+  }
+
+  // FIX 4 & 5: Rebuild hls_url and thumbnail_url for Mux videos missing them.
+  {
+    const { data } = await supabase
+      .from("publications")
+      .select("id, mux_playback_id, hls_url, thumbnail_url")
+      .is("deleted_at", null)
+      .not("mux_playback_id", "is", null);
+    for (const row of data ?? []) {
+      const patch: Record<string, string> = {};
+      if (!row.hls_url) {
+        patch.hls_url = `https://stream.mux.com/${row.mux_playback_id}.m3u8`;
+      }
+      if (!row.thumbnail_url) {
+        patch.thumbnail_url = `https://image.mux.com/${row.mux_playback_id}/thumbnail.jpg`;
+      }
+      if (Object.keys(patch).length > 0) {
+        await supabase.from("publications").update(patch).eq("id", row.id);
+      }
+    }
+  }
+
+  // FIX 6: Rebuild media_url from hls_url for Mux videos missing media_url.
+  {
+    const { data } = await supabase
+      .from("publications")
+      .select("id, hls_url, media_url")
+      .is("deleted_at", null)
+      .ilike("hls_url", "%stream.mux.com%");
+    for (const row of data ?? []) {
+      if (row.hls_url && !row.media_url) {
+        await supabase
+          .from("publications")
+          .update({ media_url: row.hls_url })
+          .eq("id", row.id);
+      }
+    }
+  }
+
+  // FIX 7: Default visibility to 'public' for visible, non-deleted rows.
+  await supabase
+    .from("publications")
+    .update({ visibility: "public" })
+    .is("visibility", null)
+    .eq("est_masque", false)
+    .is("deleted_at", null);
+
+  // FIX 8: Restore failed videos that still have an original_url.
+  {
+    const { data } = await supabase
+      .from("publications")
+      .select("id, original_url, media_url")
+      .eq("processing_status", "failed")
+      .is("deleted_at", null)
+      .not("original_url", "is", null);
+    for (const row of data ?? []) {
+      if (row.original_url && !row.media_url) {
+        await supabase
+          .from("publications")
+          .update({
+            media_url: row.original_url,
+            processing_status: "completed",
+          })
+          .eq("id", row.id);
+      }
+    }
+  }
+
+  return computeBulkRepairStats();
+}
+
+/** Post-repair summary stats (TS aggregation — PostgREST has no FILTER count). */
+async function computeBulkRepairStats(): Promise<BulkRepairStats> {
+  const { data } = await getSupabase()
+    .from("publications")
+    .select("processing_status, est_masque, mux_playback_id, hls_url, thumbnail_url")
+    .eq("type", "video")
+    .is("deleted_at", null);
+
+  const rows = data ?? [];
+  return {
+    visible_completed: rows.filter(
+      (r) => r.processing_status === "completed" && r.est_masque !== true,
+    ).length,
+    failed: rows.filter((r) => r.processing_status === "failed").length,
+    hidden: rows.filter((r) => r.est_masque === true).length,
+    mux_with_hls: rows.filter((r) => r.mux_playback_id != null && r.hls_url != null)
+      .length,
+    with_thumbnail: rows.filter((r) => r.thumbnail_url != null).length,
+    total: rows.length,
+  };
 }
