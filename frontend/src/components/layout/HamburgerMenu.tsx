@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useAuth } from "../../contexts/AuthContext";
+import { toast } from "../../components/Toast";
 
 interface MenuItem {
   label: string;
@@ -20,9 +21,12 @@ interface MenuItem {
 
 export const HamburgerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  
+  const isAdmin = user?.isAdmin || user?.role === "founder" || user?.role === "moderator";
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -58,7 +62,39 @@ export const HamburgerMenu: React.FC = () => {
     };
   }, [isOpen]);
 
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/admin/force-sync-feed", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      const imported = data.stats?.imported || 0;
+      toast.success(`Success! Imported ${imported} new videos.`);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to force sync");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const menuItems: MenuItem[] = [
+    ...(isAdmin ? [
+      {
+        label: isSyncing ? "Scraping..." : "Force Sync Feed (Admin)",
+        icon: (
+          <svg
+            className={`w-5 h-5 text-gold-500 ${isSyncing ? "animate-spin" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        ),
+        onClick: handleForceSync,
+      },
+      { divider: true, label: "", icon: null },
+    ] : []),
     // Main Navigation
     {
       label: "Messages / DMs",
