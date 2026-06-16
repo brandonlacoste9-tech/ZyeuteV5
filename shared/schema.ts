@@ -151,12 +151,16 @@ export const users = pgTable("user_profiles", {
   maxStreak: integer("max_streak").default(0),
   lastDailyBonus: timestamp("last_daily_bonus"),
   unlockedHives: jsonb("unlocked_hives").default(["quebec"]),
+  affinityTags: text("affinity_tags").array().default(sql`'{}'::text[]`), // Core for routing affinity
   raisonBannissement: text("raison_bannissement"),
   arcadePlaytime: integer("arcade_playtime").default(0),
   parentId: uuid("parent_id").references((): AnyPgColumn => users.id, {
     onDelete: "set null",
   }), // For Parental Controls
-});
+}, (table) => ({
+  roleIdx: index("idx_user_profiles_role").on(table.role),
+  emailIdx: index("idx_user_profiles_email").on(table.email),
+}));
 
 // Posts Table mapped to publications
 export const posts = pgTable(
@@ -264,6 +268,20 @@ export const posts = pgTable(
       table.regionId,
       table.createdAt,
     ),
+    feedFilterIdx: index("idx_publications_feed_filter").on(
+      table.visibility,
+      table.processingStatus,
+      table.createdAt,
+    ),
+    hashtagsGinIdx: index("idx_publications_hashtags_gin").using(
+      "gin",
+      table.hashtags,
+    ),
+    exploreFeedPartialIdx: index("idx_publications_explore_partial")
+      .on(table.viralScore, table.fireCount, table.createdAt)
+      .where(
+        sql`visibility = 'public' AND est_masque = false AND deleted_at IS NULL AND processing_status IS DISTINCT FROM 'no_audio' AND media_url IS NOT NULL`
+      ),
   }),
 );
 

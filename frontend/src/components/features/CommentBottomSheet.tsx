@@ -53,8 +53,8 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Drag state
-  const [dragY, setDragY] = useState(0);
+  // Drag state (using refs to avoid layout thrashing on move)
+  const dragY = useRef(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartY = useRef(0);
 
@@ -81,6 +81,14 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
+      
+      // Reset drag styles when opened
+      dragY.current = 0;
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translateY(0px)`;
+      }
+      const backdrop = document.getElementById("comment-backdrop");
+      if (backdrop) backdrop.style.opacity = "1";
     }
   }, [isOpen]);
 
@@ -92,8 +100,7 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     try {
       const comment = await addComment(postId, newComment.trim());
       if (comment) {
-        // Ensure user is populated for immediate display — backend may return
-        // null on a race condition; fall back to the auth context user.
+        // Ensure user is populated for immediate display
         const commentWithUser = (comment as any).user
           ? comment
           : {
@@ -126,11 +133,10 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     } finally {
       setIsSending(false);
     }
-  }, [newComment, postId, isSending]);
+  }, [newComment, postId, isSending, currentUser]);
 
   // Drag handlers for swipe-to-dismiss
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // Only allow drag from the handle area (top 50px of the sheet)
     const touch = e.touches[0];
     const rect = sheetRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -147,7 +153,17 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
       if (!isDragging) return;
       const delta = e.touches[0].clientY - dragStartY.current;
       if (delta > 0) {
-        setDragY(delta);
+        dragY.current = delta;
+        
+        // Direct DOM manipulation to avoid re-renders
+        if (sheetRef.current) {
+          sheetRef.current.style.transform = `translateY(${delta}px)`;
+          sheetRef.current.style.transition = "none";
+        }
+        const backdrop = document.getElementById("comment-backdrop");
+        if (backdrop) {
+          backdrop.style.opacity = String(Math.max(0, 1 - delta / 400));
+        }
       }
     },
     [isDragging],
@@ -158,11 +174,22 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     setIsDragging(false);
 
     // If dragged more than 120px, dismiss
-    if (dragY > 120) {
+    if (dragY.current > 120) {
       onClose();
+    } else {
+      // Snap back
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translateY(0px)`;
+        sheetRef.current.style.transition = "transform 0.3s ease-out";
+      }
+      const backdrop = document.getElementById("comment-backdrop");
+      if (backdrop) {
+        backdrop.style.opacity = "1";
+        backdrop.style.transition = "opacity 0.3s ease-out";
+      }
     }
-    setDragY(0);
-  }, [isDragging, dragY, onClose]);
+    dragY.current = 0;
+  }, [isDragging, onClose]);
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -282,7 +309,10 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                 userId={currentUser.id}
               />
             )}
-            <div className="flex-1 relative">
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+              className="flex-1 relative flex items-center"
+            >
               <input
                 ref={inputRef}
                 type="text"
@@ -294,27 +324,21 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                     : "Connecte-toi pour commenter"
                 }
                 disabled={!currentUser}
-                className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold-400/50 transition-colors disabled:opacity-50"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit();
-                  }
-                }}
+                className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 pr-12 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold-400/50 transition-colors disabled:opacity-50"
               />
-            </div>
-            <button
-              onClick={handleSubmit}
-              disabled={!newComment.trim() || isSending || !currentUser}
-              className={cn(
-                "p-2.5 rounded-full transition-all",
-                newComment.trim() && currentUser
-                  ? "bg-gold-500 text-black hover:bg-gold-400"
-                  : "bg-white/5 text-white/30",
-              )}
-            >
-              <Send size={18} />
-            </button>
+              <button
+                type="submit"
+                disabled={!newComment.trim() || isSending || !currentUser}
+                className={cn(
+                  "absolute right-1 p-1.5 rounded-full transition-all",
+                  newComment.trim() && currentUser
+                    ? "bg-gold-500 text-black hover:bg-gold-400"
+                    : "bg-transparent text-white/30",
+                )}
+              >
+                <Send size={18} />
+              </button>
+            </form>
           </div>
         </div>
 
@@ -333,9 +357,9 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
     <>
       {/* Backdrop */}
       <div
+        id="comment-backdrop"
         className="fixed inset-0 bg-black/60 z-[60] transition-opacity duration-300"
         onClick={onClose}
-        style={{ opacity: isDragging ? 1 - dragY / 400 : 1 }}
       />
 
       {/* Sheet */}
@@ -345,14 +369,10 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
           "fixed left-0 right-0 bottom-0 z-[61]",
           "bg-neutral-900 rounded-t-2xl",
           "flex flex-col",
-          "max-h-[60vh] min-h-[40vh]",
+          "max-h-[60dvh] min-h-[40dvh]",
           "transition-transform duration-300 ease-out",
           !isDragging && "animate-slide-up",
         )}
-        style={{
-          transform: `translateY(${dragY}px)`,
-          transition: isDragging ? "none" : undefined,
-        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -449,7 +469,10 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
               userId={currentUser.id}
             />
           )}
-          <div className="flex-1 relative">
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+            className="flex-1 relative flex items-center"
+          >
             <input
               ref={inputRef}
               type="text"
@@ -461,27 +484,21 @@ export const CommentBottomSheet: React.FC<CommentBottomSheetProps> = ({
                   : "Connecte-toi pour commenter"
               }
               disabled={!currentUser}
-              className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold-400/50 transition-colors disabled:opacity-50"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit();
-                }
-              }}
+              className="w-full bg-white/5 border border-white/10 rounded-full px-4 py-2.5 pr-12 text-white text-sm placeholder-white/40 focus:outline-none focus:border-gold-400/50 transition-colors disabled:opacity-50"
             />
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={!newComment.trim() || isSending || !currentUser}
-            className={cn(
-              "p-2.5 rounded-full transition-all",
-              newComment.trim() && currentUser
-                ? "bg-gold-500 text-black hover:bg-gold-400"
-                : "bg-white/5 text-white/30",
-            )}
-          >
-            <Send size={18} />
-          </button>
+            <button
+              type="submit"
+              disabled={!newComment.trim() || isSending || !currentUser}
+              className={cn(
+                "absolute right-1 p-1.5 rounded-full transition-all",
+                newComment.trim() && currentUser
+                  ? "bg-gold-500 text-black hover:bg-gold-400"
+                  : "bg-transparent text-white/30",
+              )}
+            >
+              <Send size={18} />
+            </button>
+          </form>
         </div>
       </div>
     </>

@@ -26,6 +26,7 @@ const BaseUserSchema = z
     is_verified: z.boolean().default(false),
     isVerified: z.boolean().optional(), // Compat
     isPremium: z.boolean().optional(), // Added missing field
+    isAdmin: z.boolean().optional(), // Added missing field
     coins: z.number().default(0),
     piasse_balance: z.number().default(0.0),
     piasseBalance: z.number().optional(), // Compat
@@ -84,6 +85,7 @@ export const UserSchema = z.preprocess((val: unknown) => {
     is_verified: v.isVerified || v.is_verified || false,
     isVerified: v.isVerified || v.is_verified || false,
     isPremium: v.isPremium || v.is_premium || false,
+    isAdmin: v.isAdmin || v.is_admin || false,
     coins: v.coins || 0,
     piasse_balance: v.piasse_balance || v.piasseBalance || 0.0,
     piasseBalance: v.piasse_balance || v.piasseBalance || 0.0,

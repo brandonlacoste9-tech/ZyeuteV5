@@ -20,7 +20,10 @@ function shouldTryNextKey(err: unknown): boolean {
   if (!axios.isAxiosError(err)) return false;
   const status = err.response?.status;
   if (status === 401 || status === 403 || status === 429) return true;
-  const body = String(err.response?.data ?? "").toLowerCase();
+  const body = (typeof err.response?.data === "string"
+    ? err.response.data
+    : JSON.stringify(err.response?.data || {})
+  ).toLowerCase();
   return (
     body.includes("quota") ||
     body.includes("limit") ||

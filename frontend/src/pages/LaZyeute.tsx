@@ -24,7 +24,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed, type FeedType } from "@/hooks/useInfiniteFeed";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
-import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+const MuxVideoPlayer = React.lazy(() => import("@/components/video/MuxVideoPlayer").then(m => ({ default: m.MuxVideoPlayer })));
 import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 
@@ -468,10 +468,13 @@ export const Zyeute: React.FC = () => {
   const { tap, impact, success, fire, comment, share, save, newFollower } =
     useHaptics();
   const [uiVisible, setUiVisible] = useState(true);
-  const [heartBurst, setHeartBurst] = useState<{
+  const [heartBursts, setHeartBursts] = useState<Array<{
     postId: string;
-    key: number;
-  } | null>(null);
+    id: number;
+    x: number;
+    y: number;
+    rotation: number;
+  }>>([]);
 
   // Progress bar tracking (TikTok-style).
   // Driven imperatively so the high-frequency `timeupdate` events never
@@ -637,7 +640,16 @@ export const Zyeute: React.FC = () => {
 
   const uid = authUser?.id ?? currentUser?.id;
 
-  const handleFireToggle = async (postId: string, fromDoubleTap = false) => {
+  const addHeartBurst = useCallback((postId: string, x: number, y: number) => {
+    const id = Date.now() + Math.random();
+    const rotation = Math.random() * 40 - 20; // -20 to 20 deg
+    setHeartBursts((prev) => [...prev, { postId, id, x, y, rotation }]);
+    setTimeout(() => {
+      setHeartBursts((prev) => prev.filter((b) => b.id !== id));
+    }, 1000);
+  }, []);
+
+  const handleFireToggle = async (postId: string, fromDoubleTap = false, coords?: { x: number; y: number }) => {
     if (!uid) {
       toast.error("Connecte-toi pour mettre du feu.");
       navigate("/login", { state: { from: location.pathname } });
@@ -653,6 +665,12 @@ export const Zyeute: React.FC = () => {
       (post as PostWithEngagement | undefined)?.fireCount ??
       (post as PostWithEngagement | undefined)?.fire_count ??
       0;
+
+    if (fromDoubleTap) {
+      if (coords) addHeartBurst(postId, coords.x, coords.y);
+      if (currentFired) return; // Already fired, just show the particle animation and return
+    }
+
     // Optimistic update
     const newFired = !currentFired;
     setFiredMap((m) => ({ ...m, [postId]: newFired }));
@@ -660,11 +678,7 @@ export const Zyeute: React.FC = () => {
       ...m,
       [postId]: currentCount + (newFired ? 1 : -1),
     }));
-    // Heart burst animation on double-tap fire
-    if (fromDoubleTap && newFired) {
-      setHeartBurst({ postId, key: Date.now() });
-      setTimeout(() => setHeartBurst(null), 900);
-    }
+
     try {
       await togglePostFire(postId, uid);
     } catch (error) {
@@ -696,7 +710,7 @@ export const Zyeute: React.FC = () => {
 
   // Double-tap on video → fire
   const handleVideoTap = useCallback(
-    (postId: string) => {
+    (e: React.MouseEvent | React.TouchEvent, postId: string) => {
       const now = Date.now();
       if (
         lastTapRef.current &&
@@ -705,7 +719,23 @@ export const Zyeute: React.FC = () => {
       ) {
         lastTapRef.current = null;
         impact();
-        handleFireToggle(postId, true);
+        
+        let clientX = window.innerWidth / 2;
+        let clientY = window.innerHeight / 2;
+        if ("touches" in e) {
+          if (e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+          } else if (e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+          }
+        } else {
+          clientX = (e as React.MouseEvent).clientX;
+          clientY = (e as React.MouseEvent).clientY;
+        }
+
+        handleFireToggle(postId, true, { x: clientX, y: clientY });
       } else {
         lastTapRef.current = { postId, time: now };
         // Single tap → unmute if still muted, otherwise toggle play/pause
@@ -727,7 +757,7 @@ export const Zyeute: React.FC = () => {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uid, posts, firedMap, fireCountMap, isMuted, isPlaying],
+    [uid, posts, firedMap, fireCountMap, isMuted, isPlaying, addHeartBurst],
   );
 
   const openShare = (postId: string) => {
@@ -1034,26 +1064,28 @@ export const Zyeute: React.FC = () => {
                     {isVideoSlide ? (
                       nearActive ? (
                         useMuxPlayer ? (
-                          <MuxVideoPlayer
-                            playbackId={muxId || ""}
-                            thumbnailUrl={slidePoster}
-                            className="w-full h-full object-cover"
-                            autoPlay={isActiveSlide}
-                            muted={isMuted}
-                            loop
-                            resetOnDeactivate={false}
-                            onTimeUpdate={(ct, dur) => {
-                              if (index === currentIndex)
-                                handleTimeUpdate(ct, dur);
-                            }}
-                            onError={() => {
-                              setMuxFallbackIds((prev) => {
-                                const next = new Set(prev);
-                                next.add(post.id);
-                                return next;
-                              });
-                            }}
-                          />
+                          <React.Suspense fallback={<div className="w-full h-full bg-black" />}>
+                            <MuxVideoPlayer
+                              playbackId={muxId || ""}
+                              thumbnailUrl={slidePoster}
+                              className="w-full h-full object-cover"
+                              autoPlay={isActiveSlide}
+                              muted={isMuted}
+                              loop
+                              resetOnDeactivate={false}
+                              onTimeUpdate={(ct, dur) => {
+                                if (index === currentIndex)
+                                  handleTimeUpdate(ct, dur);
+                              }}
+                              onError={() => {
+                                setMuxFallbackIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(post.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                          </React.Suspense>
                         ) : (
                           <VideoPlayer
                             src={
@@ -1131,7 +1163,7 @@ export const Zyeute: React.FC = () => {
                   <div
                     className="absolute inset-0 z-20"
                     style={{ background: "transparent" }}
-                    onClick={() => handleVideoTap(post.id)}
+                    onClick={(e) => handleVideoTap(e, post.id)}
                   />
 
                   {/* TikTok-style progress bar at bottom of video.
@@ -1143,11 +1175,15 @@ export const Zyeute: React.FC = () => {
                   )}
 
                   {/* Heart burst animation on double-tap fire */}
-                  {heartBurst?.postId === post.id && (
+                  {heartBursts.filter(b => b.postId === post.id).map(burst => (
                     <div
-                      key={heartBurst.key}
-                      className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
-                      style={{ animation: "heartPop 0.9s ease-out forwards" }}
+                      key={burst.id}
+                      className="fixed z-30 pointer-events-none"
+                      style={{ 
+                        left: burst.x - 64, // Center the 128px (w-32) heart
+                        top: burst.y - 64,
+                        transform: `rotate(${burst.rotation}deg)` 
+                      }}
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -1162,7 +1198,7 @@ export const Zyeute: React.FC = () => {
                         />
                       </svg>
                     </div>
-                  )}
+                  ))}
 
                   {/* Gradient Overlays */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none" />

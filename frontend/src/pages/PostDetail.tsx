@@ -13,7 +13,7 @@ import { Avatar } from "../components/Avatar";
 import { Button } from "../components/Button";
 import { FireRating } from "../components/features/FireRating";
 import { VideoPlayer } from "../components/features/VideoPlayer";
-import { MuxVideoPlayer } from "@/components/video/MuxVideoPlayer";
+const MuxVideoPlayer = React.lazy(() => import("@/components/video/MuxVideoPlayer").then(m => ({ default: m.MuxVideoPlayer })));
 import { VirtualCommentList } from "../components/features/VirtualCommentList";
 import { GiftPicker } from "../components/features/GiftPicker";
 import { supabase } from "../lib/supabase";
@@ -375,14 +375,16 @@ const PostDetailMedia = ({ post }: { post: Post }) => {
   if (post.type === "video" && post.mux_playback_id) {
     return (
       <div className="relative w-full h-full bg-black">
-        <MuxVideoPlayer
-          playbackId={post.mux_playback_id}
-          thumbnailUrl={post.thumbnail_url || undefined}
-          className="w-full h-full"
-          autoPlay={true}
-          muted={false}
-          loop={true}
-        />
+        <React.Suspense fallback={<div className="w-full h-full bg-black" />}>
+          <MuxVideoPlayer
+            playbackId={post.mux_playback_id}
+            thumbnailUrl={post.thumbnail_url || undefined}
+            className="w-full h-full"
+            autoPlay={true}
+            muted={false}
+            loop={true}
+          />
+        </React.Suspense>
         <VideoDebugOverlay
           isVisible={false}
           videoId={post.id}

@@ -238,6 +238,30 @@ async function runApifySearch(
   return (await response.json()) as Record<string, unknown>[];
 }
 
+function extractMetadataFromDesc(desc: string) {
+  // Extract hashtags (stripping the #)
+  const hashtags = Array.from(desc.matchAll(/#([\w\u00C0-\u017F_]+)/g)).map(m => m[1].toLowerCase());
+  
+  const d = desc.toLowerCase();
+  let city: string | null = null;
+  let regionId: string | null = null;
+  let region: string | null = null;
+
+  if (d.includes("montreal") || d.includes("mtl") || d.includes("514")) {
+    city = "Montréal"; region = "Montréal"; regionId = "montreal";
+  } else if (d.includes("quebec city") || d.includes("ville de quebec") || d.includes("vieuxquebec")) {
+    city = "Québec"; region = "Capitale-Nationale"; regionId = "quebec";
+  } else if (d.includes("laval") || d.includes("450")) {
+    city = "Laval"; region = "Laval"; regionId = "laval";
+  } else if (d.includes("gatineau") || d.includes("819")) {
+    city = "Gatineau"; region = "Outaouais"; regionId = "gatineau";
+  } else if (d.includes("sherbrooke")) {
+    city = "Sherbrooke"; region = "Estrie"; regionId = "sherbrooke";
+  }
+
+  return { hashtags, city, region, regionId };
+}
+
 export async function seedFromApify(
   supabase: SupabaseClient,
   userId: string,
@@ -315,6 +339,9 @@ export async function seedFromApify(
         item.webVideoUrl ??
           `https://www.tiktok.com/@${handle}/video/${videoId}`,
       );
+
+      const { hashtags, city, region, regionId } = extractMetadataFromDesc(desc);
+
       const status = await insertPublication(supabase, {
         id: randomUUID(),
         user_id: userId,
@@ -324,9 +351,13 @@ export async function seedFromApify(
         thumbnail_url: String(videoMeta.coverUrl ?? ""),
         caption: desc || `#${handle}`,
         content: desc || `#${handle}`,
+        content_fr: desc || `#${handle}`,
+        hashtags,
+        city: city || undefined,
+        region: region || undefined,
         type: "video",
         hive_id: opts.hiveId,
-        region_id: opts.regionId,
+        region_id: regionId || opts.regionId,
         visibility: "public",
         processing_status: "completed",
         moderation_approved: true,

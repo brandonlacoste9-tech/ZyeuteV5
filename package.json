@@ -219,6 +219,7 @@
     "@types/express": "^5.0.6",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^20.19.42",
+    "@types/pixi.js": "^4.8.9",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.0",
     "@types/react-window": "^2.0.0",
