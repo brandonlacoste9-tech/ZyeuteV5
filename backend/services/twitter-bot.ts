@@ -70,7 +70,7 @@ function generateTweetContent(post: any): string {
 }
 
 /**
- * The main worker function that finds a post, tweets it, and updates the database.
+ * The main worker function that finds a post (or arcade game), tweets it, and updates the database.
  */
 export async function runTwitterBotJob() {
   console.log("🐦 [Twitter Bot] Running scheduled tweet job...");
@@ -81,6 +81,27 @@ export async function runTwitterBotJob() {
   }
 
   try {
+    // 20% chance to tweet about an Arcade game instead of a viral video
+    if (Math.random() < 0.20) {
+      const arcadeGames = [
+        { name: "Grid Rush", url: "https://www.zyeute.com/arcade/grid-rush", desc: "Prêt pour Grid Rush ? Viens tester tes réflexes sur l'Arcade Zyeuté ! 🕹️⚡" },
+        { name: "Hive Tap", url: "https://www.zyeute.com/arcade/hive-tap", desc: "Tape au rythme du Hive ! 🐝🎵 Viens jouer à Hive Tap sur l'Arcade Zyeuté !" },
+        { name: "Poutine Stack", url: "https://www.zyeute.com/arcade/poutine", desc: "Empile ta poutine comme un pro ! 🍟🧀 Viens jouer sur l'Arcade Zyeuté !" },
+        { name: "Arcade Hub", url: "https://www.zyeute.com/arcade", desc: "Découvre tous nos jeux rétro dans le Hub Arcade Zyeuté ! 👾🎮 Viens battre les high scores !" }
+      ];
+      const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
+      const tweetText = `${game.desc}\n\n👉 ${game.url} #Zyeute #RetroGaming #Quebec`;
+
+      console.log(`🐦 [Twitter Bot] Attempting to post Arcade promo: ${game.name}`);
+      const response = await twitterClient.v2.tweet(tweetText);
+      if (response.errors && response.errors.length > 0) {
+        console.error("🐦 [Twitter Bot] Twitter API returned errors:", response.errors);
+        return;
+      }
+      console.log(`🐦 [Twitter Bot] Arcade promo published successfully! Tweet ID: ${response.data.id}`);
+      return;
+    }
+
     const post = await fetchTopUntweetedPost();
 
     if (!post) {
