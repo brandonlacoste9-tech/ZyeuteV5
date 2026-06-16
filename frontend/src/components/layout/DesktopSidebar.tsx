@@ -3,6 +3,7 @@ import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FlameEyeIcon } from "@/components/ui/Logo";
 import { toast } from "@/components/Toast";
+import { apiCall } from "@/services/api";
 import {
   IoHomeOutline,
   IoHome,
@@ -24,10 +25,9 @@ export const DesktopSidebar: React.FC = () => {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch("/api/admin/force-sync-feed", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed");
-      const imported = data.stats?.imported || 0;
+      const res = await apiCall<{ stats: { imported: number } }>("/admin/force-sync-feed", { method: "POST" });
+      if (res.error) throw new Error(res.error);
+      const imported = res.data?.stats?.imported || 0;
       toast.success(`Success! Imported ${imported} new videos.`);
     } catch (e: any) {
       toast.error(e.message || "Failed to force sync");
