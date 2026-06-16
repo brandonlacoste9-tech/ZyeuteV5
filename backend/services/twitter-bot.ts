@@ -92,7 +92,8 @@ export async function runTwitterBotJob() {
         { name: "Gamer Gurls", url: "https://www.gamergurls.com", desc: "Découvre la communauté ultime sur Gamer Gurls ! 🕹️✨ Le gaming à son meilleur." },
         { name: "IronClaw", url: "https://www.ironclaw.ca", desc: "Attrape la victoire sur IronClaw ! 🦅🎮 Des jeux intenses pour de vrais joueurs." },
         { name: "KryptoTrac", url: "https://www.kryptotrac.com", desc: "La nouvelle ère du jeu est sur KryptoTrac ! 🚀👾 Joue et découvre de nouvelles dimensions." },
-        { name: "Cyborg Gamers", url: "https://www.cyborggamers.com", desc: "Rejoins l'élite sur Cyborg Gamers ! 🤖🎮 Prépare-toi pour des sessions intenses." }
+        { name: "Cyborg Gamers", url: "https://www.cyborggamers.com", desc: "Rejoins l'élite sur Cyborg Gamers ! 🤖🎮 Prépare-toi pour des sessions intenses." },
+        { name: "Digital Newspaper", url: "https://digital-newspaper-gamma.vercel.app/", desc: "Reste informé avec notre Digital Newspaper ! 📰✨ L'actualité qui compte pour toi." }
       ];
       const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
       const tweetText = `${game.desc}\n\n👉 ${game.url} #Zyeute #RetroGaming #Quebec`;
