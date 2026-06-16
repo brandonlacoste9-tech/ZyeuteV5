@@ -2,10 +2,6 @@ import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FlameEyeIcon } from "@/components/ui/Logo";
-<<<<<<< HEAD
-=======
-import { apiFetch } from "@/lib/api";
->>>>>>> 0a1af17731fcc6d14af80bcbfd09f06d86851268
 import { toast } from "@/components/Toast";
 import {
   IoHomeOutline,
@@ -27,7 +23,6 @@ export const DesktopSidebar: React.FC = () => {
 
   const handleForceSync = async () => {
     setIsSyncing(true);
-<<<<<<< HEAD
     try {
       const res = await fetch("/api/admin/force-sync-feed", { method: "POST" });
       const data = await res.json();
@@ -36,16 +31,6 @@ export const DesktopSidebar: React.FC = () => {
       toast.success(`Success! Imported ${imported} new videos.`);
     } catch (e: any) {
       toast.error(e.message || "Failed to force sync");
-=======
-    const loadingToast = toast.loading("Scraping TikTok via Apify...");
-    try {
-      const res = await apiFetch("/api/admin/force-sync-feed", { method: "POST" });
-      if (res.error) throw new Error(res.error);
-      const imported = res.stats?.imported || 0;
-      toast.success(`Success! Imported ${imported} new videos.`, { id: loadingToast });
-    } catch (e: any) {
-      toast.error(e.message || "Failed to force sync", { id: loadingToast });
->>>>>>> 0a1af17731fcc6d14af80bcbfd09f06d86851268
     } finally {
       setIsSyncing(false);
     }
