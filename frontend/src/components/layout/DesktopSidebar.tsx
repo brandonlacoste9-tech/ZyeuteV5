@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { FlameEyeIcon } from "@/components/ui/Logo";
+import { apiFetch } from "@/lib/api";
+import { toast } from "@/components/Toast";
 import {
   IoHomeOutline,
   IoHome,
@@ -11,10 +13,29 @@ import {
   IoCloudUpload,
   IoPersonOutline,
   IoPerson,
+  IoRefreshOutline,
 } from "react-icons/io5";
 
 export const DesktopSidebar: React.FC = () => {
   const { user } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const isAdmin = user?.isAdmin || user?.role === "founder" || user?.role === "moderator";
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    const loadingToast = toast.loading("Scraping TikTok via Apify...");
+    try {
+      const res = await apiFetch("/api/admin/force-sync-feed", { method: "POST" });
+      if (res.error) throw new Error(res.error);
+      const imported = res.stats?.imported || 0;
+      toast.success(`Success! Imported ${imported} new videos.`, { id: loadingToast });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to force sync", { id: loadingToast });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const navItems = [
     {
@@ -73,6 +94,20 @@ export const DesktopSidebar: React.FC = () => {
         </nav>
 
         <div className="h-px bg-leather-800 my-4 mx-2" />
+
+        {isAdmin && (
+          <div className="px-3 mb-6">
+            <h3 className="text-leather-400 font-semibold text-sm mb-3 px-1">Admin Tools</h3>
+            <button
+              onClick={handleForceSync}
+              disabled={isSyncing}
+              className="flex items-center gap-3 w-full px-3 py-2 rounded-xl bg-gold-600/10 hover:bg-gold-600/20 text-gold-400 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <IoRefreshOutline className={`w-5 h-5 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="text-sm">{isSyncing ? "Scraping..." : "Force Sync Feed"}</span>
+            </button>
+          </div>
+        )}
 
         {user ? (
           <div className="px-3">

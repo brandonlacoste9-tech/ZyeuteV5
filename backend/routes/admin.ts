@@ -10,6 +10,7 @@ import { eq, desc, and } from "drizzle-orm";
 import { getPrivacyQueue } from "../queue.js";
 import { volumePricingService } from "../services/volume-pricing-service.js";
 import { feedAutoGenerator } from "../services/feed-auto-generator.js";
+import { runTikTokFeedPopulatorOnce } from "../services/tiktok-feed-populator-job.js";
 
 const router = Router();
 
@@ -193,6 +194,17 @@ router.post("/cleanup-ephemeral", requireAdmin, async (req: any, res: any) => {
   } catch (error: any) {
     console.error("Cleanup ephemeral posts error:", error);
     res.status(500).json({ error: "Failed to cleanup ephemeral posts" });
+  }
+});
+
+// Force sync feed from Apify (TikTok fallback)
+router.post("/force-sync-feed", requireAdmin, async (req: any, res: any) => {
+  try {
+    const stats = await runTikTokFeedPopulatorOnce(true);
+    res.json({ success: true, stats });
+  } catch (error: any) {
+    console.error("Force sync feed error:", error);
+    res.status(500).json({ error: "Failed to force sync feed", message: error.message });
   }
 });
 

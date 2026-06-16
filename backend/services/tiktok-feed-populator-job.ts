@@ -20,7 +20,7 @@ export type TikTokFeedJobRunStats = {
   errors: string[];
 };
 
-export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStats> {
+export async function runTikTokFeedPopulatorOnce(overrideForce: boolean = false): Promise<TikTokFeedJobRunStats> {
   const supabaseUrl =
     process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -31,7 +31,7 @@ export async function runTikTokFeedPopulatorOnce(): Promise<TikTokFeedJobRunStat
 
   const maxPerRun = envInt("TIKTOK_FEED_JOB_MAX_PER_RUN", 45);
 
-  const force = process.env.TIKTOK_FEED_JOB_FORCE === "true";
+  const force = overrideForce || process.env.TIKTOK_FEED_JOB_FORCE === "true";
 
   const result = await replenishQuebecFeedPool({
     supabaseUrl,
