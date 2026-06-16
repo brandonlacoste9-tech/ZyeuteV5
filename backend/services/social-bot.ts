@@ -118,17 +118,17 @@ export async function runSocialBotJob() {
     // 20% chance to tweet about an Arcade game instead of a viral video
     if (Math.random() < 0.20) {
       const arcadeGames = [
-        { name: "Grid Rush", url: "https://www.zyeute.com/arcade/grid-rush", desc: "Prêt pour Grid Rush ? Viens tester tes réflexes sur l'Arcade Zyeuté ! 🕹️⚡" },
-        { name: "Hive Tap", url: "https://www.zyeute.com/arcade/hive-tap", desc: "Tape au rythme du Hive ! 🐝🎵 Viens jouer à Hive Tap sur l'Arcade Zyeuté !" },
-        { name: "Poutine Stack", url: "https://www.zyeute.com/arcade/poutine", desc: "Empile ta poutine comme un pro ! 🍟🧀 Viens jouer sur l'Arcade Zyeuté !" },
-        { name: "Arcade Hub", url: "https://www.zyeute.com/arcade", desc: "Découvre tous nos jeux rétro dans le Hub Arcade Zyeuté ! 👾🎮 Viens battre les high scores !" },
-        { name: "HellYeah Games", url: "https://www.hellyeah-games.com", desc: "Plonge dans l'action avec HellYeah Games ! 🤘🎮 Les meilleurs jeux d'arcade sont ici." },
-        { name: "Gamer Gurls", url: "https://www.gamergurls.com", desc: "Découvre la communauté ultime sur Gamer Gurls ! 🕹️✨ Le gaming à son meilleur." },
-        { name: "IronClaw", url: "https://ironclaw-i1f8.vercel.app/", desc: "Attrape la victoire sur IronClaw ! 🦅🎮 Des jeux intenses pour de vrais joueurs." },
-        { name: "KryptoTrac", url: "https://www.kryptotrac.com", desc: "La nouvelle ère du jeu est sur KryptoTrac ! 🚀👾 Joue et découvre de nouvelles dimensions." },
-        { name: "Cyborg Gamers", url: "https://www.cyborggamers.com", desc: "Rejoins l'élite sur Cyborg Gamers ! 🤖🎮 Prépare-toi pour des sessions intenses." },
-        { name: "Digital Newspaper", url: "https://digital-newspaper-gamma.vercel.app/", desc: "Reste informé avec notre Digital Newspaper ! 📰✨ L'actualité qui compte pour toi." },
-        { name: "Floguru", url: "https://www.floguru.com", desc: "Trouve ton rythme sur Floguru ! 🌊🕹️ Laisse-toi emporter par le flow du jeu." }
+        { name: "Grid Rush", url: "https://www.zyeute.com/arcade/grid-rush", desc: "Prêt pour Grid Rush ? Viens tester tes réflexes sur l'Arcade Zyeuté ! 🕹️⚡", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "Hive Tap", url: "https://www.zyeute.com/arcade/hive-tap", desc: "Tape au rythme du Hive ! 🐝🎵 Viens jouer à Hive Tap sur l'Arcade Zyeuté !", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "Poutine Stack", url: "https://www.zyeute.com/arcade/poutine", desc: "Empile ta poutine comme un pro ! 🍟🧀 Viens jouer sur l'Arcade Zyeuté !", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "Arcade Hub", url: "https://www.zyeute.com/arcade", desc: "Découvre tous nos jeux rétro dans le Hub Arcade Zyeuté ! 👾🎮 Viens battre les high scores !", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "HellYeah Games", url: "https://www.hellyeah-games.com", desc: "Plonge dans l'action avec HellYeah Games ! 🤘🎮 Les meilleurs jeux d'arcade sont ici.", imageUrl: "https://www.hellyeah-games.com/promo.png" }, // <--- Make sure this image exists on your server!
+        { name: "Gamer Gurls", url: "https://www.gamergurls.com", desc: "Découvre la communauté ultime sur Gamer Gurls ! 🕹️✨ Le gaming à son meilleur.", imageUrl: "https://www.gamergurls.com/promo.png" }, // <--- Make sure this image exists on your server!
+        { name: "IronClaw", url: "https://ironclaw-i1f8.vercel.app/", desc: "Attrape la victoire sur IronClaw ! 🦅🎮 Des jeux intenses pour de vrais joueurs.", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "KryptoTrac", url: "https://www.kryptotrac.com", desc: "La nouvelle ère du jeu est sur KryptoTrac ! 🚀👾 Joue et découvre de nouvelles dimensions.", imageUrl: "https://www.kryptotrac.com/promo.png" }, // <--- Make sure this image exists on your server!
+        { name: "Cyborg Gamers", url: "https://www.cyborggamers.com", desc: "Rejoins l'élite sur Cyborg Gamers ! 🤖🎮 Prépare-toi pour des sessions intenses.", imageUrl: "https://www.cyborggamers.com/promo.png" }, // <--- Make sure this image exists on your server!
+        { name: "Digital Newspaper", url: "https://digital-newspaper-gamma.vercel.app/", desc: "Reste informé avec notre Digital Newspaper ! 📰✨ L'actualité qui compte pour toi.", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" },
+        { name: "Floguru", url: "https://www.floguru.com", desc: "Trouve ton rythme sur Floguru ! 🌊🕹️ Laisse-toi emporter par le flow du jeu.", imageUrl: "https://www.zyeute.com/zyeute_og_image.png" }
       ];
       const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
       const postText = await generateTweetContent(`our awesome game site ${game.name}`, game.url, game.desc);
@@ -152,7 +152,6 @@ export async function runSocialBotJob() {
       // 2. Post to Instagram/TikTok via Ayrshare (Requires media)
       if (ayrshareApiKey) {
         try {
-          const fallbackImageUrl = "https://www.zyeute.com/images/default-promo.png"; 
           const ayrshareResponse = await fetch("https://app.ayrshare.com/api/post", {
             method: "POST",
             headers: {
@@ -161,9 +160,9 @@ export async function runSocialBotJob() {
             },
             body: JSON.stringify({
               post: postText,
-              // Only enable instagram/tiktok when you have a real image/video URL!
-              platforms: ["instagram", "tiktok"], 
-              mediaUrls: [fallbackImageUrl] 
+              // Since we now have images mapped for the games, we can confidently enable Instagram!
+              platforms: ["instagram"], 
+              mediaUrls: [game.imageUrl] 
             })
           });
 
