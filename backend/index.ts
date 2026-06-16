@@ -109,7 +109,7 @@ app.use(express.json());
 // Health checks and webhooks are exempt; all other /api/* routes are covered.
 const globalRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
+  max: 3000, // Increased from 300 to 3000 to prevent feed scrolling 429s
   message: { error: "Trop de requêtes. Réessaie bientôt!" },
   standardHeaders: true,
   legacyHeaders: false,
