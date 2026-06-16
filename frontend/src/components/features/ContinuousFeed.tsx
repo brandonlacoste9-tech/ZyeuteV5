@@ -809,15 +809,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         const validPosts = prepareFeedPage(filterPlayablePosts(data), nextPage);
         if (validPosts.length > 0) {
           setPosts((prev) => mergeFeedPages(prev, validPosts));
-          setHasMore(apiHasMore);
-          setPage(nextPage);
-        } else if (apiHasMore) {
-          setPage(nextPage);
-        } else {
-          setHasMore(false);
         }
-      } else {
-        setHasMore(false);
+      }
+      
+      setHasMore(apiHasMore);
+      if (apiHasMore) {
+        setPage(nextPage);
       }
     } catch (error) {
       feedLogger.error("Error loading more videos:", error);

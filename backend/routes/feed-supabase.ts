@@ -15,16 +15,20 @@ router.get("/feed/supabase", async (req, res) => {
   try {
     const supabaseUrl =
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const anonKey =
+      process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !anonKey) {
       return res.status(500).json({
         error: "Missing Supabase configuration",
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = req.headers.authorization
+      ? createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: req.headers.authorization } },
+        })
+      : createClient(supabaseUrl, anonKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
     const userId = (req as any).userId as string | undefined;
@@ -150,16 +154,20 @@ router.get("/feed/infinite/supabase", async (req, res) => {
   try {
     const supabaseUrl =
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const anonKey =
+      process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !anonKey) {
       return res.status(500).json({
         error: "Missing Supabase configuration",
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = req.headers.authorization
+      ? createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: req.headers.authorization } },
+        })
+      : createClient(supabaseUrl, anonKey);
 
     const limit = parseInt(req.query.limit as string) || 20;
     const cursor = req.query.cursor as string | undefined;
@@ -197,12 +205,13 @@ router.get("/feed/infinite/supabase", async (req, res) => {
       });
     }
 
-    const items = (posts?.slice(0, limit) || []).filter((p) =>
+    const rawItems = posts?.slice(0, limit) || [];
+    const items = rawItems.filter((p) =>
       isExplorePlayablePost(p as Record<string, unknown>),
     );
     const hasMore = (posts?.length || 0) > limit;
     const nextCursor =
-      hasMore && items.length > 0 ? items[items.length - 1].created_at : null;
+      hasMore && rawItems.length > 0 ? rawItems[rawItems.length - 1].created_at : null;
 
     res.json({
       posts: items,
@@ -226,16 +235,20 @@ router.get("/explore/supabase", async (req, res) => {
   try {
     const supabaseUrl =
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const anonKey =
+      process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !anonKey) {
       return res.status(500).json({
         error: "Missing Supabase configuration",
       });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = req.headers.authorization
+      ? createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: req.headers.authorization } },
+        })
+      : createClient(supabaseUrl, anonKey);
 
     const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
     const limit = Math.min(
@@ -312,7 +325,7 @@ router.get("/explore/supabase", async (req, res) => {
 
     res.json({
       posts: formattedPosts,
-      hasMore: formattedPosts.length > 0,
+      hasMore: (posts?.length || 0) === limit,
       page,
       didWrap,
       hiveId,

@@ -490,19 +490,17 @@ router.get(
     try {
       const supabaseUrl =
         process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-      const supabaseKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY ||
-        process.env.SUPABASE_ANON_KEY ||
-        process.env.VITE_SUPABASE_ANON_KEY;
+      const anonKey =
+        process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
       console.log("[FeedInfinite] Request received", {
         hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseKey,
+        hasAnonKey: !!anonKey,
         urlPreview: supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : null,
       });
 
-      if (!supabaseUrl || !supabaseKey) {
-        console.error("[FeedInfinite] Missing Supabase config");
+      if (!supabaseUrl || !anonKey) {
+        console.error("[FeedInfinite] Missing Supabase anon config");
         return res
           .status(500)
           .json({ error: "Missing Supabase configuration" });
@@ -510,7 +508,11 @@ router.get(
 
       // Dynamically import to avoid top-level issues
       const { createClient } = await import("@supabase/supabase-js");
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = req.headers.authorization
+        ? createClient(supabaseUrl, anonKey, {
+            global: { headers: { Authorization: req.headers.authorization } },
+          })
+        : createClient(supabaseUrl, anonKey);
 
       const limit = parseInt(req.query.limit as string) || 30;
       const cursorRaw = req.query.cursor as string | undefined;
@@ -552,14 +554,19 @@ router.get(
         hasClientSession: !!(req.query.session as string),
       });
 
-      // Fetch viewer's region for region-aware feed weighting
+      // Fetch viewer's region and affinities for region-aware feed weighting
+      let viewerRegion = hiveId || "quebec";
+      let viewerAffinities: string[] = [];
       if (viewerId) {
         const { data: viewerProfile } = await supabase
           .from("user_profiles")
-          .select("region")
+          .select("region, affinity_tags")
           .eq("id", viewerId)
           .single();
-        void viewerProfile;
+        if (viewerProfile) {
+          if (viewerProfile.region) viewerRegion = viewerProfile.region;
+          if (viewerProfile.affinity_tags) viewerAffinities = viewerProfile.affinity_tags;
+        }
       }
 
       // ── Exclude hidden + recently watched videos ─────────────────────────
@@ -616,39 +623,63 @@ router.get(
         ignoreExclusions: boolean,
         fetchLimit: number,
       ) => {
-        let q = supabase
-          .from("publications")
-          .select(
-            `
-          *,
-          user:user_id (
-            id,
-            username,
-            display_name,
-            avatar_url,
-            subscription_tier
-          )
-        `,
-          )
-          .eq("visibility", "public")
-          .eq("est_masque", false)
-          .is("deleted_at", null)
-          .neq("processing_status", "no_audio") // Strict filter out silent videos
-          .eq("hive_id", hiveId || "quebec")
-          .or(
-            "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
-          )
-          .not("media_url", "is", null)
-          .not("caption", "ilike", "%DIAGNOSTIC%")
-          .not("content", "ilike", "%DIAGNOSTIC%")
-          .not("caption", "ilike", "%TEST VIDEO%")
-          .not("content", "ilike", "%TEST VIDEO%")
-          .order("viral_score", { ascending: false })
-          .order("reactions_count", { ascending: false })
-          .order("created_at", { ascending: false })
-          .range(offset, offset + fetchLimit - 1);
+        let q;
+        
+        if (feedType === "explore") {
+          // PATH A: Use the Algorithmic Routing Engine (Supabase RPC)
+          // This handles Regional Bias, Affinity Matching, and Time Decay natively in PostgreSQL
+          q = supabase.rpc("get_localized_explore_feed", {
+            p_viewer_id: viewerId || null,
+            p_region_id: viewerRegion,
+            p_affinity_tags: viewerAffinities || [],
+            p_limit: 1000, // Allow PostgREST .range to slice
+            p_seed: seed,
+            p_seen_ids: excludedIds || []
+          }).select(`
+            *,
+            user:user_id (
+              id,
+              username,
+              display_name,
+              avatar_url,
+              subscription_tier
+            )
+          `);
+        } else {
+          q = supabase
+            .from("publications")
+            .select(`
+            *,
+            user:user_id (
+              id,
+              username,
+              display_name,
+              avatar_url,
+              subscription_tier
+            )
+          `)
+            .eq("visibility", "public")
+            .eq("est_masque", false)
+            .is("deleted_at", null)
+            .neq("processing_status", "no_audio") // Strict filter out silent videos
+            .eq("hive_id", hiveId || "quebec")
+            .or(
+              "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+            )
+            .not("media_url", "is", null)
+            .not("caption", "ilike", "%DIAGNOSTIC%")
+            .not("content", "ilike", "%DIAGNOSTIC%")
+            .not("caption", "ilike", "%TEST VIDEO%")
+            .not("content", "ilike", "%TEST VIDEO%")
+            .order("viral_score", { ascending: false })
+            .order("reactions_count", { ascending: false })
+            .order("created_at", { ascending: false });
+        }
+        
+        q = q.range(offset, offset + fetchLimit - 1);
 
-        if (!ignoreExclusions && excludedIds.length > 0) {
+        // Path A (explore feed) handles exclusions natively in PostgreSQL. Only apply JS exclusions for fallback/following feeds.
+        if (feedType !== "explore" && !ignoreExclusions && excludedIds.length > 0) {
           q = q.not("id", "in", `(${excludedIds.join(",")})`);
         }
 
@@ -769,7 +800,8 @@ router.get(
         if (feedType === "explore") {
           return {
             ...p,
-            viral_score: exploreFeedScore(p),
+            // PATH A: Score is already calculated natively by the RPC decay algorithm.
+            viral_score: Number(p.viral_score) || 0,
             _boost_tier: "explore",
           };
         }
@@ -785,12 +817,15 @@ router.get(
         };
       });
       // Sort candidates stably/deterministically before shuffling
-      boostedPosts.sort(
-        (a: any, b: any) =>
-          b.viral_score - a.viral_score ||
-          b.reactions_count - a.reactions_count ||
-          b.id.localeCompare(a.id),
-      );
+      // Skip resorting for Explore because Path A natively sorts via RPC
+      if (feedType !== "explore") {
+        boostedPosts.sort(
+          (a: any, b: any) =>
+            b.viral_score - a.viral_score ||
+            b.reactions_count - a.reactions_count ||
+            b.id.localeCompare(a.id),
+        );
+      }
 
       // Deterministically shuffle block using block seed
       const blockSeed = (seed + blockIndex) >>> 0;
@@ -831,7 +866,8 @@ router.get(
             if (feedType === "explore") {
               return {
                 ...p,
-                viral_score: exploreFeedScore(p),
+                // PATH A: Score is already calculated natively by the RPC decay algorithm.
+                viral_score: Number(p.viral_score) || 0,
                 _boost_tier: "explore",
               };
             }
@@ -846,12 +882,14 @@ router.get(
               _boost_tier: tier,
             };
           });
-          boostedFallback.sort(
-            (a: any, b: any) =>
-              b.viral_score - a.viral_score ||
-              b.reactions_count - a.reactions_count ||
-              b.id.localeCompare(a.id),
-          );
+          if (feedType !== "explore") {
+            boostedFallback.sort(
+              (a: any, b: any) =>
+                b.viral_score - a.viral_score ||
+                b.reactions_count - a.reactions_count ||
+                b.id.localeCompare(a.id),
+            );
+          }
           const shuffledFallback = orderFeedPosts(
             boostedFallback,
             feedType,
