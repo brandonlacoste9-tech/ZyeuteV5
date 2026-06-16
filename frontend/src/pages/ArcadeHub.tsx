@@ -43,6 +43,43 @@ export default function ArcadeHub() {
           </div>
         </header>
 
+        {/* Premium Banner for Hell Yeah Games Headquarters */}
+        <div className="mb-12">
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => window.open("https://ironclaw-i1f8.vercel.app/", "_blank")}
+            className="relative w-full overflow-hidden rounded-2xl cursor-pointer group"
+            style={{ 
+              background: "linear-gradient(135deg, #FF0055 0%, #7000FF 100%)",
+              boxShadow: "0 0 30px rgba(255, 0, 85, 0.4), inset 0 0 20px rgba(0,0,0,0.5)"
+            }}
+          >
+            {/* Cyberpunk grid overlay */}
+            <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+            
+            <div className="relative p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 z-10">
+              <div className="text-center md:text-left flex-1">
+                <div className="inline-block px-3 py-1 bg-black/40 border border-white/10 rounded-full text-xs font-bold text-pink-300 uppercase tracking-widest mb-3 backdrop-blur-sm">
+                  Partenaire Officiel
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 leading-tight drop-shadow-md" style={{ fontFamily: "Inter, sans-serif" }}>
+                  Hell Yeah Games INC
+                </h2>
+                <p className="text-white/80 text-sm sm:text-base max-w-md mx-auto md:mx-0">
+                  Découvrez notre Quartier Général ! Plus de 800+ jeux premiums, des tournois exclusifs, et la communauté ultime de joueurs.
+                </p>
+              </div>
+
+              <div className="flex-shrink-0">
+                <button className="px-8 py-4 bg-white text-black font-black uppercase tracking-wider rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.4)] group-hover:shadow-[0_0_30px_rgba(255,255,255,0.8)] transition-all duration-300 flex items-center gap-2">
+                  Visiter le QG <Play className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
         <WebGamesCatalog />
 
         <p className={`text-center arcade-insert-coin mt-12 opacity-70`}>
