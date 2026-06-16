@@ -3,7 +3,7 @@ import {
   Repeat2,
   Link2,
   MessageCircle,
-  Facebook,
+  Share,
   MessageSquare,
   MoreHorizontal,
   X,
@@ -88,7 +88,7 @@ export function ShareSheet({ open, onClose, postId, title }: Props) {
       id: "facebook",
       name: "Facebook",
       color: "bg-[#1877F2]",
-      icon: <Facebook className="h-6 w-6" aria-hidden="true" />,
+      icon: <Share className="h-6 w-6" aria-hidden="true" />,
       action: () => {
         window.open(
           `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
