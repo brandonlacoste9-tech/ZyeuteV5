@@ -233,6 +233,7 @@ export const posts = pgTable(
     burnedAt: timestamp("burned_at"), // The "Scar" - remains after content deletion
     deletedAt: timestamp("deleted_at"),
     isVaulted: boolean("is_vaulted").default(false), // For "Vault" swipe gesture
+    tweetedAt: timestamp("tweeted_at"), // Tracks when this post was shared to X (Twitter)
     // TikTok-style Remix features (Duet/Stitch)
     remixType: varchar("remix_type", { length: 20 }), // 'duet', 'stitch', 'react', null
     originalPostId: uuid("original_post_id").references(

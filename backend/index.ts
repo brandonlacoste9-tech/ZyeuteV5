@@ -687,6 +687,10 @@ app.use((req, res, next) => {
       const { startFeedReplenishJob } =
         await import("./services/feed-replenish-tikapi.js");
       startFeedReplenishJob();
+      
+      const { startTwitterBot } = 
+        await import("./services/twitter-bot.js");
+      startTwitterBot();
     } catch (jobErr: unknown) {
       const msg = jobErr instanceof Error ? jobErr.message : String(jobErr);
       console.warn("⚠️ [Startup] TikTok feed job not started:", msg);
