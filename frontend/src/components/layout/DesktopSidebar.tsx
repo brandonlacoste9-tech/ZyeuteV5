@@ -64,7 +64,7 @@ export const DesktopSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="fixed left-0 top-16 bottom-0 w-[240px] hidden lg:flex flex-col border-r border-leather-800 bg-black z-40 overflow-y-auto">
+    <aside className="fixed left-0 top-16 bottom-0 w-[240px] hidden lg:flex flex-col border-r border-white/10 bg-black/40 backdrop-blur-xl z-40 overflow-y-auto shadow-2xl">
       <div className="flex-1 py-4 px-2">
         <nav className="space-y-1 mb-6">
           {navItems.map((item) => (
@@ -72,8 +72,8 @@ export const DesktopSidebar: React.FC = () => {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-200 group hover:bg-leather-900 ${
-                  isActive ? "text-gold-400 font-bold" : "text-white hover:text-white"
+                `flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-200 group hover:bg-white/5 ${
+                  isActive ? "text-gold-400 font-bold bg-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]" : "text-white/80 hover:text-white"
                 }`
               }
             >

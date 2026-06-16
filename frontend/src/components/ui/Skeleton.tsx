@@ -50,25 +50,23 @@ export const PostSkeleton: React.FC = () => (
 );
 
 export const FeedPostSkeleton: React.FC = () => (
-  <div className="h-screen w-full bg-black relative flex flex-col">
-    {/* Simulating video area */}
-    <div className="flex-grow relative bg-neutral-900 animate-pulse">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-16 h-16 rounded-full border-4 border-neutral-700 opacity-20"></div>
-      </div>
+  <div className="relative w-full h-full bg-zinc-950 flex flex-col items-center justify-center overflow-hidden">
+    {/* Shimmering background */}
+    <div className="absolute inset-0 bg-gradient-to-tr from-zinc-900 to-zinc-800 animate-pulse" />
+    
+    {/* Right Action Bar Skeletons */}
+    <div className="absolute right-3 bottom-24 flex flex-col items-center gap-5 z-30">
+      <div className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
+      <div className="w-12 h-12 rounded-full bg-white/5 animate-pulse" />
+      <div className="w-12 h-12 rounded-full bg-white/5 animate-pulse" />
+      <div className="w-12 h-12 rounded-full bg-white/5 animate-pulse" />
     </div>
 
-    {/* Simulating overlay interactive elements */}
-    <div className="absolute bottom-20 right-4 flex flex-col gap-4 items-center">
-      <AvatarSkeleton size="w-12 h-12" />
-      <Skeleton variant="circular" className="w-10 h-10 bg-neutral-800" />
-      <Skeleton variant="circular" className="w-10 h-10 bg-neutral-800" />
-      <Skeleton variant="circular" className="w-10 h-10 bg-neutral-800" />
-    </div>
-
-    <div className="absolute bottom-6 left-4 right-16 space-y-2">
-      <TextSkeleton width="w-1/2" className="bg-neutral-800 h-5" />
-      <TextSkeleton width="w-3/4" className="bg-neutral-800 h-4" />
+    {/* Bottom Info Bar Skeletons */}
+    <div className="absolute left-0 right-16 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20">
+      <div className="w-32 h-5 bg-white/10 rounded-md mb-2 animate-pulse" />
+      <div className="w-full h-4 bg-white/10 rounded-md mb-1 animate-pulse" />
+      <div className="w-2/3 h-4 bg-white/10 rounded-md animate-pulse" />
     </div>
   </div>
 );

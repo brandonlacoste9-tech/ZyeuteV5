@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import {
   MessageCircle,
   Share2,
@@ -364,9 +365,10 @@ export function SingleVideoView({
 
           {/* Fire / Like Action */}
           <div className="flex flex-col items-center">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={handleLike}
-              className="w-12 h-12 rounded-full flex items-center justify-center transition-transform active:scale-90"
+              className="w-12 h-12 rounded-full flex items-center justify-center transition-transform"
               style={{
                 background: isLiked
                   ? "rgba(255,100,0,0.25)"
@@ -374,16 +376,21 @@ export function SingleVideoView({
                 backdropFilter: "blur(8px)",
               }}
             >
-              <Flame
-                size={26}
-                className={cn(
-                  "transition-colors",
-                  isLiked
-                    ? "text-orange-400 fill-orange-400 drop-shadow-[0_0_6px_rgba(255,150,0,0.8)]"
-                    : "text-white",
-                )}
-              />
-            </button>
+              <motion.div
+                animate={isLiked ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Flame
+                  size={26}
+                  className={cn(
+                    "transition-colors",
+                    isLiked
+                      ? "text-orange-400 fill-orange-400 drop-shadow-[0_0_6px_rgba(255,150,0,0.8)]"
+                      : "text-white",
+                  )}
+                />
+              </motion.div>
+            </motion.button>
             <span
               className="text-xs font-bold mt-1"
               style={{
@@ -397,16 +404,17 @@ export function SingleVideoView({
 
           {/* Comment Action */}
           <div className="flex flex-col items-center">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={() => setShowComments(true)}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform"
               style={{
                 background: "rgba(255,255,255,0.12)",
                 backdropFilter: "blur(8px)",
               }}
             >
               <MessageCircle size={26} />
-            </button>
+            </motion.button>
             <span
               className="text-white text-xs font-bold mt-1"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
@@ -417,16 +425,17 @@ export function SingleVideoView({
 
           {/* Share Action */}
           <div className="flex flex-col items-center">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={handleShareClick}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform"
               style={{
                 background: "rgba(255,255,255,0.12)",
                 backdropFilter: "blur(8px)",
               }}
             >
               <Share2 size={26} />
-            </button>
+            </motion.button>
             <span
               className="text-white text-xs font-bold mt-1"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
@@ -437,13 +446,14 @@ export function SingleVideoView({
 
           {/* Remix Action (Duet/Stitch) */}
           <div className="flex flex-col items-center">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={(e) => {
                 e.stopPropagation();
                 tap();
                 setShowRemix(true);
               }}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform"
               style={{
                 background: "rgba(255,255,255,0.12)",
                 backdropFilter: "blur(8px)",
@@ -451,7 +461,7 @@ export function SingleVideoView({
               title="Remix"
             >
               <Scissors size={22} />
-            </button>
+            </motion.button>
             <span
               className="text-white text-xs font-bold mt-1"
               style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
@@ -462,13 +472,14 @@ export function SingleVideoView({
 
           {onOpenActions ? (
             <div className="flex flex-col items-center">
-              <button
+              <motion.button
+                whileTap={{ scale: 0.85 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   tap();
                   onOpenActions();
                 }}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform active:scale-90"
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-transform"
                 style={{
                   background: "rgba(255,255,255,0.12)",
                   backdropFilter: "blur(8px)",
@@ -476,13 +487,18 @@ export function SingleVideoView({
                 aria-label="Options"
               >
                 <MoreHorizontal size={24} />
-              </button>
+              </motion.button>
             </div>
           ) : null}
         </div>
 
         {/* Bottom Info Bar */}
-        <div className="absolute left-0 right-16 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="absolute left-0 right-16 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-20"
+        >
           <div className="flex flex-col gap-1.5">
             {/* Username with gold accent */}
             <div className="flex items-center gap-1.5">
@@ -557,7 +573,7 @@ export function SingleVideoView({
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Mute/Unmute Overlay */}
         <Button

@@ -65,7 +65,7 @@ export function FeedCommentsSheet({
             transition={{ duration: 0.2 }}
           />
           <motion.div
-            className="leather-overlay relative flex max-h-[70vh] w-full flex-col rounded-t-2xl border-t border-gold-500/30 shadow-[0_-8px_40px_rgba(0,0,0,0.7)] md:h-full md:max-h-full md:w-[400px] md:rounded-t-none md:rounded-l-2xl md:border-t-0 md:border-l"
+            className="bg-black/60 backdrop-blur-2xl relative flex max-h-[70vh] w-full flex-col rounded-t-2xl border-t border-gold-500/30 shadow-[0_-8px_40px_rgba(0,0,0,0.7)] md:h-full md:max-h-full md:w-[400px] md:rounded-t-none md:rounded-l-2xl md:border-t-0 md:border-l"
             initial={reduceMotion ? { opacity: 0 } : { y: "100%" }}
             animate={reduceMotion ? { opacity: 1 } : { y: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { y: "100%" }}
@@ -100,8 +100,14 @@ export function FeedCommentsSheet({
                   Aucun commentaire pour l’instant.
                 </p>
               ) : (
-                items.map((c) => (
-                  <div key={c.id} className="text-sm">
+                items.map((c, i) => (
+                  <motion.div
+                    key={c.id}
+                    className="text-sm"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                  >
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-gold-500 font-semibold">
                         {(c as any).user?.username || "user"}
@@ -114,7 +120,7 @@ export function FeedCommentsSheet({
                     <p className="text-white/90 mt-0.5">
                       {c.content || c.text || ""}
                     </p>
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>

@@ -6,6 +6,7 @@
 
 import React, { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Avatar } from "../Avatar";
 import { generateVideo } from "@/services/api";
 import { Image } from "../Image";
@@ -271,7 +272,12 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
         </div>
 
         {/* Bottom Content Area */}
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-20">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="absolute bottom-0 left-0 right-0 z-10 p-4 pb-20"
+        >
           {/* Ti-Guy Insight */}
           {post.ai_description && (
             <div className="mb-4">
@@ -318,10 +324,11 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
           {/* Action Buttons (Right Side) */}
           <div className="absolute right-4 bottom-20 flex flex-col items-center gap-6">
             {/* AI Generator Button */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={handleGenerate}
               disabled={isGenerating}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isGenerating ? "animate-pulse opacity-80" : "text-white hover:text-purple-400"}`}
+              className={`flex flex-col items-center gap-1 transition-all ${isGenerating ? "animate-pulse opacity-80" : "text-white hover:text-purple-400"}`}
             >
               <div
                 className={`text-3xl filter drop-shadow-lg ${isGenerating ? "animate-spin" : ""}`}
@@ -331,37 +338,40 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               <span className="font-bold text-xs font-mono text-white drop-shadow-lg uppercase">
                 {isGenerating ? "..." : "AI"}
               </span>
-            </button>
+            </motion.button>
 
             {/* Fire Button */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleLikeToggle();
               }}
-              className={`flex flex-col items-center gap-1 transition-all press-scale ${isLiked ? "scale-110" : ""
-                }`}
+              className="flex flex-col items-center gap-1 transition-all"
             >
-              <div
+              <motion.div
+                animate={isLiked ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
                 className={`text-4xl transition-all ${isLiked
                     ? "animate-pulse"
                     : "grayscale opacity-80"
                   }`}
               >
                 🔥
-              </div>
+              </motion.div>
               <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
                 {fireCount}
               </span>
-            </button>
+            </motion.button>
 
             {/* Comment Button */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleComment();
               }}
-              className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors press-scale"
+              className="flex flex-col items-center gap-1 text-white hover:text-gold-400 transition-colors"
             >
               <svg
                 className="w-8 h-8"
@@ -379,15 +389,16 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
               <span className="font-bold text-sm font-mono text-white drop-shadow-lg">
                 {commentCount}
               </span>
-            </button>
+            </motion.button>
 
             {/* Share Button */}
-            <button
+            <motion.button
+              whileTap={{ scale: 0.85 }}
               onClick={(e) => {
                 e.stopPropagation();
                 handleShare();
               }}
-              className="text-white hover:text-gold-400 transition-colors press-scale"
+              className="text-white hover:text-gold-400 transition-colors"
             >
               <svg
                 className="w-8 h-8"
@@ -402,9 +413,9 @@ export const SingleImageView = React.memo<SingleImageViewProps>(
                   d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
                 />
               </svg>
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   },

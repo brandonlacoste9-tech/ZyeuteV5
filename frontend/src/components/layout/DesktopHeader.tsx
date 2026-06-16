@@ -14,7 +14,7 @@ export const DesktopHeader: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-black border-b border-leather-800 z-50 hidden lg:flex items-center px-4 justify-between">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-black/60 backdrop-blur-md border-b border-white/10 z-50 hidden lg:flex items-center px-4 justify-between shadow-sm">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 w-[220px]">
         <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
