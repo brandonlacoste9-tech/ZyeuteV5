@@ -75,7 +75,7 @@ async function generateTweetContent(topic: string, url: string, fallbackText: st
           { role: "system", content: "You are a wild Quebecois hype-man on Twitter. Speak exclusively in heavy Joual slang." },
           { role: "user", content: prompt }
         ],
-        model: "grok-2-latest",
+        model: "grok-beta",
         stream: false,
         temperature: 0.8
       })
