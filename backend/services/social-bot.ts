@@ -1,27 +1,15 @@
-import { TwitterApi } from "twitter-api-v2";
 import { db } from "../storage.js";
 import { posts, users } from "../../shared/schema.js";
 import { eq, desc, isNull, and, sql } from "drizzle-orm";
 
-let twitterClient: TwitterApi | null = null;
-
-// Initialize the Twitter client if credentials are provided
-const apiKey = process.env.TWITTER_API_KEY;
-const apiSecret = process.env.TWITTER_API_SECRET;
-const accessToken = process.env.TWITTER_ACCESS_TOKEN;
-const accessSecret = process.env.TWITTER_ACCESS_TOKEN_SECRET;
+// Initialize Ayrshare API Key
+const ayrshareApiKey = process.env.AYRSHARE_API_KEY;
 const xaiApiKey = process.env.XAI_API_KEY;
 
-if (apiKey && apiSecret && accessToken && accessSecret) {
-  twitterClient = new TwitterApi({
-    appKey: apiKey,
-    appSecret: apiSecret,
-    accessToken: accessToken,
-    accessSecret: accessSecret,
-  });
-  console.log("🐦 [Twitter Bot] Initialized successfully with provided API keys.");
+if (ayrshareApiKey) {
+  console.log("🌐 [Social Bot] Initialized successfully with Ayrshare API key.");
 } else {
-  console.warn("⚠️ [Twitter Bot] Missing Twitter API keys in environment. Bot is disabled.");
+  console.warn("⚠️ [Social Bot] Missing AYRSHARE_API_KEY in environment. Bot is disabled.");
 }
 
 /**
@@ -97,13 +85,13 @@ async function generateTweetContent(topic: string, url: string, fallbackText: st
 }
 
 /**
- * The main worker function that finds a post (or arcade game), tweets it, and updates the database.
+ * The main worker function that finds a post (or arcade game), posts it, and updates the database.
  */
-export async function runTwitterBotJob() {
-  console.log("🐦 [Twitter Bot] Running scheduled tweet job...");
+export async function runSocialBotJob() {
+  console.log("🌐 [Social Bot] Running scheduled post job...");
 
-  if (!twitterClient) {
-    console.log("🐦 [Twitter Bot] Skipped (No API keys configured).");
+  if (!ayrshareApiKey) {
+    console.log("🌐 [Social Bot] Skipped (No Ayrshare API key configured).");
     return;
   }
 
@@ -124,40 +112,71 @@ export async function runTwitterBotJob() {
         { name: "Floguru", url: "https://www.floguru.com", desc: "Trouve ton rythme sur Floguru ! 🌊🕹️ Laisse-toi emporter par le flow du jeu." }
       ];
       const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
-      const tweetText = await generateTweetContent(`our awesome game site ${game.name}`, game.url, game.desc);
+      const postText = await generateTweetContent(`our awesome game site ${game.name}`, game.url, game.desc);
 
-      console.log(`🐦 [Twitter Bot] Attempting to post Arcade promo: ${game.name}`);
-      const response = await twitterClient.v2.tweet(tweetText);
-      if (response.errors && response.errors.length > 0) {
-        console.error("🐦 [Twitter Bot] Twitter API returned errors:", response.errors);
+      // TODO: Replace with a real promotional image URL if you want to support Instagram/TikTok!
+      const fallbackImageUrl = "https://www.zyeute.com/images/default-promo.png"; 
+
+      console.log(`🌐 [Social Bot] Attempting to post Arcade promo: ${game.name}`);
+      
+      const ayrshareResponse = await fetch("https://app.ayrshare.com/api/post", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${ayrshareApiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          post: postText,
+          // Add "instagram" and "tiktok" here once you confirm fallbackImageUrl is a real image/video!
+          platforms: ["twitter"], 
+          // mediaUrls: [fallbackImageUrl] 
+        })
+      });
+
+      const result = await ayrshareResponse.json();
+      if (result.status === "error") {
+        console.error("🌐 [Social Bot] Ayrshare API returned errors:", result.message);
         return;
       }
-      console.log(`🐦 [Twitter Bot] Arcade promo published successfully! Tweet ID: ${response.data.id}`);
+      console.log(`🌐 [Social Bot] Arcade promo published successfully via Ayrshare! ID: ${result.id}`);
       return;
     }
 
     const post = await fetchTopUntweetedPost();
 
     if (!post) {
-      console.log("🐦 [Twitter Bot] No suitable untweeted posts found. Will try again later.");
+      console.log("🌐 [Social Bot] No suitable untweeted posts found. Will try again later.");
       return;
     }
 
     const postUrl = `https://www.zyeute.com/post/${post.id}`;
     const fallbackText = `🔥 Le buzz du moment sur Zyeuté ! Check out this viral moment by @${post.username}:\n\n"${post.caption || 'Incroyable!'}"`;
-    const tweetText = await generateTweetContent(`a viral video on Zyeuté by @${post.username} titled "${post.caption || 'Incroyable!'}"`, postUrl, fallbackText);
+    const postText = await generateTweetContent(`a viral video on Zyeuté by @${post.username} titled "${post.caption || 'Incroyable!'}"`, postUrl, fallbackText);
 
-    console.log(`🐦 [Twitter Bot] Attempting to post tweet for Zyeute Post ID: ${post.id}`);
+    console.log(`🌐 [Social Bot] Attempting to post for Zyeute Post ID: ${post.id}`);
     
-    // Post the tweet
-    const response = await twitterClient.v2.tweet(tweetText);
+    // Send to Ayrshare
+    const ayrshareResponse = await fetch("https://app.ayrshare.com/api/post", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${ayrshareApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        post: postText,
+        // Since we don't have the raw MP4 from Mux easily available yet, 
+        // we restrict user posts to platforms that don't strictly require media (Twitter)
+        platforms: ["twitter"]
+      })
+    });
     
-    if (response.errors && response.errors.length > 0) {
-      console.error("🐦 [Twitter Bot] Twitter API returned errors:", response.errors);
+    const result = await ayrshareResponse.json();
+    if (result.status === "error") {
+      console.error("🌐 [Social Bot] Ayrshare API returned errors:", result.message);
       return;
     }
 
-    console.log(`🐦 [Twitter Bot] Tweet published successfully! Tweet ID: ${response.data.id}`);
+    console.log(`🌐 [Social Bot] Post published successfully! Ayrshare ID: ${result.id}`);
 
     // Mark as tweeted in our database so we don't tweet it again
     await db
@@ -165,19 +184,19 @@ export async function runTwitterBotJob() {
       .set({ tweetedAt: new Date() })
       .where(eq(posts.id, post.id));
 
-    console.log(`🐦 [Twitter Bot] Marked post ${post.id} as tweeted.`);
+    console.log(`🌐 [Social Bot] Marked post ${post.id} as posted.`);
   } catch (error) {
-    console.error("🐦 [Twitter Bot] Error running tweet job:", error);
+    console.error("🌐 [Social Bot] Error running post job:", error);
   }
 }
 
 /**
- * Starts the automated Twitter bot on a scheduled interval.
+ * Starts the automated Social bot on a scheduled interval.
  * Default: Every 4 hours.
  */
-export function startTwitterBot() {
-  if (!twitterClient) {
-    console.warn("⚠️ [Twitter Bot] Background service disabled due to missing credentials.");
+export function startSocialBot() {
+  if (!ayrshareApiKey) {
+    console.warn("⚠️ [Social Bot] Background service disabled due to missing credentials.");
     return;
   }
 
@@ -186,9 +205,9 @@ export function startTwitterBot() {
   
   // Do a first run 5 minutes after startup to allow systems to stabilize
   setTimeout(() => {
-    runTwitterBotJob();
-    setInterval(runTwitterBotJob, INTERVAL_MS);
+    runSocialBotJob();
+    setInterval(runSocialBotJob, INTERVAL_MS);
   }, 5 * 60 * 1000);
   
-  console.log(`🐦 [Twitter Bot] Background service scheduled to run every 4 hours.`);
+  console.log(`🌐 [Social Bot] Background service scheduled to run every 4 hours.`);
 }
