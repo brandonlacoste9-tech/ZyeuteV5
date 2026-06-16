@@ -87,7 +87,12 @@ export async function runTwitterBotJob() {
         { name: "Grid Rush", url: "https://www.zyeute.com/arcade/grid-rush", desc: "Prêt pour Grid Rush ? Viens tester tes réflexes sur l'Arcade Zyeuté ! 🕹️⚡" },
         { name: "Hive Tap", url: "https://www.zyeute.com/arcade/hive-tap", desc: "Tape au rythme du Hive ! 🐝🎵 Viens jouer à Hive Tap sur l'Arcade Zyeuté !" },
         { name: "Poutine Stack", url: "https://www.zyeute.com/arcade/poutine", desc: "Empile ta poutine comme un pro ! 🍟🧀 Viens jouer sur l'Arcade Zyeuté !" },
-        { name: "Arcade Hub", url: "https://www.zyeute.com/arcade", desc: "Découvre tous nos jeux rétro dans le Hub Arcade Zyeuté ! 👾🎮 Viens battre les high scores !" }
+        { name: "Arcade Hub", url: "https://www.zyeute.com/arcade", desc: "Découvre tous nos jeux rétro dans le Hub Arcade Zyeuté ! 👾🎮 Viens battre les high scores !" },
+        { name: "HellYeah Games", url: "https://www.hellyeah-games.com", desc: "Plonge dans l'action avec HellYeah Games ! 🤘🎮 Les meilleurs jeux d'arcade sont ici." },
+        { name: "Gamer Gurls", url: "https://www.gamergurls.com", desc: "Découvre la communauté ultime sur Gamer Gurls ! 🕹️✨ Le gaming à son meilleur." },
+        { name: "IronClaw", url: "https://www.ironclaw.ca", desc: "Attrape la victoire sur IronClaw ! 🦅🎮 Des jeux intenses pour de vrais joueurs." },
+        { name: "KryptoTrac", url: "https://www.kryptotrac.com", desc: "La nouvelle ère du jeu est sur KryptoTrac ! 🚀👾 Joue et découvre de nouvelles dimensions." },
+        { name: "Cyborg Gamers", url: "https://www.cyborggamers.com", desc: "Rejoins l'élite sur Cyborg Gamers ! 🤖🎮 Prépare-toi pour des sessions intenses." }
       ];
       const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
       const tweetText = `${game.desc}\n\n👉 ${game.url} #Zyeute #RetroGaming #Quebec`;
