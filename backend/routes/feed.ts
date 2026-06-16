@@ -225,13 +225,14 @@ async function fetchTiGuyCuratedSupabase(
   const { data } = await supabase
     .from("publications")
     .select(FEED_PUBLICATIONS_SELECT)
-    .eq("visibility", "public")
+    .filter("visibility::text", "eq", "public")
     .eq("est_masque", false)
     .is("deleted_at", null)
-    .eq("hive_id", hiveId || "quebec")
+    .filter("processing_status::text", "neq", "no_audio")
+    .filter("hive_id::text", "eq", hiveId || "quebec")
     .not("media_url", "is", null)
     .or(
-      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+      "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
     )
     .order("created_at", { ascending: false })
     .limit(limit * 4);
@@ -256,10 +257,10 @@ async function fetchTikTokExploreSupabase(
   const { data } = await supabase
     .from("publications")
     .select(FEED_PUBLICATIONS_SELECT)
-    .eq("visibility", "public")
+    .filter("visibility::text", "eq", "public")
     .eq("est_masque", false)
     .is("deleted_at", null)
-    .eq("hive_id", hiveId || "quebec")
+    .filter("hive_id::text", "eq", hiveId || "quebec")
     .not("media_url", "is", null)
     .in("video_source", ["tiktok", "tiktok_apify", "apify"])
     .or(
@@ -345,7 +346,7 @@ async function getPostsViaSupabase(
   const { data, error } = await supabase
     .from("publications")
     .select(`*, user:user_id(id, username, display_name, avatar_url)`)
-    .eq("visibility", "public")
+    .filter("visibility::text", "eq", "public")
     .eq("est_masque", false)
     .is("deleted_at", null)
     .or(
@@ -658,13 +659,13 @@ router.get(
               subscription_tier
             )
           `)
-            .eq("visibility", "public")
+            .filter("visibility::text", "eq", "public")
             .eq("est_masque", false)
             .is("deleted_at", null)
-            .neq("processing_status", "no_audio") // Strict filter out silent videos
-            .eq("hive_id", hiveId || "quebec")
+            .filter("processing_status::text", "neq", "no_audio") // Strict filter out silent videos
+            .filter("hive_id::text", "eq", hiveId || "quebec")
             .or(
-              "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+              "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
             )
             .not("media_url", "is", null)
             .not("caption", "ilike", "%DIAGNOSTIC%")
