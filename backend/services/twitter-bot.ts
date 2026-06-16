@@ -10,6 +10,7 @@ const apiKey = process.env.TWITTER_API_KEY;
 const apiSecret = process.env.TWITTER_API_SECRET;
 const accessToken = process.env.TWITTER_ACCESS_TOKEN;
 const accessSecret = process.env.TWITTER_ACCESS_TOKEN_SECRET;
+const xaiApiKey = process.env.XAI_API_KEY;
 
 if (apiKey && apiSecret && accessToken && accessSecret) {
   twitterClient = new TwitterApi({
@@ -52,21 +53,47 @@ async function fetchTopUntweetedPost() {
 }
 
 /**
- * Generates the tweet content for a given post.
+ * Uses Grok (xAI) to generate an unhinged Joual promotional tweet.
+ * Falls back to standard templates if the API key is missing or fails.
  */
-function generateTweetContent(post: any): string {
-  const postUrl = `https://www.zyeute.com/post/${post.id}`;
-  
-  const templates = [
-    `🔥 Le buzz du moment sur Zyeuté ! Check out this viral moment by @${post.username}:\n\n"${post.caption || 'Incroyable!'}"\n\n👀 Watch it here: ${postUrl} #Zyeute #Quebec`,
-    `Tu vas pas y croire! 😱 Regarde ce que @${post.username} vient de publier sur Zyeuté.\n\n👉 ${postUrl} #Zyeute #Viral`,
-    `On fire! 🔥 @${post.username} casse l'internet québécois sur Zyeuté avec ce post.\n\n"${post.caption || 'C\'est fou!'}"\n\n👇 Voyez par vous-mêmes :\n${postUrl} #Zyeute`,
-    `C'est le talk of the town! 🗣️ Découvrez le post le plus viral du jour par @${post.username} sur Zyeuté.\n\n🎥 ${postUrl} #ZyeuteQC`
-  ];
+async function generateTweetContent(topic: string, url: string, fallbackText: string): Promise<string> {
+  if (!xaiApiKey) {
+    return `${fallbackText}\n\n👉 ${url} #Zyeute`;
+  }
 
-  // Pick a random template
-  const randomTemplate = templates[Math.floor(Math.random() * templates.length)];
-  return randomTemplate;
+  try {
+    const prompt = `You are a wild, slightly unhinged, and extremely hyped Québécois hype-man. Write a single short tweet (under 200 characters) in authentic Joual slang promoting the following link: ${topic}. Do not include hashtags. Just give the text of the tweet, followed by the link: ${url}`;
+    
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${xaiApiKey}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: "You are a wild Quebecois hype-man on Twitter. Speak exclusively in heavy Joual slang." },
+          { role: "user", content: prompt }
+        ],
+        model: "grok-2-latest",
+        stream: false,
+        temperature: 0.8
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`xAI API error: ${response.statusText}`);
+    }
+
+    const data: any = await response.json();
+    const content = data.choices[0].message.content.trim();
+    
+    // Remove wrapping quotes if Grok added them
+    return content.replace(/^["']|["']$/g, '');
+  } catch (err) {
+    console.error("🐦 [Twitter Bot] Error calling Grok API, falling back:", err);
+    return `${fallbackText}\n\n👉 ${url} #Zyeute`;
+  }
 }
 
 /**
@@ -97,7 +124,7 @@ export async function runTwitterBotJob() {
         { name: "Floguru", url: "https://www.floguru.com", desc: "Trouve ton rythme sur Floguru ! 🌊🕹️ Laisse-toi emporter par le flow du jeu." }
       ];
       const game = arcadeGames[Math.floor(Math.random() * arcadeGames.length)];
-      const tweetText = `${game.desc}\n\n👉 ${game.url} #Zyeute #RetroGaming #Quebec`;
+      const tweetText = await generateTweetContent(`our awesome game site ${game.name}`, game.url, game.desc);
 
       console.log(`🐦 [Twitter Bot] Attempting to post Arcade promo: ${game.name}`);
       const response = await twitterClient.v2.tweet(tweetText);
@@ -116,7 +143,9 @@ export async function runTwitterBotJob() {
       return;
     }
 
-    const tweetText = generateTweetContent(post);
+    const postUrl = `https://www.zyeute.com/post/${post.id}`;
+    const fallbackText = `🔥 Le buzz du moment sur Zyeuté ! Check out this viral moment by @${post.username}:\n\n"${post.caption || 'Incroyable!'}"`;
+    const tweetText = await generateTweetContent(`a viral video on Zyeuté by @${post.username} titled "${post.caption || 'Incroyable!'}"`, postUrl, fallbackText);
 
     console.log(`🐦 [Twitter Bot] Attempting to post tweet for Zyeute Post ID: ${post.id}`);
     
