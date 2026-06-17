@@ -103,6 +103,33 @@ export const Signup: React.FC = () => {
               : "Compte créé! Vérifie ton courriel pour confirmer ton compte.";
       toast.success(successMsg);
 
+      // Claim Bounty if referral code exists
+      const refCode = localStorage.getItem("zyeute_bounty_ref");
+      if (refCode) {
+        try {
+          const { supabase } = await import("@/lib/supabase");
+          const session = await supabase.auth.getSession();
+          const token = session.data.session?.access_token;
+          if (token) {
+            const res = await fetch(`${import.meta.env.VITE_APP_URL || ""}/api/bounty/claim`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ referralCode: refCode }),
+            });
+            if (res.ok) {
+              const data = await res.json();
+              toast.success(`Bounty réclamée! +${data.amount} Cennes 💰`);
+              localStorage.removeItem("zyeute_bounty_ref");
+            }
+          }
+        } catch (e) {
+          console.error("Failed to claim bounty:", e);
+        }
+      }
+
       // Redirect to onboarding for first-time users, feed if already onboarded
       // (Supabase creates the session even before email confirmation unless
       //  "Confirm email" is enforced in the Supabase dashboard)

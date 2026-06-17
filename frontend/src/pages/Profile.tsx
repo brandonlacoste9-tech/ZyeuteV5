@@ -12,6 +12,7 @@ import { Avatar } from "@/components/Avatar";
 import { Image } from "@/components/Image";
 import { Button } from "@/components/Button";
 import { WalletBalance } from "@/components/features/WalletBalance";
+import { BountyCard } from "@/components/features/BountyCard";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import {
   getCurrentUser,
@@ -1034,6 +1035,13 @@ export const Profile: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Viral Bounty Card — own profile only */}
+          {isOwnProfile && (
+            <div className="mt-4">
+              <BountyCard />
             </div>
           )}
 

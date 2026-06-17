@@ -1,0 +1,3 @@
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20) UNIQUE;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS referred_by_id UUID REFERENCES user_profiles(id) ON DELETE SET NULL;
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS bounty_earned INTEGER DEFAULT 0;

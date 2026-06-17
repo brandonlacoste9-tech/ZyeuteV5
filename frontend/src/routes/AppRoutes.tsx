@@ -242,6 +242,17 @@ function NullClawPage() {
 }
 
 export function AppRoutes() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Capture referral codes globally
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("zyeute_bounty_ref", ref);
+    }
+  }, [location.search]);
+
   return (
     <RouteErrorBoundary>
       <Suspense

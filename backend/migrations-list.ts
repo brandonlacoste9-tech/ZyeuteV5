@@ -23,4 +23,5 @@ export const STARTUP_MIGRATIONS = [
   "20260609_quiz_daily.sql",
   "20260610_grid_rush_is_bot_column.sql",
   "20260610_carte_sucree_completions.sql",
+  "20260617_add_bounty_columns.sql",
 ];

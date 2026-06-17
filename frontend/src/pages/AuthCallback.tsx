@@ -22,9 +22,34 @@ const AuthCallback: React.FC = () => {
   const processedRef = React.useRef(false); // Ref to prevention double-fire in Strict Mode
   const redirectedRef = React.useRef(false);
 
-  const goAfterAuth = React.useCallback(() => {
+  const goAfterAuth = React.useCallback(async () => {
     if (redirectedRef.current) return;
     redirectedRef.current = true;
+    
+    // Check for bounty claim
+    const refCode = localStorage.getItem("zyeute_bounty_ref");
+    if (refCode) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (token) {
+          const res = await fetch(`${import.meta.env.VITE_APP_URL || ""}/api/bounty/claim`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ referralCode: refCode }),
+          });
+          if (res.ok) {
+            localStorage.removeItem("zyeute_bounty_ref");
+          }
+        }
+      } catch (e) {
+        console.error("Failed to claim bounty:", e);
+      }
+    }
+    
     navigate(consumeReturnTo("/feed"), { replace: true });
   }, [navigate]);
 

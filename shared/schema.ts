@@ -157,6 +157,13 @@ export const users = pgTable("user_profiles", {
   parentId: uuid("parent_id").references((): AnyPgColumn => users.id, {
     onDelete: "set null",
   }), // For Parental Controls
+  
+  // Viral Bounty System
+  referralCode: varchar("referral_code", { length: 20 }).unique(),
+  referredById: uuid("referred_by_id").references((): AnyPgColumn => users.id, {
+    onDelete: "set null",
+  }),
+  bountyEarned: integer("bounty_earned").default(0),
 }, (table) => ({
   roleIdx: index("idx_user_profiles_role").on(table.role),
   emailIdx: index("idx_user_profiles_email").on(table.email),
