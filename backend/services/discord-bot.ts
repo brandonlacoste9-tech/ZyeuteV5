@@ -124,7 +124,7 @@ function startScheduledPromos() {
 
     try {
       const channel = await discordClient.channels.fetch(defaultChannelId);
-      if (channel && channel.isTextBased()) {
+      if (channel && channel.isTextBased() && 'send' in channel) {
         const arcadeGames = [
           { name: "Grid Rush", url: "https://www.zyeute.com/arcade/grid-rush" },
           { name: "Poutine Stack", url: "https://www.zyeute.com/arcade/poutine" },
