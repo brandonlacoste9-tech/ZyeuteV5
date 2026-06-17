@@ -71,6 +71,7 @@ import videoDoctorRoutes from "./routes/video-doctor.routes.js";
 import creatorRevenueRoutes from "./routes/creator-revenue.js";
 import { hiveSyncService } from "./services/hive-sync-service.js";
 import { banCheck } from "./middleware/banCheck.js";
+import rewardsRoutes from "./routes/rewards.js";
 
 // Stripe configuration - only initialize if API key is present
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -325,6 +326,7 @@ export async function registerRoutes(
 
   // ============ ECONOMY & PAYOUT ROUTES ============
   app.use("/api", attachBearerUserId, economyRoutes);
+  app.use("/api/rewards", rewardsRoutes);
 
   // ============ UTILS & DICTIONARY ROUTES ============
   app.use("/api", utilRoutes);
