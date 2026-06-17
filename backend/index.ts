@@ -643,6 +643,9 @@ app.use((req, res, next) => {
     const { default: bountyRouter } = await import("./routes/bounty.js");
     app.use("/api/bounty", bountyRouter);
 
+    const { default: streaksRouter } = await import("./routes/streaks.js");
+    app.use("/api/streaks", streaksRouter);
+
     // Guarded Sentry verification endpoint (404 unless ?secret matches env).
     const { default: debugSentryRouter } =
       await import("./routes/debug-sentry.js");

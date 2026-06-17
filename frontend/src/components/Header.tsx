@@ -8,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Logo } from "./Logo";
+import { StreakButton } from "./features/StreakButton";
 
 export interface HeaderProps {
   showSearch?: boolean;
@@ -90,6 +91,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-3">
+          <StreakButton />
+          
           {showSearch && (
             <Link
               to="/explore"
