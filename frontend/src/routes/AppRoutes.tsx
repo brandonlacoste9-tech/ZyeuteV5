@@ -34,6 +34,7 @@ const MessagesPage = lazy(() => import("@/pages/Messages"));
 const NotificationsPage = lazy(() => import("@/pages/Notifications"));
 const SettingsPage = lazy(() => import("@/pages/Settings"));
 const ProfilePage = lazy(() => import("@/pages/Profile"));
+const Leaderboard = lazy(() => import("@/pages/Leaderboard"));
 const PremiumPage = lazy(() => import("@/pages/Premium"));
 const StorePage = lazy(() => import("@/pages/Store"));
 const WalletPage = lazy(() => import("@/pages/Wallet"));
@@ -292,6 +293,7 @@ export function AppRoutes() {
             }
           />
           <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/feed/grid" element={<FeedGrid />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/hashtag/:tag" element={<HashtagDetail />} />

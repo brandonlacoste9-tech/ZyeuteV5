@@ -116,6 +116,14 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           <Link
+            to="/leaderboard"
+            className="p-2 rounded-full transition-all hover:scale-110 hover:bg-gold-500/10 group"
+            aria-label="Leaderboard"
+          >
+            <span className="text-xl">🏆</span>
+          </Link>
+
+          <Link
             to="/notifications"
             className="p-2 rounded-full transition-all hover:scale-110 hover:bg-gold-500/10 relative group"
             aria-label="Notifications"

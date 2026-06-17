@@ -646,6 +646,9 @@ app.use((req, res, next) => {
     const { default: streaksRouter } = await import("./routes/streaks.js");
     app.use("/api/streaks", streaksRouter);
 
+    const { default: leaderboardRouter } = await import("./routes/leaderboard.js");
+    app.use("/api/leaderboard", leaderboardRouter);
+
     // Guarded Sentry verification endpoint (404 unless ?secret matches env).
     const { default: debugSentryRouter } =
       await import("./routes/debug-sentry.js");
