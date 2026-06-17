@@ -691,6 +691,10 @@ app.use((req, res, next) => {
       const { startSocialBot } = 
         await import("./services/social-bot.js");
       startSocialBot();
+
+      const { startDiscordBot } =
+        await import("./services/discord-bot.js");
+      startDiscordBot();
     } catch (jobErr: unknown) {
       const msg = jobErr instanceof Error ? jobErr.message : String(jobErr);
       console.warn("⚠️ [Startup] TikTok feed job not started:", msg);
