@@ -109,6 +109,16 @@ router.post("/claim", requireAuth, async (req: any, res) => {
         .where(eq(users.id, userId));
     });
 
+    if (rewardAmount === 100) {
+      import("../bot/ti-guy.js").then(({ broadcastEmbed }) => {
+        broadcastEmbed(
+          "🚨 JACKPOT DE SÉQUENCE! 🚨",
+          `**@${user.username || "Quelqu'un"}** vient de péter le feu pis de ramasser 100 Cennes pour sa séquence de ${newStreak} jours consécutifs! C'est malade! 🔥`,
+          0xFF4500
+        );
+      }).catch(err => console.error("Could not trigger Ti-Guy broadcast:", err));
+    }
+
     return res.json({
       success: true,
       reward: rewardAmount,

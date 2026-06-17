@@ -649,6 +649,10 @@ app.use((req, res, next) => {
     const { default: leaderboardRouter } = await import("./routes/leaderboard.js");
     app.use("/api/leaderboard", leaderboardRouter);
 
+    // Initialize Ti-Guy Discord Bot
+    const { initTiGuy } = await import("./bot/ti-guy.js");
+    initTiGuy();
+
     // Guarded Sentry verification endpoint (404 unless ?secret matches env).
     const { default: debugSentryRouter } =
       await import("./routes/debug-sentry.js");
