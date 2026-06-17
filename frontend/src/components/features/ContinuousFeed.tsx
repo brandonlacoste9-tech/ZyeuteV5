@@ -131,7 +131,10 @@ function mergeFeedPages(prev: FeedPost[], incoming: FeedPost[]): FeedPost[] {
 import { useNavigationState } from "../../contexts/NavigationStateContext";
 // Added in FE-06 for offline support
 import { useNetworkQueue } from "../../contexts/NetworkQueueContext";
-import { FeedPostSkeleton } from "@/components/ui/Skeleton";
+import {
+  FeedStateView,
+  FeedFallbackBanner,
+} from "@/components/feed/FeedStateView";
 import { useScrollVelocity } from "@/hooks/useScrollVelocity";
 import { useMotionSmooth } from "@/hooks/useMotionSmooth";
 import { useVideoActivation } from "@/hooks/useVideoActivation";
@@ -154,6 +157,8 @@ interface ContinuousFeedProps {
   stateKey?: string;
   /** 'decouverte' = explore/FYP (default), 'abonnements' = following feed */
   feedType?: "decouverte" | "abonnements";
+  /** Increment to force a fresh fetch (e.g. double-tap active tab). */
+  refreshToken?: number;
 }
 
 const FeedRow = memo(
@@ -303,6 +308,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   onVideoChange,
   stateKey = "feed",
   feedType = "decouverte",
+  refreshToken = 0,
 }) => {
   // ... existing hooks ...
 
@@ -359,6 +365,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const [isFollowingFallback, setIsFollowingFallback] = useState(false);
+  const [showFallbackBanner, setShowFallbackBanner] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsCtx, setActionsCtx] = useState<{
     postId: string;
@@ -682,6 +691,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     feedLogger.info("Fetching fresh video feed...");
     setIsLoading(true);
     setFetchError(false);
+    setIsFollowingFallback(false);
+    setShowFallbackBanner(false);
+    setLoadMoreError(false);
 
     let validPosts: Array<Post & { user: User }> = [];
     let apiHasMore: boolean;
@@ -696,6 +708,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           feedLogger.info(
             "[Abonnements] No following posts, falling back to explore",
           );
+          setIsFollowingFallback(true);
+          setShowFallbackBanner(true);
           const { posts: data, hasMore } = await getExplorePosts(
             0,
             FEED_PAGE_SIZE,
@@ -786,24 +800,57 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     setCurrentIndex(0);
     setHasMore(true);
     setFetchError(false);
+    setIsFollowingFallback(false);
+    setShowFallbackBanner(false);
+    setLoadMoreError(false);
     isFetchingRef.current = false;
     hasInitializedRef.current = false;
     // fetchVideoFeed will be triggered by the initial-fetch effect reacting to posts.length === 0
   }, [feedType]);
+
+  // Pull-to-refresh equivalent: parent increments refreshToken (double-tap tab)
+  const refreshTokenRef = useRef(refreshToken);
+  useEffect(() => {
+    if (refreshTokenRef.current === refreshToken) return;
+    refreshTokenRef.current = refreshToken;
+    setPosts([]);
+    setPage(0);
+    setCurrentIndex(0);
+    setHasMore(true);
+    setFetchError(false);
+    setIsFollowingFallback(false);
+    setShowFallbackBanner(false);
+    setLoadMoreError(false);
+    isFetchingRef.current = false;
+    hasInitializedRef.current = false;
+    setIsLoading(true);
+  }, [refreshToken]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
     if (loadingMore || !hasMore) return;
 
     setLoadingMore(true);
+    setLoadMoreError(false);
     try {
       const nextPage = page + 1;
-      const { posts: data, hasMore: apiHasMore } = await getExplorePosts(
-        nextPage,
-        FEED_PAGE_SIZE,
-        undefined,
-        getHiveId(),
-      );
+      let data: Post[] = [];
+      let apiHasMore = false;
+
+      if (feedType === "abonnements" && !isFollowingFallback) {
+        const followingPosts = await getFeedPosts(nextPage, FEED_PAGE_SIZE);
+        data = followingPosts;
+        apiHasMore = followingPosts.length === FEED_PAGE_SIZE;
+      } else {
+        const result = await getExplorePosts(
+          nextPage,
+          FEED_PAGE_SIZE,
+          undefined,
+          getHiveId(),
+        );
+        data = result.posts;
+        apiHasMore = result.hasMore;
+      }
 
       if (data.length > 0) {
         const validPosts = prepareFeedPage(filterPlayablePosts(data), nextPage);
@@ -811,17 +858,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           setPosts((prev) => mergeFeedPages(prev, validPosts));
         }
       }
-      
+
       setHasMore(apiHasMore);
       if (apiHasMore) {
         setPage(nextPage);
       }
     } catch (error) {
       feedLogger.error("Error loading more videos:", error);
+      setLoadMoreError(true);
     } finally {
       setLoadingMore(false);
     }
-  }, [page, loadingMore, hasMore]);
+  }, [page, loadingMore, hasMore, feedType, isFollowingFallback]);
 
   // [SURGICAL] Momentum Check: Show content within 2 seconds max
   useEffect(() => {
@@ -1217,41 +1265,32 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     ],
   );
 
+  const handleFeedRetry = useCallback(() => {
+    hasInitializedRef.current = false;
+    isFetchingRef.current = false;
+    void fetchVideoFeed();
+  }, [fetchVideoFeed]);
+
   if (isLoading && posts.length === 0) {
-    return (
-      <div className={cn("w-full h-full bg-black", className)}>
-        <FeedPostSkeleton />
-      </div>
-    );
+    return <FeedStateView variant="loading" className={className} />;
   }
 
   if (posts.length === 0) {
-    return (
-      <div
-        className={cn(
-          "w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-8 text-center",
-          className,
-        )}
-      >
-        <div className="text-6xl mb-6 animate-pulse">🎥</div>
-        <h2 className="text-2xl font-bold text-white mb-2">
-          Bienvenue sur Zyeuté
-        </h2>
-        <p className="text-white/60 mb-8 max-w-xs mx-auto">
-          Le fil est vide. Sois le premier à partager un moment unique avec le
-          Québec.
-        </p>
+    const variant = !isOnline
+      ? "offline"
+      : fetchError
+        ? "error"
+        : feedType === "abonnements"
+          ? "abonnements-empty"
+          : "empty";
 
-        <button
-          onClick={() => {
-            // Navigate to upload or trigger refresh
-            fetchVideoFeed();
-          }}
-          className="px-8 py-3 bg-[#D4AF37] text-black font-bold rounded-full hover:bg-[#C5A028] transition-transform active:scale-95 shadow-[0_0_20px_rgba(212,175,55,0.4)]"
-        >
-          Rafraîchir
-        </button>
-      </div>
+    return (
+      <FeedStateView
+        variant={variant}
+        className={className}
+        onRetry={handleFeedRetry}
+        isRetrying={isLoading}
+      />
     );
   }
 
@@ -1268,6 +1307,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         <div className="absolute top-0 left-0 right-0 z-50 bg-amber-500/90 text-black text-center py-2 text-sm font-medium">
           Tu es hors ligne. Les actions seront synchronisées à la reconnexion.
         </div>
+      )}
+      {showFallbackBanner && isFollowingFallback && (
+        <FeedFallbackBanner onDismiss={() => setShowFallbackBanner(false)} />
       )}
       <ZeroGravityHUD />
       <AutoSizer>
@@ -1300,9 +1342,20 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         )}
       </AutoSizer>
 
-      {loadingMore && (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 pointer-events-none z-50">
-          <div className="w-6 h-6 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin" />
+      {(loadingMore || loadMoreError) && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2">
+          {loadingMore && (
+            <div className="w-6 h-6 border-2 border-gold-500/30 border-t-gold-500 rounded-full animate-spin pointer-events-none" />
+          )}
+          {loadMoreError && !loadingMore && (
+            <button
+              type="button"
+              onClick={() => void loadMoreVideos()}
+              className="px-4 py-2 rounded-full bg-black/70 backdrop-blur-sm border border-white/15 text-white/80 text-xs font-medium hover:bg-black/90 transition-colors"
+            >
+              Impossible de charger plus — Réessayer
+            </button>
+          )}
         </div>
       )}
 

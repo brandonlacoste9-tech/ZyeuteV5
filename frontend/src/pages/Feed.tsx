@@ -69,6 +69,18 @@ export const Feed: React.FC = () => {
   const [activeTab, setActiveTab] = React.useState<
     "decouverte" | "abonnements"
   >("decouverte");
+  const [feedRefreshToken, setFeedRefreshToken] = React.useState(0);
+
+  const handleFeedTabChange = React.useCallback(
+    (tab: "decouverte" | "abonnements") => {
+      if (tab === activeTab) {
+        setFeedRefreshToken((t) => t + 1);
+      } else {
+        setActiveTab(tab);
+      }
+    },
+    [activeTab],
+  );
 
   // State for stories and user (restored)
   const [stories, setStories] = React.useState<
@@ -233,7 +245,7 @@ export const Feed: React.FC = () => {
           </div>
 
           {/* Découverte / Abonnements tab bar */}
-          <FeedTabBar active={activeTab} onChange={setActiveTab} />
+          <FeedTabBar active={activeTab} onChange={handleFeedTabChange} />
         </div>
 
         {/* Stories Section (Integrated into Header area) */}
@@ -280,7 +292,9 @@ export const Feed: React.FC = () => {
           fallback={<ErrorFallback onRetry={() => window.location.reload()} />}
         >
           <ContinuousFeed
+            key={activeTab}
             feedType={activeTab}
+            refreshToken={feedRefreshToken}
             onVideoChange={() => notifyVideoScrolled()}
           />
         </ErrorBoundary>
