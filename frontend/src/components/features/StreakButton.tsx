@@ -10,7 +10,7 @@ export const StreakButton: React.FC = () => {
   const [nextReward, setNextReward] = useState<number>(10);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [showModal, setShowModal] = useState<boolean>(false);
-  const { tap, impact, notification } = useHaptics();
+  const { tap, impact, success } = useHaptics();
 
   useEffect(() => {
     async function checkStreak() {
@@ -62,7 +62,7 @@ export const StreakButton: React.FC = () => {
         setCurrentStreak(data.currentStreak);
         
         // Huge Confetti + Haptics
-        notification("success");
+        success();
         impact();
         confetti({
           particleCount: 100,
