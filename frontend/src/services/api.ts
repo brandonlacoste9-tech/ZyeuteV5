@@ -266,7 +266,9 @@ export async function getFeedPosts(
     // video_views server-side and don't need this. Sent via header to keep the
     // URL short. (apiCall attaches a Bearer token only when signed in.)
     const seenIds = getGuestSeenForRequest();
-    const headers = seenIds.length ? { "x-seen-ids": seenIds.join(",") } : undefined;
+    const headers = seenIds.length
+      ? { "x-seen-ids": seenIds.join(",") }
+      : undefined;
     const { data, error } = await apiCall<{ posts: Post[] }>(
       `/feed?page=${page}&limit=${limit}&session=${session}`,
       headers ? { headers } : {},
@@ -289,6 +291,111 @@ export async function getFeedPosts(
   } catch (err) {
     // Final safety net
     return [];
+  }
+}
+
+export type InfiniteFeedType = "feed" | "explore" | "smart";
+
+export type InfiniteFeedResult = {
+  posts: Post[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
+async function getInfiniteFeedAuthHeaders(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await getSessionWithTimeout(3000);
+  const token = session?.access_token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+/** Cursor-based feed from /api/feed/infinite (shuffle, unseen-first, watch exclusion). */
+export async function getInfiniteFeedPosts(
+  feedType: InfiniteFeedType,
+  options: {
+    cursor?: string | null;
+    limit?: number;
+    hiveId?: string;
+    sessionId?: string;
+    signal?: AbortSignal;
+  } = {},
+): Promise<InfiniteFeedResult> {
+  const {
+    cursor = null,
+    limit = 30,
+    hiveId,
+    sessionId = getOrCreateFeedSessionId(),
+    signal,
+  } = options;
+
+  let hive = hiveId;
+  if (!hive) {
+    try {
+      hive = localStorage.getItem("zyeute_hive_id") || "quebec";
+    } catch {
+      hive = "quebec";
+    }
+  }
+
+  const params = new URLSearchParams({
+    limit: String(limit),
+    type: feedType,
+    hive,
+    session: sessionId,
+    ...(cursor ? { cursor } : {}),
+  });
+
+  const seenIds = getGuestSeenForRequest();
+  const guestHeaders = seenIds.length
+    ? { "x-seen-ids": seenIds.join(",") }
+    : undefined;
+
+  const headers =
+    feedType === "feed"
+      ? { ...(await getInfiniteFeedAuthHeaders()), ...guestHeaders }
+      : { "Content-Type": "application/json", ...guestHeaders };
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  if (signal) {
+    signal.addEventListener("abort", () => controller.abort());
+  }
+
+  try {
+    const response = await fetch(`/api/feed/infinite?${params}`, {
+      headers,
+      credentials: "include",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      apiLogger.warn(`Infinite feed ${response.status}`);
+      return { posts: [], nextCursor: null, hasMore: false };
+    }
+
+    const data = await response.json();
+    const rawCount = (data.posts || []).length;
+    const posts = (data.posts || [])
+      .map((p: Record<string, unknown>) => normalizePostForFeed(p))
+      .filter(
+        (p: Post | null): p is Post =>
+          p != null && !!p.id && postHasPlayableMedia(p),
+      );
+
+    return {
+      posts,
+      nextCursor: data.nextCursor || null,
+      hasMore: data.hasMore !== false && rawCount > 0,
+    };
+  } catch (err) {
+    apiLogger.warn("Infinite feed unavailable:", err);
+    return { posts: [], nextCursor: null, hasMore: false };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

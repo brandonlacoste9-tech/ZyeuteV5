@@ -26,6 +26,7 @@ export function rotateFeedSessionId(): string {
   const id = newSessionId();
   try {
     sessionStorage.setItem(SESSION_KEY, id);
+    sessionStorage.removeItem("zyeute_feed_shuffle_seed");
     for (const key of ["explore", "feed", "smart"]) {
       sessionStorage.removeItem(`zyeute_scroll_${key}`);
       sessionStorage.removeItem(`zyeute_la_scroll_${key}`);

@@ -3,7 +3,9 @@ import type { Post, User } from "@/types";
 
 type FeedState = {
   posts: Array<Post & { user: User }>;
-  page?: number; // Optional for Explore
+  page?: number; // Legacy offset pagination
+  cursor?: string | null; // Infinite-feed cursor
+  feedSessionId?: string; // Session used when posts were fetched
   currentIndex?: number; // Optional for Explore
   scrollOffset: number;
   filters?: {
@@ -69,12 +71,13 @@ export const NavigationStateProvider: React.FC<{
     delete feedsRef.current[key];
   }, []);
 
-  const value = React.useMemo(() => ({ saveFeedState, getFeedState, clearFeedState }), [saveFeedState, getFeedState, clearFeedState]);
+  const value = React.useMemo(
+    () => ({ saveFeedState, getFeedState, clearFeedState }),
+    [saveFeedState, getFeedState, clearFeedState],
+  );
 
   return (
-    <NavigationStateContext.Provider
-      value={value}
-    >
+    <NavigationStateContext.Provider value={value}>
       {children}
     </NavigationStateContext.Provider>
   );

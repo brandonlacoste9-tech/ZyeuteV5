@@ -46,15 +46,20 @@ import AutoSizer from "react-virtualized-auto-sizer";
 import { UnifiedMediaCard } from "./UnifiedMediaCard";
 import { FeedPostActionsSheet } from "@/components/feed/FeedPostActionsSheet";
 import {
-  getExplorePosts,
-  getFeedPosts,
+  getInfiniteFeedPosts,
   togglePostFire,
   getCurrentUser,
   postHasPlayableMedia,
   postLooksLikeTestInject,
+  type InfiniteFeedType,
 } from "@/services/api";
 import { triggerBadgeCheck } from "@/services/gamificationService";
-import { pourToiRank, fetchWatchHistory } from "@/lib/pourToiRanker";
+import {
+  getOrCreateFeedSessionId,
+  markFeedHidden,
+  maybeRotateFeedSessionAfterBackground,
+  rotateFeedSessionId,
+} from "@/lib/feedSession";
 import { recordWatch } from "@/lib/watchTracking";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -99,33 +104,44 @@ const FEED_SPACING = {
   recycleMinGap: 40,
 };
 
-function getFeedShuffleSeed(): number {
-  try {
-    const key = "zyeute_feed_shuffle_seed";
-    let stored = sessionStorage.getItem(key);
-    if (!stored) {
-      stored = String((Date.now() ^ (Math.random() * 0xffffffff)) >>> 0);
-      sessionStorage.setItem(key, stored);
-    }
-    return parseInt(stored, 10) || Date.now() >>> 0;
-  } catch {
-    return Date.now() >>> 0;
+function hashSessionToSeed(sessionId: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < sessionId.length; i++) {
+    h ^= sessionId.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
+  return h >>> 0;
 }
 
-function prepareFeedPage(posts: FeedPost[], pageOffset = 0): FeedPost[] {
+function prepareFeedPage(
+  posts: FeedPost[],
+  sessionId: string,
+  pageOffset = 0,
+): FeedPost[] {
   return prepareShuffledFeed(posts, {
     ...FEED_SPACING,
-    shuffleSeed: (getFeedShuffleSeed() + pageOffset) >>> 0,
+    shuffleSeed: (hashSessionToSeed(sessionId) + pageOffset) >>> 0,
   }) as FeedPost[];
 }
 
 /** Append new page; dedupe by clip fingerprint and space repeats apart. */
-function mergeFeedPages(prev: FeedPost[], incoming: FeedPost[]): FeedPost[] {
+function mergeFeedPages(
+  prev: FeedPost[],
+  incoming: FeedPost[],
+  sessionId: string,
+): FeedPost[] {
   return mergeFeedWithDedup(prev, incoming, {
     ...FEED_SPACING,
-    shuffleSeed: (getFeedShuffleSeed() + prev.length) >>> 0,
+    shuffleSeed: (hashSessionToSeed(sessionId) + prev.length) >>> 0,
   }) as FeedPost[];
+}
+
+function toInfiniteFeedType(
+  feedType: "decouverte" | "abonnements",
+  followingFallback: boolean,
+): InfiniteFeedType {
+  if (feedType === "abonnements" && !followingFallback) return "feed";
+  return "explore";
 }
 
 import { useNavigationState } from "../../contexts/NavigationStateContext";
@@ -314,7 +330,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   const listRef = useRef<any>(null);
   const { tap } = useHaptics();
-  const { getFeedState, saveFeedState } = useNavigationState();
+  const { getFeedState, saveFeedState, clearFeedState } = useNavigationState();
+  const feedSessionRef = useRef(rotateFeedSessionId());
   const { isOnline, addToQueue } = useNetworkQueue();
   const { user } = useAuth();
 
@@ -355,7 +372,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const [posts, setPosts] = useState<Array<Post & { user: User }>>(
     savedState?.posts || [],
   );
-  const [page, setPage] = useState(savedState?.page || 0);
+  const [nextCursor, setNextCursor] = useState<string | null>(
+    savedState?.cursor ?? null,
+  );
   const [currentIndex, setCurrentIndex] = useState(
     savedState?.currentIndex || 0,
   );
@@ -429,13 +448,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (postsRef.current.length > 0) {
         saveFeedState(stateKey, {
           posts: postsRef.current,
-          page,
+          cursor: nextCursor,
+          feedSessionId: feedSessionRef.current,
           currentIndex,
           scrollOffset: 0, // We use index for restoration
         });
       }
     };
-  }, [saveFeedState, stateKey, page, currentIndex]); // Removed posts from deps, using ref
+  }, [saveFeedState, stateKey, nextCursor, currentIndex]); // Removed posts from deps, using ref
 
   // FIX: Hydrate state if savedState arrives late (after initial mount)
   useEffect(() => {
@@ -446,7 +466,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         savedState.posts.length,
       );
       setPosts(savedState.posts);
-      setPage(savedState.page || 0);
+      setNextCursor(savedState.cursor ?? null);
+      if (savedState.feedSessionId) {
+        feedSessionRef.current = savedState.feedSessionId;
+      }
       setCurrentIndex(savedState.currentIndex || 0);
       // Ensure specific scroll restoration if needed, though the ref effect handles it
       setIsLoading(false);
@@ -672,9 +695,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       return;
     }
 
-    // Restore scroll position from saved state, but refetch if cache is a tiny stale slice
+    // Restore scroll position from saved state, but refetch if cache is stale or from another session
     const savedCount = savedState?.posts?.length ?? 0;
-    if (savedCount >= FEED_PAGE_SIZE * 2) {
+    const cacheSessionMatches =
+      !savedState?.feedSessionId ||
+      savedState.feedSessionId === feedSessionRef.current;
+    if (savedCount >= FEED_PAGE_SIZE * 2 && cacheSessionMatches) {
       feedLogger.debug(
         `Skipping fetch, using ${savedCount} posts from savedState`,
       );
@@ -697,68 +723,47 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     let validPosts: Array<Post & { user: User }> = [];
     let apiHasMore: boolean;
+    let apiNextCursor: string | null;
+    const sessionId = feedSessionRef.current;
 
     try {
-      if (feedType === "abonnements") {
-        // Following feed — uses /api/feed which filters to followed creators
-        const followingPosts = await getFeedPosts(0, FEED_PAGE_SIZE);
-        validPosts = prepareFeedPage(filterPlayablePosts(followingPosts));
-        if (validPosts.length === 0) {
-          // Fallback: show explore if not following anyone yet
-          feedLogger.info(
-            "[Abonnements] No following posts, falling back to explore",
-          );
-          setIsFollowingFallback(true);
-          setShowFallbackBanner(true);
-          const { posts: data, hasMore } = await getExplorePosts(
-            0,
-            FEED_PAGE_SIZE,
-            undefined,
-            getHiveId(),
-          );
-          validPosts = prepareFeedPage(filterPlayablePosts(data));
-          apiHasMore = hasMore;
-        } else {
-          apiHasMore = followingPosts.length === FEED_PAGE_SIZE;
-        }
-      } else {
-        const { posts: data, hasMore } = await getExplorePosts(
-          0,
-          FEED_PAGE_SIZE,
-          undefined,
-          getHiveId(),
-        );
-        apiHasMore = hasMore;
+      let followingFallback = false;
+      let infiniteType = toInfiniteFeedType(feedType, followingFallback);
+      let result = await getInfiniteFeedPosts(infiniteType, {
+        limit: FEED_PAGE_SIZE,
+        hiveId: getHiveId(),
+        sessionId,
+      });
+
+      if (feedType === "abonnements" && result.posts.length === 0) {
         feedLogger.info(
-          "[ContinuousFeed] API returned:",
-          data?.length || 0,
-          "posts",
+          "[Abonnements] No following posts, falling back to explore",
         );
+        followingFallback = true;
+        setIsFollowingFallback(true);
+        setShowFallbackBanner(true);
+        infiniteType = "explore";
+        result = await getInfiniteFeedPosts("explore", {
+          limit: FEED_PAGE_SIZE,
+          hiveId: getHiveId(),
+          sessionId,
+        });
+      }
 
-        if (data?.length) {
-          validPosts = prepareFeedPage(filterPlayablePosts(data));
+      apiHasMore = result.hasMore;
+      apiNextCursor = result.nextCursor;
+      feedLogger.info(
+        "[ContinuousFeed] API returned:",
+        result.posts?.length || 0,
+        "posts",
+        { type: infiniteType, sessionId },
+      );
 
-          // ── Pour Toi: re-rank based on watch history ─────────────────────
-          try {
-            const me = await getCurrentUser();
-            if (me?.id) {
-              const watchHistory = await fetchWatchHistory(me.id);
-              if (watchHistory.length > 0) {
-                validPosts = prepareFeedPage(
-                  pourToiRank(validPosts, watchHistory) as Array<
-                    Post & { user: User }
-                  >,
-                );
-                feedLogger.info(
-                  `[PourToi] Re-ranked ${validPosts.length} posts from ${watchHistory.length} watch events`,
-                );
-              }
-            }
-          } catch (rankErr) {
-            feedLogger.warn("[PourToi] Ranking skipped:", rankErr);
-          }
-        }
-        setHasMore(apiHasMore);
+      if (result.posts?.length) {
+        validPosts = prepareFeedPage(
+          filterPlayablePosts(result.posts),
+          sessionId,
+        );
       }
 
       if (validPosts.length === 0) {
@@ -777,9 +782,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       } else {
         setPosts(validPosts);
         setHasMore(apiHasMore);
+        setNextCursor(apiNextCursor);
       }
-
-      setPage(0);
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
       setPosts(
@@ -793,10 +797,32 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     }
   }, [savedState, feedType]);
 
+  // Rotate session after long background (PWA resume)
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        markFeedHidden();
+      } else if (maybeRotateFeedSessionAfterBackground()) {
+        feedSessionRef.current = getOrCreateFeedSessionId();
+        clearFeedState(stateKey);
+        setPosts([]);
+        setNextCursor(null);
+        setCurrentIndex(0);
+        setHasMore(true);
+        hasInitializedRef.current = false;
+        isFetchingRef.current = false;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [clearFeedState, stateKey]);
+
   // Reset feed when tab changes (Découverte ↔ Abonnements)
   useEffect(() => {
+    feedSessionRef.current = rotateFeedSessionId();
+    clearFeedState(stateKey);
     setPosts([]);
-    setPage(0);
+    setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
     setFetchError(false);
@@ -806,15 +832,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     isFetchingRef.current = false;
     hasInitializedRef.current = false;
     // fetchVideoFeed will be triggered by the initial-fetch effect reacting to posts.length === 0
-  }, [feedType]);
+  }, [feedType, clearFeedState, stateKey]);
 
   // Pull-to-refresh equivalent: parent increments refreshToken (double-tap tab)
   const refreshTokenRef = useRef(refreshToken);
   useEffect(() => {
     if (refreshTokenRef.current === refreshToken) return;
     refreshTokenRef.current = refreshToken;
+    feedSessionRef.current = rotateFeedSessionId();
+    clearFeedState(stateKey);
     setPosts([]);
-    setPage(0);
+    setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
     setFetchError(false);
@@ -824,7 +852,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     isFetchingRef.current = false;
     hasInitializedRef.current = false;
     setIsLoading(true);
-  }, [refreshToken]);
+  }, [refreshToken, clearFeedState, stateKey]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
@@ -833,43 +861,36 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     setLoadingMore(true);
     setLoadMoreError(false);
     try {
-      const nextPage = page + 1;
-      let data: Post[] = [];
-      let apiHasMore = false;
+      const infiniteType = toInfiniteFeedType(feedType, isFollowingFallback);
+      const result = await getInfiniteFeedPosts(infiniteType, {
+        ...(nextCursor ? { cursor: nextCursor } : {}),
+        limit: FEED_PAGE_SIZE,
+        hiveId: getHiveId(),
+        sessionId: feedSessionRef.current,
+      });
 
-      if (feedType === "abonnements" && !isFollowingFallback) {
-        const followingPosts = await getFeedPosts(nextPage, FEED_PAGE_SIZE);
-        data = followingPosts;
-        apiHasMore = followingPosts.length === FEED_PAGE_SIZE;
-      } else {
-        const result = await getExplorePosts(
-          nextPage,
-          FEED_PAGE_SIZE,
-          undefined,
-          getHiveId(),
+      if (result.posts.length > 0) {
+        const validPosts = prepareFeedPage(
+          filterPlayablePosts(result.posts),
+          feedSessionRef.current,
+          postsRef.current.length,
         );
-        data = result.posts;
-        apiHasMore = result.hasMore;
-      }
-
-      if (data.length > 0) {
-        const validPosts = prepareFeedPage(filterPlayablePosts(data), nextPage);
         if (validPosts.length > 0) {
-          setPosts((prev) => mergeFeedPages(prev, validPosts));
+          setPosts((prev) =>
+            mergeFeedPages(prev, validPosts, feedSessionRef.current),
+          );
         }
       }
 
-      setHasMore(apiHasMore);
-      if (apiHasMore) {
-        setPage(nextPage);
-      }
+      setHasMore(result.hasMore);
+      setNextCursor(result.nextCursor);
     } catch (error) {
       feedLogger.error("Error loading more videos:", error);
       setLoadMoreError(true);
     } finally {
       setLoadingMore(false);
     }
-  }, [page, loadingMore, hasMore, feedType, isFollowingFallback]);
+  }, [loadingMore, hasMore, nextCursor, feedType, isFollowingFallback]);
 
   // [SURGICAL] Momentum Check: Show content within 2 seconds max
   useEffect(() => {
@@ -891,11 +912,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     let cancelled = false;
 
     const savedCount = savedState?.posts?.length ?? 0;
+    const cacheSessionMatches =
+      !savedState?.feedSessionId ||
+      savedState.feedSessionId === feedSessionRef.current;
     const shouldFetchFresh =
       !savedState ||
       savedCount === 0 ||
       posts.length === 0 ||
-      savedCount < FEED_PAGE_SIZE * 2;
+      savedCount < FEED_PAGE_SIZE * 2 ||
+      !cacheSessionMatches;
 
     if (shouldFetchFresh) {
       if (hasInitializedRef.current) return;
@@ -1090,7 +1115,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     ) {
       feedLogger.info("Feed State Update", {
         currentIndex,
-        page,
+        nextCursor,
         postsCount: posts.length,
         velocity: { isFast, isMedium, isSlow },
       });
@@ -1100,7 +1125,15 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       prevIndexRef.current = currentIndex;
       lastSwitchTimeRef.current = Date.now();
     }
-  }, [currentIndex, page, posts, isFast, isMedium, isSlow, isSystemOverloaded]);
+  }, [
+    currentIndex,
+    nextCursor,
+    posts,
+    isFast,
+    isMedium,
+    isSlow,
+    isSystemOverloaded,
+  ]);
 
   // Handle rows rendered (new API name in 2.x)
   const onRowsRendered = useCallback(
@@ -1166,13 +1199,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       // Save state before navigating
       saveFeedState(stateKey, {
         posts: postsRef.current,
-        page,
+        cursor: nextCursor,
+        feedSessionId: feedSessionRef.current,
         currentIndex,
         scrollOffset: 0,
       });
       window.location.href = `/p/${postId}`;
     },
-    [saveFeedState, stateKey, page, currentIndex],
+    [saveFeedState, stateKey, nextCursor, currentIndex],
   );
 
   const handleShare = useCallback(async (postId: string) => {
