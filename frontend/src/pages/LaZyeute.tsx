@@ -1758,7 +1758,20 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <img src="/assets/icons/icon-home.png" alt="Home" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/feed" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill={location.pathname === "/feed" ? edgeLighting : "none"}
+                  stroke={location.pathname === "/feed" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={location.pathname === "/feed" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                >
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
                 <span
                   className="text-[10px] font-medium"
                   style={{
@@ -1790,7 +1803,20 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <img src="/assets/icons/icon-search.png" alt="Discover" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/search" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={location.pathname === "/search" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={location.pathname === "/search" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
                 <span
                   className="text-[10px] font-medium"
                   style={{
@@ -1822,7 +1848,17 @@ export const Zyeute: React.FC = () => {
                     boxShadow: "0 4px 15px rgba(var(--accent-rgb), 0.6)",
                   }}
                 >
-                  <img src="/assets/icons/icon-upload.png" alt="Create" className="w-8 h-8 object-contain" style={{ filter: 'grayscale(100%) opacity(0.8)' }} />
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="#1A0F0A"
+                    stroke="#1A0F0A"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
                 </div>
               </button>
 
@@ -1844,7 +1880,20 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <img src="/assets/icons/icon-arcade.png" alt="Arcade" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/arcade" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke={location.pathname === "/arcade" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={location.pathname === "/arcade" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                >
+                  <rect x="2" y="6" width="20" height="12" rx="2" />
+                  <path d="M6 12h4m-2-2v4M15 12h.01M18 10h.01" />
+                </svg>
                 <span
                   className="text-[10px] font-medium"
                   style={{
