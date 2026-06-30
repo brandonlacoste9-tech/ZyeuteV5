@@ -680,7 +680,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
                 },
                 {
                   name: "Argent",
-                  icon: "🥈",
+                  icon: "/assets/emojis/icon-badge-2.png",
                   price: "9,99$/mois",
                   perks: [
                     "Badge Argent",
@@ -693,7 +693,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
                 },
                 {
                   name: "Or",
-                  icon: "🥇",
+                  icon: "/assets/emojis/icon-badge-1.png",
                   price: "19,99$/mois",
                   perks: [
                     "Badge Or",
@@ -717,8 +717,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ overlay, onClose }) => {
                     gap: 14,
                   }}
                 >
-                  <span style={{ fontSize: 28, marginTop: 2 }}>
-                    {tier.icon}
+                  <span style={{ marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32 }}>
+                    <img src={tier.icon} alt={tier.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                   </span>
                   <div style={{ flex: 1 }}>
                     <div

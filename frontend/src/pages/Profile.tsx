@@ -796,7 +796,11 @@ export const Profile: React.FC = () => {
                         color: tierMeta.color,
                       }}
                     >
-                      <span>{tierMeta.icon}</span>
+                      <span>
+                        {tierMeta.icon.startsWith('/') 
+                          ? <img src={tierMeta.icon} alt={tierMeta.name} className="w-4 h-4 object-contain inline-block" /> 
+                          : tierMeta.icon}
+                      </span>
                       <span>{tierMeta.name}</span>
                     </div>
                   );
@@ -955,13 +959,13 @@ export const Profile: React.FC = () => {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">
+                    <span className="flex items-center justify-center w-8 h-8">
                       {subTier === "gold"
-                        ? "🥇"
+                        ? <img src="/assets/emojis/icon-badge-1.png" className="w-8 h-8 object-contain" alt="Gold" />
                         : subTier === "silver"
-                          ? "🥈"
+                          ? <img src="/assets/emojis/icon-badge-2.png" className="w-8 h-8 object-contain" alt="Silver" />
                           : subTier === "bronze"
-                            ? "🥉"
+                            ? <img src="/assets/emojis/icon-badge-3.png" className="w-8 h-8 object-contain" alt="Bronze" />
                             : "🆓"}
                     </span>
                     <div>

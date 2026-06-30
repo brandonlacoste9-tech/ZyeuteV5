@@ -86,6 +86,7 @@ export interface VirtualGift {
   name: string;
   nameJoual: string;
   emoji: string;
+  assetUrl?: string;
   price: number; // in "cennes"
   description: string;
 }
@@ -96,6 +97,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Poutine",
     nameJoual: "Une pout",
     emoji: "🍟",
+    assetUrl: "/assets/emojis/poutine.png",
     price: 10,
     description: "Le classique indémodable",
   },
@@ -104,6 +106,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Caribou",
     nameJoual: "Un p'tit caribou",
     emoji: "🦌",
+    assetUrl: "/assets/emojis/caribou.png",
     price: 50,
     description: "Pour réchauffer l'hiver",
   },
@@ -112,6 +115,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Fleur-de-lys",
     nameJoual: "Une fleur",
     emoji: "⚜️",
+    assetUrl: "/assets/emojis/fleur-de-lys.png",
     price: 100,
     description: "Fierté québécoise",
   },
@@ -120,6 +124,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Cône orange",
     nameJoual: "Le cône",
     emoji: "🚧",
+    assetUrl: "/assets/emojis/cone-orange.png",
     price: 25,
     description: "Symbole de l'été québécois",
   },
@@ -128,6 +133,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Sirop d'érable",
     nameJoual: "Du sirop",
     emoji: "🌲",
+    assetUrl: "/assets/emojis/sirop-erable.png",
     price: 75,
     description: "Le goût du Québec",
   },
@@ -136,6 +142,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Tourtière",
     nameJoual: "Une tourtière",
     emoji: "🥧",
+    assetUrl: "/assets/emojis/tourtiere.png",
     price: 35,
     description: "Le goût des Fêtes",
   },
@@ -144,6 +151,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Bière québécoise",
     nameJoual: "Une frette",
     emoji: "🍺",
+    assetUrl: "/assets/emojis/biere.png",
     price: 20,
     description: "Une bonne frette locale",
   },
@@ -152,6 +160,7 @@ export const VIRTUAL_GIFTS: VirtualGift[] = [
     name: "Bâton de hockey",
     nameJoual: "Un bâton",
     emoji: "🏒",
+    assetUrl: "/assets/emojis/hockey.png",
     price: 150,
     description: "Pour les vrais fans",
   },

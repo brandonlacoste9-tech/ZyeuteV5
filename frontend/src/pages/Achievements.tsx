@@ -128,7 +128,7 @@ export const Achievements: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gold-500 to-yellow-600 flex items-center justify-center text-4xl shadow-lg">
-                  {tierInfo.icon}
+                  {tierInfo.icon.startsWith('/') ? <img src={tierInfo.icon} alt={tierInfo.name} className="w-12 h-12 object-contain" /> : tierInfo.icon}
                 </div>
                 <div>
                   <p className="text-white/60 text-sm">Rang Actuel</p>
@@ -333,7 +333,7 @@ export const Achievements: React.FC = () => {
                         : "bg-white/5",
                     )}
                   >
-                    {earned ? achievement.icon : "🔒"}
+                    {earned ? (achievement.icon.startsWith('/') ? <img src={achievement.icon} alt={achievement.name_fr} className="w-10 h-10 object-contain" /> : achievement.icon) : "🔒"}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-white font-bold mb-1">

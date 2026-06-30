@@ -21,148 +21,46 @@ const navItems: NavItem[] = [
   {
     to: "/feed",
     labelKey: "nav.home",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-        />
-      </svg>
-    ),
-    activeIcon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-      </svg>
-    ),
+    icon: <img src="/assets/icons/icon-home.png" alt="Home" className="w-6 h-6 object-contain" style={{ filter: 'grayscale(100%) opacity(0.5)' }} />,
+    activeIcon: <img src="/assets/icons/icon-home.png" alt="Home Active" className="w-6 h-6 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.8))' }} />,
   },
   {
     to: "/explore",
     labelKey: "nav.discover",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-    ),
-    activeIcon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-      </svg>
-    ),
+    icon: <img src="/assets/icons/icon-search.png" alt="Discover" className="w-6 h-6 object-contain" style={{ filter: 'grayscale(100%) opacity(0.5)' }} />,
+    activeIcon: <img src="/assets/icons/icon-search.png" alt="Discover Active" className="w-6 h-6 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.8))' }} />,
   },
   {
     to: "/messages",
     labelKey: "nav.messages",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4v-4z"
-        />
-      </svg>
-    ),
-    activeIcon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
-      </svg>
-    ),
+    icon: <img src="/assets/icons/icon-messages.png" alt="Messages" className="w-6 h-6 object-contain" style={{ filter: 'grayscale(100%) opacity(0.5)' }} />,
+    activeIcon: <img src="/assets/icons/icon-messages.png" alt="Messages Active" className="w-6 h-6 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.8))' }} />,
   },
   {
     to: "/upload",
     labelKey: "nav.create",
     icon: (
-      <div className="relative">
-        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-        </svg>
+      <div className="relative flex items-center justify-center w-full h-full">
+        <img src="/assets/icons/icon-upload.png" alt="Create" className="w-8 h-8 object-contain" style={{ filter: 'grayscale(100%) opacity(0.8)' }} />
       </div>
     ),
     activeIcon: (
-      <div className="relative">
-        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-        </svg>
+      <div className="relative flex items-center justify-center w-full h-full">
+        <img src="/assets/icons/icon-upload.png" alt="Create Active" className="w-8 h-8 object-contain" style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.5))' }} />
       </div>
     ),
   },
   {
     to: "/arcade",
     labelKey: "nav.arcade",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        viewBox="0 0 24 24"
-      >
-        <line x1="6" x2="10" y1="12" y2="12" />
-        <line x1="8" x2="8" y1="10" y2="14" />
-        <line x1="15" x2="15.01" y1="13" y2="13" />
-        <line x1="18" x2="18.01" y1="11" y2="11" />
-        <rect width="20" height="12" x="2" y="6" rx="2" />
-      </svg>
-    ),
-    activeIcon: (
-      <svg
-        className="w-6 h-6"
-        fill="currentColor"
-        stroke="currentColor"
-        strokeWidth={0}
-        viewBox="0 0 24 24"
-      >
-        <path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm3-3c-.83 0-1.5-.67-1.5-1.5S17.67 9 18.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-      </svg>
-    ),
+    icon: <img src="/assets/icons/icon-arcade.png" alt="Arcade" className="w-6 h-6 object-contain" style={{ filter: 'grayscale(100%) opacity(0.5)' }} />,
+    activeIcon: <img src="/assets/icons/icon-arcade.png" alt="Arcade Active" className="w-6 h-6 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.8))' }} />,
   },
   {
     to: "/profile/me",
     labelKey: "nav.profile",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-        />
-      </svg>
-    ),
-    activeIcon: (
-      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-      </svg>
-    ),
+    icon: <img src="/assets/icons/icon-profile.png" alt="Profile" className="w-6 h-6 object-contain" style={{ filter: 'grayscale(100%) opacity(0.5)' }} />,
+    activeIcon: <img src="/assets/icons/icon-profile.png" alt="Profile Active" className="w-6 h-6 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(212,175,55,0.8))' }} />,
   },
 ];
 

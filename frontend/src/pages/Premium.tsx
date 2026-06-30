@@ -90,7 +90,7 @@ export default function Premium() {
     {
       id: "bronze" as const,
       name: "Bronze",
-      emoji: "🥉",
+      emoji: "/assets/emojis/icon-badge-3.png",
       price: hivePrices.bronze,
       features: isMexico
         ? [
@@ -135,7 +135,7 @@ export default function Premium() {
           : isArgentina
             ? "Plata"
             : "Argent",
-      emoji: "🥈",
+      emoji: "/assets/emojis/icon-badge-2.png",
       price: hivePrices.silver,
       features: isMexico
         ? [
@@ -178,7 +178,7 @@ export default function Premium() {
     {
       id: "gold" as const,
       name: isMexico ? "Oro" : isBrazil ? "Ouro" : isArgentina ? "Oro" : "Or",
-      emoji: "🥇",
+      emoji: "/assets/emojis/icon-badge-1.png",
       price: hivePrices.gold,
       features: isMexico
         ? [
@@ -272,10 +272,10 @@ export default function Premium() {
         {currentTier !== "free" && (
           <div className="leather-card rounded-2xl p-6 mb-8 stitched text-center">
             <div className="inline-flex items-center gap-3 bg-gold-gradient px-6 py-3 rounded-full">
-              <span className="text-2xl">
-                {currentTier === "bronze" && "🥉"}
-                {currentTier === "silver" && "🥈"}
-                {currentTier === "gold" && "🥇"}
+              <span className="flex items-center justify-center w-8 h-8">
+                {currentTier === "bronze" && <img src="/assets/emojis/icon-badge-3.png" alt="Bronze" className="w-8 h-8 object-contain" />}
+                {currentTier === "silver" && <img src="/assets/emojis/icon-badge-2.png" alt="Silver" className="w-8 h-8 object-contain" />}
+                {currentTier === "gold" && <img src="/assets/emojis/icon-badge-1.png" alt="Gold" className="w-8 h-8 object-contain" />}
               </span>
               <span className="text-leather-900 font-black text-lg">
                 Membre {currentTier.toUpperCase()}
@@ -311,9 +311,9 @@ export default function Premium() {
 
                 {/* Tier Icon */}
                 <div
-                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4`}
+                  className={`w-16 h-16 rounded-full bg-gradient-to-br ${tier.gradient} flex items-center justify-center mb-4 overflow-hidden`}
                 >
-                  <span className="text-3xl">{tier.emoji}</span>
+                  <img src={tier.emoji} alt={tier.name} className="w-12 h-12 object-contain drop-shadow-md" />
                 </div>
 
                 {/* Tier Name */}

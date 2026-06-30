@@ -85,9 +85,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     type: "video" as const,
     caption: "Welcome to Zyeuté! 🍁 Bienvenue au Québec!",
     media_url:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050417_ae1b6da4-ae6a-4b16-ac2b-54709541bb30.mp4",
     mediaUrl:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050417_ae1b6da4-ae6a-4b16-ac2b-54709541bb30.mp4",
     thumbnail_url: "/demo/branding.png",
     thumbnailUrl: "/demo/branding.png",
     user: {
@@ -127,9 +127,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     type: "video" as const,
     caption: "Montreal vibes 🏙️⚜️ #Montreal #Quebec",
     media_url:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050501_05f7421d-94d8-4613-964b-e8c4746aaa54.mp4",
     mediaUrl:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050501_05f7421d-94d8-4613-964b-e8c4746aaa54.mp4",
     thumbnail_url: "/demo/montreal.png",
     thumbnailUrl: "/demo/montreal.png",
     user: {
@@ -169,9 +169,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     type: "video" as const,
     caption: "Beautiful Quebec nature 🍁🌲",
     media_url:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050555_039e6bb5-9285-4356-80ef-d56b5f670848.mp4",
     mediaUrl:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050555_039e6bb5-9285-4356-80ef-d56b5f670848.mp4",
     thumbnail_url: "/demo/nature.png",
     thumbnailUrl: "/demo/nature.png",
     user: {
@@ -211,9 +211,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     type: "video" as const,
     caption: "Winter in Quebec ❄️❄️❄️",
     media_url:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050645_3dcddf03-cff8-4a7d-819c-97cfdd27d675.mp4",
     mediaUrl:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050645_3dcddf03-cff8-4a7d-819c-97cfdd27d675.mp4",
     thumbnail_url: "/demo/winter.png",
     thumbnailUrl: "/demo/winter.png",
     user: {
@@ -253,9 +253,9 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     type: "video" as const,
     caption: "Quebec City old town 🏰⚜️",
     media_url:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050733_eb975d16-26d7-4fdb-bd6d-784e466e68ec.mp4",
     mediaUrl:
-      "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_050733_eb975d16-26d7-4fdb-bd6d-784e466e68ec.mp4",
     thumbnail_url: "/demo/quebec_city.png",
     thumbnailUrl: "/demo/quebec_city.png",
     user: {
@@ -289,6 +289,121 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     view_count: 0,
     max_views: 1,
   },
+  {
+    id: "demo-6",
+    user_id: "demo-user-1",
+    type: "video" as const,
+    caption: "Le temps des sucres est arrivé! Petit déjeuner à la cabane! 🧇 #Quebec #Erable",
+    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
+    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
+    thumbnail_url: "/demo/branding.png",
+    thumbnailUrl: "/demo/branding.png",
+    user: {
+      id: "demo-user-1",
+      username: "cabane_sucre",
+      display_name: "Temps des Sucres",
+      avatar_url: null,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+    } as User,
+    fire_count: 15400,
+    comment_count: 850,
+    created_at: new Date().toISOString(),
+    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+  },
+  {
+    id: "demo-7",
+    user_id: "demo-user-2",
+    type: "video" as const,
+    caption: "La Chute-Montmorency est plus haute que le Niagara! 🌊 #VoyageQuebec",
+    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
+    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
+    thumbnail_url: "/demo/nature.png",
+    thumbnailUrl: "/demo/nature.png",
+    user: {
+      id: "demo-user-2",
+      username: "nature_qc",
+      display_name: "Nature QC",
+      avatar_url: null,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+    } as User,
+    fire_count: 12500,
+    comment_count: 420,
+    created_at: new Date().toISOString(),
+    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+  },
+  {
+    id: "demo-8",
+    user_id: "demo-user-3",
+    type: "video" as const,
+    caption: "Cirque du Soleil — quand Montréal illumine le monde entier! ✨",
+    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
+    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
+    thumbnail_url: "/demo/montreal.png",
+    thumbnailUrl: "/demo/montreal.png",
+    user: {
+      id: "demo-user-3",
+      username: "arts_spectacles",
+      display_name: "Arts & Spectacles",
+      avatar_url: null,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+    } as User,
+    fire_count: 22100,
+    comment_count: 1100,
+    created_at: new Date().toISOString(),
+    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+  },
+  {
+    id: "demo-9",
+    user_id: "demo-user-4",
+    type: "video" as const,
+    caption: "Les oies bernaches arrivent dans le fleuve! Signal du printemps 🌿",
+    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
+    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
+    thumbnail_url: "/demo/nature.png",
+    thumbnailUrl: "/demo/nature.png",
+    user: {
+      id: "demo-user-4",
+      username: "faune_qc",
+      display_name: "Faune Québec",
+      avatar_url: null,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+    } as User,
+    fire_count: 8900,
+    comment_count: 210,
+    created_at: new Date().toISOString(),
+    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+  },
+  {
+    id: "demo-10",
+    user_id: "demo-user-5",
+    type: "video" as const,
+    caption: "Roadtrip sur la route 132 en Gaspésie, paysages à couper le souffle! 🌊",
+    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
+    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
+    thumbnail_url: "/demo/nature.png",
+    thumbnailUrl: "/demo/nature.png",
+    user: {
+      id: "demo-user-5",
+      username: "voyage_qc",
+      display_name: "Voyage QC",
+      avatar_url: null,
+      is_verified: true,
+      created_at: new Date().toISOString(),
+      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+    } as User,
+    fire_count: 18500,
+    comment_count: 670,
+    created_at: new Date().toISOString(),
+    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+  }
 ];
 
 /** Post with optional engagement fields from API */
@@ -336,8 +451,8 @@ export const Zyeute: React.FC = () => {
     [location.search],
   );
   const posts = useMemo(() => {
-    if (apiPosts.length > 0) return apiPosts;
-    if (!isLoading && demoFeed) return DEMO_VIDEOS;
+    if (apiPosts.length > 0) return [...DEMO_VIDEOS, ...apiPosts];
+    if (!isLoading) return DEMO_VIDEOS;
     return [];
   }, [apiPosts, isLoading, demoFeed]);
 
@@ -1399,17 +1514,12 @@ export const Zyeute: React.FC = () => {
                           : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
                       }}
                     >
-                      <svg
-                        className="w-5 h-5"
-                        viewBox="0 0 24 24"
-                        fill={isFired ? "#FF3D3D" : edgeLighting}
-                        stroke={isFired ? edgeLighting : "#8B4513"}
-                        strokeWidth={1.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z" />
-                      </svg>
+                      <img 
+                        src="/assets/icons/icon-fire.png" 
+                        className="w-6 h-6 object-contain drop-shadow-md" 
+                        style={{ filter: isFired ? 'brightness(1.5) drop-shadow(0 0 8px #FF6B35)' : 'none' }} 
+                        alt="Fire" 
+                      />
                     </div>
                     <span
                       className="text-[10px] font-bold"
@@ -1439,17 +1549,11 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke={edgeLighting}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                  <img 
+                    src="/assets/icons/icon-comment.png" 
+                    className="w-6 h-6 object-contain drop-shadow-md" 
+                    alt="Comment" 
+                  />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
                   {(currentPost as PostWithEngagement).commentCount ??
@@ -1475,17 +1579,11 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke={edgeLighting}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
+                  <img 
+                    src="/assets/icons/icon-share.png" 
+                    className="w-6 h-6 object-contain drop-shadow-md" 
+                    alt="Share" 
+                  />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
                   Partager
@@ -1516,17 +1614,12 @@ export const Zyeute: React.FC = () => {
                           : undefined,
                       }}
                     >
-                      <svg
-                        className="w-5 h-5"
-                        viewBox="0 0 24 24"
-                        fill={isSaved ? "#1A0F0A" : "none"}
-                        stroke={isSaved ? "#1A0F0A" : edgeLighting}
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                      </svg>
+                      <img 
+                        src="/assets/icons/icon-save.png" 
+                        className="w-6 h-6 object-contain drop-shadow-md" 
+                        style={{ filter: isSaved ? 'brightness(1.5) drop-shadow(0 0 8px ' + edgeLighting + ')' : 'none' }} 
+                        alt="Save" 
+                      />
                     </div>
                     <span
                       className="text-[10px] font-bold"
@@ -1555,7 +1648,11 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <span className="text-lg">🎁</span>
+                  <img 
+                    src="/assets/icons/icon-gift.png" 
+                    className="w-6 h-6 object-contain drop-shadow-md" 
+                    alt="Gift" 
+                  />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
                   Cadeau
@@ -1661,31 +1758,7 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill={location.pathname === "/feed" ? edgeLighting : "none"}
-                  stroke={
-                    location.pathname === "/feed"
-                      ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
-                  }
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={
-                    location.pathname === "/feed"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
-                >
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                  <polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
+                <img src="/assets/icons/icon-home.png" alt="Home" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/feed" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
                 <span
                   className="text-[10px] font-medium"
                   style={{
@@ -1717,31 +1790,7 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={
-                    location.pathname === "/search"
-                      ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
-                  }
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={
-                    location.pathname === "/search"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
+                <img src="/assets/icons/icon-search.png" alt="Discover" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/search" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
                 <span
                   className="text-[10px] font-medium"
                   style={{
@@ -1773,17 +1822,7 @@ export const Zyeute: React.FC = () => {
                     boxShadow: "0 4px 15px rgba(var(--accent-rgb), 0.6)",
                   }}
                 >
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="#1A0F0A"
-                    stroke="#1A0F0A"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                  <img src="/assets/icons/icon-upload.png" alt="Create" className="w-8 h-8 object-contain" style={{ filter: 'grayscale(100%) opacity(0.8)' }} />
                 </div>
               </button>
 
@@ -1805,31 +1844,7 @@ export const Zyeute: React.FC = () => {
                     }}
                   />
                 )}
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={
-                    location.pathname === "/arcade"
-                      ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
-                  }
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={
-                    location.pathname === "/arcade"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
-                >
-                  <rect x="2" y="6" width="20" height="12" rx="2" />
-                  <path d="M6 12h4m-2-2v4M15 12h.01M18 10h.01" />
-                </svg>
+                <img src="/assets/icons/icon-arcade.png" alt="Arcade" className="w-6 h-6 object-contain" style={{ filter: location.pathname === "/arcade" ? 'drop-shadow(0 0 4px rgba(212,175,55,0.8))' : 'grayscale(100%) opacity(0.5)' }} />
                 <span
                   className="text-[10px] font-medium"
                   style={{

@@ -150,11 +150,11 @@ export const TIER_META: Record<
   string,
   { name: string; icon: string; color: string }
 > = {
-  novice: { name: "Novice Québécois", icon: "🥉", color: "#CD7F32" },
-  vrai: { name: "Vrai Québécois", icon: "🥈", color: "#C0C0C0" },
-  pur_laine: { name: "Pur Laine", icon: "🥇", color: "#FFD700" },
-  legende: { name: "Légende", icon: "💎", color: "#B9F2FF" },
-  icone: { name: "Icône Québécoise", icon: "👑", color: "#FF6B6B" },
+  novice: { name: "Novice Québécois", icon: "/assets/emojis/icon-badge-3.png", color: "#CD7F32" },
+  vrai: { name: "Vrai Québécois", icon: "/assets/emojis/icon-badge-2.png", color: "#C0C0C0" },
+  pur_laine: { name: "Pur Laine", icon: "/assets/emojis/icon-badge-1.png", color: "#FFD700" },
+  legende: { name: "Légende", icon: "/assets/emojis/icon-gem.png", color: "#B9F2FF" },
+  icone: { name: "Icône Québécoise", icon: "/assets/emojis/icon-crown.png", color: "#FF6B6B" },
 };
 
 export function getTierMeta(tier: string) {

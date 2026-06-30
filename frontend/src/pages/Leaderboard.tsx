@@ -120,7 +120,9 @@ export const Leaderboard: React.FC = () => {
                   onClick={() => navigate(`/profile/${top3[0].username}`)}
                   className="relative flex flex-col items-center w-1/3 cursor-pointer group"
                 >
-                  <div className="absolute -top-6 text-4xl animate-bounce z-20 filter drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]">👑</div>
+                  <div className="absolute -top-10 w-14 h-14 animate-bounce z-20">
+                    <img src="/assets/emojis/icon-crown.png" alt="Crown" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
+                  </div>
                   <div className="absolute -top-20 w-20 h-20 rounded-full border-2 border-gold-400 p-0.5 overflow-hidden transition-transform group-hover:scale-110 shadow-[0_0_25px_rgba(212,175,55,0.6)] z-10">
                     <Image src={top3[0].avatarUrl || `https://ui-avatars.com/api/?name=${top3[0].username}&background=random`} alt={top3[0].username} objectFit="cover" />
                   </div>
