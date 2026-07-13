@@ -114,6 +114,35 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     return res.status(403).json({ error: "Domain not allowed" });
   }
 
+  // Fast-fail expired TikTok signed URLs (x-expires) — avoid hammering CDN + logs
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const isTikTok =
+      host.includes("tiktok") ||
+      host.includes("tiktokv") ||
+      host.includes("tikcdn") ||
+      host.includes("byteoversea") ||
+      host.includes("muscdn");
+    if (isTikTok) {
+      const expRaw =
+        parsed.searchParams.get("x-expires") ||
+        parsed.searchParams.get("expires");
+      const exp = expRaw ? parseInt(expRaw, 10) : 0;
+      if (exp > 1e9 && exp < Math.floor(Date.now() / 1000) - 60) {
+        res.setHeader("Cache-Control", "public, max-age=3600");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        // 410 = gone; clients should stop retrying this URL
+        return res.status(410).json({
+          error: "Signed CDN URL expired",
+          code: "CDN_URL_EXPIRED",
+        });
+      }
+    }
+  } catch {
+    /* continue */
+  }
+
   try {
     const rangeHeader = req.headers.range;
 
@@ -130,15 +159,22 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
 
     if (rangeHeader) fetchHeaders["Range"] = rangeHeader;
 
-    console.log(`[MediaProxy] Fetching: ${url.substring(0, 100)}`);
-
     const resp = await fetch(url, {
       headers: fetchHeaders,
       method: "GET",
     });
 
     if (!resp.ok) {
-      console.error(`[MediaProxy] Upstream error ${resp.status} for ${url}`);
+      // Soft cache failures for TikTok so browsers/edge don't re-hammer
+      const isTikTok = /tiktok|tiktokv|tikcdn|byteoversea|muscdn/i.test(url);
+      if (isTikTok && (resp.status === 403 || resp.status === 404)) {
+        res.setHeader("Cache-Control", "public, max-age=1800");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        return res.status(410).json({
+          error: `Upstream ${resp.status}`,
+          code: "CDN_UPSTREAM_GONE",
+        });
+      }
       return res
         .status(resp.status)
         .json({ error: `Upstream error ${resp.status}` });

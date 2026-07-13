@@ -32,7 +32,7 @@ const MuxVideoPlayer = React.lazy(() =>
 import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 
-import { getProxiedMediaUrl } from "@/utils/mediaProxy";
+import { getProxiedMediaUrl, resolvePosterUrl } from "@/utils/mediaProxy";
 import { FlameEyeIcon } from "@/components/ui/Logo";
 import { CaptionWithHashtags } from "@/components/feed/CaptionWithHashtags";
 import { ShareSheet } from "@/components/feed/ShareSheet";
@@ -1226,11 +1226,12 @@ export const Zyeute: React.FC = () => {
                 index === currentIndex && isPageVisible && isPlaying;
               const muxId = (post as Post).mux_playback_id;
               const useMuxPlayer = !!muxId && !muxFallbackIds.has(post.id);
-              const slidePoster =
-                getProxiedMediaUrl(post.thumbnail_url || post.media_url) ||
-                post.thumbnail_url ||
-                post.media_url ||
-                (muxId ? `https://image.mux.com/${muxId}/thumbnail.jpg` : "");
+              // Prefer Mux poster; never load expired TikTok CDN thumbs (403 spam)
+              const slidePoster = resolvePosterUrl({
+                muxPlaybackId: muxId,
+                thumbnailUrl: post.thumbnail_url || post.thumbnailUrl,
+                mediaUrl: post.media_url || post.mediaUrl,
+              });
               const slideH = getSlideHeight();
               const isVideoSlide =
                 post.type === "video" ||
