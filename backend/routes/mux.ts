@@ -28,6 +28,25 @@ if (MUX_TOKEN_ID && MUX_TOKEN_SECRET) {
 
 const Video = mux?.video || null;
 
+function muxErrorMessage(error: unknown, fallback: string): string {
+  if (!error) return fallback;
+  if (error instanceof Error && error.message) {
+    // Keep client messages short and French-friendly
+    const m = error.message;
+    if (/unauthorized|401|invalid credentials/i.test(m)) {
+      return "Clés Mux invalides. Vérifie MUX_TOKEN_ID / MUX_TOKEN_SECRET.";
+    }
+    if (/rate limit|429/i.test(m)) {
+      return "Mux est saturé. Réessaie dans une minute.";
+    }
+    if (/network|ECONN|ETIMEDOUT|fetch failed/i.test(m)) {
+      return "Réseau Mux indisponible. Réessaie.";
+    }
+    return m.length > 180 ? `${m.slice(0, 180)}…` : m;
+  }
+  return fallback;
+}
+
 export interface MuxUploadResponse {
   uploadUrl: string;
   uploadId: string;
@@ -71,7 +90,7 @@ router.post(
       console.error("[MUX] Erreur création upload:", error);
       return res.status(500).json({
         success: false,
-        error: "Erreur lors de la création de l'upload",
+        error: muxErrorMessage(error, "Erreur lors de la création de l'upload"),
       });
     }
   },
@@ -123,7 +142,7 @@ router.get("/upload-status/:uploadId", async (req: Request, res: Response) => {
     console.error("[MUX] Erreur statut upload:", error);
     return res.status(500).json({
       success: false,
-      error: "Erreur lors de la vérification du statut",
+      error: muxErrorMessage(error, "Erreur lors de la vérification du statut"),
     });
   }
 });
@@ -223,12 +242,7 @@ export async function applyMuxWebhookEvent(
         throw new Error(`Supabase update (ready) failed: ${error.message}`);
       }
 
-      console.log(
-        "[MUX] Post mis à jour:",
-        assetId,
-        "playbackId:",
-        playbackId,
-      );
+      console.log("[MUX] Post mis à jour:", assetId, "playbackId:", playbackId);
       break;
     }
 

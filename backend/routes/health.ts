@@ -61,10 +61,16 @@ router.get("/feed", async (req: Request, res: Response) => {
     }
   }
 
-  // Fallback: direct Postgres pool (Drizzle storage)
+  // Fallback: direct Postgres pool (Drizzle) with a hard timeout so health
+  // checks never hang 15s+ when the pooler is saturated.
   try {
     const { storage } = await import("../storage.js");
-    const posts = await storage.getExplorePosts(0, 1, "quebec");
+    const posts = await Promise.race([
+      storage.getExplorePosts(0, 1, "quebec"),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("pool_health_timeout_3s")), 3000),
+      ),
+    ]);
     const hasPosts = Array.isArray(posts) && posts.length > 0;
     return res.status(200).json({
       status: hasPosts ? "ok" : "empty",
@@ -79,6 +85,7 @@ router.get("/feed", async (req: Request, res: Response) => {
       feed: "error",
       code: "FEED_HEALTH_FAIL",
       message: error?.message || "Feed check failed",
+      hint: "Prefer Supabase REST for feed; set DATABASE_URL to session pooler :5432",
     });
   }
 });

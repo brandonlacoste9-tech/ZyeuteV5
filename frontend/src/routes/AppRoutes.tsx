@@ -193,7 +193,14 @@ function KeyedGridRushMatch() {
   return <GridRushMatch key={matchId} />;
 }
 
-/** Infra marketing placeholders (kept for existing deep links). */
+/** Infra marketing placeholders (kept for deep links with ?dev=1 only). */
+function DevOnly({ children }: { children: ReactNode }) {
+  const { search } = useLocation();
+  const allow = new URLSearchParams(search).get("dev") === "1";
+  if (!allow) return <NotFoundPage />;
+  return <>{children}</>;
+}
+
 function ManusPage() {
   return (
     <div className="min-h-screen flex flex-col pt-12 bg-[#1A0F0A] text-[#F5E6D3] pb-24">
@@ -316,9 +323,31 @@ export function AppRoutes() {
             path="/legal/community-guidelines"
             element={<CommunityGuidelines />}
           />
-          <Route path="/manus" element={<ManusPage />} />
-          <Route path="/gravityclaw" element={<GravityClawPage />} />
-          <Route path="/nullclaw" element={<NullClawPage />} />
+          {/* Experimental infra pages — 404 unless ?dev=1 */}
+          <Route
+            path="/manus"
+            element={
+              <DevOnly>
+                <ManusPage />
+              </DevOnly>
+            }
+          />
+          <Route
+            path="/gravityclaw"
+            element={
+              <DevOnly>
+                <GravityClawPage />
+              </DevOnly>
+            }
+          />
+          <Route
+            path="/nullclaw"
+            element={
+              <DevOnly>
+                <NullClawPage />
+              </DevOnly>
+            }
+          />
 
           <Route
             path="/profile"

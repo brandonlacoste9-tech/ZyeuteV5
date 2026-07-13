@@ -87,9 +87,16 @@ export function getPool(): pg.Pool {
     if (!process.env.DATABASE_URL) {
       console.warn("⚠️ [STORAGE] DATABASE_URL is not defined in process.env!");
     } else {
+      const url = process.env.DATABASE_URL;
+      // Transaction pooler (6543) breaks prepared statements / long sessions with node-pg.
+      if (/:(6543)\b/.test(url) || url.includes("6543/postgres")) {
+        console.warn(
+          "⚠️ [STORAGE] DATABASE_URL uses port 6543 (transaction mode). Prefer Supabase session pooler port 5432 for Drizzle/pg.",
+        );
+      }
       console.log(
         "🔌 [STORAGE] Initializing pool with URL:",
-        process.env.DATABASE_URL.substring(0, 30) + "...",
+        url.substring(0, 30) + "...",
       );
     }
     const isProd = process.env.NODE_ENV === "production";

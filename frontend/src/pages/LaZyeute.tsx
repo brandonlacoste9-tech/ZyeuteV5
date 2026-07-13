@@ -24,7 +24,11 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useInfiniteFeed, type FeedType } from "@/hooks/useInfiniteFeed";
 import { usePageVisibility } from "@/hooks/usePageVisibility";
 import { usePreloadHint } from "@/hooks/useVideoTransition";
-const MuxVideoPlayer = React.lazy(() => import("@/components/video/MuxVideoPlayer").then(m => ({ default: m.MuxVideoPlayer })));
+const MuxVideoPlayer = React.lazy(() =>
+  import("@/components/video/MuxVideoPlayer").then((m) => ({
+    default: m.MuxVideoPlayer,
+  })),
+);
 import { VideoPlayer } from "@/components/features/VideoPlayer";
 import { VideoPlaybackDiagnostic } from "@/components/video/VideoPlaybackDiagnostic";
 
@@ -293,9 +297,12 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
     id: "demo-6",
     user_id: "demo-user-1",
     type: "video" as const,
-    caption: "Le temps des sucres est arrivé! Petit déjeuner à la cabane! 🧇 #Quebec #Erable",
-    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
-    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
+    caption:
+      "Le temps des sucres est arrivé! Petit déjeuner à la cabane! 🧇 #Quebec #Erable",
+    media_url:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
+    mediaUrl:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051415_3583fd2d-dafb-4a34-bce0-64577f419f4a.mp4",
     thumbnail_url: "/demo/branding.png",
     thumbnailUrl: "/demo/branding.png",
     user: {
@@ -305,20 +312,38 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
       avatar_url: null,
       is_verified: true,
       created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
     fire_count: 15400,
     comment_count: 850,
     created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-7",
     user_id: "demo-user-2",
     type: "video" as const,
-    caption: "La Chute-Montmorency est plus haute que le Niagara! 🌊 #VoyageQuebec",
-    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
-    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
+    caption:
+      "La Chute-Montmorency est plus haute que le Niagara! 🌊 #VoyageQuebec",
+    media_url:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
+    mediaUrl:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051514_01824e32-ce71-4386-bf19-c4e5c769acf9.mp4",
     thumbnail_url: "/demo/nature.png",
     thumbnailUrl: "/demo/nature.png",
     user: {
@@ -328,20 +353,37 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
       avatar_url: null,
       is_verified: true,
       created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
     fire_count: 12500,
     comment_count: 420,
     created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-8",
     user_id: "demo-user-3",
     type: "video" as const,
     caption: "Cirque du Soleil — quand Montréal illumine le monde entier! ✨",
-    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
-    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
+    media_url:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
+    mediaUrl:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051620_5174c6fe-ed9e-4f17-b2ac-bcc3ca314dac.mp4",
     thumbnail_url: "/demo/montreal.png",
     thumbnailUrl: "/demo/montreal.png",
     user: {
@@ -351,20 +393,38 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
       avatar_url: null,
       is_verified: true,
       created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
     fire_count: 22100,
     comment_count: 1100,
     created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-9",
     user_id: "demo-user-4",
     type: "video" as const,
-    caption: "Les oies bernaches arrivent dans le fleuve! Signal du printemps 🌿",
-    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
-    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
+    caption:
+      "Les oies bernaches arrivent dans le fleuve! Signal du printemps 🌿",
+    media_url:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
+    mediaUrl:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051838_56d920dd-1070-4856-b8ab-56cb188ae428.mp4",
     thumbnail_url: "/demo/nature.png",
     thumbnailUrl: "/demo/nature.png",
     user: {
@@ -374,20 +434,38 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
       avatar_url: null,
       is_verified: true,
       created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
     fire_count: 8900,
     comment_count: 210,
     created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
   },
   {
     id: "demo-10",
     user_id: "demo-user-5",
     type: "video" as const,
-    caption: "Roadtrip sur la route 132 en Gaspésie, paysages à couper le souffle! 🌊",
-    media_url: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
-    mediaUrl: "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
+    caption:
+      "Roadtrip sur la route 132 en Gaspésie, paysages à couper le souffle! 🌊",
+    media_url:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
+    mediaUrl:
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3FpjWWwSTgfvg6hEFzeRHYWHcBU/hf_20260630_051940_f5b624ba-15fd-469f-8633-320650121d3e.mp4",
     thumbnail_url: "/demo/nature.png",
     thumbnailUrl: "/demo/nature.png",
     user: {
@@ -397,13 +475,28 @@ const DEMO_VIDEOS: Array<Post & { user: User }> = [
       avatar_url: null,
       is_verified: true,
       created_at: new Date().toISOString(),
-      coins: 0, piasse_balance: 0, total_karma: 0, fire_score: 0, followers_count: 0, following_count: 0, posts_count: 0, is_following: false, role: "citoyen"
+      coins: 0,
+      piasse_balance: 0,
+      total_karma: 0,
+      fire_score: 0,
+      followers_count: 0,
+      following_count: 0,
+      posts_count: 0,
+      is_following: false,
+      role: "citoyen",
     } as User,
     fire_count: 18500,
     comment_count: 670,
     created_at: new Date().toISOString(),
-    visibility: "public", hive_id: "quebec", is_moderated: false, moderation_approved: true, is_hidden: false, is_ephemeral: false, view_count: 0, max_views: 1,
-  }
+    visibility: "public",
+    hive_id: "quebec",
+    is_moderated: false,
+    moderation_approved: true,
+    is_hidden: false,
+    is_ephemeral: false,
+    view_count: 0,
+    max_views: 1,
+  },
 ];
 
 /** Post with optional engagement fields from API */
@@ -445,15 +538,18 @@ export const Zyeute: React.FC = () => {
     [location.search],
   );
 
-  // Demo clips only with ?demo=1 — avoids filling the feed with test videos in production
+  // Demo clips only with ?demo=1 — never inject into production FYP by default
   const demoFeed = useMemo(
     () => new URLSearchParams(location.search).get("demo") === "1",
     [location.search],
   );
   const posts = useMemo(() => {
-    if (apiPosts.length > 0) return [...DEMO_VIDEOS, ...apiPosts];
-    if (!isLoading) return DEMO_VIDEOS;
-    return [];
+    if (demoFeed) {
+      if (apiPosts.length > 0) return [...DEMO_VIDEOS, ...apiPosts];
+      if (!isLoading) return DEMO_VIDEOS;
+      return [];
+    }
+    return apiPosts;
   }, [apiPosts, isLoading, demoFeed]);
 
   // Recover from empty API after deploy/cache glitches
@@ -583,13 +679,15 @@ export const Zyeute: React.FC = () => {
   const { tap, impact, success, fire, comment, share, save, newFollower } =
     useHaptics();
   const [uiVisible, setUiVisible] = useState(true);
-  const [heartBursts, setHeartBursts] = useState<Array<{
-    postId: string;
-    id: number;
-    x: number;
-    y: number;
-    rotation: number;
-  }>>([]);
+  const [heartBursts, setHeartBursts] = useState<
+    Array<{
+      postId: string;
+      id: number;
+      x: number;
+      y: number;
+      rotation: number;
+    }>
+  >([]);
 
   // Progress bar tracking (TikTok-style).
   // Driven imperatively so the high-frequency `timeupdate` events never
@@ -764,7 +862,11 @@ export const Zyeute: React.FC = () => {
     }, 1000);
   }, []);
 
-  const handleFireToggle = async (postId: string, fromDoubleTap = false, coords?: { x: number; y: number }) => {
+  const handleFireToggle = async (
+    postId: string,
+    fromDoubleTap = false,
+    coords?: { x: number; y: number },
+  ) => {
     if (!uid) {
       toast.error("Connecte-toi pour mettre du feu.");
       navigate("/login", { state: { from: location.pathname } });
@@ -834,7 +936,7 @@ export const Zyeute: React.FC = () => {
       ) {
         lastTapRef.current = null;
         impact();
-        
+
         let clientX = window.innerWidth / 2;
         let clientY = window.innerHeight / 2;
         if ("touches" in e) {
@@ -1002,40 +1104,44 @@ export const Zyeute: React.FC = () => {
   }
 
   // Empty state - lightweight inline message, NOT a full-screen replacement
-  const emptyFeedContent = posts.length === 0 && (
+  const emptyFeedContent = posts.length === 0 && !isLoading && !isPending && (
     <div className="px-4 pt-6 pb-6 h-full min-h-full flex items-center justify-center snap-start">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 max-w-sm w-full">
         <div className="text-4xl mb-3">🦫</div>
         <p className="text-lg font-semibold text-white">
-          Aucune publication pour l'instant
+          {feedError
+            ? "Le fil a planté un peu"
+            : "Aucune publication pour l'instant"}
         </p>
         <p className="mt-1 text-sm text-white/70">
           {feedError
-            ? "Impossible de charger le fil. Réessaie dans un instant."
+            ? "Vérifie ta connexion, puis réessaie. Si ça continue, le serveur se réveille peut-être (Render free)."
             : "Sois le premier à publier du contenu québécois!"}
         </p>
         {feedError && (
-          <p className="mt-2 text-xs text-red-300/80">
+          <p className="mt-2 text-xs text-red-300/80 break-words">
             {(feedError as Error).message || "Erreur réseau"}
           </p>
         )}
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => refetch()}
-            className="flex-1 border border-gold-500/50 text-gold-400 px-4 py-2 rounded-xl font-bold text-sm"
+            onClick={() => {
+              void refetch();
+            }}
+            className="flex-1 min-w-[7rem] border border-gold-500/50 text-gold-400 px-4 py-2 rounded-xl font-bold text-sm"
           >
             Réessayer
           </button>
           <Link
             to="/create"
-            className="flex-1 bg-gold-500 text-black px-4 py-2 rounded-xl font-bold text-center text-sm"
+            className="flex-1 min-w-[7rem] bg-gold-500 text-black px-4 py-2 rounded-xl font-bold text-center text-sm"
           >
             Créer un post
           </Link>
           <Link
             to="/explore"
-            className="flex-1 border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-center text-sm hover:bg-white/5"
+            className="flex-1 min-w-[7rem] border border-white/20 text-white px-4 py-2 rounded-xl font-medium text-center text-sm hover:bg-white/5"
           >
             Explorer
           </Link>
@@ -1179,7 +1285,11 @@ export const Zyeute: React.FC = () => {
                     {isVideoSlide ? (
                       nearActive ? (
                         useMuxPlayer ? (
-                          <React.Suspense fallback={<div className="w-full h-full bg-black" />}>
+                          <React.Suspense
+                            fallback={
+                              <div className="w-full h-full bg-black" />
+                            }
+                          >
                             <MuxVideoPlayer
                               playbackId={muxId || ""}
                               thumbnailUrl={slidePoster}
@@ -1290,30 +1400,34 @@ export const Zyeute: React.FC = () => {
                   )}
 
                   {/* Heart burst animation on double-tap fire */}
-                  {heartBursts.filter(b => b.postId === post.id).map(burst => (
-                    <div
-                      key={burst.id}
-                      className="fixed z-30 pointer-events-none"
-                      style={{ 
-                        left: burst.x - 64, // Center the 128px (w-32) heart
-                        top: burst.y - 64,
-                        transform: `rotate(${burst.rotation}deg)` 
-                      }}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="w-32 h-32 drop-shadow-[0_0_30px_rgba(255,100,50,0.9)]"
-                        style={{ animation: "heartPop 0.9s ease-out forwards" }}
+                  {heartBursts
+                    .filter((b) => b.postId === post.id)
+                    .map((burst) => (
+                      <div
+                        key={burst.id}
+                        className="fixed z-30 pointer-events-none"
+                        style={{
+                          left: burst.x - 64, // Center the 128px (w-32) heart
+                          top: burst.y - 64,
+                          transform: `rotate(${burst.rotation}deg)`,
+                        }}
                       >
-                        <path
-                          d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"
-                          fill="#FF3D3D"
-                          stroke={edgeLighting}
-                          strokeWidth={0.5}
-                        />
-                      </svg>
-                    </div>
-                  ))}
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-32 h-32 drop-shadow-[0_0_30px_rgba(255,100,50,0.9)]"
+                          style={{
+                            animation: "heartPop 0.9s ease-out forwards",
+                          }}
+                        >
+                          <path
+                            d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"
+                            fill="#FF3D3D"
+                            stroke={edgeLighting}
+                            strokeWidth={0.5}
+                          />
+                        </svg>
+                      </div>
+                    ))}
 
                   {/* Gradient Overlays */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none" />
@@ -1514,11 +1628,15 @@ export const Zyeute: React.FC = () => {
                           : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
                       }}
                     >
-                      <img 
-                        src="/assets/icons/icon-fire.png" 
-                        className="w-6 h-6 object-contain drop-shadow-md" 
-                        style={{ filter: isFired ? 'brightness(1.5) drop-shadow(0 0 8px #FF6B35)' : 'none' }} 
-                        alt="Fire" 
+                      <img
+                        src="/assets/icons/icon-fire.png"
+                        className="w-6 h-6 object-contain drop-shadow-md"
+                        style={{
+                          filter: isFired
+                            ? "brightness(1.5) drop-shadow(0 0 8px #FF6B35)"
+                            : "none",
+                        }}
+                        alt="Fire"
                       />
                     </div>
                     <span
@@ -1549,10 +1667,10 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <img 
-                    src="/assets/icons/icon-comment.png" 
-                    className="w-6 h-6 object-contain drop-shadow-md" 
-                    alt="Comment" 
+                  <img
+                    src="/assets/icons/icon-comment.png"
+                    className="w-6 h-6 object-contain drop-shadow-md"
+                    alt="Comment"
                   />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
@@ -1579,10 +1697,10 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <img 
-                    src="/assets/icons/icon-share.png" 
-                    className="w-6 h-6 object-contain drop-shadow-md" 
-                    alt="Share" 
+                  <img
+                    src="/assets/icons/icon-share.png"
+                    className="w-6 h-6 object-contain drop-shadow-md"
+                    alt="Share"
                   />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
@@ -1614,11 +1732,17 @@ export const Zyeute: React.FC = () => {
                           : undefined,
                       }}
                     >
-                      <img 
-                        src="/assets/icons/icon-save.png" 
-                        className="w-6 h-6 object-contain drop-shadow-md" 
-                        style={{ filter: isSaved ? 'brightness(1.5) drop-shadow(0 0 8px ' + edgeLighting + ')' : 'none' }} 
-                        alt="Save" 
+                      <img
+                        src="/assets/icons/icon-save.png"
+                        className="w-6 h-6 object-contain drop-shadow-md"
+                        style={{
+                          filter: isSaved
+                            ? "brightness(1.5) drop-shadow(0 0 8px " +
+                              edgeLighting +
+                              ")"
+                            : "none",
+                        }}
+                        alt="Save"
                       />
                     </div>
                     <span
@@ -1648,10 +1772,10 @@ export const Zyeute: React.FC = () => {
                     border: `2px solid ${edgeLighting}`,
                   }}
                 >
-                  <img 
-                    src="/assets/icons/icon-gift.png" 
-                    className="w-6 h-6 object-contain drop-shadow-md" 
-                    alt="Gift" 
+                  <img
+                    src="/assets/icons/icon-gift.png"
+                    className="w-6 h-6 object-contain drop-shadow-md"
+                    alt="Gift"
                   />
                 </div>
                 <span className="text-[10px] font-bold text-white/80">
@@ -1763,11 +1887,22 @@ export const Zyeute: React.FC = () => {
                   height="24"
                   viewBox="0 0 24 24"
                   fill={location.pathname === "/feed" ? edgeLighting : "none"}
-                  stroke={location.pathname === "/feed" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  stroke={
+                    location.pathname === "/feed"
+                      ? edgeLighting
+                      : "rgba(255,255,255,0.5)"
+                  }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={location.pathname === "/feed" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                  style={
+                    location.pathname === "/feed"
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
+                      : {}
+                  }
                 >
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                   <polyline points="9 22 9 12 15 12 15 22" />
@@ -1808,11 +1943,22 @@ export const Zyeute: React.FC = () => {
                   height="24"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke={location.pathname === "/search" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  stroke={
+                    location.pathname === "/search"
+                      ? edgeLighting
+                      : "rgba(255,255,255,0.5)"
+                  }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={location.pathname === "/search" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                  style={
+                    location.pathname === "/search"
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
+                      : {}
+                  }
                 >
                   <circle cx="11" cy="11" r="7" />
                   <path d="m21 21-4.35-4.35" />
@@ -1885,11 +2031,22 @@ export const Zyeute: React.FC = () => {
                   height="24"
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke={location.pathname === "/arcade" ? edgeLighting : "rgba(255,255,255,0.5)"}
+                  stroke={
+                    location.pathname === "/arcade"
+                      ? edgeLighting
+                      : "rgba(255,255,255,0.5)"
+                  }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={location.pathname === "/arcade" ? { filter: "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))" } : {}}
+                  style={
+                    location.pathname === "/arcade"
+                      ? {
+                          filter:
+                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
+                        }
+                      : {}
+                  }
                 >
                   <rect x="2" y="6" width="20" height="12" rx="2" />
                   <path d="M6 12h4m-2-2v4M15 12h.01M18 10h.01" />
