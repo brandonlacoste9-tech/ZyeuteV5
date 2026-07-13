@@ -2,7 +2,7 @@
  * Application routes — wires real pages (previously many were missing from the router).
  */
 
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import type { ReactNode } from "react";
 import {
   Routes,
@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { RequireModerator } from "@/components/auth/RequireModerator";
 import { LoadingScreen as LoadingScreenComponent } from "@/components/LoadingScreen";
 import { RouteErrorBoundary } from "@/components/RouteErrorBoundary";
+import { lazyWithRetry as lazy } from "@/lib/lazyWithRetry";
 
 function LoadingScreen({ message }: { message?: string }) {
   return <LoadingScreenComponent message={message || "Chargement..."} />;

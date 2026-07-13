@@ -3,7 +3,7 @@
  * Feature pages live under `src/pages` and are wired in `src/routes/AppRoutes.tsx`.\
  */
 
-import { lazy, Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { BrowserRouter as Router, useLocation } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -23,15 +23,17 @@ import { DesktopHeader } from "@/components/layout/DesktopHeader";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { Analytics } from "@vercel/analytics/react";
 
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
+
 // Lazy-load TIGuyFullScreen to keep it out of the main index chunk.
-const TIGuyFullScreen = lazy(() =>
+const TIGuyFullScreen = lazyWithRetry(() =>
   import("@/components/tiguy/TIGuyFullScreen").then((m) => ({
     default: m.TIGuyFullScreen,
   })),
 );
 
 // Lazy-load Onboarding overlay
-const OnboardingOverlay = lazy(() =>
+const OnboardingOverlay = lazyWithRetry(() =>
   import("@/pages/Onboarding").then((m) => ({ default: m.Onboarding })),
 );
 
@@ -76,7 +78,7 @@ function AppShell() {
     <>
       <ApiHealthBanner />
       <AgeGateModal />
-      
+
       {/* Global Desktop Layout Wrapper */}
       <div className="flex flex-col min-h-screen w-full">
         <DesktopHeader />

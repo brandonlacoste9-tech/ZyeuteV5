@@ -5,6 +5,7 @@
 
 import React from "react";
 import { logger } from "../lib/logger";
+import { isChunkLoadError, tryHardReloadOnce } from "../lib/lazyWithRetry";
 
 const errorBoundaryLogger = logger.withContext("ErrorBoundary");
 
@@ -21,30 +22,39 @@ interface State {
   error: Error | null;
   errorInfo: React.ErrorInfo | null;
   errorCount: number;
+  isChunkError: boolean;
 }
 
 // Error categorization for better user messaging
 function categorizeError(error: Error): {
-  category: "network" | "render" | "state" | "unknown";
+  category: "network" | "chunk" | "render" | "state" | "unknown";
   userMessage: string;
   isRecoverable: boolean;
 } {
   const message = error.message.toLowerCase();
   const stack = error.stack?.toLowerCase() || "";
 
-  // Network errors (incl. failed lazy route chunks after a deploy)
+  // Stale SPA chunk after deploy (looks like "network" but is a cache issue)
+  if (isChunkLoadError(error)) {
+    return {
+      category: "chunk",
+      userMessage:
+        "Mise à jour de l'app détectée. Appuie sur « Recharger » (ou ferme l'onglet et rouvre zyeute.com).",
+      isRecoverable: true,
+    };
+  }
+
+  // Real network / timeout errors
   if (
-    message.includes("fetch") ||
     message.includes("network") ||
     message.includes("timeout") ||
-    message.includes("dynamically imported module") ||
-    message.includes("loading chunk") ||
-    message.includes("failed to load")
+    message.includes("failed to fetch") ||
+    message.includes("fetch")
   ) {
     return {
       category: "network",
       userMessage:
-        "Problème de connexion. Vérifie ton internet, puis recharge la page (ou ferme l’onglet et rouvre zyeute.com).",
+        "Problème de connexion. Vérifie ton internet, puis recharge la page.",
       isRecoverable: true,
     };
   }
@@ -89,11 +99,16 @@ export class ErrorBoundary extends React.Component<Props, State> {
       error: null,
       errorInfo: null,
       errorCount: 0,
+      isChunkError: false,
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
-    return { hasError: true, error };
+    return {
+      hasError: true,
+      error,
+      isChunkError: isChunkLoadError(error),
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
@@ -110,14 +125,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
     this.setState((prevState) => ({
       errorInfo,
       errorCount: prevState.errorCount + 1,
+      isChunkError: isChunkLoadError(error),
     }));
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
 
-    // Auto-retry for recoverable errors (max 3 attempts)
+    // After a deploy, old JS chunks 404 → hard reload once (clears stale tab)
+    if (isChunkLoadError(error)) {
+      if (tryHardReloadOnce()) {
+        return;
+      }
+    }
+
+    // Soft auto-retry for other recoverable errors (max 3 attempts)
     const errorCategory = categorizeError(error);
-    if (errorCategory.isRecoverable && this.state.errorCount < 3) {
+    if (
+      errorCategory.isRecoverable &&
+      errorCategory.category !== "chunk" &&
+      this.state.errorCount < 3
+    ) {
       logger.info("Attempting auto-recovery from error", {
         category: errorCategory.category,
         attempt: this.state.errorCount + 1,
@@ -143,12 +170,18 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   handleRetry = () => {
+    // Chunk failures need a full reload (soft reset keeps the dead import)
+    if (this.state.isChunkError || isChunkLoadError(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     logger.info("Resetting error boundary state");
     this.setState({
       hasError: false,
       error: null,
       errorInfo: null,
       errorCount: 0,
+      isChunkError: false,
     });
     this.props.onReset?.();
   };
@@ -162,27 +195,31 @@ export class ErrorBoundary extends React.Component<Props, State> {
       const errorCategory = categorizeError(this.state.error);
       const showRetry =
         errorCategory.isRecoverable && this.state.errorCount < 3;
+      const isChunk = errorCategory.category === "chunk";
+      const isNetwork = errorCategory.category === "network" || isChunk;
 
       return (
         <div className="min-h-screen leather-dark flex items-center justify-center p-4">
           <div className="max-w-md w-full text-center">
             <div className="mb-6">
               <div className="text-6xl mb-4">
-                {errorCategory.category === "network" ? "📡" : "⚜️"}
+                {isChunk ? "🔄" : isNetwork ? "📡" : "⚜️"}
               </div>
               <h1 className="text-2xl font-bold text-white mb-2">
-                {errorCategory.category === "network"
-                  ? "Problème de connexion"
-                  : "Oups! Quelque chose a planté"}
+                {isChunk
+                  ? "Mise à jour requise"
+                  : errorCategory.category === "network"
+                    ? "Problème de connexion"
+                    : "Oups! Quelque chose a planté"}
               </h1>
               <p className="text-white/60 mb-6">{errorCategory.userMessage}</p>
             </div>
 
-            {/* Error details in development */}
-            {process.env.NODE_ENV === "development" && this.state.error && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-red-400 text-xs font-mono text-left overflow-auto max-h-32">
-                  {this.state.error.message}
+            {/* Always show a short code so support/debug is possible on mobile */}
+            {this.state.error && (
+              <div className="mb-6 p-3 bg-white/5 border border-white/10 rounded-xl">
+                <p className="text-white/40 text-[10px] font-mono text-left overflow-auto max-h-20 break-all">
+                  {this.state.error.message.slice(0, 180)}
                 </p>
               </div>
             )}
@@ -195,27 +232,46 @@ export class ErrorBoundary extends React.Component<Props, State> {
             )}
 
             <div className="flex flex-col gap-3">
-              {/* Retry button for recoverable errors */}
-              {showRetry && (
+              {/* Primary recovery — hard reload for chunk errors */}
+              <button
+                onClick={() => {
+                  if (isChunk) {
+                    try {
+                      sessionStorage.removeItem("zyeute_chunk_reload_at");
+                    } catch {
+                      /* ignore */
+                    }
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("_r", String(Date.now()));
+                    window.location.replace(url.toString());
+                  } else {
+                    this.handleRetry();
+                  }
+                }}
+                className="w-full px-6 py-3 bg-gold-gradient text-black font-semibold rounded-xl hover:scale-105 transition-transform animate-pulse"
+              >
+                {isChunk
+                  ? "🔄 Recharger l'app"
+                  : showRetry
+                    ? "⚡ Réessayer maintenant"
+                    : "🔄 Recharger la page"}
+              </button>
+
+              {/* Reload button */}
+              {!isChunk && (
                 <button
-                  onClick={this.handleRetry}
-                  className="w-full px-6 py-3 bg-gold-gradient text-black font-semibold rounded-xl hover:scale-105 transition-transform animate-pulse"
+                  onClick={() => window.location.reload()}
+                  className="w-full px-6 py-3 bg-gold-gradient text-black font-semibold rounded-xl hover:scale-105 transition-transform"
                 >
-                  ⚡ Réessayer maintenant
+                  🔄 Recharger la page
                 </button>
               )}
 
-              {/* Reload button */}
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-6 py-3 bg-gold-gradient text-black font-semibold rounded-xl hover:scale-105 transition-transform"
-              >
-                🔄 Recharger la page
-              </button>
-
               {/* Home button */}
               <button
-                onClick={() => (window.location.href = "/")}
+                onClick={() => {
+                  window.location.href = `/?_r=${Date.now()}`;
+                }}
                 className="w-full px-6 py-3 bg-white/5 text-white font-semibold rounded-xl hover:bg-white/10 transition-colors"
               >
                 🏠 Retour à l&apos;accueil
