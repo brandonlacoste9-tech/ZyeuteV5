@@ -1181,17 +1181,11 @@ export const Zyeute: React.FC = () => {
     </div>
   );
 
-  // Premium action rail — phone one size smaller; desktop keeps a bit more presence
+  // Phone: bare icons (TikTok-style). Desktop: gold-rim discs beside the stage.
   const railIconClass =
-    "relative w-10 h-10 lg:w-[52px] lg:h-[52px] rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 active:scale-90";
-  const railIconStyle: React.CSSProperties = {
-    background:
-      "linear-gradient(160deg, rgba(55,42,32,0.92) 0%, rgba(18,14,12,0.95) 55%, rgba(10,8,6,0.98) 100%)",
-    boxShadow:
-      "0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.5)",
-    border: "1.5px solid rgba(212,175,55,0.45)",
-  };
-  const railIconImgClass = "w-5 h-5 lg:w-7 lg:h-7 object-contain relative z-10";
+    "relative flex items-center justify-center w-10 h-10 lg:w-[52px] lg:h-[52px] rounded-full transition-all duration-200 active:scale-90 lg:overflow-hidden lg:border-[1.5px] lg:border-[rgba(212,175,55,0.45)] lg:bg-[linear-gradient(160deg,rgba(55,42,32,0.92)_0%,rgba(18,14,12,0.95)_55%,rgba(10,8,6,0.98)_100%)] lg:shadow-[0_3px_12px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)]";
+  const railIconImgClass =
+    "w-7 h-7 lg:w-7 lg:h-7 object-contain relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]";
   const railLabelClass =
     "text-[10px] lg:text-[11px] font-bold tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mt-0.5";
 
@@ -1637,27 +1631,15 @@ export const Zyeute: React.FC = () => {
                     data-testid={`button-fire-${currentPost.id}`}
                   >
                     <div
-                      className={railIconClass}
-                      style={{
-                        ...railIconStyle,
-                        ...(isFired
-                          ? {
-                              border: "1.5px solid rgba(255,80,60,0.75)",
-                              background:
-                                "linear-gradient(160deg, rgba(80,25,18,0.95) 0%, rgba(30,10,8,0.98) 100%)",
-                              boxShadow:
-                                "0 4px 18px rgba(255,60,40,0.45), 0 0 22px rgba(255,80,40,0.35), inset 0 1px 0 rgba(255,200,180,0.15)",
-                            }
-                          : {}),
-                      }}
+                      className={`${railIconClass} ${isFired ? "lg:border-red-400/80 lg:bg-[linear-gradient(160deg,rgba(80,25,18,0.95)_0%,rgba(30,10,8,0.98)_100%)] lg:shadow-[0_4px_18px_rgba(255,60,40,0.45)]" : ""}`}
                     >
                       <img
                         src="/assets/icons/icon-fire.png"
                         className={railIconImgClass}
                         style={{
                           filter: isFired
-                            ? "brightness(1.5) saturate(1.4) drop-shadow(0 0 8px #FF4D2E)"
-                            : "brightness(1.2) drop-shadow(0 1px 2px rgba(0,0,0,0.6))",
+                            ? "brightness(1.55) saturate(1.45) drop-shadow(0 0 10px #FF4D2E)"
+                            : "brightness(1.25) drop-shadow(0 2px 4px rgba(0,0,0,0.75))",
                         }}
                         alt="Fire"
                       />
@@ -1681,10 +1663,10 @@ export const Zyeute: React.FC = () => {
                 className="flex flex-col items-center press-scale"
                 data-testid={`link-comments-${currentPost.id}`}
               >
-                <div className={railIconClass} style={railIconStyle}>
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-comment.png"
-                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
+                    className={`${railIconImgClass} brightness-125`}
                     alt="Comment"
                   />
                 </div>
@@ -1703,10 +1685,10 @@ export const Zyeute: React.FC = () => {
                 className="flex flex-col items-center press-scale"
                 data-testid={`button-share-${currentPost.id}`}
               >
-                <div className={railIconClass} style={railIconStyle}>
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-share.png"
-                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
+                    className={`${railIconImgClass} brightness-125`}
                     alt="Share"
                   />
                 </div>
@@ -1725,27 +1707,15 @@ export const Zyeute: React.FC = () => {
                     data-testid={`button-save-${currentPost.id}`}
                   >
                     <div
-                      className={railIconClass}
-                      style={{
-                        ...railIconStyle,
-                        ...(isSaved
-                          ? {
-                              border: "1.5px solid rgba(255,215,80,0.85)",
-                              background:
-                                "linear-gradient(160deg, rgba(90,70,25,0.95) 0%, rgba(30,22,8,0.98) 100%)",
-                              boxShadow:
-                                "0 4px 18px rgba(212,175,55,0.4), 0 0 22px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,230,150,0.2)",
-                            }
-                          : {}),
-                      }}
+                      className={`${railIconClass} ${isSaved ? "lg:border-gold-400/90 lg:bg-[linear-gradient(160deg,rgba(90,70,25,0.95)_0%,rgba(30,22,8,0.98)_100%)] lg:shadow-[0_4px_18px_rgba(212,175,55,0.4)]" : ""}`}
                     >
                       <img
                         src="/assets/icons/icon-save.png"
                         className={railIconImgClass}
                         style={{
                           filter: isSaved
-                            ? "brightness(1.45) drop-shadow(0 0 8px rgba(255,215,80,0.85))"
-                            : "brightness(1.2) drop-shadow(0 1px 2px rgba(0,0,0,0.6))",
+                            ? "brightness(1.5) drop-shadow(0 0 10px rgba(255,215,80,0.9))"
+                            : "brightness(1.25) drop-shadow(0 2px 4px rgba(0,0,0,0.75))",
                         }}
                         alt="Save"
                       />
@@ -1768,18 +1738,10 @@ export const Zyeute: React.FC = () => {
                 }}
                 className="flex flex-col items-center press-scale"
               >
-                <div
-                  className={railIconClass}
-                  style={{
-                    ...railIconStyle,
-                    border: "1.5px solid rgba(212,175,55,0.65)",
-                    boxShadow:
-                      "0 4px 16px rgba(0,0,0,0.55), 0 0 14px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
-                  }}
-                >
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-gift.png"
-                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
+                    className={`${railIconImgClass} brightness-125`}
                     alt="Gift"
                   />
                 </div>
