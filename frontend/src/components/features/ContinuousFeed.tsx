@@ -62,6 +62,7 @@ import {
 } from "@/lib/feedSession";
 import { recordWatch } from "@/lib/watchTracking";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchWatchHistory, pourToiRank } from "@/lib/pourToiRanker";
 
 function allowDemoVideos(): boolean {
   return (
@@ -760,10 +761,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       );
 
       if (result.posts?.length) {
-        validPosts = prepareFeedPage(
-          filterPlayablePosts(result.posts),
-          sessionId,
-        );
+        let pagePosts = filterPlayablePosts(result.posts);
+        // Client-side Pour Toi re-rank from watch history (explore / following-fallback)
+        if (
+          (infiniteType === "explore" || infiniteType === "smart") &&
+          user?.id
+        ) {
+          try {
+            const history = await fetchWatchHistory(user.id);
+            if (history.length > 0) {
+              pagePosts = pourToiRank(pagePosts, history) as typeof pagePosts;
+            }
+          } catch {
+            /* keep server order */
+          }
+        }
+        validPosts = prepareFeedPage(pagePosts, sessionId);
       }
 
       if (validPosts.length === 0) {
@@ -795,7 +808,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [savedState, feedType]);
+  }, [savedState, feedType, user?.id]);
 
   // Rotate session after long background (PWA resume)
   useEffect(() => {
@@ -870,8 +883,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       });
 
       if (result.posts.length > 0) {
+        let pagePosts = filterPlayablePosts(result.posts);
+        if (
+          (infiniteType === "explore" || infiniteType === "smart") &&
+          user?.id
+        ) {
+          try {
+            const history = await fetchWatchHistory(user.id);
+            if (history.length > 0) {
+              pagePosts = pourToiRank(pagePosts, history) as typeof pagePosts;
+            }
+          } catch {
+            /* keep server order */
+          }
+        }
         const validPosts = prepareFeedPage(
-          filterPlayablePosts(result.posts),
+          pagePosts,
           feedSessionRef.current,
           postsRef.current.length,
         );
@@ -890,7 +917,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, nextCursor, feedType, isFollowingFallback]);
+  }, [
+    loadingMore,
+    hasMore,
+    nextCursor,
+    feedType,
+    isFollowingFallback,
+    user?.id,
+  ]);
 
   // [SURGICAL] Momentum Check: Show content within 2 seconds max
   useEffect(() => {

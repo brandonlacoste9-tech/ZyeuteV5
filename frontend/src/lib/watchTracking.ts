@@ -5,6 +5,7 @@
  * post ids in localStorage and send the most recent ones with each feed request.
  */
 import { apiCall } from "@/services/api";
+import { invalidatePourToiCache } from "@/lib/pourToiRanker";
 
 const GUEST_SEEN_KEY = "zyeute_seen_posts";
 /** Total ids retained locally for guests. */
@@ -17,7 +18,9 @@ function readGuestSeen(): string[] {
     const raw = localStorage.getItem(GUEST_SEEN_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((x) => typeof x === "string")
+      : [];
   } catch {
     return [];
   }
@@ -51,13 +54,18 @@ export function getGuestSeenForRequest(): string[] {
  */
 export function recordWatch(
   postId: string,
-  opts: { isAuthenticated: boolean; watchDurationMs?: number; completionRate?: number } = {
+  opts: {
+    isAuthenticated: boolean;
+    watchDurationMs?: number;
+    completionRate?: number;
+  } = {
     isAuthenticated: false,
   },
 ): void {
   if (!postId) return;
   addGuestSeen(postId);
   if (!opts.isAuthenticated) return;
+  invalidatePourToiCache();
   void apiCall("/feed/watched", {
     method: "POST",
     body: JSON.stringify({

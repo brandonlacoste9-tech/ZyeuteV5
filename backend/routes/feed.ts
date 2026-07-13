@@ -18,6 +18,11 @@ import {
   shuffleWithSeed,
   unseenFirst,
 } from "../../shared/utils/feedDedup.js";
+import {
+  extractTagsFromPost,
+  mergeAffinityTags,
+  personalizePostOrder,
+} from "../lib/personalization.js";
 
 /**
  * Resolve a stable numeric shuffle seed for the feed. A client-supplied session
@@ -835,6 +840,19 @@ router.get(
         }
       }
 
+      // ── Personalization: affinity tags + region soft re-rank (all feed types) ──
+      let rankedPool = (posts || []) as Record<string, unknown>[];
+      if (
+        viewerId &&
+        (viewerAffinities.length > 0 || viewerRegion) &&
+        rankedPool.length > 0
+      ) {
+        rankedPool = personalizePostOrder(rankedPool, {
+          affinityTags: viewerAffinities,
+          region: viewerRegion,
+        });
+      }
+
       // ── Subscription boost: multiply viral_score by tier multiplier then re-sort ──
       const BOOST: Record<string, number> = {
         gold: 5,
@@ -843,13 +861,14 @@ router.get(
         or: 5,
         argent: 3,
       };
-      const boostedPosts = (posts || []).map((p: Record<string, unknown>) => {
+      const boostedPosts = rankedPool.map((p: Record<string, unknown>) => {
         if (feedType === "explore") {
+          // Keep personalization order; viral_score already blended in personalizePostOrder
           return {
             ...p,
-            // PATH A: Score is already calculated natively by the RPC decay algorithm.
             viral_score: Number(p.viral_score) || 0,
             _boost_tier: "explore",
+            _personalized: Boolean(viewerAffinities.length),
           };
         }
         const tier = String(
@@ -864,7 +883,7 @@ router.get(
         };
       });
       // Sort candidates stably/deterministically before shuffling
-      // Skip resorting for Explore because Path A natively sorts via RPC
+      // Explore: only resort if we did NOT personalize (RPC order is fine as base)
       if (feedType !== "explore") {
         boostedPosts.sort(
           (a: any, b: any) =>
@@ -1092,6 +1111,47 @@ router.post(
         },
         { onConflict: "user_id,publication_id", ignoreDuplicates: false },
       );
+
+      // Learn affinity tags from engaged watches (≥40% complete or ≥5s)
+      const engaged =
+        (typeof completionRate === "number" && completionRate >= 0.4) ||
+        (typeof watchDurationMs === "number" && watchDurationMs >= 5000);
+      if (engaged) {
+        void (async () => {
+          try {
+            const { data: pub } = await supabase
+              .from("publications")
+              .select(
+                "hashtags, detected_themes, caption, content, city, region, region_id",
+              )
+              .eq("id", publicationId)
+              .maybeSingle();
+            if (!pub) return;
+            const learned = extractTagsFromPost(pub as any);
+            if (!learned.length) return;
+            const { data: profile } = await supabase
+              .from("user_profiles")
+              .select("affinity_tags")
+              .eq("id", viewerId)
+              .maybeSingle();
+            const merged = mergeAffinityTags(
+              (profile?.affinity_tags as string[]) || [],
+              learned,
+              30,
+            );
+            await supabase
+              .from("user_profiles")
+              .update({
+                affinity_tags: merged,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", viewerId);
+          } catch {
+            /* non-critical */
+          }
+        })();
+      }
+
       res.json({ ok: true });
     } catch (err) {
       // fail silently — watch tracking is non-critical

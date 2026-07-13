@@ -1209,6 +1209,7 @@ function mapBackendUser(user: Record<string, any>): User {
       user.subscriptionTier || user.subscription_tier || "free",
     cash_credits: user.cashCredits || user.cash_credits || 0,
     stripe_connect_id: user.stripeConnectId || user.stripe_connect_id || null,
+    affinity_tags: user.affinityTags || user.affinity_tags || [],
   } as unknown as User;
 }
 

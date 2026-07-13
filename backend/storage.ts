@@ -474,6 +474,8 @@ export class DatabaseStorage implements IStorage {
       snakeUpdates.subscription_tier = updates.subscriptionTier;
     if (updates.arcadePlaytime !== undefined)
       snakeUpdates.arcade_playtime = updates.arcadePlaytime;
+    if ((updates as any).affinityTags !== undefined)
+      snakeUpdates.affinity_tags = (updates as any).affinityTags;
 
     try {
       const result = await withTimeout(

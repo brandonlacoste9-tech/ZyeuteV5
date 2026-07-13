@@ -407,6 +407,8 @@ router.get("/users/me", optionalAuth, async (req: Request, res: Response) => {
       city: data.city,
       regionId: data.region_id,
       subscriptionTier: data.subscription_tier || "free",
+      affinityTags: data.affinity_tags || [],
+      affinity_tags: data.affinity_tags || [],
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -443,6 +445,9 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
       hive_id: z.string().max(50).optional(),
       preferred_language: z.string().max(10).optional(),
       region_id: z.string().max(100).optional(),
+      // Pour Toi interest tags (hashtag-style)
+      affinityTags: z.array(z.string().min(1).max(40)).max(40).optional(),
+      affinity_tags: z.array(z.string().min(1).max(40)).max(40).optional(),
     });
 
     const parsed = updateUserSchema.safeParse(req.body);
@@ -483,6 +488,24 @@ router.patch("/users/me", requireAuth, async (req: Request, res: Response) => {
     if (rawData.hive_id !== undefined) normalized.hiveId = rawData.hive_id;
     if (rawData.region_id !== undefined)
       normalized.regionId = rawData.region_id;
+
+    // Affinity tags → always persist via REST (array column)
+    const affinityRaw = rawData.affinityTags ?? rawData.affinity_tags;
+    if (affinityRaw !== undefined && supabaseAdmin) {
+      const tags = (affinityRaw as string[])
+        .map((t) =>
+          String(t).toLowerCase().replace(/^#/, "").trim().slice(0, 40),
+        )
+        .filter((t) => t.length >= 2)
+        .slice(0, 40);
+      await supabaseAdmin
+        .from("user_profiles")
+        .update({
+          affinity_tags: tags,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", req.userId!);
+    }
 
     const updated = await storage.updateUser(req.userId!, normalized);
 
@@ -589,11 +612,11 @@ router.get("/users/:id/friends", async (req: Request, res: Response) => {
   try {
     const followers = await storage.getFollowers(req.params.id as string);
     const following = await storage.getFollowing(req.params.id as string);
-    
+
     // Find mutuals
-    const followerIds = new Set(followers.map(f => f.id));
-    const friends = following.filter(f => followerIds.has(f.id));
-    
+    const followerIds = new Set(followers.map((f) => f.id));
+    const friends = following.filter((f) => followerIds.has(f.id));
+
     res.json({ friends });
   } catch (error) {
     console.error("Get friends error:", error);
@@ -771,9 +794,14 @@ router.delete("/me/saved/:postId", requireAuth, async (req, res) => {
  */
 router.delete("/me", requireAuth, async (req: Request, res: Response) => {
   const userId = req.userId!;
-  
+
   if (!supabaseAdmin) {
-    return res.status(503).json({ error: "Le service d'administration de la base de données n'est pas configuré." });
+    return res
+      .status(503)
+      .json({
+        error:
+          "Le service d'administration de la base de données n'est pas configuré.",
+      });
   }
 
   try {
@@ -785,7 +813,10 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .delete()
       .or(`user_id.eq.${userId},actor_id.eq.${userId}`);
     if (notifErr) {
-      console.warn("[Account Deletion] Error deleting notifications:", notifErr.message);
+      console.warn(
+        "[Account Deletion] Error deleting notifications:",
+        notifErr.message,
+      );
     }
 
     // 2. Delete comments/commentaires
@@ -794,7 +825,10 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .delete()
       .eq("user_id", userId);
     if (commentErr) {
-      console.warn("[Account Deletion] Error deleting comments:", commentErr.message);
+      console.warn(
+        "[Account Deletion] Error deleting comments:",
+        commentErr.message,
+      );
     }
 
     // 3. Delete abonnements (follows where follower or followee is this user)
@@ -803,7 +837,10 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .delete()
       .or(`follower_id.eq.${userId},followee_id.eq.${userId}`);
     if (followErr) {
-      console.warn("[Account Deletion] Error deleting abonnements:", followErr.message);
+      console.warn(
+        "[Account Deletion] Error deleting abonnements:",
+        followErr.message,
+      );
     }
 
     // 4. Delete saved_posts
@@ -812,7 +849,10 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .delete()
       .eq("user_id", userId);
     if (savedErr) {
-      console.warn("[Account Deletion] Error deleting saved_posts:", savedErr.message);
+      console.warn(
+        "[Account Deletion] Error deleting saved_posts:",
+        savedErr.message,
+      );
     }
 
     // 5. Delete publications / posts
@@ -821,7 +861,10 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .delete()
       .eq("user_id", userId);
     if (postErr) {
-      console.warn("[Account Deletion] Error deleting publications:", postErr.message);
+      console.warn(
+        "[Account Deletion] Error deleting publications:",
+        postErr.message,
+      );
     }
 
     // 6. Delete user profile
@@ -831,21 +874,32 @@ router.delete("/me", requireAuth, async (req: Request, res: Response) => {
       .eq("id", userId);
 
     if (profileErr) {
-      console.error("[Account Deletion] Error deleting user profile:", profileErr.message);
-      return res.status(500).json({ error: "Impossible de supprimer le profil utilisateur." });
+      console.error(
+        "[Account Deletion] Error deleting user profile:",
+        profileErr.message,
+      );
+      return res
+        .status(500)
+        .json({ error: "Impossible de supprimer le profil utilisateur." });
     }
 
     // 7. Delete Auth User from Supabase Auth
-    const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    const { error: authErr } =
+      await supabaseAdmin.auth.admin.deleteUser(userId);
     if (authErr) {
-      console.error("[Account Deletion] Error deleting auth user:", authErr.message);
+      console.error(
+        "[Account Deletion] Error deleting auth user:",
+        authErr.message,
+      );
     }
 
     console.log(`[Account Deletion] Successfully deleted user ${userId}`);
     return res.json({ success: true, message: "Compte supprimé avec succès." });
   } catch (error) {
     console.error("[Account Deletion] Unexpected error:", error);
-    return res.status(500).json({ error: "Une erreur inattendue est survenue." });
+    return res
+      .status(500)
+      .json({ error: "Une erreur inattendue est survenue." });
   }
 });
 
