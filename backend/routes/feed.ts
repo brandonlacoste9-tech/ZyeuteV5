@@ -616,8 +616,13 @@ router.get(
       }
 
       // ── Exclude hidden + recently watched videos ─────────────────────────
+      // Always MERGE hidden + watched + guest client-seen — never overwrite.
       let excludedIds: string[] = [];
       let hiddenIds: string[] = [];
+      // Guests send recently-watched ids via header (same as /api/feed)
+      if (!viewerId) {
+        for (const id of parseSeenIds(req)) excludedIds.push(id);
+      }
       if (viewerId) {
         try {
           hiddenIds = await storage.getHiddenPostIds(viewerId);
@@ -628,25 +633,27 @@ router.get(
       }
       if (viewerId && (feedType === "feed" || feedType === "explore")) {
         try {
-          const sevenDaysAgo = new Date(
-            Date.now() - 7 * 24 * 60 * 60 * 1000,
+          // 30 days + higher cap so logins don't re-serve the same block of clips
+          const since = new Date(
+            Date.now() - 30 * 24 * 60 * 60 * 1000,
           ).toISOString();
           const { data: watched } = await supabase
             .from("video_views")
             .select("publication_id")
             .eq("user_id", viewerId)
-            .gte("watched_at", sevenDaysAgo)
+            .gte("watched_at", since)
             .order("watched_at", { ascending: false })
-            .limit(100);
+            .limit(500);
           if (watched?.length) {
-            excludedIds = watched.map(
-              (r: { publication_id: string }) => r.publication_id,
-            );
+            for (const r of watched as { publication_id: string }[]) {
+              if (r.publication_id) excludedIds.push(r.publication_id);
+            }
           }
         } catch {
           // non-critical
         }
       }
+      excludedIds = [...new Set(excludedIds.filter(Boolean))];
 
       let authorIds: string[] | null = null;
       if (feedType === "feed" && viewerId) {
@@ -754,14 +761,19 @@ router.get(
         BLOCK_SIZE,
       );
 
-      // If we ran out of unseen posts, wrap back to block 0
+      // If we ran out of unseen posts, reshuffle seed but KEEP exclusions when
+      // possible so users don't instantly re-see the same watched clips.
+      // Only ignore exclusions if the pool is empty even with exclusions applied.
       let didWrap = false;
       if (!error && (!posts || posts.length === 0)) {
         blockIndex = 0;
         offsetInBlock = 0;
         dbOffset = 0;
         seed = (seed + 9876543) >>> 0;
-        const fallback = await buildQuery(0, true, BLOCK_SIZE);
+        let fallback = await buildQuery(0, false, BLOCK_SIZE);
+        if (!fallback.data?.length) {
+          fallback = await buildQuery(0, true, BLOCK_SIZE);
+        }
         posts = fallback.data;
         error = fallback.error;
         didWrap = true;
@@ -778,7 +790,10 @@ router.get(
         offsetInBlock = 0;
         dbOffset = 0;
         seed = (seed + 9876543) >>> 0;
-        const fallback = await buildQuery(0, true, BLOCK_SIZE);
+        let fallback = await buildQuery(0, false, BLOCK_SIZE);
+        if (!fallback.data?.length || offsetInBlock >= fallback.data.length) {
+          fallback = await buildQuery(0, true, BLOCK_SIZE);
+        }
         posts = fallback.data;
         error = fallback.error;
         didWrap = true;
