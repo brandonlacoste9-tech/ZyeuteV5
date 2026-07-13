@@ -926,38 +926,39 @@ export const Zyeute: React.FC = () => {
   };
 
   // Single tap → unmute / play-pause
-  // Double-tap → toggle action bar + chrome (immersive), and fire/like
+  // Double-tap → toggle action bar chrome only (never navigate away)
+  // Fire stays on the rail button so guests aren't sent to /login on double-tap
   const handleVideoTap = useCallback(
     (e: React.MouseEvent | React.TouchEvent, postId: string) => {
       const now = Date.now();
       if (
         lastTapRef.current &&
         lastTapRef.current.postId === postId &&
-        now - lastTapRef.current.time < 300
+        now - lastTapRef.current.time < 320
       ) {
         lastTapRef.current = null;
         impact();
-
-        // Hide/show action rail, header, bottom nav
+        // Immersive: hide/show rail + header + bottom nav
         setUiVisible((v) => !v);
 
-        let clientX = window.innerWidth / 2;
-        let clientY = window.innerHeight / 2;
-        if ("touches" in e) {
-          if (e.touches.length > 0) {
-            clientX = e.touches[0].clientX;
-            clientY = e.touches[0].clientY;
-          } else if (e.changedTouches.length > 0) {
-            clientX = e.changedTouches[0].clientX;
-            clientY = e.changedTouches[0].clientY;
+        // Optional like for signed-in users only — never force login here
+        if (uid) {
+          let clientX = window.innerWidth / 2;
+          let clientY = window.innerHeight / 2;
+          if ("touches" in e) {
+            if (e.touches.length > 0) {
+              clientX = e.touches[0].clientX;
+              clientY = e.touches[0].clientY;
+            } else if (e.changedTouches.length > 0) {
+              clientX = e.changedTouches[0].clientX;
+              clientY = e.changedTouches[0].clientY;
+            }
+          } else {
+            clientX = (e as React.MouseEvent).clientX;
+            clientY = (e as React.MouseEvent).clientY;
           }
-        } else {
-          clientX = (e as React.MouseEvent).clientX;
-          clientY = (e as React.MouseEvent).clientY;
+          void handleFireToggle(postId, true, { x: clientX, y: clientY });
         }
-
-        // Still fire on double-tap (heart burst at tap)
-        handleFireToggle(postId, true, { x: clientX, y: clientY });
       } else {
         lastTapRef.current = { postId, time: now };
         // Single tap → unmute if still muted, otherwise toggle play/pause
@@ -974,7 +975,6 @@ export const Zyeute: React.FC = () => {
           const nextPlaying = !isPlaying;
           userPausedRef.current = !nextPlaying;
           setIsPlaying(nextPlaying);
-          // Don't force chrome from play state — double-tap owns uiVisible
         }
       }
     },
