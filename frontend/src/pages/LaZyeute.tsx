@@ -925,7 +925,8 @@ export const Zyeute: React.FC = () => {
     }
   };
 
-  // Double-tap on video → fire
+  // Single tap → unmute / play-pause
+  // Double-tap → toggle action bar + chrome (immersive), and fire/like
   const handleVideoTap = useCallback(
     (e: React.MouseEvent | React.TouchEvent, postId: string) => {
       const now = Date.now();
@@ -936,6 +937,9 @@ export const Zyeute: React.FC = () => {
       ) {
         lastTapRef.current = null;
         impact();
+
+        // Hide/show action rail, header, bottom nav
+        setUiVisible((v) => !v);
 
         let clientX = window.innerWidth / 2;
         let clientY = window.innerHeight / 2;
@@ -952,6 +956,7 @@ export const Zyeute: React.FC = () => {
           clientY = (e as React.MouseEvent).clientY;
         }
 
+        // Still fire on double-tap (heart burst at tap)
         handleFireToggle(postId, true, { x: clientX, y: clientY });
       } else {
         lastTapRef.current = { postId, time: now };
@@ -969,7 +974,7 @@ export const Zyeute: React.FC = () => {
           const nextPlaying = !isPlaying;
           userPausedRef.current = !nextPlaying;
           setIsPlaying(nextPlaying);
-          setUiVisible(!nextPlaying);
+          // Don't force chrome from play state — double-tap owns uiVisible
         }
       }
     },
@@ -1485,7 +1490,7 @@ export const Zyeute: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Tap overlay: single tap = play/pause, double-tap = fire */}
+                  {/* Tap overlay: single = play/pause; double = hide chrome + fire */}
                   <div
                     className="absolute inset-0 z-20"
                     style={{ background: "transparent" }}
