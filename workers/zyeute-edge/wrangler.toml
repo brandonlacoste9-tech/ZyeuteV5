@@ -10,5 +10,9 @@ workers_dev = true
 binding = "CACHE"
 id = "2d57e667c4984474b11eb85884a29965"
 
+# Keep Render warm + seed hot public cache every 3 minutes
+[triggers]
+crons = ["*/3 * * * *"]
+
 [observability]
 enabled = true
