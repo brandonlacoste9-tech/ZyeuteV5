@@ -64,3 +64,11 @@ BEGIN
   LIMIT p_limit;
 END;
 $$ LANGUAGE plpgsql;
+
+-- PostgREST (anon + authenticated) + service role
+GRANT EXECUTE ON FUNCTION public.get_localized_explore_feed(
+  UUID, TEXT, TEXT[], INT, BIGINT, UUID[]
+) TO anon, authenticated, service_role;
+
+COMMENT ON FUNCTION public.get_localized_explore_feed(UUID, TEXT, TEXT[], INT, BIGINT, UUID[]) IS
+  'Pour Toi: rank public publications by region, affinity tags/hashtags/themes, viral_score, session seed, and recency decay.';
