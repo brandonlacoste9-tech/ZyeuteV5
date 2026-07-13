@@ -538,12 +538,6 @@ router.get(
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
         process.env.SUPABASE_ANON_KEY;
 
-      console.log("[FeedInfinite] Request received", {
-        hasUrl: !!supabaseUrl,
-        hasAnonKey: !!anonKey,
-        urlPreview: supabaseUrl ? supabaseUrl.substring(0, 30) + "..." : null,
-      });
-
       if (!supabaseUrl || !anonKey) {
         console.error("[FeedInfinite] Missing Supabase anon config");
         return res
@@ -588,16 +582,6 @@ router.get(
           (userSeed * 2654435761 + sessionSeed * 1597334677 + timeBucket) >>> 0;
         pageOffset = 0;
       }
-
-      console.log("[FeedInfinite] Query params", {
-        limit,
-        pageOffset,
-        seed,
-        feedType,
-        hiveId,
-        userId: (req as any).userId || null,
-        hasClientSession: !!(req.query.session as string),
-      });
 
       // Fetch viewer's region and affinities for region-aware feed weighting
       let viewerRegion = hiveId || "quebec";
@@ -798,12 +782,6 @@ router.get(
         error = fallback.error;
         didWrap = true;
       }
-
-      console.log("[FeedInfinite] Supabase result", {
-        postsCount: posts?.length,
-        hasError: !!error,
-        didWrap,
-      });
 
       if (error) {
         console.error("Supabase feed error:", error);

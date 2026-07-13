@@ -16,8 +16,7 @@ const PUBLIC_CACHE_RULES = [
   { re: /^\/api\/users\/[^/]+$/, soft: 45, hard: 180 },
   { re: /^\/api\/users\/[^/]+\/posts/, soft: 30, hard: 120 },
   { re: /^\/api\/gamification\/profile\//, soft: 60, hard: 300 },
-  // Guest feed first page — short, unauthenticated only
-  { re: /^\/api\/feed(\?|$)/, soft: 20, hard: 60 },
+  // NOTE: do NOT cache /api/feed* — personalization + seen-ids must stay fresh
   { re: /^\/api\/trending/, soft: 60, hard: 300 },
   { re: /^\/api\/sounds/, soft: 120, hard: 600 },
   { re: /^\/api\/search\//, soft: 30, hard: 120 },
@@ -30,7 +29,6 @@ const WARM_PATHS = [
   "/api/gifts/catalog",
   "/api/users/ti_guy_bot",
   "/api/users/ti_guy_bot/posts",
-  "/api/feed?page=0&limit=12",
 ];
 
 function matchRule(pathname, search) {

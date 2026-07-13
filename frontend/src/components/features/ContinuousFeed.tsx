@@ -334,7 +334,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { getFeedState, saveFeedState, clearFeedState } = useNavigationState();
   const feedSessionRef = useRef(rotateFeedSessionId());
   const { isOnline, addToQueue } = useNetworkQueue();
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   const hasInitializedRef = useRef(false); // Prevent double-fetch in StrictMode
   const isFetchingRef = useRef(false); // Prevent concurrent fetches
@@ -430,18 +430,18 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Record the active video as watched after a 2s dwell so the feed can surface
   // unseen videos first on the next visit. Fire-and-forget; fast scroll-through
-  // (< 2s) is not counted as a watch. Guests are tracked in localStorage,
-  // authenticated users additionally persist to video_views.
+  // (< 2s) is not counted as a watch. Guests → localStorage only; real accounts
+  // also persist to video_views (never treat guest mode as authenticated).
   useEffect(() => {
     const active = posts[currentIndex];
     if (!active?.id || String(active.id).startsWith("demo-")) return;
     const postId = String(active.id);
-    const isAuthed = !!user;
+    const isAuthed = Boolean(user?.id) && !isGuest;
     const timer = setTimeout(() => {
       recordWatch(postId, { isAuthenticated: isAuthed });
     }, 2000);
     return () => clearTimeout(timer);
-  }, [currentIndex, posts, user]);
+  }, [currentIndex, posts, user, isGuest]);
 
   // Save state on unmount
   useEffect(() => {
