@@ -1,0 +1,14 @@
+name = "zyeute-edge"
+main = "src/index.js"
+compatibility_date = "2026-03-01"
+workers_dev = true
+
+# Render origin is hard-coded in the worker (same as vercel.json today).
+# Override later with vars if we multi-env.
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "2d57e667c4984474b11eb85884a29965"
+
+[observability]
+enabled = true
