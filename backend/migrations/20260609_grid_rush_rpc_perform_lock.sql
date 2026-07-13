@@ -72,12 +72,18 @@ $$;
 
 REVOKE ALL ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) FROM anon, authenticated;
+-- Do not OWNER TO service_role: pooler/postgres role often cannot reassign ownership
+-- (permission denied for schema public). GRANT is enough for backend service_role.
 GRANT EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.grid_rush_create_bot_match(INT, UUID) TO postgres;
 
-ALTER FUNCTION public.grid_rush_create_bot_match(INT, UUID) OWNER TO service_role;
-
-GRANT SELECT, INSERT, UPDATE ON public.user_wallets TO service_role;
-GRANT SELECT, INSERT, UPDATE ON public.grid_rush_matches TO service_role;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    GRANT SELECT, INSERT, UPDATE ON public.user_wallets TO service_role;
+    GRANT SELECT, INSERT, UPDATE ON public.grid_rush_matches TO service_role;
+  END IF;
+END $$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS grid_rush_active_player_uniq
   ON public.grid_rush_matches (player_1_id)
