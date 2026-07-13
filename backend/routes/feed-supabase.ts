@@ -14,9 +14,13 @@ const router = Router();
 router.get("/feed/supabase", async (req, res) => {
   try {
     const supabaseUrl =
-      process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      process.env.VITE_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
     const anonKey =
-      process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !anonKey) {
       return res.status(500).json({
@@ -211,7 +215,9 @@ router.get("/feed/infinite/supabase", async (req, res) => {
     );
     const hasMore = (posts?.length || 0) > limit;
     const nextCursor =
-      hasMore && rawItems.length > 0 ? rawItems[rawItems.length - 1].created_at : null;
+      hasMore && rawItems.length > 0
+        ? rawItems[rawItems.length - 1].created_at
+        : null;
 
     res.json({
       posts: items,
@@ -234,9 +240,13 @@ router.get("/feed/infinite/supabase", async (req, res) => {
 router.get("/explore/supabase", async (req, res) => {
   try {
     const supabaseUrl =
-      process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      process.env.VITE_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL;
     const anonKey =
-      process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !anonKey) {
       return res.status(500).json({
@@ -269,16 +279,17 @@ router.get("/explore/supabase", async (req, res) => {
       `;
 
     const buildQuery = (from: number, to: number) => {
+      // PostgREST .or() cannot use ::text casts — matches working feed filters
       let q = supabase
         .from("publications")
         .select(selectFields)
-        .filter("visibility::text", "eq", "public")
+        .eq("visibility", "public")
         .eq("est_masque", false)
         .is("deleted_at", null)
-        .filter("processing_status::text", "neq", "no_audio")
-        .filter("hive_id::text", "eq", hiveId)
+        .neq("processing_status", "no_audio")
+        .eq("hive_id", hiveId)
         .or(
-          "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+          "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
         )
         .order("created_at", { ascending: false })
         .range(from, to);
