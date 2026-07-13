@@ -56,17 +56,24 @@
 @layer utilities {
   /* --- PREMIUM LEATHER TEXTURE SYSTEM --- */
   
-  /* Dark Pebbled Leather - Main app background */
+  /* Dark Pebbled Leather - Main app background (splash-aligned: grain + fleur-de-lys) */
   .leather-dark {
-    background-color: #0f0c0a;
+    background-color: #0a0806;
     background-image: 
+      /* Soft gold ambient (matches splash light) */
+      radial-gradient(ellipse at 50% 40%, rgba(197, 160, 85, 0.06) 0%, transparent 55%),
       /* Lighting & specular highlights */
-      radial-gradient(ellipse at 30% 20%, rgba(60, 50, 40, 0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 70% 80%, rgba(40, 30, 25, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 30% 20%, rgba(60, 50, 40, 0.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 80%, rgba(40, 30, 25, 0.18) 0%, transparent 50%),
+      /* Little fleur-de-lys all over (keep — Zyeuté leather signature) */
+      url("data:image/svg+xml,%3Csvg width='96' height='96' viewBox='0 0 96 96' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23c5a055' stroke-opacity='0.09' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M48 14c0 0-4 8-4 14 0 4 2 6 4 8 2-2 4-4 4-8 0-6-4-14-4-14zM48 36v12M36 38c-6-3-10 0-10 5s4 7 9 5c4-1 7-4 9-7M60 38c6-3 10 0 10 5s-4 7-9 5c-4-1-7-4-9-7M48 48v18M48 56l-10 10c-3 3-6 5-6 9s3 5 6 4M48 56l10 10c3 3 6 5 6 9s-3 5-6 4M42 68h12l-3 6h-6z'/%3E%3C/g%3E%3C/svg%3E"),
       /* Pebbled grain texture */
       url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='leather-dark'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='5' stitchTiles='stitch' seed='42'/%3E%3CfeColorMatrix type='saturate' values='0.1'/%3E%3CfeColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.05 0 0 0 0 0.04 0 0 0 0.8 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23leather-dark)'/%3E%3C/svg%3E"),
       /* Micro-details */
       url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='micro'%3E%3CfeTurbulence type='turbulence' baseFrequency='1.5' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.02 0 0 0 0 0.015 0 0 0 0 0.01 0 0 0 0.4 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23micro)'/%3E%3C/svg%3E");
+    /* gradients + fleur tile + grain + micro */
+    background-size: auto, auto, auto, 96px 96px, auto, auto;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
   }
   
   /* Brown Leather - Warmer alternative */

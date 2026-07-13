@@ -1050,26 +1050,58 @@ export const Zyeute: React.FC = () => {
   if (showBootSplash) {
     return (
       <div className="fixed inset-0 leather-dark flex flex-col overflow-hidden items-center justify-center">
-        <div className="relative">
-          {/* Outer AG Glow Ring */}
-          <div className="absolute inset-0 -m-4 rounded-full bg-gold-500/10 blur-xl animate-pulse" />
+        {/* Gold star dust on leather */}
+        <div
+          className="absolute inset-0 overflow-hidden pointer-events-none"
+          aria-hidden
+        >
+          {Array.from({ length: 28 }, (_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-gold-400 animate-pulse"
+              style={{
+                left: `${(i * 17 + 11) % 100}%`,
+                top: `${(i * 23 + 5) % 100}%`,
+                width: i % 4 === 0 ? 2.5 : 1.5,
+                height: i % 4 === 0 ? 2.5 : 1.5,
+                opacity: 0.12 + (i % 5) * 0.06,
+                animationDelay: `${(i * 0.14) % 3}s`,
+                animationDuration: `${2 + (i % 3)}s`,
+                boxShadow: "0 0 4px rgba(212,175,55,0.55)",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Soft gold ambient behind AG mark */}
+        <div
+          className="absolute w-[420px] h-[420px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(212,175,55,0.12) 0%, rgba(212,175,55,0.03) 40%, transparent 70%)",
+          }}
+          aria-hidden
+        />
+
+        <div className="relative z-10">
+          <div className="absolute inset-0 -m-6 rounded-full bg-gold-500/10 blur-2xl animate-pulse" />
 
           <div className="relative text-center">
-            {/* Custom Premium Spinner */}
             <div className="relative w-24 h-24 mx-auto mb-8">
               <div className="absolute inset-0 border-4 border-gold-900/40 rounded-full" />
               <div className="absolute inset-0 border-4 border-transparent border-t-gold-500 rounded-full animate-spin shadow-[0_0_15px_rgba(212,175,55,0.4)]" />
-              <div className="absolute inset-4 border-2 border-transparent border-b-gold-200/50 rounded-full animate-spin-slow rotate-45" />
-
-              {/* AG Center Logo Placeholder/Icon */}
+              <div
+                className="absolute inset-4 border-2 border-transparent border-b-gold-200/50 rounded-full rotate-45"
+                style={{ animation: "spin 2.8s linear infinite" }}
+              />
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-gold-400 font-black text-xl tracking-tighter">
+                <span className="text-gold-400 font-black text-xl tracking-tighter drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]">
                   AG
                 </span>
               </div>
             </div>
 
-            <h2 className="text-gold-400 font-black text-2xl tracking-tight mb-2 uppercase">
+            <h2 className="text-gold-400 font-black text-2xl tracking-tight mb-2 uppercase drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
               Zyeute
             </h2>
             <div className="flex items-center justify-center gap-2">
@@ -1081,7 +1113,6 @@ export const Zyeute: React.FC = () => {
               Initialisation Sécurisée AG
             </p>
 
-            {/* Failsafe for stuck loading */}
             <button
               type="button"
               onClick={() => {
@@ -1150,20 +1181,21 @@ export const Zyeute: React.FC = () => {
     </div>
   );
 
+  // TikTok craft + Zyeuté soul: minimal chrome, gold only as accent
+  const railIconClass =
+    "w-12 h-12 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-[2px] border border-white/15 shadow-[0_4px_14px_rgba(0,0,0,0.45)]";
+  const railLabelClass =
+    "text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]";
+
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
       <div className="fixed inset-0 lg:absolute lg:inset-0 leather-dark overflow-hidden flex justify-center h-full">
-        {/* Desktop Container Wrapper */}
-        <div className="w-full h-full lg:max-w-[450px] lg:mx-auto relative">
-          {/* Dynamic Edge Lighting (React-optimized) */}
+        {/* Phone-stage: pure black video canvas on leather app chrome (Zyeuté soul) */}
+        <div className="w-full h-full lg:max-w-[420px] lg:mx-auto relative bg-black lg:shadow-[0_0_0_1px_rgba(212,175,55,0.12),0_25px_80px_rgba(0,0,0,0.65)]">
+          {/* Soft top vignette */}
           <div
-            className="fixed inset-0 pointer-events-none z-10 transition-opacity duration-1000"
-            style={{
-              boxShadow: isPlaying
-                ? `inset 0 0 100px ${edgeLighting}40, inset 0 0 20px ${edgeLighting}60`
-                : "none",
-              opacity: isPlaying ? 0.6 : 0,
-            }}
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-black/50 to-transparent"
+            aria-hidden
           />
 
           {/* Header */}
@@ -1178,24 +1210,24 @@ export const Zyeute: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-4 select-none">
-              {/* Pour toi / Abonnements toggle */}
-              <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-1 py-1 border border-white/10">
+              {/* Pour toi / Abonnements — gold only on active tab */}
+              <div className="flex items-center gap-0.5 bg-black/35 backdrop-blur-md rounded-full px-1 py-1 border border-white/10">
                 <button
                   onClick={() => handleFeedSourceChange("explore")}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
+                  className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold transition-all duration-200 ${
                     feedSource === "explore"
-                      ? "bg-gold-500 text-black"
-                      : "text-white/60 hover:text-white"
+                      ? "bg-gold-500 text-black shadow-[0_0_12px_rgba(var(--accent-rgb),0.35)]"
+                      : "text-white/70 hover:text-white"
                   }`}
                 >
                   Pour toi
                 </button>
                 <button
                   onClick={() => handleFeedSourceChange("feed")}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${
+                  className={`px-3.5 py-1.5 rounded-full text-[13px] font-bold transition-all duration-200 ${
                     feedSource === "feed"
-                      ? "bg-gold-500 text-black"
-                      : "text-white/60 hover:text-white"
+                      ? "bg-gold-500 text-black shadow-[0_0_12px_rgba(var(--accent-rgb),0.35)]"
+                      : "text-white/70 hover:text-white"
                   }`}
                 >
                   Abonnements
@@ -1365,23 +1397,12 @@ export const Zyeute: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Gold Edition Cinematic Particles & High-Fidelity Tech
-                        Overlay. Only rendered for the active slide and its
-                        neighbours — the blurred/mix-blend/animated layers are
-                        expensive to composite, so we never paint them for
-                        off-screen slides (huge scroll-paint win on long feeds). */}
-                    {nearActive && (
-                      <div className="absolute inset-0 pointer-events-none z-10 opacity-30 mix-blend-screen overflow-hidden">
-                        {/* Ambient Gold Aura */}
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(212,175,55,0.15)_0%,transparent_70%)]" />
-
-                        {/* Sub-pixel Tech Scanlines */}
-                        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
-
-                        {/* Localized 'Gold Edition' Lens Flare Glow */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-gold-500/10 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full animate-pulse motion-reduce:animate-none" />
-                        <div className="absolute inset-0 gold-glow-soft opacity-50" />
-                      </div>
+                    {/* Subtle vignette only — video is the hero (TikTok craft) */}
+                    {nearActive && index === currentIndex && (
+                      <div
+                        className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-b from-black/25 via-transparent to-transparent"
+                        aria-hidden
+                      />
                     )}
                   </div>
 
@@ -1430,41 +1451,44 @@ export const Zyeute: React.FC = () => {
                       </div>
                     ))}
 
-                  {/* Gradient Overlays */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80 pointer-events-none" />
+                  {/* Bottom vignette for caption readability */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/75 pointer-events-none" />
 
-                  {/* Bottom Info */}
-                  <div className="absolute bottom-6 left-4 right-20 z-20">
-                    {/* Username */}
-                    <Link
-                      to={`/profile/${post.user?.username || post.user?.id}`}
-                      className="flex items-center gap-2 mb-2"
-                      data-testid={`link-user-${post.id}`}
-                    >
-                      <span className="text-white font-bold text-base">
-                        @{post.user?.username}
-                      </span>
-                      {post.user?.isVerified && (
-                        <span
-                          className="drop-shadow-lg"
-                          style={{ color: edgeLighting }}
-                        >
-                          ✓
+                  {/* Caption stack — TikTok density, Zyeuté gold only on Suivre */}
+                  <div className="absolute bottom-6 left-3 right-[4.5rem] lg:right-4 z-20 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <Link
+                        to={`/profile/${post.user?.username || post.user?.id}`}
+                        className="flex items-center gap-1.5 min-w-0"
+                        data-testid={`link-user-${post.id}`}
+                      >
+                        <span className="text-white font-bold text-[15px] truncate">
+                          @{post.user?.username}
                         </span>
-                      )}
-                      <SubscriberBadge
-                        tier={(post.user as any)?.subscription_tier}
-                        size="xs"
-                      />
-                    </Link>
-
-                    {/* Caption + signalement */}
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      {post.caption ? (
-                        <CaptionWithHashtags
-                          text={post.caption}
-                          className="text-white text-sm mb-2 line-clamp-3 flex-1"
+                        {post.user?.isVerified && (
+                          <span className="text-gold-400 text-xs shrink-0">
+                            ✓
+                          </span>
+                        )}
+                        <SubscriberBadge
+                          tier={(post.user as any)?.subscription_tier}
+                          size="xs"
                         />
+                      </Link>
+                      {post.user?.id && post.user.id !== authUser?.id ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            newFollower();
+                            handleFollowToggle(post.user as User);
+                          }}
+                          className="shrink-0 px-2.5 py-0.5 rounded text-[11px] font-bold border border-white/80 text-white hover:bg-white/10 active:bg-gold-500 active:text-black active:border-gold-500 transition-colors"
+                        >
+                          {followedMap[post.user.id] ||
+                          (post.user as { is_following?: boolean }).is_following
+                            ? "Abonné"
+                            : "Suivre"}
+                        </button>
                       ) : null}
                       <button
                         type="button"
@@ -1475,36 +1499,26 @@ export const Zyeute: React.FC = () => {
                           });
                           setReportOpen(true);
                         }}
-                        className="text-white/50 text-lg px-1 shrink-0"
-                        aria-label="Signaler"
+                        className="ml-auto text-white/55 text-lg leading-none px-1 shrink-0"
+                        aria-label="Plus d'options"
                       >
                         ⋯
                       </button>
                     </div>
-                    {post.user?.id && post.user.id !== authUser?.id ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          newFollower();
-                          handleFollowToggle(post.user as User);
-                        }}
-                        className="mb-2 px-3 py-1 rounded-full text-xs font-bold bg-gold-500/20 text-gold-300 border border-gold-500/40"
-                      >
-                        {followedMap[post.user.id] ||
-                        (post.user as { is_following?: boolean }).is_following
-                          ? "Abonné"
-                          : "Suivre"}
-                      </button>
+
+                    {post.caption ? (
+                      <CaptionWithHashtags
+                        text={post.caption}
+                        className="text-white text-[13px] leading-snug line-clamp-2 mb-1.5"
+                      />
                     ) : null}
 
-                    {/* Hashtags */}
                     {post.hashtags && post.hashtags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-x-1.5 gap-y-0.5 mb-1">
                         {post.hashtags.slice(0, 4).map((tag, i) => (
                           <span
                             key={i}
-                            className="text-xs"
-                            style={{ color: edgeLighting }}
+                            className="text-[12px] font-medium text-white/90"
                           >
                             #{tag}
                           </span>
@@ -1512,41 +1526,14 @@ export const Zyeute: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Region Badge */}
                     {post.region && (
-                      <div className="mt-2 inline-flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm">
-                        <span className="text-xs">📍</span>
-                        <span className="text-white text-xs capitalize">
+                      <div className="inline-flex items-center gap-1 text-white/75">
+                        <span className="text-[11px]">📍</span>
+                        <span className="text-[11px] capitalize font-medium">
                           {post.region}
                         </span>
                       </div>
                     )}
-                  </div>
-
-                  {/* Progress Indicator */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-30">
-                    {posts
-                      .slice(
-                        Math.max(0, index - 2),
-                        Math.min(posts.length, index + 3),
-                      )
-                      .map((_, i) => {
-                        const realIndex = Math.max(0, index - 2) + i;
-                        return (
-                          <div
-                            key={realIndex}
-                            className="w-1 rounded-full transition-all"
-                            style={{
-                              height:
-                                realIndex === currentIndex ? "16px" : "8px",
-                              backgroundColor:
-                                realIndex === currentIndex
-                                  ? edgeLighting
-                                  : "rgba(255,255,255,0.3)",
-                            }}
-                          />
-                        );
-                      })}
                   </div>
                 </div>
               );
@@ -1567,37 +1554,41 @@ export const Zyeute: React.FC = () => {
             )}
           </div>
 
-          {/* Right Side Actions - Leather style matching bottom nav */}
+          {/* Right rail — on mobile over video; on desktop beside the phone stage (not on video) */}
           {posts.length > 0 && currentPost && (
             <div
-              className={`absolute right-4 lg:-right-16 bottom-24 lg:bottom-32 flex flex-col items-center gap-6 z-40 pb-safe pb-4 transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+              className={`absolute z-40 flex flex-col items-center gap-4 transition-opacity duration-300 ${
+                uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+              } right-2.5 bottom-24 pb-safe lg:right-auto lg:left-full lg:ml-4 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto lg:pb-0`}
             >
-              {/* Profile -- TI-GUY button moved to floating bottom right (TIGuyButton component) */}
               <Link
                 to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
-                className="flex flex-col items-center gap-1 press-scale"
+                className="flex flex-col items-center gap-0.5 press-scale relative"
                 data-testid={`link-profile-${currentPost.id}`}
               >
-                <div
-                  className="w-10 h-10 rounded-full overflow-hidden transition-all duration-300 gold-glow gold-glow-soft"
-                  style={{
-                    background:
-                      "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                    border: `2px solid ${edgeLighting}`,
-                  }}
-                >
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/90 shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
                   <img
                     src={currentPost.user?.avatar_url || "/default-avatar.png"}
                     alt={currentPost.user?.displayName || "User"}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <span className="text-[10px] font-bold text-white/80">
-                  Profil
-                </span>
+                {currentPost.user?.id &&
+                  currentPost.user.id !== authUser?.id &&
+                  !(
+                    followedMap[currentPost.user.id] ||
+                    (currentPost.user as { is_following?: boolean })
+                      .is_following
+                  ) && (
+                    <span
+                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-gold-500 text-black text-sm font-bold flex items-center justify-center shadow-md leading-none"
+                      aria-hidden
+                    >
+                      +
+                    </span>
+                  )}
               </Link>
 
-              {/* Fire - optimistic state via firedMap */}
               {(() => {
                 const isFired =
                   firedMap[currentPost.id] ??
@@ -1614,102 +1605,69 @@ export const Zyeute: React.FC = () => {
                       fire();
                       handleFireToggle(currentPost.id);
                     }}
-                    className="flex flex-col items-center gap-1 press-scale"
+                    className="flex flex-col items-center gap-0.5 press-scale"
                     data-testid={`button-fire-${currentPost.id}`}
                   >
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-edition-halo"
-                      style={{
-                        background: isFired
-                          ? `linear-gradient(145deg, ${edgeLighting} 0%, #FF6B35 50%, #FF3D3D 100%)`
-                          : "linear-gradient(145deg, #2A1F18 0%, #1A0F0A 100%)",
-                        border: `2px solid ${isFired ? "#FF3D3D" : edgeLighting + "40"}`,
-                        boxShadow: isFired
-                          ? "0 0 15px #FF6B35, inset 0 0 10px rgba(0,0,0,0.5)"
-                          : "0 4px 10px rgba(0,0,0,0.6), inset 0 0 5px rgba(255,255,255,0.05)",
-                      }}
+                      className={`${railIconClass} ${isFired ? "border-red-400/50 bg-red-500/20" : ""}`}
                     >
                       <img
                         src="/assets/icons/icon-fire.png"
-                        className="w-6 h-6 object-contain drop-shadow-md"
+                        className="w-7 h-7 object-contain drop-shadow-md"
                         style={{
                           filter: isFired
-                            ? "brightness(1.5) drop-shadow(0 0 8px #FF6B35)"
-                            : "none",
+                            ? "brightness(1.4) saturate(1.3) drop-shadow(0 0 6px #FF3D3D)"
+                            : "brightness(1.15) contrast(1.05)",
                         }}
                         alt="Fire"
                       />
                     </div>
-                    <span
-                      className="text-[10px] font-bold"
-                      style={{ color: isFired ? edgeLighting : edgeLighting }}
-                    >
-                      {fireCount}
-                    </span>
+                    <span className={railLabelClass}>{fireCount}</span>
                   </button>
                 );
               })()}
 
-              {/* Comments */}
               <button
                 type="button"
                 onClick={() => {
                   comment();
                   openComments(currentPost.id);
                 }}
-                className="flex flex-col items-center gap-1 press-scale"
+                className="flex flex-col items-center gap-0.5 press-scale"
                 data-testid={`link-comments-${currentPost.id}`}
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
-                  style={{
-                    background:
-                      "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                    border: `2px solid ${edgeLighting}`,
-                  }}
-                >
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-comment.png"
-                    className="w-6 h-6 object-contain drop-shadow-md"
+                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
                     alt="Comment"
                   />
                 </div>
-                <span className="text-[10px] font-bold text-white/80">
+                <span className={railLabelClass}>
                   {(currentPost as PostWithEngagement).commentCount ??
                     (currentPost as PostWithEngagement).comment_count ??
                     0}
                 </span>
               </button>
 
-              {/* Share */}
               <button
                 onClick={() => {
                   share();
                   openShare(currentPost.id);
                 }}
-                className="flex flex-col items-center gap-1 press-scale"
+                className="flex flex-col items-center gap-0.5 press-scale"
                 data-testid={`button-share-${currentPost.id}`}
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
-                  style={{
-                    background:
-                      "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                    border: `2px solid ${edgeLighting}`,
-                  }}
-                >
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-share.png"
-                    className="w-6 h-6 object-contain drop-shadow-md"
+                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
                     alt="Share"
                   />
                 </div>
-                <span className="text-[10px] font-bold text-white/80">
-                  Partager
-                </span>
+                <span className={railLabelClass}>Partager</span>
               </button>
 
-              {/* Bookmark / Save */}
               {(() => {
                 const isSaved = savedMap[currentPost.id] ?? false;
                 return (
@@ -1718,37 +1676,26 @@ export const Zyeute: React.FC = () => {
                       save();
                       handleSaveToggle(currentPost.id);
                     }}
-                    className="flex flex-col items-center gap-1 press-scale"
+                    className="flex flex-col items-center gap-0.5 press-scale"
                     data-testid={`button-save-${currentPost.id}`}
                   >
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
-                      style={{
-                        background: isSaved
-                          ? `linear-gradient(145deg, ${edgeLighting} 0%, var(--color-gold-600) 100%)`
-                          : "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                        border: `2px solid ${isSaved ? edgeLighting : edgeLighting}`,
-                        boxShadow: isSaved
-                          ? "0 0 12px rgba(var(--accent-rgb), 0.7)"
-                          : undefined,
-                      }}
+                      className={`${railIconClass} ${isSaved ? "border-gold-400/60 bg-gold-500/15" : ""}`}
                     >
                       <img
                         src="/assets/icons/icon-save.png"
-                        className="w-6 h-6 object-contain drop-shadow-md"
+                        className="w-7 h-7 object-contain drop-shadow-md"
                         style={{
                           filter: isSaved
-                            ? "brightness(1.5) drop-shadow(0 0 8px " +
-                              edgeLighting +
-                              ")"
-                            : "none",
+                            ? "brightness(1.4) drop-shadow(0 0 6px rgba(var(--accent-rgb),0.8))"
+                            : "brightness(1.15)",
                         }}
                         alt="Save"
                       />
                     </div>
                     <span
-                      className="text-[10px] font-bold"
-                      style={{ color: edgeLighting }}
+                      className={railLabelClass}
+                      style={isSaved ? { color: edgeLighting } : undefined}
                     >
                       {isSaved ? "Sauvé" : "Sauver"}
                     </span>
@@ -1756,32 +1703,22 @@ export const Zyeute: React.FC = () => {
                 );
               })()}
 
-              {/* Gift */}
               <button
                 type="button"
                 onClick={() => {
                   tap();
                   setGiftOpen(true);
                 }}
-                className="flex flex-col items-center gap-1 press-scale"
+                className="flex flex-col items-center gap-0.5 press-scale"
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 stitched-double gold-glow gold-glow-soft"
-                  style={{
-                    background:
-                      "linear-gradient(145deg, #6B4423 0%, #4A3018 50%, #3D2314 100%)",
-                    border: `2px solid ${edgeLighting}`,
-                  }}
-                >
+                <div className={railIconClass}>
                   <img
                     src="/assets/icons/icon-gift.png"
-                    className="w-6 h-6 object-contain drop-shadow-md"
+                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
                     alt="Gift"
                   />
                 </div>
-                <span className="text-[10px] font-bold text-white/80">
-                  Cadeau
-                </span>
+                <span className={railLabelClass}>Cadeau</span>
               </button>
             </div>
           )}
@@ -1800,8 +1737,7 @@ export const Zyeute: React.FC = () => {
                   /* */
                 }
               }}
-              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold-500/60 bg-black/70 backdrop-blur-md text-gold-400 text-sm font-bold shadow-lg animate-pulse hover:bg-black/90 transition-all"
-              style={{ boxShadow: "0 0 20px rgba(var(--accent-rgb), 0.3)" }}
+              className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/20 bg-black/65 backdrop-blur-md text-white text-sm font-semibold shadow-lg hover:bg-black/85 transition-all"
             >
               <svg
                 width="18"
@@ -1843,46 +1779,25 @@ export const Zyeute: React.FC = () => {
             </div>
           )}
 
-          {/* Bottom Navigation */}
+          {/* Bottom nav — mobile only (desktop uses sidebar); gold on active + FAB */}
           <div
-            className={`fixed bottom-0 left-0 right-0 z-50 flex flex-col transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+            className={`lg:hidden fixed bottom-0 left-0 right-0 z-50 flex flex-col transition-opacity duration-300 ${uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"}`}
             style={{
-              background: "rgba(0,0,0,0.85)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(var(--accent-rgb), 0.25)",
+              background: "rgba(0,0,0,0.92)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderTop: "1px solid rgba(255,255,255,0.08)",
               paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
-              transform: "translateY(0)",
-              willChange: "opacity",
             }}
           >
-            {/* Gold shimmer accent line */}
-            <div
-              style={{
-                height: 1,
-                background:
-                  "linear-gradient(90deg, transparent 0%, rgba(var(--accent-rgb), 0.4) 30%, rgba(var(--accent-rgb), 0.6) 50%, rgba(var(--accent-rgb), 0.4) 70%, transparent 100%)",
-              }}
-            />
-            <div className="flex items-center justify-around py-1">
-              {/* Home */}
+            <div className="flex items-center justify-around py-1.5 px-1">
               <button
                 onClick={() => {
                   tap();
                   navigate("/feed");
                 }}
-                className="flex flex-col items-center gap-1 press-scale relative"
+                className="flex flex-col items-center gap-0.5 press-scale min-w-[3.25rem]"
               >
-                {location.pathname === "/feed" && (
-                  <span
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
-                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
-                    }}
-                  />
-                )}
                 <svg
                   width="24"
                   height="24"
@@ -1891,19 +1806,11 @@ export const Zyeute: React.FC = () => {
                   stroke={
                     location.pathname === "/feed"
                       ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
+                      : "rgba(255,255,255,0.55)"
                   }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={
-                    location.pathname === "/feed"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
                 >
                   <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                   <polyline points="9 22 9 12 15 12 15 22" />
@@ -1914,31 +1821,20 @@ export const Zyeute: React.FC = () => {
                     color:
                       location.pathname === "/feed"
                         ? edgeLighting
-                        : "rgba(255,255,255,0.5)",
+                        : "rgba(255,255,255,0.55)",
                   }}
                 >
                   Accueil
                 </span>
               </button>
 
-              {/* Search */}
               <button
                 onClick={() => {
                   tap();
                   navigate("/search");
                 }}
-                className="flex flex-col items-center gap-1 press-scale relative"
+                className="flex flex-col items-center gap-0.5 press-scale min-w-[3.25rem]"
               >
-                {location.pathname === "/search" && (
-                  <span
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
-                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
-                    }}
-                  />
-                )}
                 <svg
                   width="24"
                   height="24"
@@ -1947,19 +1843,11 @@ export const Zyeute: React.FC = () => {
                   stroke={
                     location.pathname === "/search"
                       ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
+                      : "rgba(255,255,255,0.55)"
                   }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={
-                    location.pathname === "/search"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
                 >
                   <circle cx="11" cy="11" r="7" />
                   <path d="m21 21-4.35-4.35" />
@@ -1970,38 +1858,37 @@ export const Zyeute: React.FC = () => {
                     color:
                       location.pathname === "/search"
                         ? edgeLighting
-                        : "rgba(255,255,255,0.5)",
+                        : "rgba(255,255,255,0.55)",
                   }}
                 >
                   Découvrir
                 </span>
               </button>
 
-              {/* Center create (+) */}
+              {/* Gold FAB — primary brand accent */}
               <button
                 onClick={() => {
                   tap();
                   navigate("/create");
                 }}
-                className="relative -top-3 press-scale"
-                aria-label="Create"
+                className="relative -top-2.5 press-scale"
+                aria-label="Créer"
               >
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center stitched-double gold-glow gold-edition-halo"
+                  className="w-12 h-9 rounded-[10px] flex items-center justify-center"
                   style={{
                     background:
-                      "linear-gradient(145deg, var(--color-gold-200) 0%, var(--color-gold-500) 45%, var(--color-gold-600) 70%, var(--color-gold-800) 100%)",
-                    border: "2px solid var(--color-gold-700)",
-                    boxShadow: "0 4px 15px rgba(var(--accent-rgb), 0.6)",
+                      "linear-gradient(145deg, var(--color-gold-300) 0%, var(--color-gold-500) 50%, var(--color-gold-700) 100%)",
+                    boxShadow: "0 4px 16px rgba(var(--accent-rgb), 0.45)",
                   }}
                 >
                   <svg
-                    width="24"
-                    height="24"
+                    width="22"
+                    height="22"
                     viewBox="0 0 24 24"
-                    fill="#1A0F0A"
+                    fill="none"
                     stroke="#1A0F0A"
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                     strokeLinecap="round"
                   >
                     <path d="M12 5v14M5 12h14" />
@@ -2009,24 +1896,13 @@ export const Zyeute: React.FC = () => {
                 </div>
               </button>
 
-              {/* Arcade */}
               <button
                 onClick={() => {
                   tap();
                   navigate("/arcade");
                 }}
-                className="flex flex-col items-center gap-1 press-scale relative"
+                className="flex flex-col items-center gap-0.5 press-scale min-w-[3.25rem]"
               >
-                {location.pathname === "/arcade" && (
-                  <span
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
-                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
-                    }}
-                  />
-                )}
                 <svg
                   width="24"
                   height="24"
@@ -2035,19 +1911,11 @@ export const Zyeute: React.FC = () => {
                   stroke={
                     location.pathname === "/arcade"
                       ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
+                      : "rgba(255,255,255,0.55)"
                   }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={
-                    location.pathname === "/arcade"
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
                 >
                   <rect x="2" y="6" width="20" height="12" rx="2" />
                   <path d="M6 12h4m-2-2v4M15 12h.01M18 10h.01" />
@@ -2058,31 +1926,20 @@ export const Zyeute: React.FC = () => {
                     color:
                       location.pathname === "/arcade"
                         ? edgeLighting
-                        : "rgba(255,255,255,0.5)",
+                        : "rgba(255,255,255,0.55)",
                   }}
                 >
                   Arcade
                 </span>
               </button>
 
-              {/* Profile */}
               <button
                 onClick={() => {
                   tap();
                   navigate("/profile");
                 }}
-                className="flex flex-col items-center gap-1 press-scale relative"
+                className="flex flex-col items-center gap-0.5 press-scale min-w-[3.25rem]"
               >
-                {location.pathname.startsWith("/profile") && (
-                  <span
-                    className="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, transparent, var(--accent-primary), transparent)",
-                      boxShadow: "0 0 6px rgba(var(--accent-rgb), 0.8)",
-                    }}
-                  />
-                )}
                 <svg
                   width="24"
                   height="24"
@@ -2095,19 +1952,11 @@ export const Zyeute: React.FC = () => {
                   stroke={
                     location.pathname.startsWith("/profile")
                       ? edgeLighting
-                      : "rgba(255,255,255,0.5)"
+                      : "rgba(255,255,255,0.55)"
                   }
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  style={
-                    location.pathname.startsWith("/profile")
-                      ? {
-                          filter:
-                            "drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.6))",
-                        }
-                      : {}
-                  }
                 >
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
@@ -2117,7 +1966,7 @@ export const Zyeute: React.FC = () => {
                   style={{
                     color: location.pathname.startsWith("/profile")
                       ? edgeLighting
-                      : "rgba(255,255,255,0.5)",
+                      : "rgba(255,255,255,0.55)",
                   }}
                 >
                   Profil
