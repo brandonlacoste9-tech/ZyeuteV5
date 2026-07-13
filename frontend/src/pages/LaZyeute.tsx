@@ -689,6 +689,10 @@ export const Zyeute: React.FC = () => {
       center?: boolean;
     }>
   >([]);
+  /** Big gift emoji on video after successful send (same feel as fire) */
+  const [giftBursts, setGiftBursts] = useState<
+    Array<{ postId: string; id: number; emoji: string }>
+  >([]);
 
   // Progress bar tracking (TikTok-style).
   // Driven imperatively so the high-frequency `timeupdate` events never
@@ -1575,6 +1579,26 @@ export const Zyeute: React.FC = () => {
                       ),
                     )}
 
+                  {/* 🎁 gift burst on video after successful send */}
+                  {giftBursts
+                    .filter((b) => b.postId === post.id)
+                    .map((burst) => (
+                      <div
+                        key={burst.id}
+                        className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
+                        aria-hidden
+                      >
+                        <span
+                          className="text-[7.5rem] leading-none select-none drop-shadow-[0_0_48px_rgba(255,215,80,0.95)]"
+                          style={{
+                            animation: "heartPop 1.05s ease-out forwards",
+                          }}
+                        >
+                          {burst.emoji}
+                        </span>
+                      </div>
+                    ))}
+
                   {/* Bottom vignette for caption readability */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/75 pointer-events-none" />
 
@@ -2147,6 +2171,19 @@ export const Zyeute: React.FC = () => {
               }
               postId={currentPost.id}
               onClose={() => setGiftOpen(false)}
+              onGiftSent={(gift) => {
+                const postId = currentPost.id;
+                const id = Date.now() + Math.random();
+                setGiftBursts((prev) => [
+                  ...prev,
+                  { postId, id, emoji: gift.emoji },
+                ]);
+                setTimeout(() => {
+                  setGiftBursts((prev) => prev.filter((b) => b.id !== id));
+                }, 1200);
+                // Close sheet so the big emoji is visible on the video
+                setTimeout(() => setGiftOpen(false), 280);
+              }}
             />
           )}
         </div>{" "}

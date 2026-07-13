@@ -163,6 +163,7 @@ export function GiftPicker({
       const result = await sendGift(recipientId, selected.id, postId, streamId);
       fireHaptic();
       spawnFloater(selected.emoji);
+      // Full celebration behind/over feed; parent also shows big emoji on video
       setCelebration({ emoji: selected.emoji, type: selected.id });
       setBalance(result.newBalance);
       setLastSuccess({
@@ -176,6 +177,7 @@ export function GiftPicker({
         result.message ||
           `${selected.emoji} ${selected.name} envoyé! Solde: ${result.newBalance}¢`,
       );
+      // Notify feed to pop emoji on the video (same energy as fire)
       onGiftSent?.(selected);
       setSelected(null);
     } catch (err: unknown) {
