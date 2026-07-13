@@ -40,11 +40,16 @@ export interface GiftResult {
   creatorEarned: number;
 }
 
-// Get pack + gift catalog
+// Get pack + gift catalog (public — no auth required)
 export async function getCenneCatalog(): Promise<CenneCatalog> {
-  const { data, error } = await apiCall<CenneCatalog>("/cennes/catalog");
-  if (error || !data) throw new Error(error || "Erreur catalogue");
-  return data;
+  const { data, error, code } = await apiCall<CenneCatalog>("/cennes/catalog");
+  if (error || !data) {
+    throw new Error(error || `Erreur catalogue${code ? ` (${code})` : ""}`);
+  }
+  // Normalize shapes (API always returns { packs, gifts })
+  const gifts = Array.isArray(data.gifts) ? data.gifts : [];
+  const packs = Array.isArray(data.packs) ? data.packs : [];
+  return { ...data, gifts, packs };
 }
 
 // Get current user balance

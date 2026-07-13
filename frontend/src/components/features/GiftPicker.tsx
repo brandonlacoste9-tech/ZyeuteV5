@@ -39,6 +39,22 @@ interface GiftPickerProps {
   onGiftSent?: (gift: GiftItem) => void;
 }
 
+/** Fallback if /api/cennes/catalog fails — keep gifts usable offline-ish */
+const FALLBACK_GIFTS: GiftItem[] = [
+  { id: "fleur", emoji: "🌸", name: "Fleur", cost: 10 },
+  { id: "bravo", emoji: "👏", name: "Bravo", cost: 15 },
+  { id: "cafe", emoji: "☕", name: "Café", cost: 25 },
+  { id: "coeur", emoji: "💛", name: "Coeur d'or", cost: 50 },
+  { id: "tiguy", emoji: "🤖", name: "Ti-Guy", cost: 75 },
+  { id: "feu", emoji: "🔥", name: "Feu", cost: 100 },
+  { id: "poutine", emoji: "🍟", name: "Poutine", cost: 125 },
+  { id: "erable", emoji: "🍁", name: "Érable", cost: 150 },
+  { id: "fleur_de_lys", emoji: "⚜️", name: "Fleur de Lys", cost: 250 },
+  { id: "couronne", emoji: "👑", name: "Couronne", cost: 500 },
+  { id: "sceau_voyageur", emoji: "🏅", name: "Sceau Voyageur", cost: 750 },
+  { id: "comete", emoji: "☄️", name: "Comète", cost: 1000 },
+];
+
 export function GiftPicker({
   recipientId,
   recipientName,
@@ -52,7 +68,7 @@ export function GiftPicker({
   const navigate = useNavigate();
   const { isPremium } = usePremium();
 
-  const [gifts, setGifts] = useState<GiftItem[]>([]);
+  const [gifts, setGifts] = useState<GiftItem[]>(FALLBACK_GIFTS);
   const [balance, setBalance] = useState<number>(0);
   const [selected, setSelected] = useState<GiftItem | null>(null);
   const [sending, setSending] = useState(false);
@@ -68,23 +84,37 @@ export function GiftPicker({
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
+
+    // Catalog first — never block gift grid on balance/auth failures
     try {
-      const [catalog, bal] = await Promise.all([
-        getCenneCatalog(),
-        user
-          ? getCenneBalance()
-          : Promise.resolve({ balance: 0, balanceDisplay: "0¢" }),
-      ]);
-      setGifts([...catalog.gifts].sort((a, b) => a.cost - b.cost));
-      setBalance(bal.balance);
+      const catalog = await getCenneCatalog();
+      const list = Array.isArray(catalog?.gifts) ? catalog.gifts : [];
+      if (list.length > 0) {
+        setGifts([...list].sort((a, b) => a.cost - b.cost));
+      } else {
+        setGifts(FALLBACK_GIFTS);
+        setLoadError("Catalogue vide — affichage local");
+      }
     } catch (e: unknown) {
       const msg =
-        e instanceof Error ? e.message : "Impossible de charger les cadeaux";
+        e instanceof Error ? e.message : "Impossible de charger le catalogue";
+      setGifts(FALLBACK_GIFTS);
       setLoadError(msg);
-      setGifts([]);
-    } finally {
-      setLoading(false);
     }
+
+    // Balance is optional for display; guest / 401 → 0
+    if (user) {
+      try {
+        const bal = await getCenneBalance();
+        setBalance(typeof bal.balance === "number" ? bal.balance : 0);
+      } catch {
+        setBalance(0);
+      }
+    } else {
+      setBalance(0);
+    }
+
+    setLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -243,8 +273,22 @@ export function GiftPicker({
           </div>
         )}
 
-        {/* Catalog */}
-        {loading ? (
+        {/* Catalog — always show gifts (fallback if API/balance fails) */}
+        {loadError && (
+          <p className="text-white/40 text-[10px] text-center mb-2">
+            {loadError}
+            {gifts.length > 0 ? " · catalogue de secours" : ""}
+            {" · "}
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              className="text-gold-400 font-semibold underline"
+            >
+              Réessayer
+            </button>
+          </p>
+        )}
+        {gifts.length === 0 ? (
           <div className="grid grid-cols-3 gap-2.5 mb-5">
             {Array.from({ length: 9 }).map((_, i) => (
               <div
@@ -253,25 +297,10 @@ export function GiftPicker({
               />
             ))}
           </div>
-        ) : loadError ? (
-          <div className="mb-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-center">
-            <p className="text-red-200 text-sm font-semibold mb-2">
-              {loadError}
-            </p>
-            <button
-              type="button"
-              onClick={() => void loadData()}
-              className="text-gold-400 text-sm font-bold underline"
-            >
-              Réessayer
-            </button>
-          </div>
-        ) : gifts.length === 0 ? (
-          <p className="text-white/50 text-sm text-center py-8 mb-5">
-            Aucun cadeau disponible pour le moment.
-          </p>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mb-5">
+          <div
+            className={`grid grid-cols-3 sm:grid-cols-4 gap-2.5 mb-5 ${loading ? "opacity-80" : ""}`}
+          >
             {gifts.map((gift) => {
               const isSelected = selected?.id === gift.id;
               const canAfford = !user || balance >= gift.cost;
