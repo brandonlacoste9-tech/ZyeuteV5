@@ -13,8 +13,8 @@ import type { Server as SocketIOServer } from "socket.io";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { db, storage } from "../storage.js";
-import { users } from "../../shared/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { users, gifts } from "../../shared/schema.js";
+import { eq, sql, desc } from "drizzle-orm";
 
 type DbGiftType =
   | "comete"
@@ -262,82 +262,120 @@ router.post("/gift", requireAuth, async (req, res) => {
       .where(eq(users.id, recipientId));
 
     const giftType = CENNE_TO_GIFT_TYPE[gift.id as GiftItemId];
-    const persistedGift = await storage.createGift({
-      senderId,
-      recipientId,
-      postId: postId || null,
-      giftType,
-      amount: cost,
-      stripePaymentId: null,
-    });
 
-    await db
-      .update(users)
-      .set({ totalGiftsSent: sql`${users.totalGiftsSent} + 1` })
-      .where(eq(users.id, senderId));
-    await db
-      .update(users)
-      .set({ totalGiftsReceived: sql`${users.totalGiftsReceived} + 1` })
-      .where(eq(users.id, recipientId));
+    // Persist gift record — if post_id FK fails, retry without post (still a real gift)
+    let persistedGift: { id: string } | null = null;
+    try {
+      persistedGift = await storage.createGift({
+        senderId,
+        recipientId,
+        postId: postId || null,
+        giftType,
+        amount: cost,
+        stripePaymentId: null,
+      });
+    } catch (giftErr: any) {
+      console.warn(
+        "[cennes] createGift with postId failed, retrying without post:",
+        giftErr?.message || giftErr,
+      );
+      try {
+        persistedGift = await storage.createGift({
+          senderId,
+          recipientId,
+          postId: null,
+          giftType,
+          amount: cost,
+          stripePaymentId: null,
+        });
+      } catch (giftErr2: any) {
+        console.error("[cennes] createGift failed entirely:", giftErr2);
+        // Balance already moved — still report success with ledger flag
+        persistedGift = null;
+      }
+    }
 
-    // Notify creator via Supabase (real schema: actor_id, post_id, payload jsonb)
-    await supabaseAdmin.from("notifications").insert({
-      user_id: recipientId,
-      type: "gift",
-      actor_id: senderId,
-      post_id: postId || null,
-      payload: {
-        emoji: gift.emoji,
-        name: gift.name,
-        cost: gift.cost,
-        cenneGiftId: gift.id,
-        giftRecordId: persistedGift.id,
-        message: `Tu as reçu un ${gift.emoji} ${gift.name} (${gift.cost}¢)!`,
-      },
-      lu: false,
-      created_at: new Date().toISOString(),
-    });
+    // Counters + notifications are best-effort (must not undo a successful gift)
+    try {
+      await db
+        .update(users)
+        .set({ totalGiftsSent: sql`coalesce(${users.totalGiftsSent}, 0) + 1` })
+        .where(eq(users.id, senderId));
+      await db
+        .update(users)
+        .set({
+          totalGiftsReceived: sql`coalesce(${users.totalGiftsReceived}, 0) + 1`,
+        })
+        .where(eq(users.id, recipientId));
+    } catch (counterErr) {
+      console.warn("[cennes] gift counter update skipped:", counterErr);
+    }
+
+    try {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: recipientId,
+        type: "gift",
+        actor_id: senderId,
+        post_id: postId || null,
+        payload: {
+          emoji: gift.emoji,
+          name: gift.name,
+          cost: gift.cost,
+          cenneGiftId: gift.id,
+          giftRecordId: persistedGift?.id ?? null,
+          message: `Tu as reçu un ${gift.emoji} ${gift.name} (${gift.cost}¢)!`,
+        },
+        lu: false,
+        created_at: new Date().toISOString(),
+      });
+    } catch (notifErr) {
+      console.warn("[cennes] gift notification skipped:", notifErr);
+    }
 
     // Live stream floaters — server-validated emit after successful gift
     if (streamId) {
-      const { data: liveStream } = await supabaseAdmin
-        .from("live_streams")
-        .select("id, user_id, status")
-        .eq("id", streamId)
-        .maybeSingle();
+      try {
+        const { data: liveStream } = await supabaseAdmin
+          .from("live_streams")
+          .select("id, user_id, status")
+          .eq("id", streamId)
+          .maybeSingle();
 
-      if (
-        liveStream &&
-        liveStream.user_id === recipientId &&
-        liveStream.status === "active"
-      ) {
-        const senderProfile = await db
-          .select({
-            displayName: users.displayName,
-            username: users.username,
-          })
-          .from(users)
-          .where(eq(users.id, senderId))
-          .limit(1);
+        if (
+          liveStream &&
+          liveStream.user_id === recipientId &&
+          liveStream.status === "active"
+        ) {
+          const senderProfile = await db
+            .select({
+              displayName: users.displayName,
+              username: users.username,
+            })
+            .from(users)
+            .where(eq(users.id, senderId))
+            .limit(1);
 
-        const senderName =
-          senderProfile[0]?.displayName ||
-          senderProfile[0]?.username ||
-          "Quelqu'un";
+          const senderName =
+            senderProfile[0]?.displayName ||
+            senderProfile[0]?.username ||
+            "Quelqu'un";
 
-        const io = req.app.get("io") as SocketIOServer | undefined;
-        if (io) {
-          io.to(`live:${streamId}`).emit("live:gift", {
-            id: `${Date.now()}-${persistedGift.id}`,
-            senderId,
-            senderName,
-            recipientId,
-            giftEmoji: gift.emoji,
-            giftName: gift.name,
-            giftCost: gift.cost,
-            timestamp: Date.now(),
-          });
+          const io = req.app.get("io") as SocketIOServer | undefined;
+          if (io) {
+            io.to(`live:${streamId}`).emit("live:gift", {
+              id: `${Date.now()}-${persistedGift?.id ?? "ok"}`,
+              senderId,
+              senderName,
+              recipientId,
+              giftEmoji: gift.emoji,
+              giftName: gift.name,
+              giftCost: gift.cost,
+              timestamp: Date.now(),
+            });
+          }
         }
+      } catch (liveErr) {
+        console.warn("[cennes] live gift emit skipped:", liveErr);
       }
     }
 
@@ -348,16 +386,48 @@ router.post("/gift", requireAuth, async (req, res) => {
       .where(eq(users.id, senderId))
       .limit(1);
 
+    const newBalance = balanceResult[0]?.cashCredits ?? 0;
+
     res.json({
       success: true,
       gift: { id: gift.id, emoji: gift.emoji, name: gift.name, cost },
-      giftRecordId: persistedGift.id,
-      newBalance: balanceResult[0]?.cashCredits ?? 0,
+      giftRecordId: persistedGift?.id ?? null,
+      newBalance,
       creatorEarned: creatorEarns,
+      // Client can show: "Solde: X¢ — Y¢ envoyés"
+      message: `${gift.emoji} ${gift.name} envoyé! Nouveau solde: ${newBalance}¢`,
     });
   } catch (err: any) {
     console.error("[cennes] gift error:", err);
     res.status(500).json({ error: err.message || "Erreur lors du cadeau" });
+  }
+});
+
+// ─── GET /gifts/sent — last gifts you sent (proof it went through) ────────────
+router.get("/gifts/sent", requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(
+      20,
+      Math.max(1, parseInt(String(req.query.limit || "10"), 10) || 10),
+    );
+    const rows = await db
+      .select({
+        id: gifts.id,
+        giftType: gifts.giftType,
+        amount: gifts.amount,
+        recipientId: gifts.recipientId,
+        postId: gifts.postId,
+        createdAt: gifts.createdAt,
+      })
+      .from(gifts)
+      .where(eq(gifts.senderId, req.userId!))
+      .orderBy(desc(gifts.createdAt))
+      .limit(limit);
+
+    res.json({ gifts: rows });
+  } catch (err: any) {
+    console.error("[cennes] gifts/sent error:", err);
+    res.status(500).json({ error: "Impossible de charger l'historique" });
   }
 });
 

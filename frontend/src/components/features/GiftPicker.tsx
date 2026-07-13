@@ -79,6 +79,13 @@ export function GiftPicker({
     emoji: string;
     type: string;
   } | null>(null);
+  const [lastSuccess, setLastSuccess] = useState<{
+    emoji: string;
+    name: string;
+    cost: number;
+    newBalance: number;
+    giftRecordId?: string | null;
+  } | null>(null);
   const floaterCounter = useRef(0);
 
   const loadData = useCallback(async () => {
@@ -149,13 +156,24 @@ export function GiftPicker({
     }
 
     setSending(true);
+    setLastSuccess(null);
     try {
       const result = await sendGift(recipientId, selected.id, postId, streamId);
       fireHaptic();
       spawnFloater(selected.emoji);
       setCelebration({ emoji: selected.emoji, type: selected.id });
       setBalance(result.newBalance);
-      toast.success(`${selected.emoji} Cadeau envoyé à ${recipientName}!`);
+      setLastSuccess({
+        emoji: selected.emoji,
+        name: selected.name,
+        cost: selected.cost,
+        newBalance: result.newBalance,
+        giftRecordId: result.giftRecordId,
+      });
+      toast.success(
+        result.message ||
+          `${selected.emoji} ${selected.name} envoyé! Solde: ${result.newBalance}¢`,
+      );
       onGiftSent?.(selected);
       setSelected(null);
     } catch (err: unknown) {
@@ -340,6 +358,25 @@ export function GiftPicker({
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {lastSuccess && (
+          <div className="mb-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-center">
+            <p className="text-emerald-200 font-black text-sm">
+              ✓ {lastSuccess.emoji} {lastSuccess.name} envoyé
+            </p>
+            <p className="text-white/70 text-xs mt-1">
+              −{lastSuccess.cost}¢ · nouveau solde{" "}
+              <span className="text-gold-400 font-bold">
+                {lastSuccess.newBalance}¢
+              </span>
+            </p>
+            {lastSuccess.giftRecordId && (
+              <p className="text-white/35 text-[10px] mt-1 font-mono truncate">
+                id {lastSuccess.giftRecordId.slice(0, 8)}…
+              </p>
+            )}
           </div>
         )}
 

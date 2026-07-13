@@ -35,9 +35,10 @@ export interface CenneBalance {
 export interface GiftResult {
   success: boolean;
   gift: { id: string; emoji: string; name: string; cost: number };
-  giftRecordId?: string;
+  giftRecordId?: string | null;
   newBalance: number;
   creatorEarned: number;
+  message?: string;
 }
 
 // Get pack + gift catalog (public — no auth required)
