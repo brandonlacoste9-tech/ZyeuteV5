@@ -1181,13 +1181,90 @@ export const Zyeute: React.FC = () => {
     </div>
   );
 
-  // Phone: bare icons (TikTok-style). Desktop: gold-rim discs beside the stage.
+  // Phone: bare SVG icons (PNGs had black boxes). Desktop: gold-rim discs + same SVGs.
   const railIconClass =
-    "relative flex items-center justify-center w-10 h-10 lg:w-[52px] lg:h-[52px] rounded-full transition-all duration-200 active:scale-90 lg:overflow-hidden lg:border-[1.5px] lg:border-[rgba(212,175,55,0.45)] lg:bg-[linear-gradient(160deg,rgba(55,42,32,0.92)_0%,rgba(18,14,12,0.95)_55%,rgba(10,8,6,0.98)_100%)] lg:shadow-[0_3px_12px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)]";
-  const railIconImgClass =
-    "w-7 h-7 lg:w-7 lg:h-7 object-contain relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]";
+    "relative flex items-center justify-center w-11 h-11 lg:w-[52px] lg:h-[52px] rounded-full transition-all duration-200 active:scale-90 lg:border-[1.5px] lg:border-[rgba(212,175,55,0.45)] lg:bg-[linear-gradient(160deg,rgba(55,42,32,0.92)_0%,rgba(18,14,12,0.95)_55%,rgba(10,8,6,0.98)_100%)] lg:shadow-[0_3px_12px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.12)]";
+  const railSvgClass =
+    "w-8 h-8 lg:w-7 lg:h-7 drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]";
   const railLabelClass =
     "text-[10px] lg:text-[11px] font-bold tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mt-0.5";
+
+  const RailFireIcon = ({ active }: { active?: boolean }) => (
+    <svg
+      viewBox="0 0 24 24"
+      className={railSvgClass}
+      fill={active ? "#FF5A3C" : "none"}
+      stroke={active ? "#FF8A70" : "white"}
+      strokeWidth={active ? 1.5 : 1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 22c4-2.5 6-5.5 6-9.5 0-4-2.5-6.5-4.5-8.5C12.5 5.5 12 4 12 2c0 2.5-1 4.5-2.5 6C7.5 10.5 6 13 6 15.5 6 18.5 8 21 12 22z" />
+      <path d="M12 22c-1.5-1-2.5-2.5-2.5-4.2 0-1.8 1-3 2.5-4.3 1.5 1.3 2.5 2.5 2.5 4.3 0 1.7-1 3.2-2.5 4.2z" />
+    </svg>
+  );
+  const RailCommentIcon = () => (
+    <svg
+      viewBox="0 0 24 24"
+      className={railSvgClass}
+      fill="none"
+      stroke="white"
+      strokeWidth={1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3V11.5A8.5 8.5 0 1 1 21 11.5z" />
+    </svg>
+  );
+  const RailShareIcon = () => (
+    <svg
+      viewBox="0 0 24 24"
+      className={railSvgClass}
+      fill="none"
+      stroke="white"
+      strokeWidth={1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+      <path d="M12 3v12" />
+      <path d="m7 8 5-5 5 5" />
+    </svg>
+  );
+  const RailSaveIcon = ({ active }: { active?: boolean }) => (
+    <svg
+      viewBox="0 0 24 24"
+      className={railSvgClass}
+      fill={active ? "#D4AF37" : "none"}
+      stroke={active ? "#FFE55C" : "white"}
+      strokeWidth={1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+  const RailGiftIcon = () => (
+    <svg
+      viewBox="0 0 24 24"
+      className={railSvgClass}
+      fill="none"
+      stroke="white"
+      strokeWidth={1.85}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M12 8v13" />
+      <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+      <path d="M7.5 8a2.5 2.5 0 1 1 0-5C9.5 3 12 8 12 8s2.5-5 4.5-5a2.5 2.5 0 0 1 0 5" />
+    </svg>
+  );
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
@@ -1633,16 +1710,7 @@ export const Zyeute: React.FC = () => {
                     <div
                       className={`${railIconClass} ${isFired ? "lg:border-red-400/80 lg:bg-[linear-gradient(160deg,rgba(80,25,18,0.95)_0%,rgba(30,10,8,0.98)_100%)] lg:shadow-[0_4px_18px_rgba(255,60,40,0.45)]" : ""}`}
                     >
-                      <img
-                        src="/assets/icons/icon-fire.png"
-                        className={railIconImgClass}
-                        style={{
-                          filter: isFired
-                            ? "brightness(1.55) saturate(1.45) drop-shadow(0 0 10px #FF4D2E)"
-                            : "brightness(1.25) drop-shadow(0 2px 4px rgba(0,0,0,0.75))",
-                        }}
-                        alt="Fire"
-                      />
+                      <RailFireIcon active={isFired} />
                     </div>
                     <span
                       className={railLabelClass}
@@ -1664,11 +1732,7 @@ export const Zyeute: React.FC = () => {
                 data-testid={`link-comments-${currentPost.id}`}
               >
                 <div className={railIconClass}>
-                  <img
-                    src="/assets/icons/icon-comment.png"
-                    className={`${railIconImgClass} brightness-125`}
-                    alt="Comment"
-                  />
+                  <RailCommentIcon />
                 </div>
                 <span className={railLabelClass}>
                   {(currentPost as PostWithEngagement).commentCount ??
@@ -1686,11 +1750,7 @@ export const Zyeute: React.FC = () => {
                 data-testid={`button-share-${currentPost.id}`}
               >
                 <div className={railIconClass}>
-                  <img
-                    src="/assets/icons/icon-share.png"
-                    className={`${railIconImgClass} brightness-125`}
-                    alt="Share"
-                  />
+                  <RailShareIcon />
                 </div>
                 <span className={railLabelClass}>Share</span>
               </button>
@@ -1709,16 +1769,7 @@ export const Zyeute: React.FC = () => {
                     <div
                       className={`${railIconClass} ${isSaved ? "lg:border-gold-400/90 lg:bg-[linear-gradient(160deg,rgba(90,70,25,0.95)_0%,rgba(30,22,8,0.98)_100%)] lg:shadow-[0_4px_18px_rgba(212,175,55,0.4)]" : ""}`}
                     >
-                      <img
-                        src="/assets/icons/icon-save.png"
-                        className={railIconImgClass}
-                        style={{
-                          filter: isSaved
-                            ? "brightness(1.5) drop-shadow(0 0 10px rgba(255,215,80,0.9))"
-                            : "brightness(1.25) drop-shadow(0 2px 4px rgba(0,0,0,0.75))",
-                        }}
-                        alt="Save"
-                      />
+                      <RailSaveIcon active={isSaved} />
                     </div>
                     <span
                       className={railLabelClass}
@@ -1739,11 +1790,7 @@ export const Zyeute: React.FC = () => {
                 className="flex flex-col items-center press-scale"
               >
                 <div className={railIconClass}>
-                  <img
-                    src="/assets/icons/icon-gift.png"
-                    className={`${railIconImgClass} brightness-125`}
-                    alt="Gift"
-                  />
+                  <RailGiftIcon />
                 </div>
                 <span className={railLabelClass}>Cadeau</span>
               </button>
