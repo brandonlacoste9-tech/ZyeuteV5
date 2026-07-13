@@ -1181,11 +1181,18 @@ export const Zyeute: React.FC = () => {
     </div>
   );
 
-  // TikTok craft + Zyeuté soul: minimal chrome, gold only as accent
+  // Premium action rail — gold ring badges, glass depth, clear active states
   const railIconClass =
-    "w-12 h-12 rounded-full flex items-center justify-center bg-black/30 backdrop-blur-[2px] border border-white/15 shadow-[0_4px_14px_rgba(0,0,0,0.45)]";
+    "relative w-[52px] h-[52px] rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 active:scale-90";
+  const railIconStyle: React.CSSProperties = {
+    background:
+      "linear-gradient(160deg, rgba(55,42,32,0.92) 0%, rgba(18,14,12,0.95) 55%, rgba(10,8,6,0.98) 100%)",
+    boxShadow:
+      "0 4px 16px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.5)",
+    border: "1.5px solid rgba(212,175,55,0.45)",
+  };
   const railLabelClass =
-    "text-[11px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]";
+    "text-[11px] font-bold tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mt-0.5";
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
@@ -1554,24 +1561,37 @@ export const Zyeute: React.FC = () => {
             )}
           </div>
 
-          {/* Right rail — on mobile over video; on desktop beside the phone stage (not on video) */}
+          {/* Right rail — premium gold badges; mobile on video, desktop beside stage */}
           {posts.length > 0 && currentPost && (
             <div
-              className={`absolute z-40 flex flex-col items-center gap-4 transition-opacity duration-300 ${
+              className={`absolute z-40 flex flex-col items-center gap-3.5 transition-opacity duration-300 ${
                 uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-              } right-2.5 bottom-24 pb-safe lg:right-auto lg:left-full lg:ml-4 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto lg:pb-0`}
+              } right-2 bottom-24 pb-safe lg:right-auto lg:left-full lg:ml-3 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto lg:pb-0 lg:py-4 lg:px-2.5 lg:rounded-3xl lg:border lg:border-gold-500/20 lg:bg-black/40 lg:backdrop-blur-md lg:shadow-[0_12px_40px_rgba(0,0,0,0.55)]`}
             >
+              {/* Profile — gold ring + follow */}
               <Link
                 to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
-                className="flex flex-col items-center gap-0.5 press-scale relative"
+                className="flex flex-col items-center press-scale relative mb-1"
                 data-testid={`link-profile-${currentPost.id}`}
               >
-                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/90 shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
-                  <img
-                    src={currentPost.user?.avatar_url || "/default-avatar.png"}
-                    alt={currentPost.user?.displayName || "User"}
-                    className="w-full h-full object-cover"
-                  />
+                <div
+                  className="w-[56px] h-[56px] rounded-full p-[2.5px]"
+                  style={{
+                    background:
+                      "linear-gradient(145deg, #FFE55C 0%, #D4AF37 40%, #8B6914 100%)",
+                    boxShadow:
+                      "0 0 0 1px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.25)",
+                  }}
+                >
+                  <div className="w-full h-full rounded-full overflow-hidden bg-black ring-2 ring-black">
+                    <img
+                      src={
+                        currentPost.user?.avatar_url || "/default-avatar.png"
+                      }
+                      alt={currentPost.user?.displayName || "User"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
                 {currentPost.user?.id &&
                   currentPost.user.id !== authUser?.id &&
@@ -1581,7 +1601,14 @@ export const Zyeute: React.FC = () => {
                       .is_following
                   ) && (
                     <span
-                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-gold-500 text-black text-sm font-bold flex items-center justify-center shadow-md leading-none"
+                      className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-[22px] h-[22px] rounded-full text-black text-base font-black flex items-center justify-center leading-none"
+                      style={{
+                        background:
+                          "linear-gradient(145deg, #FFE55C 0%, #D4AF37 50%, #B8860B 100%)",
+                        boxShadow:
+                          "0 2px 8px rgba(0,0,0,0.5), 0 0 10px rgba(212,175,55,0.45)",
+                        border: "1.5px solid rgba(0,0,0,0.35)",
+                      }}
                       aria-hidden
                     >
                       +
@@ -1605,24 +1632,41 @@ export const Zyeute: React.FC = () => {
                       fire();
                       handleFireToggle(currentPost.id);
                     }}
-                    className="flex flex-col items-center gap-0.5 press-scale"
+                    className="flex flex-col items-center press-scale group"
                     data-testid={`button-fire-${currentPost.id}`}
                   >
                     <div
-                      className={`${railIconClass} ${isFired ? "border-red-400/50 bg-red-500/20" : ""}`}
+                      className={railIconClass}
+                      style={{
+                        ...railIconStyle,
+                        ...(isFired
+                          ? {
+                              border: "1.5px solid rgba(255,80,60,0.75)",
+                              background:
+                                "linear-gradient(160deg, rgba(80,25,18,0.95) 0%, rgba(30,10,8,0.98) 100%)",
+                              boxShadow:
+                                "0 4px 18px rgba(255,60,40,0.45), 0 0 22px rgba(255,80,40,0.35), inset 0 1px 0 rgba(255,200,180,0.15)",
+                            }
+                          : {}),
+                      }}
                     >
                       <img
                         src="/assets/icons/icon-fire.png"
-                        className="w-7 h-7 object-contain drop-shadow-md"
+                        className="w-7 h-7 object-contain relative z-10"
                         style={{
                           filter: isFired
-                            ? "brightness(1.4) saturate(1.3) drop-shadow(0 0 6px #FF3D3D)"
-                            : "brightness(1.15) contrast(1.05)",
+                            ? "brightness(1.5) saturate(1.4) drop-shadow(0 0 8px #FF4D2E)"
+                            : "brightness(1.2) drop-shadow(0 1px 2px rgba(0,0,0,0.6))",
                         }}
                         alt="Fire"
                       />
                     </div>
-                    <span className={railLabelClass}>{fireCount}</span>
+                    <span
+                      className={railLabelClass}
+                      style={isFired ? { color: "#FF8A70" } : undefined}
+                    >
+                      {fireCount}
+                    </span>
                   </button>
                 );
               })()}
@@ -1633,13 +1677,13 @@ export const Zyeute: React.FC = () => {
                   comment();
                   openComments(currentPost.id);
                 }}
-                className="flex flex-col items-center gap-0.5 press-scale"
+                className="flex flex-col items-center press-scale"
                 data-testid={`link-comments-${currentPost.id}`}
               >
-                <div className={railIconClass}>
+                <div className={railIconClass} style={railIconStyle}>
                   <img
                     src="/assets/icons/icon-comment.png"
-                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
+                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
                     alt="Comment"
                   />
                 </div>
@@ -1655,17 +1699,17 @@ export const Zyeute: React.FC = () => {
                   share();
                   openShare(currentPost.id);
                 }}
-                className="flex flex-col items-center gap-0.5 press-scale"
+                className="flex flex-col items-center press-scale"
                 data-testid={`button-share-${currentPost.id}`}
               >
-                <div className={railIconClass}>
+                <div className={railIconClass} style={railIconStyle}>
                   <img
                     src="/assets/icons/icon-share.png"
-                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
+                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
                     alt="Share"
                   />
                 </div>
-                <span className={railLabelClass}>Partager</span>
+                <span className={railLabelClass}>Share</span>
               </button>
 
               {(() => {
@@ -1676,19 +1720,31 @@ export const Zyeute: React.FC = () => {
                       save();
                       handleSaveToggle(currentPost.id);
                     }}
-                    className="flex flex-col items-center gap-0.5 press-scale"
+                    className="flex flex-col items-center press-scale"
                     data-testid={`button-save-${currentPost.id}`}
                   >
                     <div
-                      className={`${railIconClass} ${isSaved ? "border-gold-400/60 bg-gold-500/15" : ""}`}
+                      className={railIconClass}
+                      style={{
+                        ...railIconStyle,
+                        ...(isSaved
+                          ? {
+                              border: "1.5px solid rgba(255,215,80,0.85)",
+                              background:
+                                "linear-gradient(160deg, rgba(90,70,25,0.95) 0%, rgba(30,22,8,0.98) 100%)",
+                              boxShadow:
+                                "0 4px 18px rgba(212,175,55,0.4), 0 0 22px rgba(212,175,55,0.3), inset 0 1px 0 rgba(255,230,150,0.2)",
+                            }
+                          : {}),
+                      }}
                     >
                       <img
                         src="/assets/icons/icon-save.png"
-                        className="w-7 h-7 object-contain drop-shadow-md"
+                        className="w-7 h-7 object-contain"
                         style={{
                           filter: isSaved
-                            ? "brightness(1.4) drop-shadow(0 0 6px rgba(var(--accent-rgb),0.8))"
-                            : "brightness(1.15)",
+                            ? "brightness(1.45) drop-shadow(0 0 8px rgba(255,215,80,0.85))"
+                            : "brightness(1.2) drop-shadow(0 1px 2px rgba(0,0,0,0.6))",
                         }}
                         alt="Save"
                       />
@@ -1709,12 +1765,20 @@ export const Zyeute: React.FC = () => {
                   tap();
                   setGiftOpen(true);
                 }}
-                className="flex flex-col items-center gap-0.5 press-scale"
+                className="flex flex-col items-center press-scale"
               >
-                <div className={railIconClass}>
+                <div
+                  className={railIconClass}
+                  style={{
+                    ...railIconStyle,
+                    border: "1.5px solid rgba(212,175,55,0.65)",
+                    boxShadow:
+                      "0 4px 16px rgba(0,0,0,0.55), 0 0 14px rgba(212,175,55,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
+                  }}
+                >
                   <img
                     src="/assets/icons/icon-gift.png"
-                    className="w-7 h-7 object-contain drop-shadow-md brightness-125"
+                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
                     alt="Gift"
                   />
                 </div>
