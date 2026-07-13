@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CompanyPageShell } from "./CompanyPageShell";
+import { useSEO } from "@/hooks/useSEO";
 
 const CONTACT_CHANNELS = [
   {
@@ -31,6 +32,13 @@ const CONTACT_CHANNELS = [
 ] as const;
 
 export const ContactPage: React.FC = () => {
+  useSEO({
+    title: "Contact",
+    description:
+      "Contacte Zyeute : support, presse, confidentialité, juridique et modération. On répond en français.",
+    url: "/contact",
+  });
+
   return (
     <CompanyPageShell title="Contact">
       <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">

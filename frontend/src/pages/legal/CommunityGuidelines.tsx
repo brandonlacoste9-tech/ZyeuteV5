@@ -5,8 +5,16 @@
 import React from "react";
 import { Header } from "../../components/Header";
 import { BottomNav } from "../../components/BottomNav";
+import { useSEO } from "@/hooks/useSEO";
 
 export const CommunityGuidelines: React.FC = () => {
+  useSEO({
+    title: "Directives de la communauté",
+    description:
+      "Les règles de la ruche Zyeute : respect, sécurité et expression libre pour les Québécois et francophones.",
+    url: "/legal/community",
+  });
+
   return (
     <div className="min-h-screen bg-black pb-20">
       <Header title="Directives de la Communauté" showBack={true} />

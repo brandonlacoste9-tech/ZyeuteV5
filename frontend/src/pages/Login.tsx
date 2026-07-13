@@ -20,10 +20,18 @@ import { AppConfig } from "@/config/factory";
 import { useTranslation } from "@/i18n";
 import { OVHCloudFooter } from "@/components/features/OVHCloudBadge";
 import { rememberReturnTo, consumeReturnTo } from "@/lib/redirectAfterAuth";
+import { useSEO } from "@/hooks/useSEO";
 
 const loginLogger = logger.withContext("Login");
 
 export const Login: React.FC = () => {
+  useSEO({
+    title: "Connexion",
+    description:
+      "Connecte-toi à Zyeute — l'app vidéo du Québec. Courriel, Google ou mode invité.",
+    url: "/login",
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
   const { enterGuestMode } = useAuth();

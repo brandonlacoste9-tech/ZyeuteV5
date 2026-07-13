@@ -48,6 +48,7 @@ import { GiftPicker } from "@/components/features/GiftPicker";
 import { FeedErrorBoundary } from "@/components/feed/FeedErrorBoundary";
 import { SubscriberBadge } from "@/components/ui/SubscriberBadge";
 import usePremium from "@/hooks/usePremium";
+import { useSEO } from "@/hooks/useSEO";
 import { toast } from "@/components/Toast";
 import { useHaptics } from "@/hooks/useHaptics";
 import type { Post, User } from "@/types";
@@ -518,6 +519,16 @@ export const Zyeute: React.FC = () => {
 
   /** Pour toi = explore; Abonnements = people you follow (requires auth for filtering). */
   const [feedSource, setFeedSource] = useState<FeedType>("explore");
+
+  useSEO({
+    title:
+      feedSource === "following"
+        ? "Abonnements — Fil d'actualité"
+        : "Pour toi — Vidéos du Québec",
+    description:
+      "Le fil vertical Zyeute : vidéos courtes des créateurs d'ici. Swipe, like, partage — fait au Québec.",
+    url: "/feed",
+  });
 
   // Infinite scroll hook
   const {

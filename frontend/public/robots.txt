@@ -1,12 +1,26 @@
+# Zyeute — crawl rules (production: www.zyeute.com)
 User-agent: *
 Allow: /
 
-# Public pages — fully crawlable
+# High-value public surfaces
 Allow: /explore
 Allow: /premium
+Allow: /arcade
+Allow: /about
+Allow: /contact
+Allow: /newsroom
+Allow: /signup
+Allow: /login
+Allow: /leaderboard
+Allow: /legal/
+Allow: /terms
+Allow: /privacy
+Allow: /feed
+Allow: /p/
+Allow: /profile/
 Allow: /sitemap.xml
 
-# Private/auth pages — no need to index
+# App surfaces — no SEO value
 Disallow: /settings
 Disallow: /notifications
 Disallow: /messages
@@ -18,6 +32,16 @@ Disallow: /auth/
 Disallow: /api/
 Disallow: /admin/
 Disallow: /moderation/
+Disallow: /onboarding
+Disallow: /parental
+Disallow: /ai-studio
+Disallow: /studio
 
-# Sitemap
-Sitemap: https://zyeute.com/sitemap.xml
+# AI / training bots (optional courtesy — remove if you want full training opt-in)
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://www.zyeute.com/sitemap.xml

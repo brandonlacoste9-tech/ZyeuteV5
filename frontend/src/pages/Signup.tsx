@@ -22,8 +22,16 @@ import {
   detectHiveFromLocale,
 } from "@/contexts/HiveContext";
 import { detectLanguageFromBrowser } from "@/lib/geoDetect";
+import { useSEO } from "@/hooks/useSEO";
 
 export const Signup: React.FC = () => {
+  useSEO({
+    title: "Créer un compte",
+    description:
+      "Rejoins Zyeute — l'app vidéo du Québec. Inscription gratuite en quelques secondes.",
+    url: "/signup",
+  });
+
   const navigate = useNavigate();
   const isMountedRef = React.useRef(true);
   const navigationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -111,14 +119,17 @@ export const Signup: React.FC = () => {
           const session = await supabase.auth.getSession();
           const token = session.data.session?.access_token;
           if (token) {
-            const res = await fetch(`${import.meta.env.VITE_APP_URL || ""}/api/bounty/claim`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+            const res = await fetch(
+              `${import.meta.env.VITE_APP_URL || ""}/api/bounty/claim`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ referralCode: refCode }),
               },
-              body: JSON.stringify({ referralCode: refCode }),
-            });
+            );
             if (res.ok) {
               const data = await res.json();
               toast.success(`Bounty réclamée! +${data.amount} Cennes 💰`);

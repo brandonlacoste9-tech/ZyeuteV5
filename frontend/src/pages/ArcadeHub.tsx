@@ -8,9 +8,16 @@ import {
   arcadeTextCyan,
   arcadeTextMuted,
 } from "@/components/arcade/arcade-ui";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function ArcadeHub() {
   const navigate = useNavigate();
+  useSEO({
+    title: "Arcade — Jeux québécois",
+    description:
+      "Zyeuté Arcade : Grid Rush, Poutine Stack, Carte Sucrée et plus. Mini-jeux gratuits pour la gang d'icitte.",
+    url: "/arcade",
+  });
 
   return (
     <ArcadeBackdrop className="pb-24">
@@ -45,29 +52,36 @@ export default function ArcadeHub() {
 
         {/* Premium Banner for Hell Yeah Games Headquarters */}
         <div className="mb-12">
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => window.open("https://ironclaw-i1f8.vercel.app/", "_blank")}
+            onClick={() =>
+              window.open("https://ironclaw-i1f8.vercel.app/", "_blank")
+            }
             className="relative w-full overflow-hidden rounded-2xl cursor-pointer group"
-            style={{ 
+            style={{
               background: "linear-gradient(135deg, #FF0055 0%, #7000FF 100%)",
-              boxShadow: "0 0 30px rgba(255, 0, 85, 0.4), inset 0 0 20px rgba(0,0,0,0.5)"
+              boxShadow:
+                "0 0 30px rgba(255, 0, 85, 0.4), inset 0 0 20px rgba(0,0,0,0.5)",
             }}
           >
             {/* Cyberpunk grid overlay */}
             <div className="absolute inset-0 opacity-20 pointer-events-none bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-            
+
             <div className="relative p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 z-10">
               <div className="text-center md:text-left flex-1">
                 <div className="inline-block px-3 py-1 bg-black/40 border border-white/10 rounded-full text-xs font-bold text-pink-300 uppercase tracking-widest mb-3 backdrop-blur-sm">
                   Partenaire Officiel
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 leading-tight drop-shadow-md" style={{ fontFamily: "Inter, sans-serif" }}>
+                <h2
+                  className="text-3xl sm:text-4xl font-black text-white mb-2 leading-tight drop-shadow-md"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   Hell Yeah Games INC
                 </h2>
                 <p className="text-white/80 text-sm sm:text-base max-w-md mx-auto md:mx-0">
-                  Découvrez notre Quartier Général ! Plus de 800+ jeux premiums, des tournois exclusifs, et la communauté ultime de joueurs.
+                  Découvrez notre Quartier Général ! Plus de 800+ jeux premiums,
+                  des tournois exclusifs, et la communauté ultime de joueurs.
                 </p>
               </div>
 
@@ -117,7 +131,9 @@ function WebGamesCatalog() {
       setLoading(true);
       try {
         // Fetch from our backend proxy with the selected category
-        const res = await fetch(`/api/gamedistribution/rss?category=${activeCategory}`);
+        const res = await fetch(
+          `/api/gamedistribution/rss?category=${activeCategory}`,
+        );
         const data = await res.json();
         if (data && Array.isArray(data)) {
           setGames(data);
@@ -137,7 +153,7 @@ function WebGamesCatalog() {
         <h2 className="text-xl sm:text-2xl font-bold arcade-title-gradient arcade-font-pixel">
           CATALOGUE WEB
         </h2>
-        
+
         {/* Neon Tabs Menu */}
         <div className="flex flex-wrap justify-center gap-3">
           {categories.map((cat) => (
@@ -158,32 +174,41 @@ function WebGamesCatalog() {
 
       {loading ? (
         <div className="mt-20 flex justify-center opacity-50 min-h-[300px]">
-          <div className="arcade-font-pixel animate-pulse text-cyan-400">Chargement...</div>
+          <div className="arcade-font-pixel animate-pulse text-cyan-400">
+            Chargement...
+          </div>
         </div>
       ) : (
-
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        {games.map((g) => (
-          <motion.div
-            key={g.Md5}
-            whileHover={{ y: -4 }}
-            className="bg-[#2d1b4e]/80 rounded-xl overflow-hidden border border-[#3d2b5e] flex flex-col group cursor-pointer"
-            onClick={() => navigate(`/arcade/play?url=${encodeURIComponent(g.Url)}&title=${encodeURIComponent(g.Title)}`)}
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-black/50">
-              <img 
-                src={g.Asset[0]} 
-                alt={g.Title} 
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-              />
-            </div>
-            <div className="p-3">
-              <h3 className="font-bold text-sm text-white truncate mb-1">{g.Title}</h3>
-              <p className="text-xs text-purple-300/70 line-clamp-2">{g.Description}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+          {games.map((g) => (
+            <motion.div
+              key={g.Md5}
+              whileHover={{ y: -4 }}
+              className="bg-[#2d1b4e]/80 rounded-xl overflow-hidden border border-[#3d2b5e] flex flex-col group cursor-pointer"
+              onClick={() =>
+                navigate(
+                  `/arcade/play?url=${encodeURIComponent(g.Url)}&title=${encodeURIComponent(g.Title)}`,
+                )
+              }
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-black/50">
+                <img
+                  src={g.Asset[0]}
+                  alt={g.Title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <div className="p-3">
+                <h3 className="font-bold text-sm text-white truncate mb-1">
+                  {g.Title}
+                </h3>
+                <p className="text-xs text-purple-300/70 line-clamp-2">
+                  {g.Description}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       )}
     </div>
   );

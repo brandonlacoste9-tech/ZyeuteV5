@@ -24,8 +24,9 @@ interface SEOProps {
 const DEFAULT_TITLE = "Zyeute — L'app vidéo du Québec";
 const DEFAULT_DESC =
   "La plateforme de vidéos courtes 100% québécoise. Partage, découvre et connecte-toi avec les créateurs du Québec.";
-const DEFAULT_IMAGE = "https://zyeute.com/zyeute_og_image.png";
-const BASE_URL = "https://zyeute.com";
+const DEFAULT_IMAGE = "https://www.zyeute.com/zyeute_og_image.png";
+/** Prefer www — apex redirects to www in production */
+const BASE_URL = "https://www.zyeute.com";
 
 function setMeta(property: string, content: string, isName = false) {
   const attr = isName ? "name" : "property";

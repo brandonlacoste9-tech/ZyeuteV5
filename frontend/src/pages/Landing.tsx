@@ -5,8 +5,16 @@
 
 import React from "react";
 import { Hero } from "@/components/Hero";
+import { useSEO } from "@/hooks/useSEO";
 
 const Landing: React.FC = () => {
+  useSEO({
+    title: "L'app vidéo du Québec | TikTok québécois",
+    description:
+      "Zyeute est la plateforme de vidéos courtes 100% québécoise. Partage tes clips, découvre des créateurs de Montréal, Québec et partout au Québec.",
+    url: "/",
+  });
+
   return (
     <div className="min-h-screen">
       <Hero />

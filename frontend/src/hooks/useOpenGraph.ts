@@ -15,13 +15,14 @@ export function useOpenGraph(post: Post | null) {
     const description =
       post.caption ||
       "Découvrez ce contenu sur Zyeuté, la plateforme vidéo québécoise.";
-    const DEFAULT_OG_IMAGE = "https://zyeute.com/zyeute_og_image.png";
+    const DEFAULT_OG_IMAGE = "https://www.zyeute.com/zyeute_og_image.png";
     const image =
       post.thumbnail_url ||
       (post.mux_playback_id
         ? `https://image.mux.com/${post.mux_playback_id}/thumbnail.jpg?width=600&height=338&fit_mode=smartcrop`
         : DEFAULT_OG_IMAGE);
-    const url = `https://zyeute.com/post/${post.id}`;
+    // Canonical post path is /p/:id (see AppRoutes)
+    const url = `https://www.zyeute.com/p/${post.id}`;
 
     // Helper to set or create meta tag
     const setMeta = (property: string, content: string, attr = "property") => {
@@ -87,7 +88,7 @@ export function useOpenGraph(post: Post | null) {
       videoLd["author"] = {
         "@type": "Person",
         name: post.user.display_name || post.user.username,
-        url: `https://zyeute.com/profile/${post.user.username}`,
+        url: `https://www.zyeute.com/profile/${post.user.username}`,
       };
     }
 

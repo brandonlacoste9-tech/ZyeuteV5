@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CompanyPageShell } from "./CompanyPageShell";
+import { useSEO } from "@/hooks/useSEO";
 
 const PRESS_ITEMS = [
   {
@@ -27,6 +28,13 @@ const PRESS_ITEMS = [
 ] as const;
 
 export const NewsroomPage: React.FC = () => {
+  useSEO({
+    title: "Newsroom — Presse et actualités",
+    description:
+      "Nouvelles produit, lancements et communiqués Zyeute. Contact presse : press@zyeute.com.",
+    url: "/newsroom",
+  });
+
   return (
     <CompanyPageShell title="Newsroom">
       <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4">

@@ -5,8 +5,16 @@
 import React from "react";
 import { Header } from "../../components/Header";
 import { BottomNav } from "../../components/BottomNav";
+import { useSEO } from "@/hooks/useSEO";
 
 export const PrivacyPolicy: React.FC = () => {
+  useSEO({
+    title: "Politique de confidentialité",
+    description:
+      "Politique de confidentialité Zyeute — GDPR, PIPEDA, Loi 25 du Québec et CCPA. Comment on protège tes données.",
+    url: "/privacy",
+  });
+
   return (
     <div className="min-h-screen bg-black pb-20">
       <Header title="Politique de Confidentialité" showBack={true} />

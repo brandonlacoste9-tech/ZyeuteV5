@@ -283,13 +283,13 @@ export const Profile: React.FC = () => {
             "@type": "Person",
             name: user.display_name || user.username,
             alternateName: `@${user.username}`,
-            url: `https://zyeute.com/profile/${user.username}`,
+            url: `https://www.zyeute.com/profile/${user.username}`,
             image: user.avatar_url || undefined,
             description: user.bio || `Créateur sur Zyeute`,
             memberOf: {
               "@type": "Organization",
               name: "Zyeute",
-              url: "https://zyeute.com",
+              url: "https://www.zyeute.com",
             },
           },
         }

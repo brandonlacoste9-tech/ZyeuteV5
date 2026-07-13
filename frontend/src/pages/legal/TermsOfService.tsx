@@ -6,8 +6,16 @@
 import React from "react";
 import { Header } from "../../components/Header";
 import { BottomNav } from "../../components/BottomNav";
+import { useSEO } from "@/hooks/useSEO";
 
 export const TermsOfService: React.FC = () => {
+  useSEO({
+    title: "Conditions d'utilisation",
+    description:
+      "Conditions d'utilisation de Zyeute — plateforme vidéo québécoise. Conformité au droit du Québec.",
+    url: "/terms",
+  });
+
   return (
     <div className="min-h-screen bg-black pb-20">
       <Header title="Conditions d'Utilisation" showBack={true} />

@@ -1,8 +1,16 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { CompanyPageShell } from "./CompanyPageShell";
+import { useSEO } from "@/hooks/useSEO";
 
 export const AboutPage: React.FC = () => {
+  useSEO({
+    title: "À propos — Fait au Québec",
+    description:
+      "Zyeuté, c'est l'app vidéo du Québec : fil vertical, créateurs d'ici, culture et joual. Découvre notre mission et ce qui nous distingue de TikTok.",
+    url: "/about",
+  });
+
   return (
     <CompanyPageShell title="À propos">
       <div className="inline-block bg-gold-500/20 px-4 py-2 rounded-full mb-6">
