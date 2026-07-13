@@ -1,10 +1,9 @@
 /**
- * GiftPicker — TikTok-style gift sheet
- * Opens from video feed or profile. Shows gift items with cenne cost.
- * Deducts from balance on send; floats sent gift emoji as animation.
+ * GiftPicker — feed gift sheet (cennes balance)
+ * Leather + gold chrome, clear grid, floating send + full-screen celebration.
  */
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getCenneCatalog,
@@ -23,6 +22,7 @@ import {
   getGiftTier,
   giftTierBorderClass,
 } from "@/lib/giftCatalog";
+import { GiftOverlay } from "./GiftOverlay";
 
 interface FloatingGift {
   id: string;
@@ -36,8 +36,7 @@ interface GiftPickerProps {
   postId?: string;
   streamId?: string;
   onClose: () => void;
-  /** Container ref so we can float emojis over the video */
-  containerRef?: React.RefObject<HTMLElement>;
+  onGiftSent?: (gift: GiftItem) => void;
 }
 
 export function GiftPicker({
@@ -46,6 +45,7 @@ export function GiftPicker({
   postId,
   streamId,
   onClose,
+  onGiftSent,
 }: GiftPickerProps) {
   const { user } = useAuth();
   const { fire: fireHaptic } = useHaptics();
@@ -56,37 +56,61 @@ export function GiftPicker({
   const [balance, setBalance] = useState<number>(0);
   const [selected, setSelected] = useState<GiftItem | null>(null);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [floaters, setFloaters] = useState<FloatingGift[]>([]);
+  const [celebration, setCelebration] = useState<{
+    emoji: string;
+    type: string;
+  } | null>(null);
   const floaterCounter = useRef(0);
 
-  useEffect(() => {
-    Promise.all([
-      getCenneCatalog(),
-      user
-        ? getCenneBalance()
-        : Promise.resolve({ balance: 0, balanceDisplay: "0¢" }),
-    ]).then(([catalog, bal]) => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [catalog, bal] = await Promise.all([
+        getCenneCatalog(),
+        user
+          ? getCenneBalance()
+          : Promise.resolve({ balance: 0, balanceDisplay: "0¢" }),
+      ]);
       setGifts([...catalog.gifts].sort((a, b) => a.cost - b.cost));
       setBalance(bal.balance);
-    });
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : "Impossible de charger les cadeaux";
+      setLoadError(msg);
+      setGifts([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const spawnFloater = (emoji: string) => {
     const id = String(++floaterCounter.current);
-    const x = 20 + Math.random() * 60; // % from left
+    const x = 25 + Math.random() * 50;
     setFloaters((prev) => [...prev, { id, emoji, x }]);
     setTimeout(() => {
       setFloaters((prev) => prev.filter((f) => f.id !== id));
-    }, 1800);
+    }, 2000);
   };
 
   const handleSend = async () => {
     if (!user) {
       toast.error("Connecte-toi pour envoyer un cadeau.");
-      navigate("/login");
+      navigate("/login", { state: { from: "/feed" } });
       return;
     }
     if (!selected) return;
+    if (!recipientId) {
+      toast.error("Créateur introuvable pour ce cadeau.");
+      return;
+    }
     if (balance < selected.cost) {
       toast.error("Solde insuffisant — achète des cennes dans la boutique!");
       navigate("/store");
@@ -99,19 +123,26 @@ export function GiftPicker({
       const result = await sendGift(recipientId, selected.id, postId, streamId);
       fireHaptic();
       spawnFloater(selected.emoji);
+      setCelebration({ emoji: selected.emoji, type: selected.id });
       setBalance(result.newBalance);
       toast.success(`${selected.emoji} Cadeau envoyé à ${recipientName}!`);
+      onGiftSent?.(selected);
       setSelected(null);
-    } catch (err: any) {
-      if (
-        err.message?.includes("insuffisant") ||
-        err.message?.includes("INSUFFICIENT")
-      ) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes("insuffisant") || message.includes("INSUFFICIENT")) {
         toast.error("Solde insuffisant — achète des cennes dans la boutique!");
         navigate("/store");
         onClose();
+      } else if (
+        message.includes("Unauthorized") ||
+        message.includes("401") ||
+        message.toLowerCase().includes("connect")
+      ) {
+        toast.error("Connecte-toi pour envoyer un cadeau.");
+        navigate("/login", { state: { from: "/feed" } });
       } else {
-        toast.error(err.message || "Erreur lors de l'envoi");
+        toast.error(message || "Erreur lors de l'envoi");
       }
     } finally {
       setSending(false);
@@ -120,60 +151,80 @@ export function GiftPicker({
 
   return (
     <>
-      {/* Floating emojis */}
       {floaters.map((f) => (
         <div
           key={f.id}
-          className="fixed bottom-48 z-[200] text-4xl pointer-events-none animate-gift-float"
-          style={{ left: `${f.x}%` }}
+          className="fixed bottom-40 left-0 z-[200] pointer-events-none flex flex-col items-center animate-gift-float"
+          style={{ left: `${f.x}%`, transform: "translateX(-50%)" }}
         >
-          {f.emoji}
+          <span className="text-5xl drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">
+            {f.emoji}
+          </span>
         </div>
       ))}
+
+      {celebration && (
+        <GiftOverlay
+          giftType={celebration.type}
+          emoji={celebration.emoji}
+          recipientName={recipientName}
+          isVisible
+          onComplete={() => setCelebration(null)}
+        />
+      )}
 
       <SheetShell
         open
         onClose={onClose}
         className="z-[160]"
-        panelClassName="px-5 pb-safe max-h-[85vh] overflow-y-auto"
+        panelClassName="px-4 pb-safe max-h-[88vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="mt-1 flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-white font-black text-lg">Envoyer un cadeau</h3>
-            <p className="text-leather-400 text-sm">à {recipientName}</p>
+        <div className="mt-1 flex items-start justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <h3 className="text-white font-black text-lg tracking-tight">
+              Envoyer un cadeau
+            </h3>
+            <p className="text-white/55 text-sm truncate">
+              à{" "}
+              <span className="text-gold-400 font-semibold">
+                {recipientName}
+              </span>
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 bg-gold-500/10 border border-gold-500/30 px-3 py-1.5 rounded-full">
-              <span className="text-gold-400 font-black">{balance}¢</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 bg-black/40 border border-gold-500/35 px-3 py-1.5 rounded-full shadow-[0_0_12px_rgba(212,175,55,0.12)]">
+              <span className="text-gold-400 text-xs font-bold">¢</span>
+              <span className="text-gold-400 font-black tabular-nums">
+                {user ? balance : "—"}
+              </span>
             </div>
             <button
               type="button"
               onClick={() => {
-                navigate("/store");
+                navigate(user ? "/store" : "/login");
                 onClose();
               }}
-              className="min-h-11 rounded-lg px-1 text-gold-400 text-xs font-semibold underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
+              className="min-h-10 rounded-full px-3 text-xs font-bold bg-gold-500 text-black hover:bg-gold-400 transition-colors"
             >
-              Acheter +
+              {user ? "Acheter +" : "Connexion"}
             </button>
           </div>
         </div>
 
-        {/* Upsell banner — free users with no balance */}
-        {!isPremium && balance === 0 && (
-          <div
-            className="mb-4 rounded-xl p-3 flex items-center justify-between"
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05))",
-              border: "1px solid rgba(212,175,55,0.3)",
-            }}
-          >
-            <div>
+        {!user && (
+          <div className="mb-4 rounded-xl border border-gold-500/25 bg-gold-500/10 px-3 py-2.5">
+            <p className="text-gold-200 text-xs font-semibold">
+              Connecte-toi pour envoyer des cadeaux avec tes cennes.
+            </p>
+          </div>
+        )}
+
+        {user && !isPremium && balance === 0 && (
+          <div className="mb-4 rounded-xl p-3 flex items-center justify-between gap-2 border border-gold-500/30 bg-gradient-to-r from-gold-500/15 to-transparent">
+            <div className="min-w-0">
               <p className="text-gold-300 text-xs font-bold">
-                Abonnés Argent et Or reçoivent des cennes chaque mois{" "}
-                <span aria-hidden="true">🎁</span>
+                Abonnés Argent/Or reçoivent des cennes chaque mois
               </p>
               <p className="text-white/50 text-[11px] mt-0.5">
                 Ou achète un pack dans la boutique
@@ -185,60 +236,93 @@ export function GiftPicker({
                 navigate("/premium");
                 onClose();
               }}
-              className="ml-3 min-h-11 flex-shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60"
+              className="shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black"
             >
               Upgrader
             </button>
           </div>
         )}
 
-        {/* Gift grid */}
-        <div className="grid grid-cols-4 gap-3 mb-5">
-          {gifts.map((gift) => {
-            const isSelected = selected?.id === gift.id;
-            const canAfford = balance >= gift.cost;
-            const tier = getGiftTier(gift.cost);
-            const creatorShare = getCreatorShare(gift.cost);
-            return (
-              <button
-                key={gift.id}
-                type="button"
-                onClick={() => setSelected(isSelected ? null : gift)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${giftTierBorderClass(tier)} ${
-                  isSelected
-                    ? "bg-gold-500/30 ring-2 ring-gold-500 scale-105"
-                    : canAfford
-                      ? "bg-white/5 hover:bg-white/10 active:scale-95"
-                      : "bg-white/3 opacity-40"
-                }`}
-              >
-                <GiftIcon id={gift.id} emoji={gift.emoji} />
-                <span className="text-leather-200 text-[10px] font-semibold leading-tight text-center">
-                  {gift.name}
-                </span>
-                <span
-                  className={`text-[10px] font-black ${canAfford ? "text-gold-400" : "text-leather-500"}`}
+        {/* Catalog */}
+        {loading ? (
+          <div className="grid grid-cols-3 gap-2.5 mb-5">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-28 rounded-2xl bg-white/5 border border-white/5 animate-pulse"
+              />
+            ))}
+          </div>
+        ) : loadError ? (
+          <div className="mb-5 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-center">
+            <p className="text-red-200 text-sm font-semibold mb-2">
+              {loadError}
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadData()}
+              className="text-gold-400 text-sm font-bold underline"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : gifts.length === 0 ? (
+          <p className="text-white/50 text-sm text-center py-8 mb-5">
+            Aucun cadeau disponible pour le moment.
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 mb-5">
+            {gifts.map((gift) => {
+              const isSelected = selected?.id === gift.id;
+              const canAfford = !user || balance >= gift.cost;
+              const tier = getGiftTier(gift.cost);
+              const creatorShare = getCreatorShare(gift.cost);
+              return (
+                <button
+                  key={gift.id}
+                  type="button"
+                  onClick={() => setSelected(isSelected ? null : gift)}
+                  className={`flex flex-col items-center gap-1 p-2.5 rounded-2xl transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 ${giftTierBorderClass(tier)} ${
+                    isSelected
+                      ? "bg-gold-500/25 ring-2 ring-gold-400 scale-[1.03] shadow-[0_0_16px_rgba(212,175,55,0.25)]"
+                      : canAfford
+                        ? "bg-black/35 hover:bg-white/10 active:scale-95 border border-white/10"
+                        : "bg-black/20 opacity-45 border border-white/5"
+                  }`}
                 >
-                  {gift.cost}¢
-                </span>
-                <span className="text-[9px] text-gold-500/60 leading-tight text-center">
-                  Créateur {creatorShare}¢
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  <div className="h-10 flex items-center justify-center">
+                    <GiftIcon
+                      id={gift.id}
+                      emoji={gift.emoji}
+                      className="w-9 h-9"
+                    />
+                  </div>
+                  <span className="text-white/90 text-[11px] font-semibold leading-tight text-center line-clamp-1">
+                    {gift.name}
+                  </span>
+                  <span
+                    className={`text-[11px] font-black tabular-nums ${canAfford ? "text-gold-400" : "text-white/35"}`}
+                  >
+                    {gift.cost}¢
+                  </span>
+                  <span className="text-[9px] text-gold-500/70 leading-tight text-center">
+                    Créateur {creatorShare}¢
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        {/* Send button */}
         <button
           type="button"
-          onClick={handleSend}
-          disabled={!selected || sending}
+          onClick={() => void handleSend()}
+          disabled={!selected || sending || loading}
           className="w-full py-3.5 rounded-2xl font-black text-base transition-all btn-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/60 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {sending ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="w-5 h-5 border-2 border-leather-900/40 border-t-leather-900 rounded-full animate-spin" />
+              <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
               Envoi...
             </span>
           ) : selected ? (
@@ -247,7 +331,12 @@ export function GiftPicker({
             "Choisis un cadeau"
           )}
         </button>
+        <p className="text-white/35 text-[10px] text-center mt-3 leading-relaxed">
+          70% des cennes vont au créateur · 30% Zyeuté
+        </p>
       </SheetShell>
     </>
   );
 }
+
+export default GiftPicker;

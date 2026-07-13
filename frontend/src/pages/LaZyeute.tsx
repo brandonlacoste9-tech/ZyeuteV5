@@ -2095,7 +2095,11 @@ export const Zyeute: React.FC = () => {
           {/* Gift Picker */}
           {giftOpen && currentPost && (
             <GiftPicker
-              recipientId={currentPost.user?.id || currentPost.user_id || ""}
+              recipientId={
+                currentPost.user?.id ||
+                (currentPost as { user_id?: string }).user_id ||
+                ""
+              }
               recipientName={
                 currentPost.user?.displayName ||
                 currentPost.user?.username ||
