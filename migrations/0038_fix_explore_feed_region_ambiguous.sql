@@ -1,5 +1,5 @@
--- Stronger personalization in get_localized_explore_feed:
--- affinity on hashtags + detected_themes, region match, viral + recency.
+-- Fix: PL/pgSQL variable "region" clashed with publications.region → 42702 ambiguous.
+-- Rename locals to v_* and re-grant.
 
 CREATE OR REPLACE FUNCTION get_localized_explore_feed(
   p_viewer_id UUID,
@@ -10,7 +10,6 @@ CREATE OR REPLACE FUNCTION get_localized_explore_feed(
   p_seen_ids UUID[]
 ) RETURNS SETOF publications AS $$
 DECLARE
-  -- Use v_ prefix: bare "region"/"tags" clash with publications columns (42702).
   v_tags TEXT[] := COALESCE(p_affinity_tags, ARRAY[]::text[]);
   v_region TEXT := lower(COALESCE(p_region_id, 'quebec'));
 BEGIN
@@ -35,7 +34,6 @@ BEGIN
   SELECT c.*
   FROM candidates c
   ORDER BY (
-    -- Region / hive
     (CASE
       WHEN lower(c.hive_id::text) = v_region THEN 55.0
       WHEN lower(COALESCE(c.region_id, '')) = v_region THEN 45.0
@@ -43,17 +41,13 @@ BEGIN
       WHEN lower(COALESCE(c.city, '')) = v_region THEN 35.0
       ELSE 0.0
     END) +
-    -- Hashtag overlap
     (CASE WHEN c.hashtags IS NOT NULL AND c.hashtags && v_tags THEN 40.0 ELSE 0.0 END) +
-    -- Theme overlap (if column present; null-safe)
     (CASE
       WHEN c.detected_themes IS NOT NULL AND c.detected_themes && v_tags THEN 35.0
       ELSE 0.0
     END) +
-    -- Popularity (down-weighted)
     (COALESCE(c.viral_score, 0) / 8000.0) +
     (COALESCE(c.reactions_count, 0) * 0.08) +
-    -- Session seed jitter for variety
     (
       (
         (('x' || substr(md5(c.id::text || p_seed::text), 1, 16))::bit(64)::bigint
@@ -66,10 +60,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- PostgREST (anon + authenticated) + service role
 GRANT EXECUTE ON FUNCTION public.get_localized_explore_feed(
   UUID, TEXT, TEXT[], INT, BIGINT, UUID[]
 ) TO anon, authenticated, service_role;
-
-COMMENT ON FUNCTION public.get_localized_explore_feed(UUID, TEXT, TEXT[], INT, BIGINT, UUID[]) IS
-  'Pour Toi: rank public publications by region, affinity tags/hashtags/themes, viral_score, session seed, and recency decay.';
