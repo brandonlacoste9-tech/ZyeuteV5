@@ -1181,18 +1181,19 @@ export const Zyeute: React.FC = () => {
     </div>
   );
 
-  // Premium action rail — gold ring badges, glass depth, clear active states
+  // Premium action rail — phone one size smaller; desktop keeps a bit more presence
   const railIconClass =
-    "relative w-[52px] h-[52px] rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 active:scale-90";
+    "relative w-10 h-10 lg:w-[52px] lg:h-[52px] rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 active:scale-90";
   const railIconStyle: React.CSSProperties = {
     background:
       "linear-gradient(160deg, rgba(55,42,32,0.92) 0%, rgba(18,14,12,0.95) 55%, rgba(10,8,6,0.98) 100%)",
     boxShadow:
-      "0 4px 16px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.5)",
+      "0 3px 12px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.5)",
     border: "1.5px solid rgba(212,175,55,0.45)",
   };
+  const railIconImgClass = "w-5 h-5 lg:w-7 lg:h-7 object-contain relative z-10";
   const railLabelClass =
-    "text-[11px] font-bold tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mt-0.5";
+    "text-[10px] lg:text-[11px] font-bold tracking-wide text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mt-0.5";
 
   return (
     <FeedErrorBoundary fallbackTitle="Le fil n’a pas pu s’afficher">
@@ -1462,7 +1463,7 @@ export const Zyeute: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/75 pointer-events-none" />
 
                   {/* Caption stack — TikTok density, Zyeuté gold only on Suivre */}
-                  <div className="absolute bottom-6 left-3 right-[4.5rem] lg:right-4 z-20 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
+                  <div className="absolute bottom-6 left-3 right-14 lg:right-4 z-20 drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]">
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <Link
                         to={`/profile/${post.user?.username || post.user?.id}`}
@@ -1564,26 +1565,26 @@ export const Zyeute: React.FC = () => {
           {/* Right rail — premium gold badges; mobile on video, desktop beside stage */}
           {posts.length > 0 && currentPost && (
             <div
-              className={`absolute z-40 flex flex-col items-center gap-3.5 transition-opacity duration-300 ${
+              className={`absolute z-40 flex flex-col items-center gap-2.5 lg:gap-3.5 transition-opacity duration-300 ${
                 uiVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-              } right-2 bottom-24 pb-safe lg:right-auto lg:left-full lg:ml-3 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto lg:pb-0 lg:py-4 lg:px-2.5 lg:rounded-3xl lg:border lg:border-gold-500/20 lg:bg-black/40 lg:backdrop-blur-md lg:shadow-[0_12px_40px_rgba(0,0,0,0.55)]`}
+              } right-1.5 bottom-24 pb-safe lg:right-auto lg:left-full lg:ml-3 lg:top-1/2 lg:-translate-y-1/2 lg:bottom-auto lg:pb-0 lg:py-4 lg:px-2.5 lg:rounded-3xl lg:border lg:border-gold-500/20 lg:bg-black/40 lg:backdrop-blur-md lg:shadow-[0_12px_40px_rgba(0,0,0,0.55)]`}
             >
-              {/* Profile — gold ring + follow */}
+              {/* Profile — gold ring + follow (phone smaller) */}
               <Link
                 to={`/profile/${currentPost.user?.username || currentPost.user?.id}`}
-                className="flex flex-col items-center press-scale relative mb-1"
+                className="flex flex-col items-center press-scale relative mb-0.5 lg:mb-1"
                 data-testid={`link-profile-${currentPost.id}`}
               >
                 <div
-                  className="w-[56px] h-[56px] rounded-full p-[2.5px]"
+                  className="w-11 h-11 lg:w-[56px] lg:h-[56px] rounded-full p-[2px] lg:p-[2.5px]"
                   style={{
                     background:
                       "linear-gradient(145deg, #FFE55C 0%, #D4AF37 40%, #8B6914 100%)",
                     boxShadow:
-                      "0 0 0 1px rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.5), 0 0 20px rgba(212,175,55,0.25)",
+                      "0 0 0 1px rgba(0,0,0,0.4), 0 4px 14px rgba(0,0,0,0.5), 0 0 16px rgba(212,175,55,0.22)",
                   }}
                 >
-                  <div className="w-full h-full rounded-full overflow-hidden bg-black ring-2 ring-black">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-black ring-1 lg:ring-2 ring-black">
                     <img
                       src={
                         currentPost.user?.avatar_url || "/default-avatar.png"
@@ -1601,7 +1602,7 @@ export const Zyeute: React.FC = () => {
                       .is_following
                   ) && (
                     <span
-                      className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-[22px] h-[22px] rounded-full text-black text-base font-black flex items-center justify-center leading-none"
+                      className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-[18px] h-[18px] lg:w-[22px] lg:h-[22px] rounded-full text-black text-sm lg:text-base font-black flex items-center justify-center leading-none"
                       style={{
                         background:
                           "linear-gradient(145deg, #FFE55C 0%, #D4AF37 50%, #B8860B 100%)",
@@ -1652,7 +1653,7 @@ export const Zyeute: React.FC = () => {
                     >
                       <img
                         src="/assets/icons/icon-fire.png"
-                        className="w-7 h-7 object-contain relative z-10"
+                        className={railIconImgClass}
                         style={{
                           filter: isFired
                             ? "brightness(1.5) saturate(1.4) drop-shadow(0 0 8px #FF4D2E)"
@@ -1683,7 +1684,7 @@ export const Zyeute: React.FC = () => {
                 <div className={railIconClass} style={railIconStyle}>
                   <img
                     src="/assets/icons/icon-comment.png"
-                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
+                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
                     alt="Comment"
                   />
                 </div>
@@ -1705,7 +1706,7 @@ export const Zyeute: React.FC = () => {
                 <div className={railIconClass} style={railIconStyle}>
                   <img
                     src="/assets/icons/icon-share.png"
-                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
+                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
                     alt="Share"
                   />
                 </div>
@@ -1740,7 +1741,7 @@ export const Zyeute: React.FC = () => {
                     >
                       <img
                         src="/assets/icons/icon-save.png"
-                        className="w-7 h-7 object-contain"
+                        className={railIconImgClass}
                         style={{
                           filter: isSaved
                             ? "brightness(1.45) drop-shadow(0 0 8px rgba(255,215,80,0.85))"
@@ -1778,7 +1779,7 @@ export const Zyeute: React.FC = () => {
                 >
                   <img
                     src="/assets/icons/icon-gift.png"
-                    className="w-7 h-7 object-contain drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125"
+                    className={`${railIconImgClass} drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] brightness-125`}
                     alt="Gift"
                   />
                 </div>
