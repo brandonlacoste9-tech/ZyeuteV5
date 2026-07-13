@@ -495,11 +495,19 @@ export async function createPost(postData: {
   videoType?: "mux";
   muxData?: { assetId: string; playbackId: string; uploadId: string };
 }): Promise<Post | null> {
+  // Mux posts from MuxUpload already have playbackId when ready; mark completed.
+  // If somehow playback is missing, keep "processing" so feed filters stay honest.
+  const muxReady = Boolean(
+    postData.videoType === "mux" && postData.muxData?.playbackId,
+  );
+  const processing_status =
+    postData.videoType === "mux" && !muxReady ? "processing" : "completed";
+
   const { data, error } = await apiCall<{ post: Post }>("/posts", {
     method: "POST",
     body: JSON.stringify({
       ...postData,
-      processing_status: "completed",
+      processing_status,
     }),
   });
 

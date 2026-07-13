@@ -87,13 +87,21 @@ surgicalUploadRouter.post(
       // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
       const caption =
         req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
+      // Normalize type for feed players (video vs image)
+      const mediaType =
+        inferredType === "video" ||
+        /video|mp4|webm|mov|quicktime/i.test(mimetype || "")
+          ? "video"
+          : inferredType === "image" || /image\//i.test(mimetype || "")
+            ? "image"
+            : inferredType || "video";
       // Match columns Supabase `publications` actually exposes (avoid unknown cols → insert 400)
       const insertRow = {
         user_id: userId,
         content: caption,
         caption,
         media_url: publicUrl,
-        type: inferredType,
+        type: mediaType,
         processing_status: "completed",
         hive_id: req.body.hiveId || "quebec",
         visibility: "public",
@@ -101,6 +109,8 @@ surgicalUploadRouter.post(
         is_moderated: true,
         moderation_approved: true,
         region: req.body.region || "montreal",
+        region_id: req.body.region || "montreal",
+        video_source: "upload",
       };
       // Untyped Supabase client (no generated Database) — publications row shape is valid at runtime
       const { data: postData, error: postError } = await supabase

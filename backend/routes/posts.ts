@@ -377,7 +377,10 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
           hls_url: (parsed.data as any).hlsUrl || null,
           thumbnail_url: (parsed.data as any).thumbnailUrl || null,
           type: validatedType,
-          processing_status: "completed",
+          processing_status:
+            isMuxUpload && !(parsed.data as any).muxPlaybackId
+              ? "processing"
+              : (req.body.processing_status as string) || "completed",
           is_moderated: true,
           moderation_approved:
             modResult.status === "approved" && videoModerationApproved,
@@ -385,6 +388,7 @@ router.post("/posts", requireAuth, async (req: Request, res: Response) => {
             modResult.status !== "approved" || !videoModerationApproved,
           hive_id: parsed.data.hiveId || "quebec",
           region_id: regionId,
+          region: regionId,
           visibility: (parsed.data as any).visibility || "public",
           mux_asset_id: (parsed.data as any).muxAssetId || null,
           mux_upload_id: (parsed.data as any).muxUploadId || null,

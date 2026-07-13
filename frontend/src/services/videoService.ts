@@ -18,8 +18,8 @@ import { logger } from "@/lib/logger";
 
 const videoServiceLogger = logger.withContext("VideoService");
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://zyeutev5-1.onrender.com";
+// Relative /api so Vercel rewrite → live Render (never hardcode old host).
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export interface VideoProcessResult {
   url: string;
@@ -108,10 +108,22 @@ export async function generateCaptions(
 async function generateCaptionsFromFile(file: File): Promise<CaptionLine[]> {
   videoServiceLogger.debug("Requesting Mux captions for file:", file.name);
 
-  // Step 1: Create a Mux upload for this file
+  // Step 1: Create a Mux upload for this file (auth required)
+  const { getSessionWithTimeout } = await import("@/lib/supabase");
+  const {
+    data: { session },
+  } = await getSessionWithTimeout(3000);
+  const token = session?.access_token;
+  if (!token) {
+    throw new Error("Connexion requise pour générer des sous-titres");
+  }
+
   const uploadRes = await fetch(`${API_BASE}/api/mux/create-upload`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ cors_origin: window.location.origin }),
     credentials: "include",
   });
@@ -136,7 +148,10 @@ async function generateCaptionsFromFile(file: File): Promise<CaptionLine[]> {
     await new Promise((r) => setTimeout(r, 3000));
     const statusRes = await fetch(
       `${API_BASE}/api/mux/upload-status/${uploadId}`,
-      { credentials: "include" },
+      {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      },
     );
     if (statusRes.ok) {
       const { data } = await statusRes.json();

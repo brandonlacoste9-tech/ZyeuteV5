@@ -87,7 +87,13 @@ export function MuxUpload({
         error?: string;
       }>("/mux/create-upload", {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          // Mux direct-upload CORS must match the browser origin (zyeute.com)
+          cors_origin:
+            typeof window !== "undefined"
+              ? window.location.origin
+              : "https://zyeute.com",
+        }),
       });
 
       if (createError || !createData?.data) {
