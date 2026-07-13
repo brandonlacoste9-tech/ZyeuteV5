@@ -686,6 +686,7 @@ export const Zyeute: React.FC = () => {
       x: number;
       y: number;
       rotation: number;
+      center?: boolean;
     }>
   >([]);
 
@@ -853,14 +854,27 @@ export const Zyeute: React.FC = () => {
 
   const uid = authUser?.id ?? currentUser?.id;
 
-  const addHeartBurst = useCallback((postId: string, x: number, y: number) => {
-    const id = Date.now() + Math.random();
-    const rotation = Math.random() * 40 - 20; // -20 to 20 deg
-    setHeartBursts((prev) => [...prev, { postId, id, x, y, rotation }]);
-    setTimeout(() => {
-      setHeartBursts((prev) => prev.filter((b) => b.id !== id));
-    }, 1000);
-  }, []);
+  const addFireBurst = useCallback(
+    (postId: string, opts?: { x?: number; y?: number; center?: boolean }) => {
+      const id = Date.now() + Math.random();
+      const rotation = Math.random() * 30 - 15;
+      setHeartBursts((prev) => [
+        ...prev,
+        {
+          postId,
+          id,
+          x: opts?.x ?? 0,
+          y: opts?.y ?? 0,
+          rotation,
+          center: opts?.center ?? !opts?.x,
+        },
+      ]);
+      setTimeout(() => {
+        setHeartBursts((prev) => prev.filter((b) => b.id !== id));
+      }, 1100);
+    },
+    [],
+  );
 
   const handleFireToggle = async (
     postId: string,
@@ -869,7 +883,6 @@ export const Zyeute: React.FC = () => {
   ) => {
     if (!uid) {
       toast.error("Connecte-toi pour mettre du feu.");
-      navigate("/login", { state: { from: location.pathname } });
       return;
     }
     const post = posts.find((p) => p.id === postId);
@@ -883,9 +896,14 @@ export const Zyeute: React.FC = () => {
       (post as PostWithEngagement | undefined)?.fire_count ??
       0;
 
-    if (fromDoubleTap) {
-      if (coords) addHeartBurst(postId, coords.x, coords.y);
-      if (currentFired) return; // Already fired, just show the particle animation and return
+    if (fromDoubleTap && currentFired) {
+      // Already fired — show 🔥 again, don't un-fire
+      if (coords) {
+        addFireBurst(postId, { x: coords.x, y: coords.y, center: false });
+      } else {
+        addFireBurst(postId, { center: true });
+      }
+      return;
     }
 
     // Optimistic update
@@ -895,6 +913,15 @@ export const Zyeute: React.FC = () => {
       ...m,
       [postId]: currentCount + (newFired ? 1 : -1),
     }));
+
+    // Big 🔥 on the video whenever fire turns ON (rail or double-tap)
+    if (newFired) {
+      if (coords) {
+        addFireBurst(postId, { x: coords.x, y: coords.y, center: false });
+      } else {
+        addFireBurst(postId, { center: true });
+      }
+    }
 
     try {
       await togglePostFire(postId, uid);
@@ -979,7 +1006,7 @@ export const Zyeute: React.FC = () => {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uid, posts, firedMap, fireCountMap, isMuted, isPlaying, addHeartBurst],
+    [uid, posts, firedMap, fireCountMap, isMuted, isPlaying, addFireBurst],
   );
 
   const openShare = (postId: string) => {
@@ -1505,35 +1532,48 @@ export const Zyeute: React.FC = () => {
                     <FeedProgressBar key={post.id} ref={progressBarRef} />
                   )}
 
-                  {/* Heart burst animation on double-tap fire */}
+                  {/* 🔥 burst on the video when user fires (rail or double-tap) */}
                   {heartBursts
                     .filter((b) => b.postId === post.id)
-                    .map((burst) => (
-                      <div
-                        key={burst.id}
-                        className="fixed z-30 pointer-events-none"
-                        style={{
-                          left: burst.x - 64, // Center the 128px (w-32) heart
-                          top: burst.y - 64,
-                          transform: `rotate(${burst.rotation}deg)`,
-                        }}
-                      >
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="w-32 h-32 drop-shadow-[0_0_30px_rgba(255,100,50,0.9)]"
-                          style={{
-                            animation: "heartPop 0.9s ease-out forwards",
-                          }}
+                    .map((burst) =>
+                      burst.center ? (
+                        <div
+                          key={burst.id}
+                          className="absolute inset-0 z-40 pointer-events-none flex items-center justify-center"
+                          aria-hidden
                         >
-                          <path
-                            d="M12 2C10.5 4.5 8 7 8 10c0 2 1 3 2 4-1-1-3-3-3-6 0-4 3-6 5-6zm0 4c-1 1.5-2 3-2 5 0 3 2 5 4 5s4-2 4-5c0-2-1-3.5-2-5 0 0 1 2 1 3 0 2-1 3-2 3s-2-1-2-3c0-1 1-3 1-3z"
-                            fill="#FF3D3D"
-                            stroke={edgeLighting}
-                            strokeWidth={0.5}
-                          />
-                        </svg>
-                      </div>
-                    ))}
+                          <span
+                            className="text-[7rem] leading-none select-none drop-shadow-[0_0_40px_rgba(255,100,40,0.95)]"
+                            style={{
+                              animation: "heartPop 0.95s ease-out forwards",
+                              transform: `rotate(${burst.rotation}deg)`,
+                            }}
+                          >
+                            🔥
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          key={burst.id}
+                          className="fixed z-40 pointer-events-none"
+                          style={{
+                            left: burst.x - 56,
+                            top: burst.y - 56,
+                            transform: `rotate(${burst.rotation}deg)`,
+                          }}
+                          aria-hidden
+                        >
+                          <span
+                            className="text-[7rem] leading-none select-none drop-shadow-[0_0_40px_rgba(255,100,40,0.95)]"
+                            style={{
+                              animation: "heartPop 0.95s ease-out forwards",
+                            }}
+                          >
+                            🔥
+                          </span>
+                        </div>
+                      ),
+                    )}
 
                   {/* Bottom vignette for caption readability */}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/75 pointer-events-none" />
