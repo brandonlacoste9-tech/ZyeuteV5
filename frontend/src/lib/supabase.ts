@@ -55,24 +55,61 @@ export async function getSessionWithTimeout(ms = 2500): Promise<{
   data: { session: { access_token: string } | null };
 }> {
   // Return cached session if fresh
-  if (_cachedSession !== undefined && Date.now() - _cacheTimestamp < SESSION_CACHE_TTL) {
+  if (
+    _cachedSession !== undefined &&
+    Date.now() - _cacheTimestamp < SESSION_CACHE_TTL
+  ) {
     return { data: { session: _cachedSession } };
   }
 
   try {
+    let timedOut = false;
     const result = await Promise.race([
       supabase.auth.getSession(),
       new Promise<{ data: { session: null } }>((resolve) =>
-        setTimeout(() => resolve({ data: { session: null } }), ms),
+        setTimeout(() => {
+          timedOut = true;
+          resolve({ data: { session: null } });
+        }, ms),
       ),
     ]);
-    // Update cache
-    const sess = (result as any)?.data?.session;
+
+    const sess = (result as any)?.data?.session ?? null;
+
+    // CRITICAL: never cache a timeout as "logged out" — mobile storage is often
+    // slow and a 3s race would strip the bearer token for 30s, breaking gifts.
+    if (timedOut && !sess) {
+      // Prefer last known good session if we had one earlier in this page life
+      if (_cachedSession?.access_token) {
+        return { data: { session: _cachedSession } };
+      }
+      return { data: { session: null } };
+    }
+
     _cachedSession = sess ? { access_token: sess.access_token } : null;
     _cacheTimestamp = Date.now();
-    return result;
+    return { data: { session: _cachedSession } };
   } catch {
+    // On error, keep previous cache rather than forcing logout
+    if (_cachedSession?.access_token) {
+      return { data: { session: _cachedSession } };
+    }
     return { data: { session: null } };
+  }
+}
+
+/** Force a fresh session read (e.g. before payment/gift). */
+export async function refreshSessionCache(): Promise<{
+  access_token: string;
+} | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const sess = data.session;
+    _cachedSession = sess ? { access_token: sess.access_token } : null;
+    _cacheTimestamp = Date.now();
+    return _cachedSession;
+  } catch {
+    return _cachedSession?.access_token ? _cachedSession : null;
   }
 }
 

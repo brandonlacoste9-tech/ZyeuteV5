@@ -63,7 +63,7 @@ export function GiftPicker({
   onClose,
   onGiftSent,
 }: GiftPickerProps) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const { fire: fireHaptic } = useHaptics();
   const navigate = useNavigate();
   const { isPremium } = usePremium();
@@ -138,9 +138,13 @@ export function GiftPicker({
   };
 
   const handleSend = async () => {
-    if (!user) {
-      toast.error("Connecte-toi pour envoyer un cadeau.");
-      navigate("/login", { state: { from: "/feed" } });
+    if (!user || isGuest) {
+      toast.error(
+        isGuest
+          ? "Mode invité — connecte-toi pour envoyer un cadeau."
+          : "Connecte-toi pour envoyer un cadeau.",
+      );
+      // Stay on sheet; user taps Connexion when ready (no forced hard nav on cell)
       return;
     }
     if (!selected) return;
@@ -150,8 +154,6 @@ export function GiftPicker({
     }
     if (balance < selected.cost) {
       toast.error("Solde insuffisant — achète des cennes dans la boutique!");
-      navigate("/store");
-      onClose();
       return;
     }
 
@@ -180,15 +182,15 @@ export function GiftPicker({
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes("insuffisant") || message.includes("INSUFFICIENT")) {
         toast.error("Solde insuffisant — achète des cennes dans la boutique!");
-        navigate("/store");
-        onClose();
       } else if (
+        message === "AUTH_REQUIRED" ||
         message.includes("Unauthorized") ||
         message.includes("401") ||
-        message.toLowerCase().includes("connect")
+        message.toLowerCase().includes("autoris")
       ) {
-        toast.error("Connecte-toi pour envoyer un cadeau.");
-        navigate("/login", { state: { from: "/feed" } });
+        toast.error(
+          "Session expirée — appuie sur Connexion, puis renvoie le cadeau.",
+        );
       } else {
         toast.error(message || "Erreur lors de l'envoi");
       }
@@ -260,11 +262,23 @@ export function GiftPicker({
           </div>
         </div>
 
-        {!user && (
-          <div className="mb-4 rounded-xl border border-gold-500/25 bg-gold-500/10 px-3 py-2.5">
+        {(!user || isGuest) && (
+          <div className="mb-4 rounded-xl border border-gold-500/25 bg-gold-500/10 px-3 py-2.5 flex items-center justify-between gap-2">
             <p className="text-gold-200 text-xs font-semibold">
-              Connecte-toi pour envoyer des cadeaux avec tes cennes.
+              {isGuest
+                ? "Mode invité — connecte-toi pour gifter avec des cennes."
+                : "Connecte-toi pour envoyer des cadeaux avec tes cennes."}
             </p>
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/login", { state: { from: "/feed" } });
+                onClose();
+              }}
+              className="shrink-0 px-3 py-1.5 rounded-full bg-gold-500 text-black text-xs font-black"
+            >
+              Connexion
+            </button>
           </div>
         )}
 

@@ -77,12 +77,52 @@ export async function sendGift(
   postId?: string,
   streamId?: string,
 ): Promise<GiftResult> {
-  const { data, error } = await apiCall<GiftResult>("/cennes/gift", {
+  // Refresh auth token right before send — mobile often has a stale null cache
+  try {
+    const { refreshSessionCache } = await import("@/lib/supabase");
+    await refreshSessionCache();
+  } catch {
+    /* ignore */
+  }
+
+  const { data, error, code } = await apiCall<GiftResult>("/cennes/gift", {
     method: "POST",
     body: JSON.stringify({ recipientId, giftId, postId, streamId }),
   });
+
+  // One retry after hard session refresh if unauthorized
+  if (
+    (code === 401 ||
+      error?.toLowerCase().includes("autoris") ||
+      error?.toLowerCase().includes("unauthorized")) &&
+    !data
+  ) {
+    try {
+      const { refreshSessionCache } = await import("@/lib/supabase");
+      const sess = await refreshSessionCache();
+      if (sess?.access_token) {
+        const retry = await apiCall<GiftResult>("/cennes/gift", {
+          method: "POST",
+          body: JSON.stringify({ recipientId, giftId, postId, streamId }),
+        });
+        if (retry.data && !retry.error) return retry.data;
+        throw new Error(
+          retry.error ||
+            (retry.code === 401 ? "AUTH_REQUIRED" : "Erreur lors du cadeau"),
+        );
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message === "AUTH_REQUIRED") throw e;
+    }
+    throw new Error("AUTH_REQUIRED");
+  }
+
   if (error || !data) {
-    throw new Error(error || "Erreur lors du cadeau");
+    throw new Error(
+      code === 401 || error?.toLowerCase().includes("autoris")
+        ? "AUTH_REQUIRED"
+        : error || "Erreur lors du cadeau",
+    );
   }
   return data;
 }
