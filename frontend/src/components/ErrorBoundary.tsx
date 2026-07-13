@@ -32,15 +32,19 @@ function categorizeError(error: Error): {
   const message = error.message.toLowerCase();
   const stack = error.stack?.toLowerCase() || "";
 
-  // Network errors
+  // Network errors (incl. failed lazy route chunks after a deploy)
   if (
     message.includes("fetch") ||
     message.includes("network") ||
-    message.includes("timeout")
+    message.includes("timeout") ||
+    message.includes("dynamically imported module") ||
+    message.includes("loading chunk") ||
+    message.includes("failed to load")
   ) {
     return {
       category: "network",
-      userMessage: "Problème de connexion. Vérifie ton internet et réessaye.",
+      userMessage:
+        "Problème de connexion. Vérifie ton internet, puis recharge la page (ou ferme l’onglet et rouvre zyeute.com).",
       isRecoverable: true,
     };
   }

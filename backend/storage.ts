@@ -552,9 +552,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPostsByUser(userId: string, limit: number = 50): Promise<Post[]> {
+    // Only columns the profile grid / feed cards need.
+    // Never select embedding (768-dim vector) — that alone made this endpoint ~15–20s
+    // and tripped the client 15s abort ("empty profile" / connection feel).
+    const PROFILE_POST_COLUMNS =
+      "id, user_id, type, media_url, original_url, enhanced_url, processing_status, mux_playback_id, hls_url, thumbnail_url, caption, content, reactions_count, comments_count, est_masque, view_count, city, region_id, created_at, is_ephemeral, is_vaulted, deleted_at";
+
     try {
-      return await db
-        .select()
+      return (await db
+        .select({
+          id: posts.id,
+          userId: posts.userId,
+          type: posts.type,
+          mediaUrl: posts.mediaUrl,
+          originalUrl: posts.originalUrl,
+          enhancedUrl: posts.enhancedUrl,
+          processingStatus: posts.processingStatus,
+          muxPlaybackId: posts.muxPlaybackId,
+          hlsUrl: posts.hlsUrl,
+          thumbnailUrl: posts.thumbnailUrl,
+          caption: posts.caption,
+          content: posts.content,
+          fireCount: posts.fireCount,
+          commentCount: posts.commentCount,
+          isHidden: posts.isHidden,
+          viewCount: posts.viewCount,
+          city: posts.city,
+          regionId: posts.regionId,
+          createdAt: posts.createdAt,
+          isEphemeral: posts.isEphemeral,
+          isVaulted: posts.isVaulted,
+          deletedAt: posts.deletedAt,
+        })
         .from(posts)
         .where(
           and(
@@ -563,7 +592,7 @@ export class DatabaseStorage implements IStorage {
           ),
         )
         .orderBy(desc(posts.createdAt))
-        .limit(limit);
+        .limit(limit)) as Promise<Post[]>;
     } catch (err) {
       console.error(
         "[storage.getPostsByUser] Drizzle failed, using Supabase REST fallback:",
@@ -573,7 +602,7 @@ export class DatabaseStorage implements IStorage {
       if (!sb) return [];
       const { data } = await sb
         .from("publications")
-        .select("*")
+        .select(PROFILE_POST_COLUMNS)
         .eq("user_id", userId)
         .or("est_masque.is.null,est_masque.eq.false")
         .order("created_at", { ascending: false })

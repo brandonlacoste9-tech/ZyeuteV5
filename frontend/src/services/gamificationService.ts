@@ -53,7 +53,7 @@ const RARITY_LABEL: Record<string, string> = {
  */
 export async function trackDailyInteract(): Promise<InteractResult | null> {
   const { data, error } = await apiCall<InteractResult>(
-    "/api/gamification/interact",
+    "/gamification/interact",
     { method: "POST" },
   );
 
@@ -81,7 +81,7 @@ export async function triggerBadgeCheck(
   data?: Record<string, unknown>,
 ): Promise<string[]> {
   const { data: result, error } = await apiCall<{ new_badges: string[] }>(
-    "/api/gamification/award",
+    "/gamification/award",
     {
       method: "POST",
       body: JSON.stringify({ trigger_type: triggerType, data }),
@@ -137,7 +137,7 @@ export async function fetchGamificationProfile(
   userId: string,
 ): Promise<GamificationProfile | null> {
   const { data, error } = await apiCall<GamificationProfile>(
-    `/api/gamification/profile/${userId}`,
+    `/gamification/profile/${userId}`,
   );
   if (error || !data) return null;
   return data;
@@ -150,11 +150,31 @@ export const TIER_META: Record<
   string,
   { name: string; icon: string; color: string }
 > = {
-  novice: { name: "Novice Québécois", icon: "/assets/emojis/icon-badge-3.png", color: "#CD7F32" },
-  vrai: { name: "Vrai Québécois", icon: "/assets/emojis/icon-badge-2.png", color: "#C0C0C0" },
-  pur_laine: { name: "Pur Laine", icon: "/assets/emojis/icon-badge-1.png", color: "#FFD700" },
-  legende: { name: "Légende", icon: "/assets/emojis/icon-gem.png", color: "#B9F2FF" },
-  icone: { name: "Icône Québécoise", icon: "/assets/emojis/icon-crown.png", color: "#FF6B6B" },
+  novice: {
+    name: "Novice Québécois",
+    icon: "/assets/emojis/icon-badge-3.png",
+    color: "#CD7F32",
+  },
+  vrai: {
+    name: "Vrai Québécois",
+    icon: "/assets/emojis/icon-badge-2.png",
+    color: "#C0C0C0",
+  },
+  pur_laine: {
+    name: "Pur Laine",
+    icon: "/assets/emojis/icon-badge-1.png",
+    color: "#FFD700",
+  },
+  legende: {
+    name: "Légende",
+    icon: "/assets/emojis/icon-gem.png",
+    color: "#B9F2FF",
+  },
+  icone: {
+    name: "Icône Québécoise",
+    icon: "/assets/emojis/icon-crown.png",
+    color: "#FF6B6B",
+  },
 };
 
 export function getTierMeta(tier: string) {

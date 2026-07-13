@@ -398,19 +398,24 @@ export const Profile: React.FC = () => {
 
   // Fetch user posts + subscribe to Realtime for processing status updates
   React.useEffect(() => {
-    if (!user) return;
+    if (!user || user.id === "guest") {
+      setPosts([]);
+      return;
+    }
 
+    let cancelled = false;
     const fetchPosts = async () => {
       try {
+        // Prefer username route when available (same handler; clearer logs)
         const userPosts = await getUserPosts(user.id);
-        setPosts(userPosts || []);
+        if (!cancelled) setPosts(userPosts || []);
       } catch (err) {
         profileLogger.error("[Profile] Error fetching user posts:", err);
-        setPosts([]);
+        if (!cancelled) setPosts([]);
       }
     };
 
-    fetchPosts();
+    void fetchPosts();
 
     // Supabase Realtime: refresh grid when a post's processing_status changes
     // (e.g. Mux webhook fires and sets status = 'completed')
@@ -432,6 +437,7 @@ export const Profile: React.FC = () => {
       .subscribe();
 
     return () => {
+      cancelled = true;
       supabase.removeChannel(channel);
     };
   }, [user]);
@@ -797,9 +803,15 @@ export const Profile: React.FC = () => {
                       }}
                     >
                       <span>
-                        {tierMeta.icon.startsWith('/') 
-                          ? <img src={tierMeta.icon} alt={tierMeta.name} className="w-4 h-4 object-contain inline-block" /> 
-                          : tierMeta.icon}
+                        {tierMeta.icon.startsWith("/") ? (
+                          <img
+                            src={tierMeta.icon}
+                            alt={tierMeta.name}
+                            className="w-4 h-4 object-contain inline-block"
+                          />
+                        ) : (
+                          tierMeta.icon
+                        )}
                       </span>
                       <span>{tierMeta.name}</span>
                     </div>
@@ -960,13 +972,27 @@ export const Profile: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center justify-center w-8 h-8">
-                      {subTier === "gold"
-                        ? <img src="/assets/emojis/icon-badge-1.png" className="w-8 h-8 object-contain" alt="Gold" />
-                        : subTier === "silver"
-                          ? <img src="/assets/emojis/icon-badge-2.png" className="w-8 h-8 object-contain" alt="Silver" />
-                          : subTier === "bronze"
-                            ? <img src="/assets/emojis/icon-badge-3.png" className="w-8 h-8 object-contain" alt="Bronze" />
-                            : "🆓"}
+                      {subTier === "gold" ? (
+                        <img
+                          src="/assets/emojis/icon-badge-1.png"
+                          className="w-8 h-8 object-contain"
+                          alt="Gold"
+                        />
+                      ) : subTier === "silver" ? (
+                        <img
+                          src="/assets/emojis/icon-badge-2.png"
+                          className="w-8 h-8 object-contain"
+                          alt="Silver"
+                        />
+                      ) : subTier === "bronze" ? (
+                        <img
+                          src="/assets/emojis/icon-badge-3.png"
+                          className="w-8 h-8 object-contain"
+                          alt="Bronze"
+                        />
+                      ) : (
+                        "🆓"
+                      )}
                     </span>
                     <div>
                       <p

@@ -115,10 +115,17 @@ export async function apiCall<T>(
       const isPostCreate =
         endpoint === "/posts" &&
         (options.method === "POST" || options.method === "post");
+      const isUserPosts = /\/users\/[^/]+\/posts/.test(endpoint);
       const timeoutId = setTimeout(
         () => controller.abort(),
-        endpoint.includes("generate") ? 120000 : isPostCreate ? 60000 : 15000,
-      ); // 2min for AI, 60s for publish, 15s otherwise
+        endpoint.includes("generate")
+          ? 120000
+          : isPostCreate
+            ? 60000
+            : isUserPosts
+              ? 25000
+              : 15000,
+      ); // 2min AI, 60s publish, 25s profile posts, 15s otherwise
 
       const response = await fetch(apiUrl, {
         ...options,
@@ -1346,8 +1353,8 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     media_url: mediaUrl,
     thumbnail_url: p.thumbnail_url || p.thumbnailUrl,
     caption: p.caption,
-    fire_count: p.reactions_count || p.fire_count || 0,
-    comment_count: p.comments_count || p.comment_count || 0,
+    fire_count: p.reactions_count || p.fire_count || p.fireCount || 0,
+    comment_count: p.comments_count || p.comment_count || p.commentCount || 0,
     gift_count: p.gift_count || 0,
     user: p.user ? mapBackendUser(p.user) : undefined,
     created_at: p.created_at || p.createdAt,
