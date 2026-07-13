@@ -5,7 +5,7 @@
  */
 
 import { storage } from "../storage.js";
-import { generateText } from "ai";
+import { generateText } from "../lib/ai-generate.js";
 import { getVertexModel } from "../ai/vertex-ai.js";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 

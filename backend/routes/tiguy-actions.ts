@@ -34,7 +34,8 @@ import { storage } from "../storage.js";
 import { v3Mod } from "../v3-swarm.js";
 import { TIGUY_SYSTEM_PROMPT } from "../ai/orchestrator.js";
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, tool } from "ai";
+import { tool } from "ai";
+import { generateText, setAiConversationId } from "../lib/ai-generate.js";
 import {
   zyeuteBrainTools,
   ajusterMomentumTool,
@@ -89,7 +90,10 @@ router.get("/voices", async (req, res) => {
  */
 router.post("/chat", async (req, res) => {
   try {
-    const { message, skill } = req.body;
+    const { message, skill, conversationId } = req.body;
+    // Group multi-turn Ti-Guy chats in Sentry Conversations
+    const uid = (req as { userId?: string }).userId;
+    setAiConversationId(conversationId || (uid ? `tiguy:${uid}` : undefined));
 
     // 1. TRENDS SKILL
     if (skill === "trends" || message.toLowerCase().includes("tendance")) {
