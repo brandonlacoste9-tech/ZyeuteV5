@@ -11,14 +11,16 @@ export const createProductionPool = () => {
     // Connection string from Supabase (use pooled connection)
     connectionString: process.env.DATABASE_URL,
 
-    // Pool sizing: scale with instances, not one giant pool
-    // Each Railway/Render instance gets its own pool
-    max: isProduction ? 20 : 10, // Max connections per instance
-    min: isProduction ? 5 : 2, // Keep warm connections
+    // Pool sizing: Supabase pooler has limited slots per project.
+    // Keep this tiny on free/starter hosts (matches storage.ts production max: 4).
+    // Each Render/Railway instance opens its own pool — do NOT use min>0 on free tier.
+    max: isProduction ? 4 : 10,
+    min: 0,
 
-    // Timeouts (aggressive for production)
-    idleTimeoutMillis: 10000, // Close idle after 10s
-    connectionTimeoutMillis: 5000, // Fail fast if can't connect
+    // Timeouts
+    idleTimeoutMillis: 10000,
+    // Session pooler (port 5432) can be slower to allocate under load
+    connectionTimeoutMillis: isProduction ? 15000 : 5000,
 
     // Statement timeout (prevent long-running queries from locking DB)
     statement_timeout: 30000, // 30s max per query

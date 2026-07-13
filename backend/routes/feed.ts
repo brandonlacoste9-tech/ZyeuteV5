@@ -463,19 +463,54 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
 router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
+    const hive = (req.query.hive as string) || "quebec";
+    const viewerId = (req as any).userId as string | undefined;
+    const seed = resolveFeedSeed(req.query.session, viewerId);
 
     const embedding = req.query.embedding
       ? JSON.parse(req.query.embedding as string)
       : null;
 
     if (!embedding) {
-      // Fallback: Just return explore posts if no vector provided yet
+      // Fallback: same Supabase path as GET /api/feed (avoid DATABASE_URL pool timeouts)
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const posts = await getPostsViaSupabase(
+          limit,
+          0,
+          hive,
+          seed,
+          viewerId,
+          viewerId ? [] : parseSeenIds(req),
+        );
+        return res.json({ posts, isFallback: true, source: "supabase" });
+      }
       const posts = await storage.getExplorePosts(0, limit);
-      return res.json({ posts, isFallback: true });
+      return res.json({ posts, isFallback: true, source: "pool" });
     }
 
-    const posts = await storage.getSmartRecommendations(embedding, limit);
-    res.json({ posts });
+    try {
+      const posts = await storage.getSmartRecommendations(embedding, limit);
+      return res.json({ posts });
+    } catch (vectorErr) {
+      console.error("Smart recommendations failed, falling back:", vectorErr);
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const posts = await getPostsViaSupabase(
+          limit,
+          0,
+          hive,
+          seed,
+          viewerId,
+          viewerId ? [] : parseSeenIds(req),
+        );
+        return res.json({
+          posts,
+          isFallback: true,
+          source: "supabase",
+          vectorFailed: true,
+        });
+      }
+      throw vectorErr;
+    }
   } catch (error) {
     console.error("Get smart feed error:", error);
     res.status(500).json({ error: "Failed to get smart recommendations" });
@@ -490,9 +525,13 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const supabaseUrl =
-        process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+        process.env.VITE_SUPABASE_URL ||
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
+        process.env.SUPABASE_URL;
       const anonKey =
-        process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+        process.env.VITE_SUPABASE_ANON_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+        process.env.SUPABASE_ANON_KEY;
 
       console.log("[FeedInfinite] Request received", {
         hasUrl: !!supabaseUrl,
@@ -566,7 +605,8 @@ router.get(
           .single();
         if (viewerProfile) {
           if (viewerProfile.region) viewerRegion = viewerProfile.region;
-          if (viewerProfile.affinity_tags) viewerAffinities = viewerProfile.affinity_tags;
+          if (viewerProfile.affinity_tags)
+            viewerAffinities = viewerProfile.affinity_tags;
         }
       }
 
@@ -625,7 +665,7 @@ router.get(
         fetchLimit: number,
       ) => {
         let q;
-        
+
         if (feedType === "explore") {
           // PATH A: Use the Algorithmic Routing Engine (Supabase RPC)
           // This handles Regional Bias, Affinity Matching, and Time Decay natively in PostgreSQL
@@ -635,7 +675,7 @@ router.get(
             p_affinity_tags: viewerAffinities || [],
             p_limit: 1000, // Allow PostgREST .range to slice
             p_seed: seed,
-            p_seen_ids: excludedIds || []
+            p_seen_ids: excludedIds || [],
           }).select(`
             *,
             user:user_id (
@@ -649,7 +689,8 @@ router.get(
         } else {
           q = supabase
             .from("publications")
-            .select(`
+            .select(
+              `
             *,
             user:user_id (
               id,
@@ -658,7 +699,8 @@ router.get(
               avatar_url,
               subscription_tier
             )
-          `)
+          `,
+            )
             .filter("visibility::text", "eq", "public")
             .eq("est_masque", false)
             .is("deleted_at", null)
@@ -676,11 +718,15 @@ router.get(
             .order("reactions_count", { ascending: false })
             .order("created_at", { ascending: false });
         }
-        
+
         q = q.range(offset, offset + fetchLimit - 1);
 
         // Path A (explore feed) handles exclusions natively in PostgreSQL. Only apply JS exclusions for fallback/following feeds.
-        if (feedType !== "explore" && !ignoreExclusions && excludedIds.length > 0) {
+        if (
+          feedType !== "explore" &&
+          !ignoreExclusions &&
+          excludedIds.length > 0
+        ) {
           q = q.not("id", "in", `(${excludedIds.join(",")})`);
         }
 
