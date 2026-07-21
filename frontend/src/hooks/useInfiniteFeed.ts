@@ -20,6 +20,7 @@ import {
   maybeRotateFeedSessionAfterBackground,
   rotateFeedSessionId,
 } from "@/lib/feedSession";
+import { getGuestSeenForRequest } from "@/lib/watchTracking";
 
 function getStoredHive(): string {
   try {
@@ -135,10 +136,15 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         ...(cursorStr ? { cursor: cursorStr } : {}),
       });
 
-      const headers =
-        feedType === "feed"
-          ? await getAuthHeaders()
-          : { "Content-Type": "application/json" };
+      // Always send auth (watch exclusions for logged-in users) + local seen
+      // ids (guests + backup for authed). Explore used to skip both, which
+      // made Pour Toi re-serve the same clips on every open.
+      const authHeaders = await getAuthHeaders();
+      const seenIds = getGuestSeenForRequest();
+      const headers: Record<string, string> = {
+        ...authHeaders,
+        ...(seenIds.length ? { "x-seen-ids": seenIds.join(",") } : {}),
+      };
 
       const response = await fetchWithTimeout(
         `/api/feed/infinite?${params}`,
@@ -152,12 +158,17 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
 
       const data = await response.json();
       const rawCount = (data.posts || []).length;
-      const posts = (data.posts || [])
+      const locallySeen = new Set(getGuestSeenForRequest());
+      const playable = (data.posts || [])
         .map((p: Record<string, unknown>) => normalizePostForFeed(p))
         .filter(
           (p: Post | null): p is Post =>
             p != null && !!p.id && postHasPlayableMedia(p),
         );
+      // Prefer unseen; only keep watched if the whole page was already seen
+      // (small catalog / wrap) so the feed never goes blank.
+      const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
+      const posts = unseenOnly.length > 0 ? unseenOnly : playable;
 
       if (
         typeof window !== "undefined" &&

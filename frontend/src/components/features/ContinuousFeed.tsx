@@ -696,20 +696,22 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       return;
     }
 
-    // Restore scroll position from saved state, but refetch if cache is stale or from another session
+    // Only reuse in-memory cache when it belongs to THIS feed session.
+    // Missing feedSessionId (legacy) must NOT skip fetch — that locked users
+    // into the same first clips every time they reopened the tab.
     const savedCount = savedState?.posts?.length ?? 0;
     const cacheSessionMatches =
-      !savedState?.feedSessionId ||
-      savedState.feedSessionId === feedSessionRef.current;
+      Boolean(savedState?.feedSessionId) &&
+      savedState!.feedSessionId === feedSessionRef.current;
     if (savedCount >= FEED_PAGE_SIZE * 2 && cacheSessionMatches) {
       feedLogger.debug(
         `Skipping fetch, using ${savedCount} posts from savedState`,
       );
       return;
     }
-    if (savedCount > 0) {
+    if (savedCount > 0 && !cacheSessionMatches) {
       feedLogger.info(
-        `Saved feed has only ${savedCount} posts — refreshing from API`,
+        "Saved feed is from another session — refreshing for fresh shuffle",
       );
     }
 

@@ -64,8 +64,8 @@ async function attachOptionalUser(
   next();
 }
 
-/** Max guest seen ids honored per request (mirrors the client cap). */
-const GUEST_SEEN_LIMIT = 50;
+/** Max client-supplied seen ids honored per request (mirrors client send cap). */
+const GUEST_SEEN_LIMIT = 200;
 
 /**
  * Recently-watched post ids supplied by a guest client. Read from the
@@ -424,9 +424,8 @@ router.get("/", optionalAuth, async (req: Request, res: Response) => {
     const viewerId = (req as any).userId as string | undefined;
     const seed = resolveFeedSeed(req.query.session, viewerId);
 
-    // Guests have no video_views rows; the client sends its recently-watched ids
-    // (capped, last ~50) so we can deprioritize them. Header keeps the URL short.
-    const guestSeenIds = viewerId ? [] : parseSeenIds(req);
+    // Client-seen always applied (guests only; authed as backup before video_views).
+    const guestSeenIds = parseSeenIds(req);
 
     // Try Supabase HTTP first (always works)
     if (SUPABASE_URL && SUPABASE_KEY) {
@@ -485,7 +484,7 @@ router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
           hive,
           seed,
           viewerId,
-          viewerId ? [] : parseSeenIds(req),
+          parseSeenIds(req),
         );
         return res.json({ posts, isFallback: true, source: "supabase" });
       }
@@ -505,7 +504,7 @@ router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
           hive,
           seed,
           viewerId,
-          viewerId ? [] : parseSeenIds(req),
+          parseSeenIds(req),
         );
         return res.json({
           posts,
@@ -603,10 +602,9 @@ router.get(
       // Always MERGE hidden + watched + guest client-seen — never overwrite.
       let excludedIds: string[] = [];
       let hiddenIds: string[] = [];
-      // Guests send recently-watched ids via header (same as /api/feed)
-      if (!viewerId) {
-        for (const id of parseSeenIds(req)) excludedIds.push(id);
-      }
+      // Client-seen always merges in (guests only have this; authed use it as
+      // a backup for watches not yet flushed to video_views).
+      for (const id of parseSeenIds(req)) excludedIds.push(id);
       if (viewerId) {
         try {
           hiddenIds = await storage.getHiddenPostIds(viewerId);
@@ -802,6 +800,7 @@ router.get(
 
       // Pour toi: inject Ti-Guy + TikTok clips (buried under bulk stock seed)
       if (feedType === "explore") {
+        const excludedSetForMerge = new Set(excludedIds.map(String));
         const mergeCurated = (rows: Record<string, unknown>[]) => {
           if (!rows.length) return;
           const merged = [...(posts || [])] as Record<string, unknown>[];
@@ -809,6 +808,8 @@ router.get(
           const seenContent = new Set(merged.map((p) => getPostContentKey(p)));
           for (const row of rows) {
             const id = String(row.id);
+            // Never re-inject clips the viewer already watched
+            if (excludedSetForMerge.has(id)) continue;
             const contentKey = getPostContentKey(row);
             if (seenIds.has(id) || seenContent.has(contentKey)) continue;
             merged.push(row);
@@ -973,11 +974,27 @@ router.get(
         }
       }
 
-      if (hiddenIds.length > 0) {
-        const hiddenSet = new Set(hiddenIds);
-        finalPosts = finalPosts.filter(
-          (p: Record<string, unknown>) => !hiddenSet.has(String(p.id)),
+      // Hard-exclude watched/hidden after shuffle + curated inject. Soft
+      // reordering alone was letting the same clips lead every app open.
+      const hardExclude = new Set([
+        ...hiddenIds.map(String),
+        ...excludedIds.map(String),
+      ]);
+      if (hardExclude.size > 0) {
+        const filtered = finalPosts.filter(
+          (p: Record<string, unknown>) => !hardExclude.has(String(p.id)),
         );
+        // Only fall back to watched clips when the unseen pool is exhausted
+        if (filtered.length > 0) {
+          finalPosts = filtered;
+        } else if (!didWrap) {
+          // Prefer unseen-first recycle of the spaced block over raw wrap
+          const recycled = unseenFirst(
+            spacedCandidates as { id?: unknown }[],
+            hardExclude,
+          ).slice(0, limit) as Record<string, unknown>[];
+          finalPosts = recycled.length > 0 ? recycled : finalPosts;
+        }
       }
 
       const activeOffset = didWrap ? 0 : pageOffset;
@@ -993,6 +1010,7 @@ router.get(
         source: "supabase-http-v2",
         feedType,
         followingFiltered: !!(feedType === "feed" && authorIds?.length),
+        excludedCount: hardExclude.size,
       });
     } catch (error) {
       res.status(500).json({

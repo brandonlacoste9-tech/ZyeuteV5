@@ -92,13 +92,24 @@ async function main() {
     process.exit(1);
   }
 
+  const cron = process.env.CRON_SECRET?.trim().replace(/^["']+|["']+$/g, "");
+  if (!cron) {
+    console.warn(
+      "⚠️ CRON_SECRET missing — Render /api/seed/custom will return 401",
+    );
+  }
+
   let total = 0;
   const batchSize = 8;
   for (let i = 0; i < videos.length; i += batchSize) {
     const batch = videos.slice(i, i + batchSize);
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (cron) headers["X-Cron-Secret"] = cron;
     const res = await fetch(`${API_BASE}/api/seed/custom`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ videos: batch }),
     });
     const text = await res.text();

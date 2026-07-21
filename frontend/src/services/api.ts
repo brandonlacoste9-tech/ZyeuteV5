@@ -357,14 +357,12 @@ export async function getInfiniteFeedPosts(
   });
 
   const seenIds = getGuestSeenForRequest();
-  const guestHeaders = seenIds.length
-    ? { "x-seen-ids": seenIds.join(",") }
-    : undefined;
-
-  const headers =
-    feedType === "feed"
-      ? { ...(await getInfiniteFeedAuthHeaders()), ...guestHeaders }
-      : { "Content-Type": "application/json", ...guestHeaders };
+  // Auth for video_views exclusions + local seen ids for guests / backup.
+  // Explore must not skip auth — otherwise every Pour Toi open looks identical.
+  const headers: Record<string, string> = {
+    ...(await getInfiniteFeedAuthHeaders()),
+    ...(seenIds.length ? { "x-seen-ids": seenIds.join(",") } : {}),
+  };
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20_000);
@@ -386,12 +384,15 @@ export async function getInfiniteFeedPosts(
 
     const data = await response.json();
     const rawCount = (data.posts || []).length;
-    const posts = (data.posts || [])
+    const locallySeen = new Set(getGuestSeenForRequest());
+    const playable = (data.posts || [])
       .map((p: Record<string, unknown>) => normalizePostForFeed(p))
       .filter(
         (p: Post | null): p is Post =>
           p != null && !!p.id && postHasPlayableMedia(p),
       );
+    const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
+    const posts = unseenOnly.length > 0 ? unseenOnly : playable;
 
     return {
       posts,

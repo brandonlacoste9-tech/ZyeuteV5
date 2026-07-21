@@ -56,8 +56,25 @@ export default function ArcadeHub() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() =>
-              window.open("https://ironclaw-i1f8.vercel.app/", "_blank")
+              window.open(
+                "https://www.hellyeah-games.com/",
+                "_blank",
+                "noopener,noreferrer",
+              )
             }
+            role="link"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                window.open(
+                  "https://www.hellyeah-games.com/",
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }
+            }}
+            aria-label="Visiter Hell Yeah Games"
             className="relative w-full overflow-hidden rounded-2xl cursor-pointer group"
             style={{
               background: "linear-gradient(135deg, #FF0055 0%, #7000FF 100%)",

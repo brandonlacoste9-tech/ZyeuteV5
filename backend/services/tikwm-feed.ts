@@ -69,7 +69,11 @@ export async function fetchTikwmChallengePosts(
   challengeId: string,
   count = 12,
   cursor = 0,
-): Promise<Record<string, unknown>[]> {
+): Promise<{
+  videos: Record<string, unknown>[];
+  cursor: number;
+  hasMore: boolean;
+}> {
   const res = await axios.get<TikwmChallengePostsResponse>(
     `${TIKWM_BASE}/challenge/posts`,
     {
@@ -78,31 +82,52 @@ export async function fetchTikwmChallengePosts(
       headers: { "User-Agent": "ZyeuteFeedSeed/1.0" },
     },
   );
-  if (res.data?.code !== 0) return [];
-  return res.data?.data?.videos ?? [];
+  if (res.data?.code !== 0) {
+    return { videos: [], cursor: 0, hasMore: false };
+  }
+  const data = res.data?.data;
+  return {
+    videos: data?.videos ?? [],
+    cursor: Number(data?.cursor ?? 0),
+    hasMore: Boolean(data?.hasMore),
+  };
 }
 
 async function collectFromTags(
   tags: HashtagSeed[],
   perTag: number,
   sourcePrefix: string,
+  pagesPerTag = 1,
 ): Promise<FeedSeedCandidate[]> {
   const out: FeedSeedCandidate[] = [];
   const seen = new Set<string>();
+  const pageSize = Math.min(Math.max(perTag, 1), 30);
 
   for (const tag of tags) {
     if (!tag.id) continue;
+    let cursor = 0;
+    let pages = 0;
     try {
-      const items = await fetchTikwmChallengePosts(tag.id, perTag);
-      for (const item of items) {
-        const mapped = mapTikwmItemToVideo(item);
-        if (!mapped?.video_id || seen.has(mapped.video_id)) continue;
-        seen.add(mapped.video_id);
-        out.push({
-          video: mapped,
-          region: tag.region,
-          source: `${sourcePrefix}:${tag.name}`,
-        });
+      while (pages < pagesPerTag) {
+        const {
+          videos,
+          cursor: nextCursor,
+          hasMore,
+        } = await fetchTikwmChallengePosts(tag.id, pageSize, cursor);
+        pages += 1;
+        for (const item of videos) {
+          const mapped = mapTikwmItemToVideo(item);
+          if (!mapped?.video_id || seen.has(mapped.video_id)) continue;
+          seen.add(mapped.video_id);
+          out.push({
+            video: mapped,
+            region: tag.region,
+            source: `${sourcePrefix}:${tag.name}`,
+          });
+        }
+        if (!hasMore || !nextCursor || nextCursor === cursor) break;
+        cursor = nextCursor;
+        await new Promise((r) => setTimeout(r, 900));
       }
     } catch (e: unknown) {
       console.warn(
@@ -120,9 +145,12 @@ async function collectFromTags(
 export async function collectTikwmFeedSeedCandidates(opts?: {
   regionalPerTag?: number;
   viralPerTag?: number;
+  /** Extra TikWM pages per hashtag (default 1). Use 3–5 for deeper pulls. */
+  pagesPerTag?: number;
 }): Promise<FeedSeedCandidate[]> {
   const regionalPerTag = opts?.regionalPerTag ?? 10;
   const viralPerTag = opts?.viralPerTag ?? 6;
+  const pagesPerTag = opts?.pagesPerTag ?? 1;
   const seen = new Set<string>();
   const merged: FeedSeedCandidate[] = [];
 
@@ -139,13 +167,16 @@ export async function collectTikwmFeedSeedCandidates(opts?: {
       REGIONAL_HASHTAG_SEEDS.filter((t) => t.id),
       regionalPerTag,
       "tikwm:regional",
+      pagesPerTag,
     ),
   );
   append(
     await collectFromTags(
-      VIRAL_HASHTAG_SEEDS.filter((t) => t.id).slice(0, 4),
+      // All viral tags that have resolved challenge ids (need volume for 100s of clips)
+      VIRAL_HASHTAG_SEEDS.filter((t) => t.id),
       viralPerTag,
       "tikwm:viral",
+      pagesPerTag,
     ),
   );
 

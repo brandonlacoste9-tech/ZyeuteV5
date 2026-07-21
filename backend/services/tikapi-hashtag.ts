@@ -26,21 +26,30 @@ export const REGIONAL_HASHTAG_SEEDS: HashtagSeed[] = [
   { name: "quebec", id: "13725", region: "quebec_city" },
   { name: "quebecois", id: "4764129", region: "quebec_city" },
   { name: "mtl", id: "84124", region: "montreal" },
-  { name: "poutine", region: "montreal" },
+  { name: "poutine", id: "1874324", region: "montreal" },
   { name: "vieuxquebec", region: "quebec_city" },
+  { name: "laval", id: "5012099", region: "montreal" },
+  { name: "gatineau", id: "1545799", region: "gatineau" },
+  { name: "sherbrooke", id: "14732515", region: "sherbrooke" },
+  { name: "quebeccity", id: "4032418", region: "quebec_city" },
+  { name: "montrealtiktok", id: "1642342885160965", region: "montreal" },
+  { name: "tiktokcanada", id: "1592696115752962", region: "montreal" },
 ];
 
 /** High-volume tags — fill the feed when regional pool is thin. */
 export const VIRAL_HASHTAG_SEEDS: HashtagSeed[] = [
-  { name: "fyp", region: "montreal" },
-  { name: "viral", region: "montreal" },
+  { name: "fyp", id: "229207", region: "montreal" },
+  { name: "viral", id: "20884", region: "montreal" },
+  { name: "comedy", id: "1606334392378370", region: "montreal" },
+  { name: "dance", id: "5054", region: "montreal" },
+  { name: "funny", id: "5424", region: "montreal" },
+  { name: "canada", id: "14848", region: "montreal" },
+  { name: "hockey", id: "18560", region: "montreal" },
+  { name: "timhortons", id: "245457", region: "montreal" },
+  { name: "foodtok", id: "1617319982244870", region: "montreal" },
   { name: "trending", region: "montreal" },
   { name: "foryou", region: "montreal" },
   { name: "foryoupage", region: "montreal" },
-  { name: "comedy", region: "montreal" },
-  { name: "dance", region: "montreal" },
-  { name: "funny", region: "montreal" },
-  { name: "canada", id: "2703", region: "montreal" },
   { name: "foodtiktok", region: "montreal" },
 ];
 

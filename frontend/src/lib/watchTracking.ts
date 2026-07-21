@@ -8,10 +8,13 @@ import { apiCall } from "@/services/api";
 import { invalidatePourToiCache } from "@/lib/pourToiRanker";
 
 const GUEST_SEEN_KEY = "zyeute_seen_posts";
-/** Total ids retained locally for guests. */
-const GUEST_SEEN_CAP = 200;
-/** Ids sent per feed request — keep small so the header/URL stays short. */
-const GUEST_SEEN_SEND = 50;
+/** Total ids retained locally (guests + authed backup). */
+const GUEST_SEEN_CAP = 400;
+/**
+ * Ids sent per feed request. Higher = less repeat on open; still fits a header
+ * (~UUIDs × 150 ≈ 5.5KB). Backend caps at the same order of magnitude.
+ */
+const GUEST_SEEN_SEND = 150;
 
 function readGuestSeen(): string[] {
   try {
