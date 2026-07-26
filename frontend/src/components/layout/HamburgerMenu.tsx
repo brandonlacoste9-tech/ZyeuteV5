@@ -606,7 +606,7 @@ export const HamburgerMenu: React.FC = () => {
               <span>Zyeuté ⚜️ Fait au Québec 🦫</span>
               <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
                 <a
-                  href="https://hublife-192.netlify.app/?from=network&via=zyeute&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_v1"
+                  href="https://hublife.ca/?from=network&via=zyeute&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_v1"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-amber-700 dark:text-amber-400 font-semibold hover:underline"
