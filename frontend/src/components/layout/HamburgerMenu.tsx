@@ -26,8 +26,9 @@ export const HamburgerMenu: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  
-  const isAdmin = user?.isAdmin || user?.role === "founder" || user?.role === "moderator";
+
+  const isAdmin =
+    user?.isAdmin || user?.role === "founder" || user?.role === "moderator";
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -66,7 +67,10 @@ export const HamburgerMenu: React.FC = () => {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await apiCall<{ stats: { imported: number } }>("/admin/force-sync-feed", { method: "POST" });
+      const res = await apiCall<{ stats: { imported: number } }>(
+        "/admin/force-sync-feed",
+        { method: "POST" },
+      );
       if (res.error) throw new Error(res.error);
       const imported = res.data?.stats?.imported || 0;
       toast.success(`Success! Imported ${imported} new videos.`);
@@ -78,23 +82,30 @@ export const HamburgerMenu: React.FC = () => {
   };
 
   const menuItems: MenuItem[] = [
-    ...(isAdmin ? [
-      {
-        label: isSyncing ? "Scraping..." : "Force Sync Feed (Admin)",
-        icon: (
-          <svg
-            className={`w-5 h-5 text-gold-500 ${isSyncing ? "animate-spin" : ""}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        ),
-        onClick: handleForceSync,
-      },
-      { divider: true, label: "", icon: null },
-    ] : []),
+    ...(isAdmin
+      ? [
+          {
+            label: isSyncing ? "Scraping..." : "Force Sync Feed (Admin)",
+            icon: (
+              <svg
+                className={`w-5 h-5 text-gold-500 ${isSyncing ? "animate-spin" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+            ),
+            onClick: handleForceSync,
+          },
+          { divider: true, label: "", icon: null },
+        ]
+      : []),
     // Main Navigation
     {
       label: "Messages / DMs",
@@ -591,8 +602,28 @@ export const HamburgerMenu: React.FC = () => {
             )}
 
             {/* Footer */}
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-center text-xs text-gray-500 dark:text-gray-400 rounded-b-xl">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-center text-xs text-gray-500 dark:text-gray-400 rounded-b-xl space-y-1">
               <span>Zyeuté ⚜️ Fait au Québec 🦫</span>
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                <a
+                  href="https://hublife-192.netlify.app/?from=network&via=zyeute&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_v1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-700 dark:text-amber-400 font-semibold hover:underline"
+                >
+                  ⌂ HubLife
+                </a>
+                <span aria-hidden>·</span>
+                <a
+                  href="https://grok-assistant.com/?from=network&via=zyeute&intent=ask&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_v1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
+                  Ask Grok
+                </a>
+              </div>
+              <span className="block opacity-70">North Network</span>
             </div>
           </div>
         </>
