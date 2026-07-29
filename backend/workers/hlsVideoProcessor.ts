@@ -8,8 +8,6 @@ import { Worker, Job } from "bullmq";
 import fs from "fs/promises";
 import path from "path";
 import { getBullMQConnection } from "../redis.js";
-import { processVideoToHLS } from "../services/videoProcessor.js";
-import { uploadHLSToStorage } from "../services/storage.js";
 import { updatePostStatus, saveHLSUrls } from "../services/videoDatabase.js";
 
 export interface HLSVideoJob {
@@ -43,12 +41,20 @@ if (!connection) {
       try {
         await updatePostStatus(postId, "processing");
 
-        const result = await processVideoToHLS({ postId, videoUrl });
+        const fs = await import("fs");
+        const { downloadVideo } = await import("../services/videoProcessor.js");
+        const { uploadBufferToMuxDirect } = await import("../services/mux-service.js");
+        
+        const rawVideoPath = await downloadVideo(videoUrl);
+        const videoBuffer = await fs.promises.readFile(rawVideoPath);
+        
+        const muxResult = await uploadBufferToMuxDirect(videoBuffer);
+        if (!muxResult) {
+            throw new Error("Failed to upload video to Mux.");
+        }
 
-        const { hlsUrl, thumbnailUrl } = await uploadHLSToStorage(
-          result,
-          postId,
-        );
+        const hlsUrl = muxResult.hlsUrl;
+        const thumbnailUrl = muxResult.thumbnailUrl;
 
         await saveHLSUrls(postId, { hlsUrl, thumbnailUrl });
 
@@ -56,9 +62,9 @@ if (!connection) {
 
         // Cleanup temp directory
         try {
-          await fs.rm(result.outDir, { recursive: true, force: true });
+          await fs.promises.unlink(rawVideoPath);
         } catch (e) {
-          console.warn(`[HLS Worker] Cleanup failed for ${result.outDir}:`, e);
+          console.warn(`[HLS Worker] Cleanup failed for ${rawVideoPath}:`, e);
         }
 
         // Notify API for cache invalidation

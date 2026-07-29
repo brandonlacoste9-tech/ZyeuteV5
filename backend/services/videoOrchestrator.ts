@@ -1,5 +1,5 @@
 import { VideoProcessingJob, processVideo } from "./videoProcessor.js";
-import { uploadProcessedVideo } from "./storage.js";
+
 import {
   updatePostStatus,
   saveVideoUrls,
@@ -71,10 +71,25 @@ export const VideoOrchestrator = {
         // If it's just a technical failure, we can continue to upload
       }
 
-      await sendProgress(userId, postId, 80, "Uploading");
+      await sendProgress(userId, postId, 80, "Uploading to Mux");
 
-      // 3. Upload to Storage
-      const urls = await uploadProcessedVideo(processedFiles, postId);
+      // 3. Upload directly to Mux (bypassing Supabase Storage)
+      const fs = await import("fs");
+      const { uploadBufferToMuxDirect } = await import("./mux-service.js");
+      
+      const videoBuffer = await fs.promises.readFile(processedFiles.videoHigh);
+      const muxResult = await uploadBufferToMuxDirect(videoBuffer);
+      
+      if (!muxResult) {
+        throw new Error("Failed to upload video to Mux.");
+      }
+
+      const urls = {
+        videoHighUrl: muxResult.hlsUrl,
+        videoMediumUrl: muxResult.hlsUrl,
+        videoLowUrl: muxResult.hlsUrl,
+        thumbnailUrl: muxResult.thumbnailUrl,
+      };
 
       // 4. Update Database
       await saveVideoUrls(postId, urls);

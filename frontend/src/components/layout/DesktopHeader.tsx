@@ -28,6 +28,13 @@ export const DesktopHeader: React.FC = () => {
             ZYEUTÉ
           </span>
         </Link>
+        <a
+          href="https://hublife.ca/?from=network&via=zyeute&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_home"
+          className="ml-2 text-[11px] font-semibold tracking-wide text-amber-200/90 hover:text-amber-50 border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 rounded-full transition-colors"
+          title="North Network home"
+        >
+          ⌂ HubLife
+        </a>
       </div>
 
       {/* Center: Search */}

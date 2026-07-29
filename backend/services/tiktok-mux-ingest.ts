@@ -2,36 +2,22 @@
  * TikTok → Mux ingest for permanent Pour toi playback (HLS + MuxVideoPlayer).
  * Downloads while TikAPI URLs are fresh; avoids expiring TikTok CDN links.
  */
-import Mux from "@mux/mux-node";
-import { fetch } from "undici";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   downloadTikTokMp4,
   mirrorTikTokVideoToSupabase,
   uploadMp4ToSupabase,
 } from "./tiktok-mirror-storage.js";
+import {
+  getMuxClient,
+  uploadBufferToMuxDirect,
+  createMuxAssetFromUrl,
+  MuxIngestResult,
+} from "./mux-service.js";
 
-export type TikTokMuxIngestResult = {
-  muxAssetId: string;
-  muxPlaybackId: string;
-  hlsUrl: string;
-  thumbnailUrl: string;
+export type TikTokMuxIngestResult = MuxIngestResult & {
   stagingUrl?: string;
 };
-
-let muxClient: Mux | null | undefined;
-
-function getMuxClient(): Mux | null {
-  if (muxClient !== undefined) return muxClient;
-  const tokenId = process.env.MUX_TOKEN_ID?.trim();
-  const tokenSecret = process.env.MUX_TOKEN_SECRET?.trim();
-  if (!tokenId || !tokenSecret) {
-    muxClient = null;
-    return null;
-  }
-  muxClient = new Mux({ tokenId, tokenSecret });
-  return muxClient;
-}
 
 export function isMuxIngestConfigured(): boolean {
   return getMuxClient() !== null;
@@ -44,86 +30,6 @@ function pickSourceUrls(
   return [hdUrl, sdUrl].filter(
     (u): u is string => typeof u === "string" && u.startsWith("http"),
   );
-}
-
-async function createMuxAssetFromUrl(
-  mux: Mux,
-  ingestUrl: string,
-): Promise<TikTokMuxIngestResult | null> {
-  try {
-    const asset = await mux.video.assets.create({
-      inputs: [{ url: ingestUrl }],
-      playback_policy: ["public"],
-    });
-    const muxAssetId = asset.id;
-    const muxPlaybackId = asset.playback_ids?.[0]?.id;
-    if (!muxAssetId || !muxPlaybackId) return null;
-
-    return {
-      muxAssetId,
-      muxPlaybackId,
-      hlsUrl: `https://stream.mux.com/${muxPlaybackId}.m3u8`,
-      thumbnailUrl: `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg`,
-      stagingUrl: ingestUrl,
-    };
-  } catch (err: unknown) {
-    console.warn(
-      "[TikTokMux] URL ingest failed:",
-      err instanceof Error ? err.message : String(err),
-    );
-    return null;
-  }
-}
-
-async function uploadBufferToMuxDirect(
-  mux: Mux,
-  buffer: Buffer,
-): Promise<TikTokMuxIngestResult | null> {
-  try {
-    const upload = await mux.video.uploads.create({
-      new_asset_settings: { playback_policy: ["public"] },
-      cors_origin: process.env.FRONTEND_URL || "*",
-    });
-
-    if (!upload.url) return null;
-
-    const putResp = await fetch(upload.url, {
-      method: "PUT",
-      body: buffer,
-      headers: { "Content-Type": "video/mp4" },
-    });
-
-    if (!putResp.ok) {
-      console.warn(`[TikTokMux] Direct upload PUT ${putResp.status}`);
-      return null;
-    }
-
-    for (let i = 0; i < 12; i++) {
-      await new Promise((r) => setTimeout(r, i === 0 ? 500 : 1500));
-      const status = await mux.video.uploads.retrieve(upload.id);
-      if (!status.asset_id) continue;
-
-      const asset = await mux.video.assets.retrieve(status.asset_id);
-      const muxPlaybackId = asset.playback_ids?.[0]?.id;
-      if (!muxPlaybackId) continue;
-
-      return {
-        muxAssetId: asset.id,
-        muxPlaybackId,
-        hlsUrl: `https://stream.mux.com/${muxPlaybackId}.m3u8`,
-        thumbnailUrl: `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg`,
-      };
-    }
-
-    console.warn("[TikTokMux] Direct upload timed out waiting for asset");
-    return null;
-  } catch (err: unknown) {
-    console.warn(
-      "[TikTokMux] Direct upload failed:",
-      err instanceof Error ? err.message : String(err),
-    );
-    return null;
-  }
 }
 
 /**
@@ -145,7 +51,7 @@ export async function ingestTikTokVideoToMux(options: {
     const buffer = await downloadTikTokMp4(sourceUrl);
     if (!buffer) continue;
 
-    const direct = await uploadBufferToMuxDirect(mux, buffer);
+    const direct = await uploadBufferToMuxDirect(buffer);
     if (direct) {
       console.log(
         `[TikTokMux] Direct upload OK for ${options.tiktokId} → ${direct.muxPlaybackId}`,
@@ -205,7 +111,7 @@ export async function ingestVideoUrlToMux(options: {
     return null;
   }
 
-  const direct = await uploadBufferToMuxDirect(mux, buffer);
+  const direct = await uploadBufferToMuxDirect(buffer);
   if (direct) return direct;
 
   if (options.supabase) {
