@@ -24,6 +24,9 @@ import {
   personalizePostOrder,
 } from "../lib/personalization.js";
 
+/** Original production DB may not ship get_localized_explore_feed. */
+let exploreRpcDisabled = false;
+
 /**
  * Resolve a stable numeric shuffle seed for the feed. A client-supplied session
  * token (persisted in sessionStorage) keeps order stable across paginated
@@ -653,6 +656,38 @@ router.get(
         }
       }
 
+      const publicationSelect = `
+            *,
+            user:user_id (
+              id,
+              username,
+              display_name,
+              avatar_url,
+              subscription_tier
+            )
+          `;
+
+      const buildTableQuery = () =>
+        supabase
+          .from("publications")
+          .select(publicationSelect)
+          .filter("visibility::text", "eq", "public")
+          .eq("est_masque", false)
+          .is("deleted_at", null)
+          .filter("processing_status::text", "neq", "no_audio")
+          .filter("hive_id::text", "eq", hiveId || "quebec")
+          .or(
+            "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+          )
+          .not("media_url", "is", null)
+          .not("caption", "ilike", "%DIAGNOSTIC%")
+          .not("content", "ilike", "%DIAGNOSTIC%")
+          .not("caption", "ilike", "%TEST VIDEO%")
+          .not("content", "ilike", "%TEST VIDEO%")
+          .order("viral_score", { ascending: false })
+          .order("reactions_count", { ascending: false })
+          .order("created_at", { ascending: false });
+
       const buildQuery = (
         offset: number,
         ignoreExclusions: boolean,
@@ -660,64 +695,27 @@ router.get(
       ) => {
         let q;
 
-        if (feedType === "explore") {
-          // PATH A: Use the Algorithmic Routing Engine (Supabase RPC)
-          // This handles Regional Bias, Affinity Matching, and Time Decay natively in PostgreSQL
-          q = supabase.rpc("get_localized_explore_feed", {
-            p_viewer_id: viewerId || null,
-            p_region_id: viewerRegion,
-            p_affinity_tags: viewerAffinities || [],
-            p_limit: 1000, // Allow PostgREST .range to slice
-            p_seed: seed,
-            p_seen_ids: excludedIds || [],
-          }).select(`
-            *,
-            user:user_id (
-              id,
-              username,
-              display_name,
-              avatar_url,
-              subscription_tier
-            )
-          `);
-        } else {
+        if (feedType === "explore" && !exploreRpcDisabled) {
           q = supabase
-            .from("publications")
-            .select(
-              `
-            *,
-            user:user_id (
-              id,
-              username,
-              display_name,
-              avatar_url,
-              subscription_tier
-            )
-          `,
-            )
-            .filter("visibility::text", "eq", "public")
-            .eq("est_masque", false)
-            .is("deleted_at", null)
-            .filter("processing_status::text", "neq", "no_audio") // Strict filter out silent videos
-            .filter("hive_id::text", "eq", hiveId || "quebec")
-            .or(
-              "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
-            )
-            .not("media_url", "is", null)
-            .not("caption", "ilike", "%DIAGNOSTIC%")
-            .not("content", "ilike", "%DIAGNOSTIC%")
-            .not("caption", "ilike", "%TEST VIDEO%")
-            .not("content", "ilike", "%TEST VIDEO%")
-            .order("viral_score", { ascending: false })
-            .order("reactions_count", { ascending: false })
-            .order("created_at", { ascending: false });
+            .rpc("get_localized_explore_feed", {
+              p_viewer_id: viewerId || null,
+              p_region_id: viewerRegion,
+              p_affinity_tags: viewerAffinities || [],
+              p_limit: 1000,
+              p_seed: seed,
+              p_seen_ids: excludedIds || [],
+            })
+            .select(publicationSelect);
+        } else {
+          q = buildTableQuery();
         }
 
         q = q.range(offset, offset + fetchLimit - 1);
 
-        // Path A (explore feed) handles exclusions natively in PostgreSQL. Only apply JS exclusions for fallback/following feeds.
+        // Path A (explore RPC) handles exclusions in SQL. Table/following feeds
+        // apply them in PostgREST.
         if (
-          feedType !== "explore" &&
+          (feedType !== "explore" || exploreRpcDisabled) &&
           !ignoreExclusions &&
           excludedIds.length > 0
         ) {
@@ -742,6 +740,25 @@ router.get(
         false,
         BLOCK_SIZE,
       );
+
+      if (
+        error &&
+        feedType === "explore" &&
+        !exploreRpcDisabled &&
+        /get_localized_explore_feed|PGRST202|schema cache/i.test(
+          String((error as { message?: string; code?: string }).message || "") +
+            String((error as { code?: string }).code || ""),
+        )
+      ) {
+        console.warn(
+          "explore RPC unavailable, falling back to publications table:",
+          (error as { message?: string }).message,
+        );
+        exploreRpcDisabled = true;
+        const retry = await buildQuery(dbOffset, false, BLOCK_SIZE);
+        posts = retry.data;
+        error = retry.error;
+      }
 
       // If we ran out of unseen posts, reshuffle seed but KEEP exclusions when
       // possible so users don't instantly re-see the same watched clips.
