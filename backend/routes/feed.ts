@@ -157,7 +157,7 @@ function orderExploreFeed(
     arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
 
   const stockShuffled = sh(stock, blockSeed + 333);
-  const stockTail = stockShuffled.slice(0, Math.min(8, stockShuffled.length));
+  const stockTail = stockShuffled;
 
   return [
     ...interleaveQueues(
@@ -890,11 +890,17 @@ router.get(
       // Deterministically shuffle block using block seed
       const blockSeed = (seed + blockIndex) >>> 0;
       const orderedPosts = orderFeedPosts(boostedPosts, feedType, blockSeed);
+      const playableOrdered = orderedPosts.filter((p) =>
+        isExplorePlayablePost(p),
+      );
+      const nonStockOrdered = playableOrdered.filter(
+        (p) => !isStockFillerPost(p),
+      );
       const feedCandidates =
         feedType === "explore"
-          ? orderedPosts.filter(
-              (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
-            )
+          ? nonStockOrdered.length >= 8
+            ? nonStockOrdered
+            : playableOrdered
           : orderedPosts;
       const dedupedCandidates = dedupePostsByContent(feedCandidates);
       const spacedCandidates =
@@ -955,11 +961,17 @@ router.get(
             feedType,
             seed,
           );
+          const fallbackPlayable = shuffledFallback.filter((p) =>
+            isExplorePlayablePost(p),
+          );
+          const fallbackNonStock = fallbackPlayable.filter(
+            (p) => !isStockFillerPost(p),
+          );
           const fallbackCandidates =
             feedType === "explore"
-              ? shuffledFallback.filter(
-                  (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
-                )
+              ? fallbackNonStock.length >= 8
+                ? fallbackNonStock
+                : fallbackPlayable
               : shuffledFallback;
           const dedupedFallback = dedupePostsByContent(fallbackCandidates);
           const spacedFallback =
