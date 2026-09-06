@@ -1142,9 +1142,12 @@ export async function surgicalUpload(
     // DO NOT set Content-Type — the browser must set it automatically
     // with the correct multipart/form-data boundary for FormData.
 
-    // Use relative URL — Vercel rewrites /api/* to Railway backend in production
-    // Local dev: Vite proxy handles /api → localhost:3000
-    const uploadUrl = "/api/upload/simple";
+    // Direct to Railway so large videos skip Netlify's proxy body limit.
+    const apiOrigin = (
+      import.meta.env.VITE_API_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "")
+    ).replace(/\/$/, "");
+    const uploadUrl = `${apiOrigin}/api/upload/simple`;
 
     const response = await fetch(uploadUrl, {
       method: "POST",
