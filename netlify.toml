@@ -1,5 +1,5 @@
 # Zyeuté V5 — Netlify (frontend SPA)
-# Backend stays on Render / Cloudflare Worker. This file only hosts the Vite app.
+# API is proxied to the Railway Express service.
 
 [build]
   command = "npm run build:vercel"
@@ -11,10 +11,9 @@
   NODE_OPTIONS = "--max-old-space-size=4096"
   CI = "true"
 
-# Same /api proxy as vercel.json — relative fetch() in the SPA hits the edge worker.
 [[redirects]]
   from = "/api/*"
-  to = "https://zyeute-edge.brandonlacoste9.workers.dev/api/:splat"
+  to = "https://zyeutev5-production-ebf4.up.railway.app/api/:splat"
   status = 200
   force = true
 
@@ -23,7 +22,6 @@
   to = "/index.html"
   status = 404
 
-# Client-side router (React Router)
 [[redirects]]
   from = "/*"
   to = "/index.html"
