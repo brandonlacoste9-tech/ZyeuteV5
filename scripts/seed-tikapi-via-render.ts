@@ -11,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { collectFeedSeedCandidates } from "../backend/services/tikapi-hashtag.js";
 import type { FeedSeedCandidate } from "../backend/services/tikapi-hashtag.js";
 
-const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
+const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-7vx9.onrender.com";
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || "https://[REF].supabase.co";
 const SUPABASE_ANON =

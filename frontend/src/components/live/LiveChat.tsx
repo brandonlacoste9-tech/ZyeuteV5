@@ -54,7 +54,7 @@ const TIER_COLOURS: Record<string, string> = {
 const WS_URL =
   import.meta.env.VITE_WS_URL ||
   import.meta.env.VITE_API_URL ||
-  "https://zyeutev5-1.onrender.com";
+  "https://zyeutev5-7vx9.onrender.com";
 
 export function LiveChat({ streamId, compact = false }: LiveChatProps) {
   const { user } = useAuth();

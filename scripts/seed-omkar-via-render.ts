@@ -30,7 +30,7 @@ import { filterUnseenTikTokVideos } from "../backend/utils/tiktok-seed-dedup.js"
 
 const LOCK_NAME = "omkar-seed";
 
-const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-1.onrender.com";
+const API_BASE = process.env.SEED_API_BASE || "https://zyeutev5-7vx9.onrender.com";
 const OMKAR = "https://tiktok-scraper.omkar.cloud";
 const SUPABASE_URL =
   process.env.VITE_SUPABASE_URL || "https://vuanulvyqkfezmjcikfk.supabase.co";

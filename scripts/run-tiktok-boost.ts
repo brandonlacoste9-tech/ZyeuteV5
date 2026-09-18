@@ -28,7 +28,7 @@ const omkarLimit = parseInt(
 );
 
 const API_BASE =
-  process.env.ZYEUTE_API_BASE?.trim() || "https://zyeutev5-1.onrender.com";
+  process.env.ZYEUTE_API_BASE?.trim() || "https://zyeutev5-7vx9.onrender.com";
 const CRON = process.env.CRON_SECRET?.trim();
 
 async function remotePost(path: string) {

@@ -10,7 +10,7 @@ import { BottomNav } from "../components/BottomNav";
 import { Button } from "../components/Button";
 
 const API_BASE =
-  (import.meta as any).env?.VITE_API_URL || "https://zyeutev5-1.onrender.com";
+  (import.meta as any).env?.VITE_API_URL || "https://zyeutev5-7vx9.onrender.com";
 
 /**
  * Interface for a live stream

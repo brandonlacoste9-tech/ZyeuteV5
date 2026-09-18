@@ -39,7 +39,7 @@ function categorizeError(error: Error): {
     return {
       category: "chunk",
       userMessage:
-        "Mise à jour de l'app détectée. Appuie sur « Recharger » (ou ferme l'onglet et rouvre zyeute.com).",
+        "Mise à jour de l'app détectée. Appuie sur « Recharger » (ou ferme l'onglet et rouvre zyeute.ca).",
       isRecoverable: true,
     };
   }

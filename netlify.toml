@@ -1,5 +1,5 @@
 # Zyeuté V5 — Netlify (frontend SPA)
-# API is proxied to the Railway Express service.
+# API is proxied to the Render Express service.
 
 [build]
   command = "npm run build:vercel"
@@ -13,7 +13,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://zyeutev5-production-ebf4.up.railway.app/api/:splat"
+  to = "https://zyeutev5-7vx9.onrender.com/api/:splat"
   status = 200
   force = true
 
