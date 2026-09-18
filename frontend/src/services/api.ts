@@ -11,6 +11,7 @@ const apiLogger = logger.withContext("API");
 import { getSessionWithTimeout } from "@/lib/supabase";
 import { getOrCreateFeedSessionId } from "@/lib/feedSession";
 import { getGuestSeenForRequest } from "@/lib/watchTracking";
+import { getQcStreetPosts } from "@/lib/qc-street-clips";
 import {
   AIImageResponseSchema,
   AIVideoResponseSchema,
@@ -392,7 +393,15 @@ export async function getInfiniteFeedPosts(
           p != null && !!p.id && postHasPlayableMedia(p),
       );
     const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
-    const posts = unseenOnly.length > 0 ? unseenOnly : playable;
+    let posts = unseenOnly.length > 0 ? unseenOnly : playable;
+
+    if (!cursor) {
+      const local = getQcStreetPosts(sessionId).filter(
+        (p) => !locallySeen.has(String(p.id)),
+      );
+      const seenIds = new Set(posts.map((p) => String(p.id)));
+      posts = [...local.filter((p) => !seenIds.has(p.id)), ...posts];
+    }
 
     return {
       posts,
@@ -1232,6 +1241,7 @@ export function postHasPlayableMedia(p: Post): boolean {
     return true;
   }
   const media = String(p.media_url ?? "").trim();
+  if (media.startsWith("/clips/") && /\.mp4(\?|$)/i.test(media)) return true;
   if (media.length < 12 || !/^https?:\/\//i.test(media)) return false;
   // FAL temporary URLs expire → black player; still allow if we have a Mux id above
   if (/fal\.media|\.fal\.run/i.test(media)) return false;

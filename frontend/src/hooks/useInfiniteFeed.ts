@@ -13,6 +13,7 @@ import { useInView } from "react-intersection-observer";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
+import { getQcStreetPosts } from "@/lib/qc-street-clips";
 import { getSessionWithTimeout } from "@/lib/supabase";
 import {
   getOrCreateFeedSessionId,
@@ -168,7 +169,16 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       // Prefer unseen; only keep watched if the whole page was already seen
       // (small catalog / wrap) so the feed never goes blank.
       const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
-      const posts = unseenOnly.length > 0 ? unseenOnly : playable;
+      let posts = unseenOnly.length > 0 ? unseenOnly : playable;
+
+      // First page: mix original Québec street clips into Pour toi.
+      if (!cursorStr) {
+        const local = getQcStreetPosts(feedSessionId).filter(
+          (p) => !locallySeen.has(String(p.id)),
+        );
+        const seenIds = new Set(posts.map((p) => String(p.id)));
+        posts = [...local.filter((p) => !seenIds.has(p.id)), ...posts];
+      }
 
       if (
         typeof window !== "undefined" &&
