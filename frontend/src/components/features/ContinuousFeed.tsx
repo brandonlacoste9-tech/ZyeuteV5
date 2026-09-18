@@ -53,6 +53,7 @@ import {
   postLooksLikeTestInject,
   type InfiniteFeedType,
 } from "@/services/api";
+import { getQcStreetPosts } from "@/lib/qc-street-clips";
 import { triggerBadgeCheck } from "@/services/gamificationService";
 import {
   getOrCreateFeedSessionId,
@@ -97,6 +98,32 @@ function filterPlayablePosts(items: Post[]): FeedPost[] {
     if (!postHasPlayableMedia(p)) return false;
     return true;
   }) as FeedPost[];
+}
+
+function seedStreetFeed(): FeedPost[] {
+  return filterPlayablePosts(getQcStreetPosts());
+}
+
+function warmupStreetClips(posts: FeedPost[], count = 2) {
+  if (typeof document === "undefined") return;
+  posts.slice(0, count).forEach((p) => {
+    const href = p.media_url;
+    if (!href || document.querySelector(`link[data-qc-warm="${p.id}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "video";
+    link.href = href;
+    link.setAttribute("data-qc-warm", p.id);
+    document.head.appendChild(link);
+    if (p.thumbnail_url) {
+      const img = document.createElement("link");
+      img.rel = "preload";
+      img.as = "image";
+      img.href = p.thumbnail_url;
+      img.setAttribute("data-qc-warm", `${p.id}-jpg`);
+      document.head.appendChild(img);
+    }
+  });
 }
 
 const FEED_SPACING = {
@@ -366,12 +393,17 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
+  const streetSeed =
+    feedType === "decouverte" && !savedState?.posts?.length
+      ? seedStreetFeed()
+      : [];
+
   const postsRef = useRef<Array<Post & { user: User }>>(
-    savedState?.posts || [],
+    savedState?.posts?.length ? savedState.posts : streetSeed,
   );
 
   const [posts, setPosts] = useState<Array<Post & { user: User }>>(
-    savedState?.posts || [],
+    savedState?.posts?.length ? savedState.posts : streetSeed,
   );
   const [nextCursor, setNextCursor] = useState<string | null>(
     savedState?.cursor ?? null,
@@ -381,7 +413,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   );
 
   // Only loading if we have no posts
-  const [isLoading, setIsLoading] = useState(!savedState?.posts?.length);
+  const [isLoading, setIsLoading] = useState(
+    !(savedState?.posts?.length || streetSeed.length),
+  );
+
+  useEffect(() => {
+    warmupStreetClips(
+      (savedState?.posts?.length ? savedState.posts : streetSeed) as FeedPost[],
+      3,
+    );
+  }, []);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState(false);
@@ -718,7 +759,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     isFetchingRef.current = true;
     lastFetchTimeRef.current = Date.now();
     feedLogger.info("Fetching fresh video feed...");
-    setIsLoading(true);
+    if (postsRef.current.length === 0) setIsLoading(true);
     setFetchError(false);
     setIsFollowingFallback(false);
     setShowFallbackBanner(false);
@@ -782,6 +823,11 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       }
 
       if (validPosts.length === 0) {
+        if (postsRef.current.length > 0) {
+          setHasMore(false);
+          setFetchError(false);
+          return;
+        }
         if (allowDemoVideos()) {
           feedLogger.info("Using demo videos (?demo=1)");
           setPosts(DEMO_VIDEOS);
@@ -795,17 +841,27 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         setFetchError(false);
         return;
       } else {
-        setPosts(validPosts);
+        setPosts((prev) => {
+          if (prev.length === 0) return validPosts;
+          const have = new Set(prev.map((p) => p.id));
+          const extra = validPosts.filter((p) => !have.has(p.id));
+          if (extra.length === 0) return prev;
+          return mergeFeedPages(prev, extra, sessionId);
+        });
         setHasMore(apiHasMore);
         setNextCursor(apiNextCursor);
       }
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
-      setPosts(
-        allowDemoVideos() ? (DEMO_VIDEOS as Array<Post & { user: User }>) : [],
-      );
-      setHasMore(false);
-      setFetchError(!allowDemoVideos());
+      if (postsRef.current.length === 0) {
+        setPosts(
+          allowDemoVideos()
+            ? (DEMO_VIDEOS as Array<Post & { user: User }>)
+            : [],
+        );
+        setHasMore(false);
+        setFetchError(!allowDemoVideos());
+      }
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
@@ -820,7 +876,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       } else if (maybeRotateFeedSessionAfterBackground()) {
         feedSessionRef.current = getOrCreateFeedSessionId();
         clearFeedState(stateKey);
-        setPosts([]);
+        setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
         setNextCursor(null);
         setCurrentIndex(0);
         setHasMore(true);
@@ -830,13 +886,13 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [clearFeedState, stateKey]);
+  }, [clearFeedState, stateKey, feedType]);
 
   // Reset feed when tab changes (Découverte ↔ Abonnements)
   useEffect(() => {
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
-    setPosts([]);
+    setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
     setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
@@ -856,7 +912,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     refreshTokenRef.current = refreshToken;
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
-    setPosts([]);
+    setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
     setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
