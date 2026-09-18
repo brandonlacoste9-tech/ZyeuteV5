@@ -123,9 +123,24 @@ if (credentialsMissing) {
   }
 }
 
-// Helper function to get dynamic redirect URL based on current domain
+// After Google, never send people back to the old zyeute.com site.
+// www.zyeute.ca currently 301s to lazyute.netlify.app and drops the OAuth
+// hash — so the live callback host is Netlify until that bounce is gone.
+const LIVE_ORIGIN = "https://lazyute.netlify.app";
+
 function getRedirectUrl(): string {
-  const origin = window.location.origin;
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : LIVE_ORIGIN;
+  const host = origin.replace(/^https?:\/\//, "").toLowerCase();
+  if (host === "localhost" || host.startsWith("127.0.0.1")) {
+    return `${origin}/auth/callback`;
+  }
+  if (host === "zyeute.com" || host === "www.zyeute.com") {
+    return `${LIVE_ORIGIN}/auth/callback`;
+  }
+  if (host === "zyeute.ca" || host === "www.zyeute.ca") {
+    return `${LIVE_ORIGIN}/auth/callback`;
+  }
   return `${origin}/auth/callback`;
 }
 
