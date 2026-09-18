@@ -157,7 +157,7 @@ const ArcadeIcon = ({ active }: { active: boolean }) => (
 const navItems: NavItem[] = [
   {
     to: "/",
-    label: "Accueil",
+    label: "Pour toi",
     icon: <HomeIcon active={false} />,
     activeIcon: <HomeIcon active={true} />,
   },
@@ -173,12 +173,6 @@ const navItems: NavItem[] = [
     icon: <CreateButton />,
     activeIcon: <CreateButton />,
     isCreate: true,
-  },
-  {
-    to: "/arcade",
-    label: "Arcade",
-    icon: <ArcadeIcon active={false} />,
-    activeIcon: <ArcadeIcon active={true} />,
   },
   {
     to: "/profile/me",

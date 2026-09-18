@@ -11,7 +11,7 @@ const TRANSLATIONS: Record<string, Record<string, string>> = {
     "nav.stories": "Histoires",
     "nav.notifications": "Notifications",
     "nav.profile": "Mon Profil",
-    "nav.home": "Accueil",
+    "nav.home": "Pour toi",
     "nav.discover": "Découvrir",
     "nav.create": "Créer",
     "nav.notifications_short": "Notifs",

@@ -508,9 +508,42 @@ export const Upload: React.FC = () => {
                 <textarea
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Quoi de neuf au Québec? #Mtl #Hiver ⚜️"
+                  placeholder="15 secondes dans la rue. Quessé qui se passe icitte?"
                   className="input-premium h-32 resize-none"
                 />
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    {
+                      label: "Le dépanneur",
+                      text: "Minuit au dépanneur du coin. Le Québec, là.",
+                    },
+                    {
+                      label: "Le métro",
+                      text: "La orange line au complet. On rentre icitte.",
+                    },
+                    {
+                      label: "La terrasse",
+                      text: "Premier 20 degrés. La terrasse est pleine. #Montréal",
+                    },
+                    {
+                      label: "Le chalet",
+                      text: "Fin de semaine au chalet. Le lac est gelé encore.",
+                    },
+                    {
+                      label: "Le Stade",
+                      text: "Quand le Stade chante, on l'entend jusqu'à la maison.",
+                    },
+                  ].map((tpl) => (
+                    <button
+                      key={tpl.label}
+                      type="button"
+                      onClick={() => setCaption(tpl.text)}
+                      className="text-[11px] px-2.5 py-1 rounded-full border border-gold-500/40 text-gold-400"
+                    >
+                      {tpl.label}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
                   onClick={() => {

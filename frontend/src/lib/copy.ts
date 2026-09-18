@@ -220,7 +220,7 @@ export const copy = {
     or: "ou ben",
     and: "pis",
     madeInQuebec: "Fait au Québec 🦫⚜️",
-    tagline: "L'app sociale du Québec",
+    tagline: "Quessé qui se passe icitte?",
     you: "Toi",
     verified: "Vérifié",
     sponsored: "Commandité",

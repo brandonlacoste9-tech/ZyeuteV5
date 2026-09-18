@@ -21,12 +21,12 @@ interface SEOProps {
   noIndex?: boolean;
 }
 
-const DEFAULT_TITLE = "Zyeute — L'app vidéo du Québec";
+const DEFAULT_TITLE = "Zyeuté — Quessé qui se passe icitte?";
 const DEFAULT_DESC =
-  "La plateforme de vidéos courtes 100% québécoise. Partage, découvre et connecte-toi avec les créateurs du Québec.";
-const DEFAULT_IMAGE = "https://www.zyeute.com/zyeute_og_image.png";
-/** Prefer www — apex redirects to www in production */
-const BASE_URL = "https://www.zyeute.com";
+  "L'app vidéo du Québec. Clips de ta rue — Montréal, Québec, Gatineau. En français.";
+const DEFAULT_IMAGE = "https://www.zyeute.ca/zyeute_og_image.png";
+/** Prefer www — DNS is moving to zyeute.ca */
+const BASE_URL = "https://www.zyeute.ca";
 
 function setMeta(property: string, content: string, isName = false) {
   const attr = isName ? "name" : "property";

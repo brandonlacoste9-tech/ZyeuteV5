@@ -9,9 +9,9 @@ import { useSEO } from "@/hooks/useSEO";
 
 const Landing: React.FC = () => {
   useSEO({
-    title: "L'app vidéo du Québec | TikTok québécois",
+    title: "Quessé qui se passe icitte?",
     description:
-      "Zyeute est la plateforme de vidéos courtes 100% québécoise. Partage tes clips, découvre des créateurs de Montréal, Québec et partout au Québec.",
+      "L'app vidéo du Québec. Clips de ta rue — Montréal, Québec, Gatineau. En français.",
     url: "/",
   });
 

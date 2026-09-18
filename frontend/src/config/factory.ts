@@ -51,20 +51,20 @@ const QUEBEC_CONFIG: AppConfig = {
   identity: {
     hiveId: "quebec",
     name: "Zyeuté",
-    tagline: "Le Swarm Québécois ⚜️",
+    tagline: "Quessé qui se passe icitte?",
     region: "QC",
     locale: "fr-CA",
     iconEmoji: "⚜️",
     giftEmoji: "⚜️",
-    landingTitle: "Bienvenue dans le Swarm",
-    landingSubtitle: "La plateforme sociale premium du Québec.",
+    landingTitle: "Quessé qui se passe icitte?",
+    landingSubtitle: "L'app vidéo du Québec. Ta rue, ta langue.",
     onboardingSteps: [
       {
-        title: "Découvrez",
-        description: "Vidéos exclusives et talents locaux.",
+        title: "Découvre",
+        description: "Clips de Montréal, Québec, Gatineau — icitte.",
       },
-      { title: "Connectez", description: "Échangez avec la communauté." },
-      { title: "Gagnez", description: "Recevez des cadeaux de vos fans." },
+      { title: "Filme", description: "15 secondes dans la rue. C'est tout." },
+      { title: "Envoie", description: "Le clip que tu shares dans le groupe." },
     ],
   },
   theme: {
@@ -84,7 +84,7 @@ const QUEBEC_CONFIG: AppConfig = {
     enableChat: true,
     enableStories: true,
     enableModeration: true,
-    enableGifts: true,
+    enableGifts: false,
   },
 };
 
@@ -126,7 +126,7 @@ const BRAZIL_CONFIG: AppConfig = {
     enableChat: true,
     enableStories: true,
     enableModeration: true,
-    enableGifts: true,
+    enableGifts: false,
   },
 };
 
@@ -165,7 +165,7 @@ const ARGENTINA_CONFIG: AppConfig = {
     enableChat: true,
     enableStories: true,
     enableModeration: true,
-    enableGifts: true,
+    enableGifts: false,
   },
 };
 
@@ -204,7 +204,7 @@ const MEXICO_CONFIG: AppConfig = {
     enableChat: true,
     enableStories: true,
     enableModeration: true,
-    enableGifts: true,
+    enableGifts: false,
   },
 };
 

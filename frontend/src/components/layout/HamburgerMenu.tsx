@@ -509,7 +509,28 @@ export const HamburgerMenu: React.FC = () => {
 
             {/* Menu Items */}
             <div className="py-2">
-              {menuItems.map((item, index) => {
+              {menuItems
+                .filter((item) => {
+                  if (item.divider) return true;
+                  const hidden = new Set([
+                    "/live",
+                    "/arcade",
+                    "/studio",
+                    "/ti-guy",
+                    "/swarm",
+                    "/manus",
+                    "/gravityclaw",
+                    "/nullclaw",
+                    "/store",
+                    "/wallet",
+                    "/revenue",
+                    "/analytics",
+                    "/premium",
+                    "/chat-history",
+                  ]);
+                  return !item.to || !hidden.has(item.to);
+                })
+                .map((item, index) => {
                 if (item.divider) {
                   return (
                     <hr

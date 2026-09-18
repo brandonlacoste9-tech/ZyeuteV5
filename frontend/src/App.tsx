@@ -4,10 +4,9 @@
  */
 
 import { Suspense, useState, useEffect } from "react";
-import { BrowserRouter as Router, useLocation } from "react-router-dom";
+import { BrowserRouter as Router } from "react-router-dom";
 import { LoadingScreen as LoadingScreenComponent } from "./components/LoadingScreen";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { TIGuyButton } from "@/components/tiguy/TIGuyButton";
 import { useTIGuy } from "@/components/tiguy/useTIGuy";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BorderColorProvider } from "@/contexts/BorderColorContext";
@@ -44,9 +43,6 @@ function LoadingScreen({ message }: { message?: string }) {
 function AppShell() {
   const { isLoading, user } = useAuth();
   const { isOpen, openChat, closeChat } = useTIGuy(user?.id ?? "anonymous");
-  const location = useLocation();
-  const isFeedPage = location.pathname === "/feed" || location.pathname === "/";
-  const isMessagesPage = location.pathname === "/messages";
 
   // Hard cap: never show loading screen for more than 3.5s
   const [forceReady, setForceReady] = useState(false);
@@ -91,9 +87,6 @@ function AppShell() {
       </div>
       {user ? (
         <>
-          {!isOpen && !isFeedPage && !isMessagesPage && (
-            <TIGuyButton onClick={openChat} />
-          )}
           <Suspense fallback={null}>
             <TIGuyFullScreen
               isOpen={isOpen}

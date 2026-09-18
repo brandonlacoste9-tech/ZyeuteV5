@@ -639,17 +639,14 @@ export function AppRoutes() {
           />
 
           {/* Live streaming */}
-          <Route path="/live" element={<LiveDiscoverPage />} />
-          <Route path="/live/watch/:id" element={<WatchLivePage />} />
+          <Route path="/live" element={<Navigate to="/feed" replace />} />
+          <Route
+            path="/live/watch/:id"
+            element={<Navigate to="/feed" replace />}
+          />
           <Route
             path="/live/go"
-            element={
-              <RequireAuth>
-                <RequireRealAccount>
-                  <GoLivePage />
-                </RequireRealAccount>
-              </RequireAuth>
-            }
+            element={<Navigate to="/upload" replace />}
           />
 
           {/* Analytics */}
@@ -675,7 +672,7 @@ export function AppRoutes() {
           />
 
           {/* Arcade */}
-          <Route path="/arcade" element={<ArcadeHub />} />
+          <Route path="/arcade" element={<Navigate to="/feed" replace />} />
           <Route
             path="/arcade/grid-rush"
             element={

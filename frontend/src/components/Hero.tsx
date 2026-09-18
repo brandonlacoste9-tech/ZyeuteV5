@@ -26,9 +26,12 @@ export const Hero: React.FC = () => {
         </h1>
 
         {/* Hero Subtitle */}
-        <p className="text-xl md:text-2xl text-stone-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-          La plateforme sociale québécoise qui célèbre notre culture et
-          créativité
+        <p className="text-xl md:text-2xl text-stone-300 mb-4 max-w-2xl mx-auto leading-relaxed">
+          Quessé qui se passe icitte?
+        </p>
+        <p className="text-base md:text-lg text-stone-400 mb-12 max-w-xl mx-auto leading-relaxed">
+          Clips de ta rue — Montréal, Québec, Gatineau. En français. Pas un
+          algo de Californie.
         </p>
 
         {/* CTA Section - Vertical Stack for Clear Hierarchy */}

@@ -115,7 +115,7 @@ const ZyeuteLogin: React.FC = () => {
 
         <FleurDeLis />
         <h1 className="title">Zyeuté</h1>
-        <p className="subtitle">L'APP SOCIALE DU QUÉBEC</p>
+        <p className="subtitle">Quessé qui se passe icitte?</p>
 
         <div className="login-card">
           <h2 className="card-title">Connecte-toi</h2>

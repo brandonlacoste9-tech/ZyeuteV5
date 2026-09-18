@@ -39,7 +39,8 @@ const FeedTabBar: React.FC<{
     <div className="flex items-center gap-6 mt-2 pb-0">
       {(["decouverte", "abonnements"] as const).map((tab) => {
         const isActive = active === tab;
-        const label = tab === "decouverte" ? "Découverte" : "Abonnements";
+        const label =
+          tab === "decouverte" ? "Pour toi" : "Abonnements";
         return (
           <button
             key={tab}
@@ -209,13 +210,17 @@ export const Feed: React.FC = () => {
                 >
                   Zyeuté
                 </span>
+                <span className="hidden sm:inline text-[10px] text-white/40 font-medium tracking-normal normal-case ml-1">
+                  Quessé qui se passe icitte?
+                </span>
               </div>
             </div>
-            {/* Right: search + VIP */}
+            {/* Right: search */}
             <div className="flex items-center gap-2">
               <Link
                 to="/explore"
                 className="p-2 rounded-full hover:bg-white/10 transition-colors text-gold-400"
+                aria-label="Explorer"
               >
                 <svg
                   className="w-5 h-5"
@@ -231,21 +236,22 @@ export const Feed: React.FC = () => {
                   />
                 </svg>
               </Link>
-              <Link
-                to="/premium"
-                className="text-black text-[10px] font-black px-2.5 py-1 rounded-lg transition-all"
-                style={{
-                  background: "linear-gradient(135deg, #FFD700, #C9A227)",
-                  boxShadow: "0 0 10px rgba(212,175,55,0.4)",
-                }}
-              >
-                VIP
-              </Link>
             </div>
           </div>
 
-          {/* Découverte / Abonnements tab bar */}
           <FeedTabBar active={activeTab} onChange={handleFeedTabChange} />
+          <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 gold-scrollbar">
+            {["Montréal", "Québec", "Gatineau", "Sherbrooke", "Saguenay"].map(
+              (city) => (
+                <span
+                  key={city}
+                  className="shrink-0 text-[11px] px-2.5 py-1 rounded-full border border-gold-500/30 text-gold-400/90"
+                >
+                  {city}
+                </span>
+              ),
+            )}
+          </div>
         </div>
 
         {/* Stories Section (Integrated into Header area) */}
