@@ -835,6 +835,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           setFetchError(false);
           return;
         }
+        const street = seedStreetFeed();
+        if (street.length > 0) {
+          feedLogger.info("API empty — showing Québec street clips");
+          setPosts(street);
+          setHasMore(false);
+          setFetchError(false);
+          return;
+        }
         feedLogger.info("No posts and no ?demo=1 — empty feed");
         setPosts([]);
         setHasMore(false);
@@ -854,13 +862,16 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
       if (postsRef.current.length === 0) {
+        const street = seedStreetFeed();
         setPosts(
           allowDemoVideos()
             ? (DEMO_VIDEOS as Array<Post & { user: User }>)
-            : [],
+            : street.length > 0
+              ? street
+              : [],
         );
         setHasMore(false);
-        setFetchError(!allowDemoVideos());
+        setFetchError(!allowDemoVideos() && street.length === 0);
       }
     } finally {
       setIsLoading(false);

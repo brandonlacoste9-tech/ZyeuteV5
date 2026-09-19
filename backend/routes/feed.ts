@@ -240,7 +240,7 @@ async function fetchTiGuyCuratedSupabase(
     .filter("hive_id::text", "eq", hiveId || "quebec")
     .not("media_url", "is", null)
     .or(
-      "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
     )
     .order("created_at", { ascending: false })
     .limit(limit * 4);
@@ -549,9 +549,15 @@ router.get(
 
       // Dynamically import to avoid top-level issues
       const { createClient } = await import("@supabase/supabase-js");
-      const supabase = req.headers.authorization
+      const rawAuth = req.headers.authorization;
+      const authLooksLikeJwt =
+        typeof rawAuth === "string" &&
+        /^Bearer\s+[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/.test(
+          rawAuth,
+        );
+      const supabase = authLooksLikeJwt
         ? createClient(supabaseUrl, anonKey, {
-            global: { headers: { Authorization: req.headers.authorization } },
+            global: { headers: { Authorization: rawAuth } },
           })
         : createClient(supabaseUrl, anonKey);
 
