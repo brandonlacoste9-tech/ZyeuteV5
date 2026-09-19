@@ -13,7 +13,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://zyeutev5-7vx9.onrender.com/api/:splat"
+  to = "https://zyeute-api.onrender.com/api/:splat"
   status = 200
   force = true
 
