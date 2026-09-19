@@ -683,7 +683,7 @@ router.get(
           .filter("processing_status::text", "neq", "no_audio")
           .filter("hive_id::text", "eq", hiveId || "quebec")
           .or(
-            "processing_status::text.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+            "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
           )
           .not("media_url", "is", null)
           .not("caption", "ilike", "%DIAGNOSTIC%")
