@@ -75,6 +75,78 @@ const CLIPS: Array<{
     caption: "Carnaval dans la rue. Les parka, les lumières, la neige.",
     city: "Québec",
   },
+  {
+    id: "qc-street-09",
+    file: "qc-09",
+    caption: "Tire d'érable sur la neige. Si ça colle pas au bâton, c'est trop cuit.",
+    city: "Montérégie",
+  },
+  {
+    id: "qc-street-10",
+    file: "qc-10",
+    caption: "Bagels St-Viateur à 6h. Encore chauds. Le Mile End sent le sésame.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-11",
+    file: "qc-11",
+    caption: "Hockey sur le lac. Pas de sifflet. Juste le froid et la rondelle.",
+    city: "Laurentides",
+  },
+  {
+    id: "qc-street-12",
+    file: "qc-12",
+    caption: "Mont-Royal au coucher. Toute la ville en bas. On respire.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-13",
+    file: "qc-13",
+    caption: "Jean-Talon un samedi. Tomates, maïs, érable. Le marché parle français.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-14",
+    file: "qc-14",
+    caption: "Le traversier Québec–Lévis. Le fleuve, le château, le froid dans la face.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-15",
+    file: "qc-15",
+    caption: "Smoked meat coupé à la main. Moutarde, seigle, c'est tout.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-16",
+    file: "qc-16",
+    caption: "La souffleuse dans la ruelle. Les triplex, les lumières jaunes, l'hiver.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-17",
+    file: "qc-17",
+    caption: "Un steamé à 2h. Chou, moutarde, pain vapeur. Montréal, icitte.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-18",
+    file: "qc-18",
+    caption: "Phare en Gaspésie. Le golfe tape. On est encore au bout du monde.",
+    city: "Gaspésie",
+  },
+  {
+    id: "qc-street-19",
+    file: "qc-19",
+    caption: "Spa nordique dans les pins. L'eau chaude, la neige, on dit plus rien.",
+    city: "Lanaudière",
+  },
+  {
+    id: "qc-street-20",
+    file: "qc-20",
+    caption: "Accordéon dans le métro. Le corridor chante plus fort que le train.",
+    city: "Montréal",
+  },
 ];
 
 function hashSeed(s: string): number {
