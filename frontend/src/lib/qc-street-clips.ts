@@ -147,6 +147,78 @@ const CLIPS: Array<{
     caption: "Accordéon dans le métro. Le corridor chante plus fort que le train.",
     city: "Montréal",
   },
+  {
+    id: "qc-street-21",
+    file: "qc-21",
+    caption: "Percé. Le rocher perce encore. Le golfe n'a pas changé.",
+    city: "Gaspésie",
+  },
+  {
+    id: "qc-street-22",
+    file: "qc-22",
+    caption: "Le fjord du Saguenay. Les falaises, l'eau noire, on se tait.",
+    city: "Saguenay",
+  },
+  {
+    id: "qc-street-23",
+    file: "qc-23",
+    caption: "La Saint-Jean dans la rue. Feu, bleu, blanc. C'est chez nous.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-24",
+    file: "qc-24",
+    caption: "Cabane à sucre le matin. Fèves, œufs, oreilles de crisse.",
+    city: "Montérégie",
+  },
+  {
+    id: "qc-street-25",
+    file: "qc-25",
+    caption: "La glace, le rouge, le bruit. Hockey icitte, pas ailleurs.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-26",
+    file: "qc-26",
+    caption: "Pêche blanche. Un trou, un café, le silence du lac.",
+    city: "Lanaudière",
+  },
+  {
+    id: "qc-street-27",
+    file: "qc-27",
+    caption: "Canal Lachine en été. Vélo, picnic, les briques encore chaudes.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-28",
+    file: "qc-28",
+    caption: "L'Oratoire au crépuscule. Les marches, le dôme, la ville en bas.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-29",
+    file: "qc-29",
+    caption: "Les Îles. Falaises rouges, eau turquoise, le vent décide.",
+    city: "Îles-de-la-Madeleine",
+  },
+  {
+    id: "qc-street-30",
+    file: "qc-30",
+    caption: "Tourtière qui sort du four. L'hiver sent ça, icitte.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-31",
+    file: "qc-31",
+    caption: "Bleuets du Saguenay. Le seau se remplit plus vite que les mains.",
+    city: "Saguenay",
+  },
+  {
+    id: "qc-street-32",
+    file: "qc-32",
+    caption: "Première neige sur le Plateau. Les escaliers jaunes, déjà glissants.",
+    city: "Montréal",
+  },
 ];
 
 function hashSeed(s: string): number {
