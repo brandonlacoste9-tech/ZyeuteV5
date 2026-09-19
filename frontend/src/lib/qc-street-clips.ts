@@ -291,6 +291,78 @@ const CLIPS: Array<{
     caption: "Rimouski au coucher. Le quai, les bateaux, le Bas-du-Fleuve.",
     city: "Rimouski",
   },
+  {
+    id: "qc-street-45",
+    file: "qc-45",
+    caption: "Forillon. Les falaises tombent dans le golfe. On est au bout.",
+    city: "Gaspésie",
+  },
+  {
+    id: "qc-street-46",
+    file: "qc-46",
+    caption: "Crevettes de Matane. Les bateaux rentrent, le quai sent la mer.",
+    city: "Matane",
+  },
+  {
+    id: "qc-street-47",
+    file: "qc-47",
+    caption: "Pouding chômeur. Le sirop bout en dessous. C'est ça, un dessert icitte.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-48",
+    file: "qc-48",
+    caption: "Habitat 67. Des cubes sur le fleuve. Montréal, ça aussi.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-49",
+    file: "qc-49",
+    caption: "Le pont Jacques-Cartier allumé. La ville se mire dans l'eau.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-50",
+    file: "qc-50",
+    caption: "Notre-Dame en bleu. On parle plus bas, icitte.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-51",
+    file: "qc-51",
+    caption: "Les chaudières dans l'érablière. L'hiver finit par sucrer.",
+    city: "Montérégie",
+  },
+  {
+    id: "qc-street-52",
+    file: "qc-52",
+    caption: "Palais de glace. Les lumières, les blocs, le Carnaval.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-53",
+    file: "qc-53",
+    caption: "Sherbrooke en automne. La rivière, les briques, l'Estrie.",
+    city: "Sherbrooke",
+  },
+  {
+    id: "qc-street-54",
+    file: "qc-54",
+    caption: "Gatineau au coucher. La rivière des Outaouais, les ponts.",
+    city: "Gatineau",
+  },
+  {
+    id: "qc-street-55",
+    file: "qc-55",
+    caption: "Trois-Rivières. Le fleuve, la pierre, le milieu du Québec.",
+    city: "Trois-Rivières",
+  },
+  {
+    id: "qc-street-56",
+    file: "qc-56",
+    caption: "Jazz dehors le soir. Les lampadaires, la foule, Place des Arts.",
+    city: "Montréal",
+  },
 ];
 
 function hashSeed(s: string): number {
