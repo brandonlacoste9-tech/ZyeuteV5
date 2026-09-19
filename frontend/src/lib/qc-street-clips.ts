@@ -219,6 +219,78 @@ const CLIPS: Array<{
     caption: "Première neige sur le Plateau. Les escaliers jaunes, déjà glissants.",
     city: "Montréal",
   },
+  {
+    id: "qc-street-33",
+    file: "qc-33",
+    caption: "Tadoussac. La queue sort de l'eau. On oublie de respirer.",
+    city: "Tadoussac",
+  },
+  {
+    id: "qc-street-34",
+    file: "qc-34",
+    caption: "Montmorency gelée. La chute devient un mur.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-35",
+    file: "qc-35",
+    caption: "Canot à glace. On tire, on glisse, on gèle. Le fleuve décide.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-36",
+    file: "qc-36",
+    caption: "Charlevoix en automne. Les collines, les granges, le rouge partout.",
+    city: "Charlevoix",
+  },
+  {
+    id: "qc-street-37",
+    file: "qc-37",
+    caption: "Village de ski le soir. Les lumières, la neige, on rentre tard.",
+    city: "Laurentides",
+  },
+  {
+    id: "qc-street-38",
+    file: "qc-38",
+    caption: "Vieux-Port la nuit. La tour, le fleuve, Montréal se mire.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-39",
+    file: "qc-39",
+    caption: "Les déneigeuses. Orange, bruit, la ville se dégage.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-40",
+    file: "qc-40",
+    caption: "Pommes de l'Île d'Orléans. L'échelle, le fleuve, on croque icitte.",
+    city: "Île d'Orléans",
+  },
+  {
+    id: "qc-street-41",
+    file: "qc-41",
+    caption: "Pâté chinois du four. Bœuf, maïs, patates. Souper de semaine.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-42",
+    file: "qc-42",
+    caption: "Place Jacques-Cartier. Les terrasses, les artistes, les pavés.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-43",
+    file: "qc-43",
+    caption: "Raquette dans le bois. Juste les pas et la neige qui tombe.",
+    city: "Laurentides",
+  },
+  {
+    id: "qc-street-44",
+    file: "qc-44",
+    caption: "Rimouski au coucher. Le quai, les bateaux, le Bas-du-Fleuve.",
+    city: "Rimouski",
+  },
 ];
 
 function hashSeed(s: string): number {
