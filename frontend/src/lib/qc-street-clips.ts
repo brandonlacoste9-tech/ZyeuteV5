@@ -363,6 +363,78 @@ const CLIPS: Array<{
     caption: "Jazz dehors le soir. Les lampadaires, la foule, Place des Arts.",
     city: "Montréal",
   },
+  {
+    id: "qc-street-57",
+    file: "qc-57",
+    caption: "Les tam-tams du dimanche. Le mont, les drums, on s'assoit.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-58",
+    file: "qc-58",
+    caption: "Sainte-Catherine mouillée. Les néons, le métro, on marche encore.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-59",
+    file: "qc-59",
+    caption: "Cidre de glace. Les pommes gelées, ça goûte l'hiver.",
+    city: "Montérégie",
+  },
+  {
+    id: "qc-street-60",
+    file: "qc-60",
+    caption: "Tremblant le soir. Les lumières, la neige, on rentre tard.",
+    city: "Laurentides",
+  },
+  {
+    id: "qc-street-61",
+    file: "qc-61",
+    caption: "Les montgolfières au petit matin. Le Richelieu, le brouillard.",
+    city: "Saint-Jean-sur-Richelieu",
+  },
+  {
+    id: "qc-street-62",
+    file: "qc-62",
+    caption: "Saint-Denis sous la pluie. Les triplex, les néons, le bus.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-63",
+    file: "qc-63",
+    caption: "Magog au coucher. Le lac, le quai, on dit plus rien.",
+    city: "Magog",
+  },
+  {
+    id: "qc-street-64",
+    file: "qc-64",
+    caption: "Val-d'Or en hiver. La rue, la vapeur, l'Abitibi tient.",
+    city: "Val-d'Or",
+  },
+  {
+    id: "qc-street-65",
+    file: "qc-65",
+    caption: "Des cretons sur le toast. Café allongé. Le matin icitte.",
+    city: "Québec",
+  },
+  {
+    id: "qc-street-66",
+    file: "qc-66",
+    caption: "Premier vrai printemps. On sort les vélos. La neige fond encore.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-67",
+    file: "qc-67",
+    caption: "La Biosphère au bleu. L'île, le dôme, le fleuve.",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-68",
+    file: "qc-68",
+    caption: "Feu de camp au chalet. Les étincelles, on reste un peu.",
+    city: "Laurentides",
+  },
 ];
 
 function hashSeed(s: string): number {
