@@ -106,7 +106,7 @@ export async function apiCall<T>(
         ...((options.headers as Record<string, string>) || {}),
       };
 
-      if (token) {
+      if (token && token.split(".").length === 3 && token.length > 20) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
@@ -315,9 +315,13 @@ async function getInfiniteFeedAuthHeaders(): Promise<Record<string, string>> {
     data: { session },
   } = await getSessionWithTimeout(3000);
   const token = session?.access_token;
+  const jwtOk =
+    typeof token === "string" &&
+    token.split(".").length === 3 &&
+    token.length > 20;
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(jwtOk ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
@@ -380,7 +384,11 @@ export async function getInfiniteFeedPosts(
 
     if (!response.ok) {
       apiLogger.warn(`Infinite feed ${response.status}`);
-      return { posts: [], nextCursor: null, hasMore: false };
+      return {
+        posts: cursor ? [] : getQcStreetPosts(sessionId),
+        nextCursor: null,
+        hasMore: false,
+      };
     }
 
     const data = await response.json();

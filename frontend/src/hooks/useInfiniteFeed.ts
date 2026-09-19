@@ -65,9 +65,13 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     data: { session },
   } = await getSessionWithTimeout(3000);
   const token = session?.access_token;
+  const jwtOk =
+    typeof token === "string" &&
+    token.split(".").length === 3 &&
+    token.length > 20;
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(jwtOk ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
@@ -128,10 +132,17 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     refetchOnWindowFocus: false,
     queryFn: async ({ pageParam, signal }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
+      const streetFallback = () => ({
+        posts: cursorStr ? [] : getQcStreetPosts(feedSessionId),
+        nextCursor: null,
+        hasMore: false,
+        feedType,
+      });
 
+      try {
       const params = new URLSearchParams({
         limit: "30",
-        type: feedType,
+        type: feedType === "feed" ? "explore" : feedType,
         hive: getStoredHive(),
         session: feedSessionId,
         ...(cursorStr ? { cursor: cursorStr } : {}),
@@ -154,7 +165,15 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       );
 
       if (!response.ok) {
-        throw new Error(`Feed ${response.status}`);
+        if (!cursorStr) {
+          return {
+            posts: getQcStreetPosts(feedSessionId),
+            nextCursor: null,
+            hasMore: false,
+            feedType,
+          };
+        }
+        return { posts: [], nextCursor: null, hasMore: false, feedType };
       }
 
       const data = await response.json();
@@ -197,6 +216,9 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         nextCursor: data.nextCursor || null,
         hasMore: data.hasMore !== false && rawCount > 0,
       };
+      } catch {
+        return streetFallback();
+      }
     },
     getNextPageParam: (lastPage) => {
       if (lastPage.hasMore === false) return undefined;
@@ -294,7 +316,15 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
       );
 
       if (!response.ok) {
-        throw new Error(`Feed ${response.status}`);
+        if (!cursorStr) {
+          return {
+            posts: getQcStreetPosts(),
+            nextCursor: null,
+            hasMore: false,
+            feedType,
+          };
+        }
+        return { posts: [], nextCursor: null, hasMore: false, feedType };
       }
 
       return response.json();
