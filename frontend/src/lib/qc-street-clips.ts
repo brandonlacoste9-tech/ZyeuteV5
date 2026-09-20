@@ -435,6 +435,78 @@ const CLIPS: Array<{
     caption: "Feu de camp au chalet. Les étincelles, on reste un peu.",
     city: "Laurentides",
   },
+  {
+    id: "qc-street-69",
+    file: "qc-69",
+    caption: "La Banquise. Y'avoue: meilleure poutine de sa vie. Via @perryclinton_",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-70",
+    file: "qc-70",
+    caption: "Poutine à Emilia. Fromage en grains qui tient. Via @baklaeats",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-71",
+    file: "qc-71",
+    caption: "LA MEILLEURE POUTINE DE NOTRE VIE. Via @kloeegenin",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-72",
+    file: "qc-72",
+    caption: "La Banquise, Rachel Est. Celle que tout le monde nomme. Via @marcelloeats",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-73",
+    file: "qc-73",
+    caption: "Onze poutines, un road trip. Lequel gagne. Via @josephdebenedictis",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-74",
+    file: "qc-74",
+    caption: "Les meilleures poutines de Montréal. Via @foodbytiana",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-75",
+    file: "qc-75",
+    caption: "Poutine merguez. Kabab, Arthur-Sauvé. Via @everyeatspossible",
+    city: "Saint-Eustache",
+  },
+  {
+    id: "qc-street-76",
+    file: "qc-76",
+    caption: "La Banquise. Fallait y goûter. Via @heyitsemaad",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-77",
+    file: "qc-77",
+    caption: "Grosse commande. On a presque pris le menu. Via @everyeatspossible",
+    city: "Laval",
+  },
+  {
+    id: "qc-street-78",
+    file: "qc-78",
+    caption: "La meilleure poutine. La Banquise. Via @dolinda.b",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-79",
+    file: "qc-79",
+    caption: "Poutine au Vieux-Port. Via @explorefood715",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-80",
+    file: "qc-80",
+    caption: "J'y vais à chaque fois que je viens à Montréal. Via @axelletaniegi_travel",
+    city: "Montréal",
+  },
 ];
 
 function hashSeed(s: string): number {
