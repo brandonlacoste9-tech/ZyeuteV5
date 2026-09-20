@@ -19,6 +19,7 @@ const noOpLock = async <R>(
 ): Promise<R> => fn();
 
 const credentialsMissing = !isValidUrl(supabaseUrl) || !supabaseAnonKey;
+export const supabaseCredentialsMissing = credentialsMissing;
 
 // When credentials are missing, use a placeholder URL so createClient doesn't
 // throw synchronously. newer supabase-js rejects empty strings, which crashes

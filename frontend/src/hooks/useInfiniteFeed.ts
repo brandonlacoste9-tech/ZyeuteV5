@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Post } from "@/types";
 import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import { getQcStreetPosts } from "@/lib/qc-street-clips";
-import { getSessionWithTimeout } from "@/lib/supabase";
+import { getSessionWithTimeout, supabaseCredentialsMissing } from "@/lib/supabase";
 import {
   getOrCreateFeedSessionId,
   markFeedHidden,
@@ -61,6 +61,9 @@ export function removePostFromFeedCache(
 }
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
+  if (supabaseCredentialsMissing) {
+    return { "Content-Type": "application/json" };
+  }
   const {
     data: { session },
   } = await getSessionWithTimeout(3000);
@@ -78,7 +81,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 function fetchWithTimeout(
   url: string,
   init: RequestInit,
-  ms = 20_000,
+  ms = 8_000,
 ): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ms);
@@ -128,8 +131,19 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     staleTime: 0,
     gcTime: 0,
     retry: 1,
-    retryDelay: 1500,
+    retryDelay: 800,
     refetchOnWindowFocus: false,
+    placeholderData: {
+      pages: [
+        {
+          posts: getQcStreetPosts("boot"),
+          nextCursor: null,
+          hasMore: true,
+          feedType,
+        },
+      ],
+      pageParams: [null],
+    },
     queryFn: async ({ pageParam, signal }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
       const streetFallback = () => ({
@@ -161,7 +175,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       const response = await fetchWithTimeout(
         `/api/feed/infinite?${params}`,
         { headers, credentials: "include", signal },
-        20_000,
+        8_000,
       );
 
       if (!response.ok) {
@@ -312,7 +326,7 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
       const response = await fetchWithTimeout(
         `/api/feed/infinite?${params}`,
         { headers, credentials: "include", signal },
-        20_000,
+        8_000,
       );
 
       if (!response.ok) {
