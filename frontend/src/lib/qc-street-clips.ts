@@ -507,6 +507,72 @@ const CLIPS: Array<{
     caption: "J'y vais à chaque fois que je viens à Montréal. Via @axelletaniegi_travel",
     city: "Montréal",
   },
+  {
+    id: "qc-street-81",
+    file: "qc-81",
+    caption: "Les Tam-Tams du Mont-Royal. Dimanche, la montagne respire. Via @sandramontrealcanada",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-82",
+    file: "qc-82",
+    caption: "Les Tam-Tams: festival libre au monument Cartier. Via @mtl_stories",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-83",
+    file: "qc-83",
+    caption: "Une belle journée de partage aux Tam-Tams. Via @gaellebodyart",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-85",
+    file: "qc-85",
+    caption: "Les Tam-Tams du Mont-Royal. Via @harmo123456",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-86",
+    file: "qc-86",
+    caption: "Le beat de Montréal. Dimanche aux Tam-Tams. Via @sumit_montreal",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-87",
+    file: "qc-87",
+    caption: "Les Tam-Tams du dimanche. Y'a une version Rive-Sud aussi. Via @biancadjardins",
+    city: "Longueuil",
+  },
+  {
+    id: "qc-street-88",
+    file: "qc-88",
+    caption: "Les dimanches dehors. Ça aussi c'est un festival de Montréal. Via @thedevinakaur",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-89",
+    file: "qc-89",
+    caption: "Dimanche à Montréal, c'est les Tam-Tams. Via @coeur.de.nomade",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-90",
+    file: "qc-90",
+    caption: "Vivre au Plateau, c'est jamais plate. Via @math.travels",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-91",
+    file: "qc-91",
+    caption: "La percussion au Mont-Royal. Via @cithara.regem",
+    city: "Montréal",
+  },
+  {
+    id: "qc-street-92",
+    file: "qc-92",
+    caption: "Une journée bénie sur la montagne. Via @goddessofpink",
+    city: "Montréal",
+  },
 ];
 
 function hashSeed(s: string): number {
