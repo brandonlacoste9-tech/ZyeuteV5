@@ -594,7 +594,7 @@ export class DatabaseStorage implements IStorage {
           ),
         )
         .orderBy(desc(posts.createdAt))
-        .limit(limit)) as Promise<Post[]>;
+        .limit(limit)) as Post[];
     } catch (err) {
       console.error(
         "[storage.getPostsByUser] Drizzle failed, using Supabase REST fallback:",
