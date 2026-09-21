@@ -522,7 +522,7 @@ export const Zyeute: React.FC = () => {
 
   useSEO({
     title:
-      feedSource === "following"
+      feedSource === "feed"
         ? "Abonnements — Fil d'actualité"
         : "Pour toi — Vidéos du Québec",
     description:
