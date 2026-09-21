@@ -87,14 +87,12 @@ surgicalUploadRouter.post(
       // 5. Create Database Record via Supabase REST (no DATABASE_URL needed)
       const caption =
         req.body.caption || originalname || `Nouveau partage sur Zyeuté! 🍁`;
-      // Normalize type for feed players (video vs image)
+      // Normalize type for feed players (video vs photo)
       const mediaType =
         inferredType === "video" ||
         /video|mp4|webm|mov|quicktime/i.test(mimetype || "")
           ? "video"
-          : inferredType === "image" || /image\//i.test(mimetype || "")
-            ? "image"
-            : inferredType || "video";
+          : "photo";
       // Match columns Supabase `publications` actually exposes (avoid unknown cols → insert 400)
       const insertRow = {
         user_id: userId,
