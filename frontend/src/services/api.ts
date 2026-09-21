@@ -394,7 +394,7 @@ export async function getInfiniteFeedPosts(
     const data = await response.json();
     const rawCount = (data.posts || []).length;
     const locallySeen = new Set(getGuestSeenForRequest());
-    const playable = (data.posts || [])
+    const playable: Post[] = (data.posts || [])
       .map((p: Record<string, unknown>) => normalizePostForFeed(p))
       .filter(
         (p: Post | null): p is Post =>
