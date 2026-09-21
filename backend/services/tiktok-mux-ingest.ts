@@ -67,7 +67,7 @@ export async function ingestTikTokVideoToMux(options: {
         buffer,
       );
       if (stagingUrl) {
-        const fromStaging = await createMuxAssetFromUrl(mux, stagingUrl);
+        const fromStaging = await createMuxAssetFromUrl(stagingUrl);
         if (fromStaging) {
           console.log(
             `[TikTokMux] Staging ingest OK for ${options.tiktokId} → ${fromStaging.muxPlaybackId}`,
@@ -87,7 +87,7 @@ export async function ingestTikTokVideoToMux(options: {
         "mux-fallback",
       );
       if (!mirrored) continue;
-      const fromMirror = await createMuxAssetFromUrl(mux, mirrored);
+      const fromMirror = await createMuxAssetFromUrl(mirrored);
       if (fromMirror) return { ...fromMirror, stagingUrl: mirrored };
     }
   }
@@ -106,7 +106,7 @@ export async function ingestVideoUrlToMux(options: {
 
   const buffer = await downloadTikTokMp4(options.sourceUrl);
   if (!buffer) {
-    const fromUrl = await createMuxAssetFromUrl(mux, options.sourceUrl);
+    const fromUrl = await createMuxAssetFromUrl(options.sourceUrl);
     if (fromUrl) return fromUrl;
     return null;
   }
@@ -122,7 +122,7 @@ export async function ingestVideoUrlToMux(options: {
       buffer,
     );
     if (stagingUrl) {
-      return createMuxAssetFromUrl(mux, stagingUrl);
+      return createMuxAssetFromUrl(stagingUrl);
     }
   }
 
