@@ -21,6 +21,7 @@ import { pathToFileURL } from 'url';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { createGzip } from 'zlib';
+import dns from 'dns/promises';
 
 const execAsync = promisify(exec);
 
@@ -35,6 +36,36 @@ interface BackupResult {
   size?: number;
   error?: string;
   timestamp: string;
+}
+
+
+/**
+ * GitHub Actions runners have no IPv6 egress, and Supabase direct hosts can
+ * resolve IPv6-first, which makes pg_dump die with "Network is unreachable".
+ * Resolve the host to IPv4 up front and pin it via libpq's hostaddr parameter
+ * so the connection never attempts IPv6. Also logs what DNS returned, so a
+ * future failure shows whether an A record even exists.
+ */
+async function withForcedIPv4(connUrl: string): Promise<string> {
+  try {
+    const parsed = new URL(connUrl);
+    const host = parsed.hostname;
+    const [v4, v6] = await Promise.all([
+      dns.resolve4(host).catch((): string[] => []),
+      dns.resolve6(host).catch((): string[] => []),
+    ]);
+    console.log(`🔍 DNS for ${host}: IPv4=[${v4.join(',') || 'none'}] IPv6=[${v6.join(',') || 'none'}]`);
+    if (v4.length > 0) {
+      parsed.searchParams.set('hostaddr', v4[0]);
+      console.log(`🌐 Pinning IPv4 via hostaddr=${v4[0]}`);
+      return parsed.toString();
+    }
+    console.log('⚠️ No IPv4 address found, using connection URL as-is');
+    return connUrl;
+  } catch (e) {
+    console.log(`⚠️ DNS pre-check failed, using connection URL as-is: ${(e as Error).message}`);
+    return connUrl;
+  }
 }
 
 /**
@@ -53,7 +84,8 @@ export async function createBackup(): Promise<BackupResult> {
 
     // Use pg_dump to create backup
     // Format: Custom compressed format for optimal storage
-    const dumpCommand = `pg_dump "${DATABASE_URL}" --format=custom --compress=9 --file="${filepath}.tmp"`;
+    const dumpUrl = await withForcedIPv4(DATABASE_URL!);
+    const dumpCommand = `pg_dump "${dumpUrl}" --format=custom --compress=9 --file="${filepath}.tmp"`;
     
     await execAsync(dumpCommand, {
       maxBuffer: 1024 * 1024 * 100, // 100MB buffer
@@ -160,7 +192,8 @@ export async function restoreBackup(filename: string): Promise<boolean> {
     console.log('⚠️  This will OVERWRITE the current database!');
 
     // Use pg_restore to restore backup
-    const restoreCommand = `pg_restore --clean --if-exists --dbname="${DATABASE_URL}" "${filepath}"`;
+    const restoreUrl = await withForcedIPv4(DATABASE_URL!);
+  const restoreCommand = `pg_restore --clean --if-exists --dbname="${restoreUrl}" "${filepath}"`;
 
     await execAsync(restoreCommand, {
       maxBuffer: 1024 * 1024 * 100, // 100MB buffer
