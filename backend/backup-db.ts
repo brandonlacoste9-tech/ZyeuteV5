@@ -17,6 +17,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
 import { createGzip } from 'zlib';
@@ -208,8 +209,15 @@ async function main() {
   console.log('\n✅ Backup complete!');
 }
 
-// Run if executed directly
-if (require.main === module) {
+// Run if executed directly.
+// NOTE: this repo uses ES modules ("type": "module" in package.json), so the
+// old CommonJS check `require.main === module` throws
+// `ReferenceError: require is not defined`. Use the ESM-safe equivalent.
+const isMainModule =
+  process.argv[1] != null &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMainModule) {
   main().catch((error) => {
     console.error('❌ Fatal error:', error);
     process.exit(1);
