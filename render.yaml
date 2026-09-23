@@ -38,7 +38,7 @@ services:
       - key: MUX_WEBHOOK_SECRET
         sync: false
       - key: FRONTEND_URL
-        value: https://zyeute.com
+        value: https://zyeute.ca
 
       # ── AI Services ───────────────────────────────────────────────────────
       - key: GOOGLE_CLOUD_PROJECT
