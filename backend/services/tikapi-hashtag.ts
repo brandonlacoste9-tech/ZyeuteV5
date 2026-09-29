@@ -130,7 +130,9 @@ async function collectFromHashtagList(
   const out: FeedSeedCandidate[] = [];
   const localSeen = new Set<string>();
 
-  for (const tag of tags) {
+  const processTag = async (tag: HashtagSeed): Promise<FeedSeedCandidate[]> => {
+    const batch: FeedSeedCandidate[] = [];
+    const batchSeen = new Set<string>();
     // Prefer hashtag-by-id (1 call/tag). Search is fallback only when no id — saves rate limit.
     if (getTikApiClient()) {
       const id = tag.id ?? (await resolveHashtagId(tag.name));
@@ -140,8 +142,8 @@ async function collectFromHashtagList(
           const mapped = mapTikApiRawItemToVideo(item);
           if (!mapped) continue;
           pushVideo(
-            out,
-            localSeen,
+            batch,
+            batchSeen,
             mapped,
             tag,
             `${sourcePrefix}:hashtag:${tag.name}`,
@@ -158,8 +160,8 @@ async function collectFromHashtagList(
             );
             if (!mapped) continue;
             pushVideo(
-              out,
-              localSeen,
+              batch,
+              batchSeen,
               mapped,
               tag,
               `${sourcePrefix}:search:${tag.name}`,
@@ -171,11 +173,34 @@ async function collectFromHashtagList(
         }
       }
     }
+    return batch;
+  };
 
-    await new Promise((r) => setTimeout(r, 600));
+  // Fetch tags in parallel batches — the old sequential loop with 600ms
+  // delays took 3+ minutes for 25 tags and never survived hosting time limits.
+  const CONCURRENCY = 4;
+  for (let i = 0; i < tags.length; i += CONCURRENCY) {
+    const chunk = tags.slice(i, i + CONCURRENCY);
+    const settled = await Promise.allSettled(chunk.map(processTag));
+    for (const s of settled) {
+      if (s.status !== "fulfilled") continue;
+      for (const c of s.value) {
+        if (localSeen.has(c.video.video_id)) continue;
+        localSeen.add(c.video.video_id);
+        out.push(c);
+      }
+    }
   }
 
   return out;
+}
+
+/** Rotate a window of `n` tags through the list by 4h slot (matches the auto-job cadence). */
+function rotateTags<T>(tags: T[], n: number): T[] {
+  if (n <= 0 || n >= tags.length) return tags;
+  const slot = Math.floor(Date.now() / (4 * 60 * 60 * 1000));
+  const start = (slot * n) % tags.length;
+  return Array.from({ length: n }, (_, i) => tags[(start + i) % tags.length]);
 }
 
 /** Trending / FYP-style discovery via TikAPI search. */
@@ -206,6 +231,12 @@ export type CollectFeedSeedOptions = {
   viralPerTag?: number;
   trendingCount?: number;
   minPlays?: number;
+  /**
+   * Max hashtags to hit per run (regional first, then viral). Rotates by 4h
+   * slot so repeated runs cover the whole list. Keeps a run fast enough to
+   * finish on time-limited hosting. 0/unset = all tags (slow).
+   */
+  maxTags?: number;
 };
 
 /**
@@ -218,6 +249,7 @@ export async function collectFeedSeedCandidates(
   const viralPerTag = opts.viralPerTag ?? 12;
   const trendingCount = opts.trendingCount ?? 20;
   const minPlays = opts.minPlays ?? 0;
+  const maxTags = opts.maxTags ?? 0;
 
   const seen = new Set<string>();
   const merged: FeedSeedCandidate[] = [];
@@ -230,9 +262,18 @@ export async function collectFeedSeedCandidates(
     }
   };
 
+  let regionalSeeds = REGIONAL_HASHTAG_SEEDS;
+  let viralSeeds = VIRAL_HASHTAG_SEEDS;
+  if (maxTags > 0) {
+    const takeRegional = Math.min(regionalSeeds.length, maxTags);
+    const takeViral = Math.max(0, Math.min(viralSeeds.length, maxTags - takeRegional));
+    regionalSeeds = rotateTags(regionalSeeds, takeRegional);
+    viralSeeds = rotateTags(viralSeeds, takeViral);
+  }
+
   append(
     await collectFromHashtagList(
-      REGIONAL_HASHTAG_SEEDS,
+      regionalSeeds,
       regionalPerTag,
       minPlays,
       "tikapi:regional",
@@ -240,7 +281,7 @@ export async function collectFeedSeedCandidates(
   );
   append(
     await collectFromHashtagList(
-      VIRAL_HASHTAG_SEEDS,
+      viralSeeds,
       viralPerTag,
       minPlays,
       "tikapi:viral",
