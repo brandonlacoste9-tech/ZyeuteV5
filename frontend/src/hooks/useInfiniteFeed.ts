@@ -136,7 +136,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     placeholderData: {
       pages: [
         {
-          posts: getQcStreetPosts("boot"),
+          posts: getQcStreetPosts(feedSessionId),
           nextCursor: null,
           hasMore: true,
           feedType,
@@ -332,7 +332,7 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
       if (!response.ok) {
         if (!cursorStr) {
           return {
-            posts: getQcStreetPosts(),
+            posts: getQcStreetPosts(Math.random().toString(36).slice(2)),
             nextCursor: null,
             hasMore: false,
             feedType,
@@ -362,3 +362,4 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
     refetch,
   };
 }
+
