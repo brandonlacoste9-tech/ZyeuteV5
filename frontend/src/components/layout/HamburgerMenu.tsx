@@ -67,13 +67,17 @@ export const HamburgerMenu: React.FC = () => {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await apiCall<{ stats: { imported: number } }>(
+      const res = await apiCall<{ stats: { imported: number }; started?: boolean }>(
         "/admin/force-sync-feed",
         { method: "POST" },
       );
       if (res.error) throw new Error(res.error);
-      const imported = res.data?.stats?.imported || 0;
-      toast.success(`Success! Imported ${imported} new videos.`);
+      if (res.data?.started) {
+        toast.success("Sync started — fresh videos will appear in a few minutes.");
+      } else {
+        const imported = res.data?.stats?.imported || 0;
+        toast.success(`Success! Imported ${imported} new videos.`);
+      }
     } catch (e: any) {
       toast.error(e.message || "Failed to force sync");
     } finally {
