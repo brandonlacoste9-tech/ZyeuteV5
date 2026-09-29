@@ -100,8 +100,12 @@ function filterPlayablePosts(items: Post[]): FeedPost[] {
   }) as FeedPost[];
 }
 
-function seedStreetFeed(): FeedPost[] {
-  return filterPlayablePosts(getQcStreetPosts());
+function seedStreetFeed(sessionId?: string): FeedPost[] {
+  // Never fall back to getQcStreetPosts()'s fixed default seed — that served
+  // the identical clip order on every open. Random per call when no session.
+  return filterPlayablePosts(
+    getQcStreetPosts(sessionId || Math.random().toString(36).slice(2)),
+  );
 }
 
 function warmupStreetClips(posts: FeedPost[], count = 2) {
@@ -395,7 +399,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // without triggering excessive re-renders/saves during normal operation
   const streetSeed =
     feedType === "decouverte" && !savedState?.posts?.length
-      ? seedStreetFeed()
+      ? seedStreetFeed(feedSessionRef.current)
       : [];
 
   const postsRef = useRef<Array<Post & { user: User }>>(
@@ -835,7 +839,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           setFetchError(false);
           return;
         }
-        const street = seedStreetFeed();
+        const street = seedStreetFeed(sessionId);
         if (street.length > 0) {
           feedLogger.info("API empty — showing Québec street clips");
           setPosts(street);
@@ -862,7 +866,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     } catch (error) {
       feedLogger.error("Error fetching API posts:", error);
       if (postsRef.current.length === 0) {
-        const street = seedStreetFeed();
+        const street = seedStreetFeed(sessionId);
         setPosts(
           allowDemoVideos()
             ? (DEMO_VIDEOS as Array<Post & { user: User }>)
@@ -887,7 +891,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       } else if (maybeRotateFeedSessionAfterBackground()) {
         feedSessionRef.current = getOrCreateFeedSessionId();
         clearFeedState(stateKey);
-        setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
+        setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
         setNextCursor(null);
         setCurrentIndex(0);
         setHasMore(true);
@@ -903,7 +907,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   useEffect(() => {
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
-    setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
+    setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
     setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
@@ -923,7 +927,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     refreshTokenRef.current = refreshToken;
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
-    setPosts(feedType === "decouverte" ? seedStreetFeed() : []);
+    setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
     setNextCursor(null);
     setCurrentIndex(0);
     setHasMore(true);
@@ -1510,3 +1514,4 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     </div>
   );
 };
+
