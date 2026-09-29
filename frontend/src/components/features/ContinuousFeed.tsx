@@ -108,6 +108,12 @@ function seedStreetFeed(sessionId?: string): FeedPost[] {
   );
 }
 
+/** Street-clip seed posts (AI Québec clips) — loading fallback, not real feed content. */
+function isStreetClipPost(p: { id?: unknown }): boolean {
+  const id = String((p as { id?: unknown })?.id ?? "");
+  return id === "zyeute-house" || id.startsWith("qc-street-");
+}
+
 function warmupStreetClips(posts: FeedPost[], count = 2) {
   if (typeof document === "undefined") return;
   posts.slice(0, count).forEach((p) => {
@@ -855,6 +861,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       } else {
         setPosts((prev) => {
           if (prev.length === 0) return validPosts;
+          // Seed is only a loading placeholder: when the API delivers real posts,
+          // replace the street-clip seed instead of burying real content under it.
+          if (prev.every(isStreetClipPost)) return validPosts;
           const have = new Set(prev.map((p) => p.id));
           const extra = validPosts.filter((p) => !have.has(p.id));
           if (extra.length === 0) return prev;
