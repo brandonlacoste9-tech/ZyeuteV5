@@ -198,10 +198,25 @@ router.post("/cleanup-ephemeral", requireAdmin, async (req: any, res: any) => {
 });
 
 // Force sync feed from Apify (TikTok fallback)
+// Runs detached: the scrape takes minutes, far longer than the
+// proxy/gateway timeout, so we return immediately and let it finish
+// in the background.
 router.post("/force-sync-feed", requireAdmin, async (req: any, res: any) => {
   try {
-    const stats = await runTikTokFeedPopulatorOnce(true);
-    res.json({ success: true, stats });
+    runTikTokFeedPopulatorOnce(true)
+      .then((stats) =>
+        console.log(
+          `[admin/force-sync-feed] background sync finished: imported=${stats.imported}`,
+        ),
+      )
+      .catch((error: any) =>
+        console.error("[admin/force-sync-feed] background sync failed:", error),
+      );
+    res.json({
+      success: true,
+      started: true,
+      message: "Feed sync started in background",
+    });
   } catch (error: any) {
     console.error("Force sync feed error:", error);
     res.status(500).json({ error: "Failed to force sync feed", message: error.message });
