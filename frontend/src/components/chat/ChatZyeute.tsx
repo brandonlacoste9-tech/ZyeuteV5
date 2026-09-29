@@ -816,11 +816,6 @@ export const ChatZyeute: React.FC<Props> = ({ onClose }) => {
               <button onClick={() => setMenuEmojiOuvert(!menuEmojiOuvert)} className={cn("w-10 h-10 rounded-xl border transition-all flex items-center justify-center text-lg", menuEmojiOuvert ? "bg-[#d4af37]/30 border-[#d4af37]" : "bg-[#3a2820]/80 border-[#d4af37]/20 hover:border-[#d4af37]/50")}>
                 😀
               </button>
-              {["🎨", "🖼️", "📎", "🎵", "📍"].map((emoji, i) => (
-                <button key={i} onClick={() => toast.info("Bientôt disponible!")} className="w-10 h-10 rounded-xl bg-[#3a2820]/80 border border-[#d4af37]/20 hover:border-[#d4af37]/50 transition-all flex items-center justify-center text-lg">
-                  {emoji}
-                </button>
-              ))}
             </div>
 
             {/* Saisie */}

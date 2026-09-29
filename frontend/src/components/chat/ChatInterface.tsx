@@ -643,19 +643,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onClose }) => {
               boxShadow: "0 -10px 40px rgba(0,0,0,0.5)",
             }}
           >
-            {/* Toolbar */}
-            <div className="flex items-center justify-center gap-2 mb-3">
-              {["🎨", "😀", "🖼️", "📎", "🎵", "📍"].map((emoji, i) => (
-                <button
-                  key={i}
-                  onClick={() => toast.info("Bientôt disponible!")}
-                  className="w-10 h-10 rounded-xl bg-[#3a2820]/80 border border-[#d4af37]/20 hover:border-[#d4af37]/50 hover:bg-[#d4af37]/10 transition-all flex items-center justify-center text-lg"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-
             {/* Main Input */}
             <form
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}

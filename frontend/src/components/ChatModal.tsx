@@ -9,15 +9,8 @@ import { createPortal } from "react-dom";
 import {
   IoCloseOutline,
   IoMenuOutline,
-  IoHappyOutline,
   IoAttachOutline,
-  IoCameraOutline,
   IoMicOutline,
-  IoSparklesOutline,
-  IoImagesOutline,
-  IoDocumentOutline,
-  IoSettingsOutline,
-  IoEllipsisHorizontalOutline,
   IoCheckmarkDoneOutline,
 } from "react-icons/io5";
 import { RiAlertFill } from "react-icons/ri";
@@ -374,33 +367,6 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* TOOLBAR ROW */}
-        <div
-          className="flex items-center justify-around px-6 py-3 border-t border-[#d4af37]/20"
-          style={{
-            background: "rgba(35, 25, 18, 0.95)",
-          }}
-        >
-          {[
-            { Icon: IoSparklesOutline, label: "Effets" },
-            { Icon: IoHappyOutline, label: "Emoji" },
-            { Icon: IoImagesOutline, label: "Galerie" },
-            { Icon: IoDocumentOutline, label: "Document" },
-            { Icon: IoSettingsOutline, label: "Paramètres" },
-            { Icon: IoEllipsisHorizontalOutline, label: "Plus" },
-          ].map(({ Icon, label }) => (
-            <button
-              key={label}
-              onClick={() => toast.info(`${label} bientôt disponible`)}
-              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
-              style={{ color: "#d4af37" }}
-              title={label}
-            >
-              <Icon className="w-6 h-6" />
-            </button>
-          ))}
-        </div>
-
         {/* INPUT BAR */}
         <div
           className="px-4 py-3 border-t-2"
@@ -416,15 +382,6 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
             className="flex items-center gap-3"
           >
             {/* Left Icons */}
-            <button
-              type="button"
-              onClick={() => toast.info("Emoji bientôt disponible")}
-              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
-              style={{ color: "#d4af37" }}
-            >
-              <IoHappyOutline className="w-6 h-6" />
-            </button>
-
             {/* Input Field */}
             <div
               className="flex-1 flex items-center gap-2 px-4 py-3 rounded-full"
@@ -465,14 +422,6 @@ export const ChatModal: React.FC<ChatModalProps> = ({ onClose }) => {
               style={{ color: "#d4af37" }}
             >
               <IoAttachOutline className="w-6 h-6" />
-            </button>
-            <button
-              type="button"
-              onClick={() => toast.info("Caméra bientôt disponible")}
-              className="p-2 rounded-full transition-all hover:bg-[#d4af37]/20 active:scale-95"
-              style={{ color: "#d4af37" }}
-            >
-              <IoCameraOutline className="w-6 h-6" />
             </button>
 
             {/* MIC BUTTON (Primary Submit) */}
