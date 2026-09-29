@@ -20,6 +20,7 @@ import { logger } from "@/lib/logger";
 import { BottomNav } from "@/components/BottomNav";
 import { useSEO } from "@/hooks/useSEO";
 import { QuebecHashtags } from "@/components/trending/QuebecHashtags";
+import { QuebecFeed } from "@/components/QuebecFeed";
 import { ErrorBoundary, ErrorFallback } from "@/components/ErrorBoundary";
 import { ExploreGridSkeleton } from "@/components/ui/Skeleton";
 import { Gamepad2 } from "lucide-react";
@@ -397,6 +398,9 @@ export const Explore: React.FC = () => {
 
         {/* Enhanced Trending Hashtags Component */}
         <QuebecHashtags />
+
+        {/* Live Québec feed — Qlub.social public timeline */}
+        <QuebecFeed />
 
         {/* Dynamic Tendances — live hashtags from API based on selected region */}
         {(trendingFromApi.length > 0 || isTrendingLoading) && (
