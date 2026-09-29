@@ -1,31 +1,39 @@
 /**
  * QuebecFeed — "Ce qui se passe au Québec"
+ * Affiche la timeline publique de Qlub.social (le réseau social québécois)
+ * directement dans Zyeuté, dans le style cuir & or de l'app.
  *
- * Live section powered by the Qlub.social public timeline (standard Mastodon
- * API, no auth required). Gives Zyeuté visitors a living Québec feed on day
- * one. Every post is credited to its author with a link back to the original
- * on Qlub — that's the fediverse etiquette.
+ * Source : API publique Mastodon de Qlub — aucun auth requis.
+ *   GET https://qlub.social/api/v1/timelines/public?local=true&limit=12
+ *
+ * Étiquette du fédiverse : chaque post est crédité à son auteur avec un
+ * lien vers son profil Qlub. Les cartes s'ouvrent en ligne (expand inline)
+ * pour garder la lecture à l'intérieur de Zyeuté.
  */
-import React from "react";
-import { RefreshCw, ExternalLink } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { RefreshCw, ChevronDown } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 const feedLogger = logger.withContext("QuebecFeed");
 
 const QLUB_API =
   "https://qlub.social/api/v1/timelines/public?local=true&limit=12";
+const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
 
 interface QlubAccount {
-  display_name: string;
+  id: string;
   username: string;
   acct: string;
+  display_name: string;
+  url: string;
   avatar: string;
 }
 
-interface QlubMedia {
+interface QlubAttachment {
+  id: string;
   type: string;
-  preview_url: string;
   url: string;
+  preview_url: string;
 }
 
 interface QlubStatus {
@@ -34,175 +42,228 @@ interface QlubStatus {
   content: string;
   url: string;
   account: QlubAccount;
-  media_attachments: QlubMedia[];
-}
-
-function stripHtml(html: string): string {
-  const div = document.createElement("div");
-  div.innerHTML = html;
-  return (div.textContent || "").trim().replace(/\s+/g, " ");
+  media_attachments: QlubAttachment[];
+  favourites_count: number;
+  reblogs_count: number;
 }
 
 function timeAgo(iso: string): string {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "à l'instant";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `il y a ${m} min`;
-  const h = Math.floor(m / 60);
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
   if (h < 24) return `il y a ${h} h`;
-  return `il y a ${Math.floor(h / 24)} j`;
+  const d = Math.floor(h / 24);
+  return `il y a ${d} j`;
 }
 
-function SkeletonCard() {
-  return (
-    <div className="flex-shrink-0 w-[270px] leather-card rounded-xl p-3 animate-pulse">
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-9 h-9 rounded-full bg-white/10" />
-        <div className="flex-1">
-          <div className="h-3 w-24 rounded bg-white/10 mb-1" />
-          <div className="h-2 w-16 rounded bg-white/10" />
-        </div>
-      </div>
-      <div className="h-3 rounded bg-white/10 mb-1" />
-      <div className="h-3 rounded bg-white/10 w-4/5" />
-    </div>
-  );
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
-export const QuebecFeed: React.FC = () => {
-  const [posts, setPosts] = React.useState<QlubStatus[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [hasError, setHasError] = React.useState(false);
+export function QuebecFeed() {
+  const [items, setItems] = useState<QlubStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const load = React.useCallback(async () => {
-    setIsLoading(true);
-    setHasError(false);
+  const load = useCallback(async () => {
     try {
+      setError(false);
       const res = await fetch(QLUB_API);
-      if (!res.ok) throw new Error(`Qlub API: HTTP ${res.status}`);
-      const data = (await res.json()) as QlubStatus[];
-      setPosts(Array.isArray(data) ? data.slice(0, 12) : []);
+      if (!res.ok) throw new Error(`Qlub API: ${res.status}`);
+      const data: QlubStatus[] = await res.json();
+      setItems(data);
     } catch (err) {
       feedLogger.warn("Impossible de charger le fil Qlub", { err });
-      setHasError(true);
+      setError(true);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     load();
+    const t = setInterval(load, REFRESH_MS);
+    return () => clearInterval(t);
   }, [load]);
 
+  const toggle = (id: string) =>
+    setExpandedId((cur) => (cur === id ? null : id));
+
   return (
-    <section className="mb-6" aria-label="Ce qui se passe au Québec">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-gold-400 font-bold embossed flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-400" />
-          </span>
-          <span>Ce qui se passe au Québec</span>
-        </h2>
-        <div className="flex items-center gap-2">
-          <span className="text-leather-400 text-xs">en direct de Qlub</span>
-          <button
-            type="button"
-            onClick={load}
-            disabled={isLoading}
-            className="btn-leather rounded-full p-1.5 disabled:opacity-50"
-            aria-label="Actualiser le fil Québec"
-          >
-            <RefreshCw
-              className={`w-4 h-4 text-gold-400 ${isLoading ? "animate-spin" : ""}`}
-            />
-          </button>
+    <section aria-label="Ce qui se passe au Québec" className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-gold-400 embossed">
+            Ce qui se passe au Québec
+          </h2>
+          <p className="text-xs text-leather-400">
+            En direct de{" "}
+            <a
+              href="https://qlub.social"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline decoration-gold-500/40 underline-offset-2 hover:text-gold-300"
+            >
+              Qlub.social
+            </a>{" "}
+            — le réseau social québécois
+          </p>
         </div>
+        <button
+          onClick={load}
+          aria-label="Actualiser le fil"
+          className="p-2 rounded-full btn-leather text-gold-400 hover:text-gold-300 transition-colors"
+        >
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+        </button>
       </div>
 
-      {isLoading ? (
-        <div className="flex gap-3 overflow-x-auto pb-2 gold-scrollbar">
-          {[1, 2, 3].map((i) => (
-            <SkeletonCard key={i} />
+      {loading && items.length === 0 && (
+        <div className="flex gap-3 overflow-hidden pb-2" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="leather-card stitched rounded-2xl p-4 w-72 shrink-0 animate-pulse"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-leather-800" />
+                <div className="flex-1">
+                  <div className="h-3 w-24 rounded bg-leather-800 mb-1.5" />
+                  <div className="h-2 w-16 rounded bg-leather-800" />
+                </div>
+              </div>
+              <div className="h-3 w-full rounded bg-leather-800 mb-2" />
+              <div className="h-3 w-5/6 rounded bg-leather-800" />
+            </div>
           ))}
         </div>
-      ) : hasError ? (
-        <div className="leather-card rounded-xl p-4 text-center stitched">
-          <p className="text-leather-300 text-sm mb-2">
-            Le fil du Québec ne répond pas pour l&apos;instant.
+      )}
+
+      {error && items.length === 0 && !loading && (
+        <div className="leather-card stitched rounded-2xl p-6 text-center">
+          <p className="text-sm text-leather-300 mb-3">
+            Le fil du Québec est indisponible pour le moment.
           </p>
           <button
-            type="button"
             onClick={load}
-            className="btn-gold px-4 py-2 rounded-xl text-sm"
+            className="px-4 py-2 rounded-xl btn-gold text-sm font-semibold"
           >
             Réessayer
           </button>
         </div>
-      ) : posts.length === 0 ? null : (
-        <div className="flex gap-3 overflow-x-auto pb-2 gold-scrollbar">
-          {posts.map((post) => {
-            const text = stripHtml(post.content);
-            const image = post.media_attachments?.find(
-              (m) => m.type === "image",
+      )}
+
+      {items.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-2 gold-scrollbar snap-x">
+          {items.map((item) => {
+            const expanded = expandedId === item.id;
+            const authorName =
+              item.account.display_name || `@${item.account.username}`;
+            const images = item.media_attachments.filter(
+              (a) => a.type === "image"
             );
-            const author = post.account;
+            const shownImages = expanded ? images : images.slice(0, 1);
             return (
-              <article
-                key={post.id}
-                className="flex-shrink-0 w-[270px] leather-card rounded-xl p-3 stitched-subtle flex flex-col"
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => toggle(item.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggle(item.id);
+                  }
+                }}
+                className="leather-card stitched rounded-2xl p-4 w-72 shrink-0 snap-start cursor-pointer hover:border-gold-500/50 transition-colors text-left"
+                aria-expanded={expanded}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  {author.avatar ? (
+                <div className="flex items-center gap-3 mb-2.5">
+                  {item.account.avatar ? (
                     <img
-                      src={author.avatar}
-                      alt={author.display_name || author.username}
-                      className="w-9 h-9 rounded-full object-cover border border-leather-600"
+                      src={item.account.avatar}
+                      alt=""
                       loading="lazy"
+                      className="w-10 h-10 rounded-full object-cover border border-gold-500/30"
                     />
                   ) : (
-                    <div className="w-9 h-9 rounded-full bg-leather-800 flex items-center justify-center text-xs font-bold text-gold-500">
-                      {(author.display_name || author.username || "?")[0]?.toUpperCase()}
+                    <div className="w-10 h-10 rounded-full bg-leather-800 border border-gold-500/30 flex items-center justify-center text-gold-400 text-sm font-bold">
+                      {initials(authorName)}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <div className="text-white text-xs font-bold truncate">
-                      {author.display_name || author.username}
-                    </div>
-                    <div className="text-leather-400 text-[11px] truncate">
-                      @{author.acct} · {timeAgo(post.created_at)}
-                    </div>
+                    <a
+                      href={item.account.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="block text-sm font-semibold text-white truncate hover:text-gold-300"
+                      title={`Voir ${authorName} sur Qlub`}
+                    >
+                      {authorName}
+                    </a>
+                    <span className="block text-xs text-leather-400 truncate">
+                      @{item.account.acct} · {timeAgo(item.created_at)}
+                    </span>
                   </div>
-                </div>
-                {text && (
-                  <p className="text-leather-100 text-[13px] leading-snug line-clamp-4 mb-2 flex-shrink-0">
-                    {text}
-                  </p>
-                )}
-                {image && (
-                  <img
-                    src={image.preview_url || image.url}
-                    alt=""
-                    className="w-full h-28 object-cover rounded-lg mb-2"
-                    loading="lazy"
+                  <ChevronDown
+                    size={16}
+                    className={`shrink-0 text-gold-500/70 transition-transform ${
+                      expanded ? "rotate-180" : ""
+                    }`}
                   />
+                </div>
+
+                <div
+                  className={`text-sm text-leather-100 leading-relaxed break-words ${
+                    expanded ? "" : "line-clamp-4"
+                  } [&_a]:text-gold-300 [&_a]:underline [&_p]:mb-2`}
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: item.content }}
+                />
+
+                {shownImages.length > 0 && (
+                  <div
+                    className={`mt-3 grid gap-2 ${
+                      shownImages.length > 1 ? "grid-cols-2" : ""
+                    }`}
+                  >
+                    {shownImages.map((att) => (
+                      <img
+                        key={att.id}
+                        src={att.preview_url || att.url}
+                        alt=""
+                        loading="lazy"
+                        className="rounded-xl object-cover w-full max-h-40 border border-leather-600"
+                      />
+                    ))}
+                  </div>
                 )}
-                <a
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-auto pt-1 text-gold-400 hover:text-gold-300 text-xs font-semibold flex items-center gap-1 transition-colors"
-                >
-                  Voir sur Qlub
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </article>
+
+                <div className="mt-3 flex items-center justify-between text-xs text-leather-400">
+                  <span>
+                    {item.reblogs_count > 0 &&
+                      `${item.reblogs_count} partages · `}
+                    {item.favourites_count > 0 &&
+                      `${item.favourites_count} favoris`}
+                  </span>
+                  <span className="text-gold-500/70">
+                    {expanded ? "Réduire" : "Lire plus"}
+                  </span>
+                </div>
+              </div>
             );
           })}
         </div>
       )}
     </section>
   );
-};
-
-export default QuebecFeed;
+}
