@@ -355,15 +355,19 @@ export const Explore: React.FC = () => {
           </div>
         </div>
 
-        {/* Arcade entry card */}
+        {/* HellYeah Games entry card */}
         <button
           type="button"
           onClick={() => {
             tap();
-            navigate("/arcade");
+            window.open(
+              "https://scintillating-muffin-8efa7a.netlify.app/",
+              "_blank",
+              "noopener",
+            );
           }}
           className="w-full mb-6 rounded-md p-4 flex items-center gap-4 text-left transition-colors duration-200 cursor-pointer group arcade-explore-teaser"
-          aria-label="Ouvrir l'Arcade Zyeuté"
+          aria-label="Ouvrir HellYeah Games"
         >
           <div className="flex-shrink-0 w-14 h-14 rounded-sm border-2 border-[#00f3ff]/50 bg-black/50 flex items-center justify-center group-hover:border-[#ff2bd6]/60 transition-colors shadow-[0_0_16px_rgba(0,243,255,0.2)]">
             <Gamepad2 className="w-7 h-7 text-[#00f3ff]" aria-hidden />
@@ -371,14 +375,14 @@ export const Explore: React.FC = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="arcade-font-pixel text-[#ffe600] uppercase tracking-wider text-[0.65rem] leading-relaxed">
-                Arcade Zyeuté
+                HellYeah Games
               </h2>
               <span className="text-[9px] font-bold uppercase tracking-wider bg-[#39ff14]/10 text-[#39ff14] px-2 py-0.5 rounded-sm border border-[#39ff14]/40">
                 LIVE
               </span>
             </div>
             <p className="text-[#9eb4d8] text-sm mt-1">
-              INSERT COIN — Grid Rush, Poutine, Carte Sucrée & Hive Tap
+              La page officielle — jeux, vidéos et communauté
             </p>
           </div>
           <svg
