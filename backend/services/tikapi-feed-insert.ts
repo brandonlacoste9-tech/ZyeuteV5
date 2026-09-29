@@ -353,29 +353,51 @@ export async function importFeedSeedCandidates(options: {
         const userId = await resolveAuthorPg(client);
         if (!userId) throw new Error("no_system_user");
 
-        for (const c of options.candidates) {
-          if (stats.imported >= options.maxImport) break;
-          if (await isDuplicatePg(client, c.video.video_id)) {
-            stats.duplicate++;
-            continue;
+        // Mux ingest (inside buildPublicationRow) is the slow step (~2-5s/video).
+        // Run it in parallel batches; dedup checks + inserts stay sequential
+        // on the single pg client.
+        const INGEST_CONCURRENCY = 4;
+        let pgIdx = 0;
+        const pgCandidates = options.candidates;
+        while (stats.imported < options.maxImport && pgIdx < pgCandidates.length) {
+          const batch: typeof pgCandidates = [];
+          while (batch.length < INGEST_CONCURRENCY && pgIdx < pgCandidates.length) {
+            const c = pgCandidates[pgIdx++];
+            if (await isDuplicatePg(client, c.video.video_id)) {
+              stats.duplicate++;
+              continue;
+            }
+            batch.push(c);
           }
-          try {
-            const row = await buildPublicationRow(
-              userId,
-              c.video,
-              c.region,
-              c.source,
-              mirrorClient,
-            );
+          if (batch.length === 0) break;
+          const rows = await Promise.all(
+            batch.map(async (c) => {
+              try {
+                return await buildPublicationRow(
+                  userId,
+                  c.video,
+                  c.region,
+                  c.source,
+                  mirrorClient,
+                );
+              } catch {
+                return null;
+              }
+            }),
+          );
+          for (const row of rows) {
+            if (stats.imported >= options.maxImport) break;
             if (!row) {
               stats.skipped++;
               continue;
             }
-            trackImportStats(stats, row);
-            await insertPg(client, row);
-            stats.imported++;
-          } catch {
-            stats.failed++;
+            try {
+              trackImportStats(stats, row);
+              await insertPg(client, row);
+              stats.imported++;
+            } catch {
+              stats.failed++;
+            }
           }
         }
       } finally {
@@ -397,30 +419,50 @@ export async function importFeedSeedCandidates(options: {
     const userId = await resolveAuthorSupabase(supabase);
     if (!userId) throw new Error("no_system_user");
 
-    for (const c of options.candidates) {
-      if (stats.imported >= options.maxImport) break;
-      if (await isDuplicateSupabase(supabase, c.video.video_id)) {
-        stats.duplicate++;
-        continue;
+    // Same batched parallel ingest as the pg path above.
+    const SB_INGEST_CONCURRENCY = 4;
+    let sbIdx = 0;
+    const sbCandidates = options.candidates;
+    while (stats.imported < options.maxImport && sbIdx < sbCandidates.length) {
+      const batch: typeof sbCandidates = [];
+      while (batch.length < SB_INGEST_CONCURRENCY && sbIdx < sbCandidates.length) {
+        const c = sbCandidates[sbIdx++];
+        if (await isDuplicateSupabase(supabase, c.video.video_id)) {
+          stats.duplicate++;
+          continue;
+        }
+        batch.push(c);
       }
-      const row = await buildPublicationRow(
-        userId,
-        c.video,
-        c.region,
-        c.source,
-        supabase,
+      if (batch.length === 0) break;
+      const rows = await Promise.all(
+        batch.map(async (c) => {
+          try {
+            return await buildPublicationRow(
+              userId,
+              c.video,
+              c.region,
+              c.source,
+              supabase,
+            );
+          } catch {
+            return null;
+          }
+        }),
       );
-      if (!row) {
-        stats.skipped++;
-        continue;
+      for (const row of rows) {
+        if (stats.imported >= options.maxImport) break;
+        if (!row) {
+          stats.skipped++;
+          continue;
+        }
+        trackImportStats(stats, row);
+        const { error } = await supabase.from("publications").insert(row);
+        if (error) {
+          stats.failed++;
+          continue;
+        }
+        stats.imported++;
       }
-      trackImportStats(stats, row);
-      const { error } = await supabase.from("publications").insert(row);
-      if (error) {
-        stats.failed++;
-        continue;
-      }
-      stats.imported++;
     }
     return stats;
   }
