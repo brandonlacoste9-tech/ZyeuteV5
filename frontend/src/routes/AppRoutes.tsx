@@ -28,7 +28,6 @@ const OnboardingPage = lazy(() => import("@/pages/Onboarding"));
 const AuthCallbackPage = lazy(() => import("@/pages/AuthCallback"));
 const Zyeute = lazy(() => import("@/pages/LaZyeute"));
 const ExplorePage = lazy(() => import("@/pages/Explore"));
-const LandingPage = lazy(() => import("@/pages/Landing"));
 const FeedGrid = lazy(() => import("@/pages/Feed"));
 const UploadPage = lazy(() => import("@/pages/Upload"));
 const PostDetailPage = lazy(() => import("@/pages/PostDetail"));
@@ -187,21 +186,6 @@ function RequireRealAccount({ children }: { children: ReactNode }) {
   }
 
   return <>{children}</>;
-}
-
-/** Public home: marketing landing for logged-out visitors, feed for sessions/guests. */
-function HomeRoute() {
-  const { isAuthenticated, isGuest, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <LoadingScreen message="Chargement..." />;
-  }
-
-  if (isAuthenticated || isGuest) {
-    return <Navigate to="/feed" replace />;
-  }
-
-  return <LandingPage />;
 }
 
 /** Remount match page when :matchId changes so stale game state cannot leak. */
@@ -766,7 +750,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route path="/" element={<HomeRoute />} />
+          <Route path="/" element={<Navigate to="/feed" replace />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
