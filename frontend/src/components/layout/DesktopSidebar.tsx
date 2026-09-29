@@ -112,7 +112,6 @@ export const DesktopSidebar: React.FC = () => {
           <div className="px-3">
             <h3 className="text-leather-400 font-semibold text-sm mb-4 px-1">Abonnements</h3>
             <p className="text-leather-500 text-sm px-1">Comptes que tu suis...</p>
-            {/* TODO: Add actual following list fetched from API */}
           </div>
         ) : (
           <div className="px-4 py-4 rounded-xl bg-leather-900/50 border border-leather-800 mx-2 text-center">

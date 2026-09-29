@@ -13,7 +13,7 @@ const PRESS_ITEMS = [
   },
   {
     date: "26 novembre 2025",
-    title: "Lancement public de zyeute.com",
+    title: "Lancement public de zyeute.ca",
     summary:
       "La plateforme vidéo sociale du Québec ouvre ses portes avec feed vertical, profils créateurs, Ti-Guy IA et monétisation en piasses.",
     tag: "Lancement",
@@ -31,7 +31,7 @@ export const NewsroomPage: React.FC = () => {
   useSEO({
     title: "Newsroom — Presse et actualités",
     description:
-      "Nouvelles produit, lancements et communiqués Zyeute. Contact presse : press@zyeute.com.",
+      "Nouvelles produit, lancements et communiqués Zyeute. Contact presse : press@zyeute.ca.",
     url: "/newsroom",
   });
 
@@ -44,10 +44,10 @@ export const NewsroomPage: React.FC = () => {
         Nouvelles, lancements produit et communiqués pour la presse. Pour toute
         demande média, écris à{" "}
         <a
-          href="mailto:press@zyeute.com"
+          href="mailto:press@zyeute.ca"
           className="text-gold-400 hover:underline"
         >
-          press@zyeute.com
+          press@zyeute.ca
         </a>
         .
       </p>

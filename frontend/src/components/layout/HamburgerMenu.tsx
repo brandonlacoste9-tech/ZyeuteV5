@@ -625,17 +625,6 @@ export const HamburgerMenu: React.FC = () => {
             {/* Footer */}
             <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 text-center text-xs text-gray-500 dark:text-gray-400 rounded-b-xl space-y-1">
               <span>Zyeuté ⚜️ Fait au Québec 🦫</span>
-              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
-                <a
-                  href="https://grok-assistant.com/?from=network&via=zyeute&intent=ask&utm_source=north_network&utm_medium=cross_app&utm_campaign=zyeute_v1"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:underline"
-                >
-                  Ask Grok
-                </a>
-              </div>
-              <span className="block opacity-70">North Network</span>
             </div>
           </div>
         </>

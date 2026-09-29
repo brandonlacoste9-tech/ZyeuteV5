@@ -8,7 +8,8 @@ import React, { useState } from "react";
 import { useHaptics } from "@/hooks/useHaptics";
 import { ChatModal } from "./ChatModal";
 import { cn } from "@/lib/utils";
-import tiGuyEmblem from "@assets/TI-GUY_NEW_SHARP_1765507001190.jpg";
+// NOTE: attached_assets/ is not tracked in git — use the public beaver emblem instead.
+const tiGuyEmblem = "/zyeute-beaver.svg";
 
 interface ChatButtonProps {
   onClick?: () => void;

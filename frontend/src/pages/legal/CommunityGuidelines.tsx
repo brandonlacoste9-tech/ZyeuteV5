@@ -462,25 +462,25 @@ export const CommunityGuidelines: React.FC = () => {
               <li>
                 📧 Email:{" "}
                 <a
-                  href="mailto:support@zyeute.com"
+                  href="mailto:support@zyeute.ca"
                   className="text-gold-400 hover:underline"
                 >
-                  support@zyeute.com
+                  support@zyeute.ca
                 </a>
               </li>
               <li>
                 🛡️ Modération:{" "}
                 <a
-                  href="mailto:moderation@zyeute.com"
+                  href="mailto:moderation@zyeute.ca"
                   className="text-gold-400 hover:underline"
                 >
-                  moderation@zyeute.com
+                  moderation@zyeute.ca
                 </a>
               </li>
               <li>
                 📖 Centre d&apos;aide:{" "}
                 <a href="/help" className="text-gold-400 hover:underline">
-                  zyeute.com/help
+                  zyeute.ca/help
                 </a>
               </li>
             </ul>

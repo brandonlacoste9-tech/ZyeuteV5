@@ -6,27 +6,27 @@ import { useSEO } from "@/hooks/useSEO";
 const CONTACT_CHANNELS = [
   {
     label: "Support général",
-    email: "support@zyeute.com",
+    email: "support@zyeute.ca",
     desc: "Compte, bugs, aide avec l'app",
   },
   {
     label: "Presse & partenariats",
-    email: "press@zyeute.com",
+    email: "press@zyeute.ca",
     desc: "Médias, collaborations, événements",
   },
   {
     label: "Confidentialité",
-    email: "privacy@zyeute.com",
+    email: "privacy@zyeute.ca",
     desc: "Données personnelles, Loi 25, GDPR",
   },
   {
     label: "Juridique",
-    email: "legal@zyeute.com",
+    email: "legal@zyeute.ca",
     desc: "Conditions, propriété intellectuelle",
   },
   {
     label: "Modération",
-    email: "moderation@zyeute.com",
+    email: "moderation@zyeute.ca",
     desc: "Signalements, sécurité communautaire",
   },
 ] as const;
@@ -70,12 +70,12 @@ export const ContactPage: React.FC = () => {
       <section className="mb-8">
         <h2 className="text-xl font-bold text-gold-400 mb-3">Site web</h2>
         <a
-          href="https://zyeute.com"
+          href="https://zyeute.ca"
           target="_blank"
           rel="noopener noreferrer"
           className="text-gold-400 hover:underline"
         >
-          zyeute.com
+          zyeute.ca
         </a>
       </section>
 

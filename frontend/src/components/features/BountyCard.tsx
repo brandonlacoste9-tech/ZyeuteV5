@@ -38,7 +38,7 @@ export const BountyCard: React.FC = () => {
 
   const handleCopyLink = () => {
     if (!referralCode) return;
-    const link = `https://zyeute.com/signup?ref=${referralCode}`;
+    const link = `https://zyeute.ca/signup?ref=${referralCode}`;
     navigator.clipboard.writeText(link);
     toast.success("Lien d'invitation copié!");
   };
