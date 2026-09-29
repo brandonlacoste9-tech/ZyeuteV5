@@ -547,7 +547,10 @@ router.post("/tikwm", async (req, res) => {
 
 /**
  * POST /api/seed/tikapi — Import TikToks via TikAPI (uses TIKAPI_KEY + Supabase on server).
- * Query: ?force=1&limit=40
+ * Query: ?force=1&limit=40[&background=1]
+ * background=1 runs the import detached and returns immediately — use it
+ * when calling through a proxy/gateway with a short timeout, otherwise the
+ * gateway 504s while the import is still running.
  */
 router.post("/tikapi", async (req, res) => {
   try {
@@ -560,13 +563,35 @@ router.post("/tikapi", async (req, res) => {
     const limitRaw = req.query.limit ?? req.body?.limit;
     const maxImport =
       limitRaw != null ? parseInt(String(limitRaw), 10) : undefined;
+    const background =
+      req.query.background === "1" || req.query.background === "true";
 
-    const result = await replenishFeedTikApiIfLow({
-      force,
-      maxImport:
-        Number.isFinite(maxImport) && maxImport! > 0 ? maxImport : undefined,
-      hiveId: (req.query.hive as string) || "quebec",
-    });
+    const runImport = () =>
+      replenishFeedTikApiIfLow({
+        force,
+        maxImport:
+          Number.isFinite(maxImport) && maxImport! > 0 ? maxImport : undefined,
+        hiveId: (req.query.hive as string) || "quebec",
+      });
+
+    if (background) {
+      runImport()
+        .then((r) =>
+          console.log(
+            `[seed/tikapi] background import finished: imported=${r.imported}`,
+          ),
+        )
+        .catch((e) =>
+          console.error("[seed/tikapi] background import failed:", e),
+        );
+      return res.json({
+        success: true,
+        started: true,
+        message: "TikAPI import started in background",
+      });
+    }
+
+    const result = await runImport();
 
     if (!result.triggered && result.imported === 0) {
       const hint = !process.env.TIKAPI_KEY?.trim()
