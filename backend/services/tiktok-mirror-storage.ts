@@ -35,6 +35,9 @@ export async function downloadTikTokMp4(
     const resp = await fetch(sourceUrl, {
       headers,
       redirect: "follow",
+      // TikTok CDN throttles or stalls datacenter IPs — fail fast (30s)
+      // instead of hanging the whole feed import on one video.
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!resp.ok) {
