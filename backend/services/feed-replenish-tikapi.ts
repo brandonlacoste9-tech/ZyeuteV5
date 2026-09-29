@@ -155,6 +155,9 @@ export async function replenishFeedTikApiIfLow(options?: {
     viralPerTag: 10,
     trendingCount: 25,
     minPlays: 0,
+    // Keep the fetch phase under ~30s: 8 rotating hashtags instead of all 25.
+    // The 4h auto-job rotates the window, so the full list gets covered over time.
+    maxTags: 8,
   });
 
   if (candidates.length < 5) {
