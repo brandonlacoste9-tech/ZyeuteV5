@@ -1028,17 +1028,30 @@ router.get(
         posts.length > 0 &&
         offsetInBlock >= posts.length
       ) {
-        blockIndex = 0;
-        offsetInBlock = 0;
-        dbOffset = 0;
-        seed = (seed + 9876543) >>> 0;
-        let fallback = await buildQuery(0, false, BLOCK_SIZE);
-        if (!fallback.data?.length || offsetInBlock >= fallback.data.length) {
-          fallback = await buildQuery(0, true, BLOCK_SIZE);
+        // This block is exhausted. Read the next viral/RPC block before
+        // replaying block 0 — replaying is why the same ~25 clips loop.
+        const nextBlockStart = (blockIndex + 1) * BLOCK_SIZE;
+        const next = await buildQuery(nextBlockStart, false, BLOCK_SIZE);
+        if (next.data?.length) {
+          posts = next.data;
+          error = next.error;
+          blockIndex += 1;
+          offsetInBlock = 0;
+          dbOffset = nextBlockStart;
+          pageOffset = nextBlockStart;
+        } else {
+          blockIndex = 0;
+          offsetInBlock = 0;
+          dbOffset = 0;
+          seed = (seed + 9876543) >>> 0;
+          let fallback = await buildQuery(0, false, BLOCK_SIZE);
+          if (!fallback.data?.length || offsetInBlock >= fallback.data.length) {
+            fallback = await buildQuery(0, true, BLOCK_SIZE);
+          }
+          posts = fallback.data;
+          error = fallback.error;
+          didWrap = true;
         }
-        posts = fallback.data;
-        error = fallback.error;
-        didWrap = true;
       }
 
       if (error) {
@@ -1057,6 +1070,9 @@ router.get(
         posts = fallback.data;
         error = fallback.error;
       }
+
+      // Count DB rows before curated/recent merges inflate the block.
+      const dbRowCount = Array.isArray(posts) ? posts.length : 0;
 
       // Pour toi: inject Ti-Guy + TikTok clips (buried under bulk stock seed)
       if (feedType === "explore") {
@@ -1341,11 +1357,20 @@ router.get(
         }
       }
 
-      const activeOffset = didWrap ? 0 : pageOffset;
-      const hasMore = finalPosts.length >= limit && !didWrap;
-      const nextCursor = hasMore
-        ? String(activeOffset + finalPosts.length) + "-" + seed
-        : null;
+      // A short page (watch filter, dedupe) is not the end of the catalog.
+      // Keep going through this ranked block, then the next DB block.
+      // Only stop when the query itself ran dry, or we already replayed block 0.
+      const windowEnd = offsetInBlock + limit;
+      const moreInRankedBlock =
+        !didWrap && windowEnd < spacedCandidates.length;
+      const dbHasAnotherBlock = !didWrap && dbRowCount >= BLOCK_SIZE;
+      const nextOffset = moreInRankedBlock
+        ? blockIndex * BLOCK_SIZE + windowEnd
+        : dbHasAnotherBlock
+          ? (blockIndex + 1) * BLOCK_SIZE
+          : null;
+      const hasMore = nextOffset !== null;
+      const nextCursor = hasMore ? `${nextOffset}-${seed || 1}` : null;
 
       res.json({
         posts: restoreViralScores(finalPosts),
