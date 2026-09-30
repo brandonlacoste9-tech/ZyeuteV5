@@ -1,12 +1,12 @@
 /**
- * zyeute-edge — Cloudflare Worker API edge cache + keep-warm in front of Render.
+ * zyeute-edge — Cloudflare Worker API edge cache + keep-warm in front of Railway.
  *
  * - Public GET cache in KV (never for Authorization-bearing requests)
  * - Stale-while-revalidate: serve soft-expired cache while refreshing origin
- * - Cron (scheduled) pings health + warms hot keys so Render stays awake
+ * - Cron (scheduled) pings health + warms hot keys so the origin stays warm
  */
 
-const ORIGIN = "https://zyeute-api.onrender.com";
+const ORIGIN = "https://zyeutev5-production-2731.up.railway.app";
 
 /** Soft TTL = serve as fresh. After soft, still serve stale while revalidating until hard. */
 const PUBLIC_CACHE_RULES = [

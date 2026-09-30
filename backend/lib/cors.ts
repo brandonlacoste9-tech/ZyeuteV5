@@ -12,6 +12,7 @@ export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = [
   "https://zyeute.com",
   "https://zyeute.vercel.app",
   "https://zyeutev5-production.up.railway.app",
+  "https://zyeutev5-production-2731.up.railway.app",
   "https://zyeutev5-7vx9.onrender.com",
   "https://zyeute-api.onrender.com",
   "http://localhost:12000",

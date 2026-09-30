@@ -5,7 +5,7 @@ import { supabase } from "./supabase";
 const COLONY_API_URL =
   import.meta.env.VITE_COLONY_API_URL ||
   (import.meta.env.PROD
-    ? "https://zyeutev5-7vx9.onrender.com"
+    ? "https://zyeutev5-production-2731.up.railway.app"
     : "http://localhost:10000");
 
 class ColonyLink {
