@@ -17,6 +17,9 @@ const PROXY_DOMAINS = [
   "tiktokcdn.com",
   "byteoversea.com",
   "muscdn.com",
+  // Muse file URLs send Cross-Origin-Resource-Policy: same-origin, so a
+  // <video> on zyeute.ca is blocked unless we fetch them same-origin.
+  "muse.ai",
 ];
 
 /** 1×1 transparent PNG — used when a cover is known-dead (expired TikTok, etc.) */

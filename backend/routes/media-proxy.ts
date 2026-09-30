@@ -31,6 +31,8 @@ const ALLOWED_HOSTS = [
   "tiktokcdn.com",
   "byteoversea.com",
   "muscdn.com",
+  "muse.ai",
+  "*.muse.ai",
 ];
 
 function isAllowedUrl(url: string): boolean {
@@ -154,7 +156,9 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
         ? "https://www.tiktok.com/"
         : url.includes("mixkit.co")
           ? "https://mixkit.co/"
-          : "https://www.google.com/",
+          : url.includes("muse.ai")
+            ? "https://muse.ai/"
+            : "https://www.google.com/",
     };
 
     if (rangeHeader) fetchHeaders["Range"] = rangeHeader;
@@ -197,6 +201,7 @@ router.get("/", proxyLimiter, async (req: Request, res: Response) => {
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Range");
     res.setHeader(
