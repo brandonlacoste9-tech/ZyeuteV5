@@ -250,7 +250,12 @@ function NullClawPage() {
   );
 }
 
-export function AppRoutes() {
+export function RootRedirect() {
+  const location = useLocation();
+  return <Navigate to={{ pathname: "/feed", search: location.search }} replace />;
+}
+
+function AppRoutes() {
   const location = useLocation();
 
   useEffect(() => {
@@ -750,7 +755,7 @@ export function AppRoutes() {
             }
           />
 
-          <Route path="/" element={<Navigate to="/feed" replace />} />
+          <Route path="/" element={<RootRedirect />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
