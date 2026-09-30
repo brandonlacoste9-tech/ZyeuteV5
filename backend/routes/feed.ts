@@ -573,6 +573,7 @@ router.get(
       }
 
       const feedType = (req.query.type as string) || "explore";
+      const sortParam = (req.query.sort as string) || "";
       const hiveId = req.query.hive as string | undefined;
 
       const viewerId = (req as any).userId as string | undefined;
@@ -673,7 +674,7 @@ router.get(
             )
           `;
 
-      const buildTableQuery = () =>
+      const buildBaseQuery = () =>
         supabase
           .from("publications")
           .select(publicationSelect)
@@ -689,10 +690,51 @@ router.get(
           .not("caption", "ilike", "%DIAGNOSTIC%")
           .not("content", "ilike", "%DIAGNOSTIC%")
           .not("caption", "ilike", "%TEST VIDEO%")
-          .not("content", "ilike", "%TEST VIDEO%")
+          .not("content", "ilike", "%TEST VIDEO%");
+
+      const buildTableQuery = () =>
+        buildBaseQuery()
           .order("viral_score", { ascending: false })
           .order("reactions_count", { ascending: false })
           .order("created_at", { ascending: false });
+
+      // ── sort=newest: strict chronological feed, no shuffle ─────────────
+      // Lets viewers watch fresh imports land. Same filters as the table
+      // path, primary order created_at desc, simple offset pagination.
+      if (sortParam === "newest") {
+        let nq = buildBaseQuery()
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false });
+        if (excludedIds.length > 0) {
+          nq = nq.not("id", "in", `(${excludedIds.join(",")})`);
+        }
+        nq = nq.range(pageOffset, pageOffset + limit - 1);
+        const { data: newestPosts, error: newestError } = await nq;
+        if (newestError) {
+          console.error(
+            "[FeedInfinite] newest sort error:",
+            newestError,
+          );
+          return res.status(500).json({
+            error: "Database error",
+            details: (newestError as { message?: string }).message,
+          });
+        }
+        const rows = (newestPosts || []) as Record<string, unknown>[];
+        const hasMoreNewest = rows.length >= limit;
+        return res.json({
+          posts: rows,
+          hasMore: hasMoreNewest,
+          nextCursor: hasMoreNewest
+            ? `${pageOffset + rows.length}-0`
+            : null,
+          source: "supabase-http-v2",
+          feedType,
+          sort: "newest",
+          followingFiltered: false,
+          excludedCount: excludedIds.length,
+        });
+      }
 
       const buildQuery = (
         offset: number,

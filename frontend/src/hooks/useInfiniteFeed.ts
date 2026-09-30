@@ -154,12 +154,15 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       });
 
       try {
+      const sortParam =
+        new URLSearchParams(window.location.search).get("sort") || "";
       const params = new URLSearchParams({
         limit: "30",
         type: feedType === "feed" ? "explore" : feedType,
         hive: getStoredHive(),
         session: feedSessionId,
         ...(cursorStr ? { cursor: cursorStr } : {}),
+        ...(sortParam ? { sort: sortParam } : {}),
       });
 
       // Always send auth (watch exclusions for logged-in users) + local seen
@@ -311,11 +314,14 @@ export function useInfiniteFeedManual(feedType: FeedType = "explore") {
         ? parseInt(cursorStr.split("-")[0], 10) || 0
         : 0;
 
+      const sortParam =
+        new URLSearchParams(window.location.search).get("sort") || "";
       const params = new URLSearchParams({
         limit: "30",
         type: feedType,
         hive: getStoredHive(),
         ...(cursorOffset > 0 ? { cursor: String(cursorOffset) } : {}),
+        ...(sortParam ? { sort: sortParam } : {}),
       });
 
       const headers =
