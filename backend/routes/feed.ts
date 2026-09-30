@@ -13,9 +13,9 @@ import {
   getPostContentKey,
   interleaveQueues,
   mergeFeedWithDedup,
-  prepareShuffledFeed,
   seededTierShuffle,
   shuffleWithSeed,
+  spaceOutFeed,
   unseenFirst,
 } from "../../shared/utils/feedDedup.js";
 import {
@@ -184,7 +184,68 @@ function isStockFillerPost(p: Record<string, unknown>): boolean {
   return false;
 }
 
-/** Explore: TikTok first, then curated, then user content; stock landscapes last. */
+/** ~24h half-life: score halves about once a day (e^(-0.028 * 24) ≈ 0.51). */
+const RECENCY_LAMBDA_PER_HOUR = 0.028;
+const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
+/** One fresh upload per 9 ranked posts ≈ 10% of the block. */
+const FRESH_SLOT_EVERY = 9;
+
+function recencyMultiplier(createdAt: unknown, now: number): number {
+  const t = new Date(String(createdAt ?? "")).getTime();
+  if (!Number.isFinite(t)) return 1;
+  const ageHours = Math.max(0, (now - t) / 3_600_000);
+  return Math.exp(-RECENCY_LAMBDA_PER_HOUR * ageHours);
+}
+
+/** Rank on decayed viral_score. Original score is restored before the response. */
+function applyRecencyDecay(
+  posts: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const now = Date.now();
+  return posts.map((p) => {
+    const base = Number(p.viral_score) || 0;
+    return {
+      ...p,
+      _raw_viral_score: base,
+      viral_score: base * recencyMultiplier(p.created_at, now),
+    };
+  });
+}
+
+function restoreViralScores(
+  posts: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  return posts.map((p) => {
+    if (!("_raw_viral_score" in p)) return p;
+    const raw = p._raw_viral_score;
+    const next = { ...p, viral_score: raw };
+    delete next._raw_viral_score;
+    return next;
+  });
+}
+
+function interleaveFreshPosts<T extends Record<string, unknown>>(
+  ordered: T[],
+  fresh: T[],
+  every = FRESH_SLOT_EVERY,
+): T[] {
+  const queue = fresh.filter((p) => p.id != null);
+  if (queue.length === 0 || every < 1) return ordered;
+  const freshIds = new Set(queue.map((p) => String(p.id)));
+  const main = ordered.filter((p) => !freshIds.has(String(p.id)));
+  if (main.length === 0) return queue;
+  const out: T[] = [];
+  let fi = 0;
+  for (let i = 0; i < main.length; i++) {
+    out.push(main[i]);
+    if ((i + 1) % every === 0 && fi < queue.length) out.push(queue[fi++]);
+  }
+  return out;
+}
+
+/** Explore: TikTok first, then curated, then user content; stock landscapes last.
+ *  Within each bucket, rank by decayed viral_score and shuffle only inside tiers.
+ */
 function orderExploreFeed(
   posts: Record<string, unknown>[],
   blockSeed: number,
@@ -210,8 +271,13 @@ function orderExploreFeed(
     other.push(p);
   }
 
-  const sh = (arr: Record<string, unknown>[], seed: number) =>
-    arr.length <= 1 ? arr : shuffleWithSeed(arr, seed);
+  const sh = (arr: Record<string, unknown>[], seed: number) => {
+    if (arr.length <= 1) return arr;
+    const ranked = [...arr].sort(
+      (a, b) => (Number(b.viral_score) || 0) - (Number(a.viral_score) || 0),
+    );
+    return seededTierShuffle(ranked, seed, 10);
+  };
 
   const stockShuffled = sh(stock, blockSeed + 333);
   const stockTail = stockShuffled;
@@ -235,7 +301,8 @@ function orderFeedPosts(
   blockSeed: number,
 ): Record<string, unknown>[] {
   if (feedType === "explore") return orderExploreFeed(posts, blockSeed);
-  return shuffleWithSeed(posts, blockSeed);
+  // Input is already best-first (decayed viral). Shuffle inside tiers only.
+  return seededTierShuffle(posts, blockSeed, 10);
 }
 
 /** Explore (Pour toi): TikTok vertical first; demote Pexels landscape stock. */
@@ -342,6 +409,39 @@ async function fetchTikTokExploreSupabase(
         isReliableTikTokPlayback(p),
     )
     .slice(0, limit);
+}
+
+/** Uploads from the last 24h — viral sort often misses them until they have score. */
+async function fetchFreshSupabase(
+  supabase: SupabaseClient,
+  hiveId: string,
+  authorIds: string[] | null,
+  limit = 24,
+): Promise<Record<string, unknown>[]> {
+  const since = new Date(Date.now() - FRESH_WINDOW_MS).toISOString();
+  let q = supabase
+    .from("publications")
+    .select(FEED_PUBLICATIONS_SELECT)
+    .filter("visibility::text", "eq", "public")
+    .eq("est_masque", false)
+    .is("deleted_at", null)
+    .filter("processing_status::text", "neq", "no_audio")
+    .filter("hive_id::text", "eq", hiveId || "quebec")
+    .not("media_url", "is", null)
+    .gte("created_at", since)
+    .or(
+      "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+    );
+  if (authorIds && authorIds.length > 0) {
+    q = q.in("user_id", authorIds);
+  }
+  const { data } = await q
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (!data?.length) return [];
+  return (data as Record<string, unknown>[]).filter(
+    (p) => isExplorePlayablePost(p) && !isStockFillerPost(p),
+  );
 }
 
 /**
@@ -958,8 +1058,36 @@ router.get(
         }
       }
 
+      // ── Fresh uploads (<24h) get reserved slots so they aren't buried ──
+      let freshPosts: Record<string, unknown>[] = [];
+      try {
+        const freshRows = await fetchFreshSupabase(
+          supabase,
+          hiveId || "quebec",
+          authorIds,
+        );
+        const excludedSet = new Set(excludedIds.map(String));
+        freshPosts = freshRows.filter((p) => !excludedSet.has(String(p.id)));
+        if (freshPosts.length) {
+          const merged = [...((posts || []) as Record<string, unknown>[])];
+          const seen = new Set(merged.map((p) => String(p.id)));
+          for (const row of freshPosts) {
+            const id = String(row.id);
+            if (seen.has(id)) continue;
+            merged.push(row);
+            seen.add(id);
+          }
+          posts = merged;
+        }
+      } catch (freshErr) {
+        console.warn("[FeedInfinite] Fresh fetch skipped:", freshErr);
+      }
+
       // ── Personalization: affinity tags + region soft re-rank (all feed types) ──
-      let rankedPool = (posts || []) as Record<string, unknown>[];
+      // Decay viral_score first so old hits lose rank before affinity/boost/shuffle.
+      let rankedPool = applyRecencyDecay(
+        (posts || []) as Record<string, unknown>[],
+      );
       if (
         viewerId &&
         (viewerAffinities.length > 0 || viewerRegion) &&
@@ -1027,18 +1155,16 @@ router.get(
             : playableOrdered
           : orderedPosts;
       const dedupedCandidates = dedupePostsByContent(feedCandidates);
+      // spaceOutFeed keeps tier order; prepareShuffledFeed would full-shuffle it away.
       const spacedCandidates =
         feedType === "explore"
-          ? prepareShuffledFeed(dedupedCandidates, {
-              shuffleSeed: (blockSeed + seed) >>> 0,
+          ? spaceOutFeed(dedupedCandidates, [], {
               minContentGap: 16,
               minAuthorGap: 6,
             })
           : dedupedCandidates;
-      let finalPosts = spacedCandidates.slice(
-        offsetInBlock,
-        offsetInBlock + limit,
-      );
+      const withFresh = interleaveFreshPosts(spacedCandidates, freshPosts);
+      let finalPosts = withFresh.slice(offsetInBlock, offsetInBlock + limit);
 
       // If sliced posts are empty, wrap around block 0
       if (finalPosts.length === 0 && !didWrap) {
@@ -1052,7 +1178,9 @@ router.get(
         didWrap = true;
 
         if (!error && posts) {
-          const boostedFallback = posts.map((p: Record<string, unknown>) => {
+          const boostedFallback = applyRecencyDecay(
+            posts as Record<string, unknown>[],
+          ).map((p: Record<string, unknown>) => {
             if (feedType === "explore") {
               return {
                 ...p,
@@ -1100,13 +1228,15 @@ router.get(
           const dedupedFallback = dedupePostsByContent(fallbackCandidates);
           const spacedFallback =
             feedType === "explore"
-              ? prepareShuffledFeed(dedupedFallback, {
-                  shuffleSeed: seed >>> 0,
+              ? spaceOutFeed(dedupedFallback, [], {
                   minContentGap: 16,
                   minAuthorGap: 6,
                 })
               : dedupedFallback;
-          finalPosts = spacedFallback.slice(0, limit);
+          finalPosts = interleaveFreshPosts(spacedFallback, freshPosts).slice(
+            0,
+            limit,
+          );
         }
       }
 
@@ -1190,7 +1320,7 @@ router.get(
         : null;
 
       res.json({
-        posts: finalPosts,
+        posts: restoreViralScores(finalPosts),
         hasMore,
         nextCursor,
         source: "supabase-http-v2",
