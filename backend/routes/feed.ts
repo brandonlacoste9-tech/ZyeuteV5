@@ -75,6 +75,10 @@ const GUEST_SEEN_LIMIT = 200;
  * `x-seen-ids` header (preferred — keeps the URL short) or the `seen` query
  * param as a fallback. Comma-separated, capped to the most recent ids.
  */
+/** Post ids are UUIDs — anything else (e.g. local fallback clip ids like "qc-street-66") is dropped. */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function parseSeenIds(req: Request): string[] {
   const raw =
     (req.headers["x-seen-ids"] as string | undefined) ||
@@ -83,7 +87,9 @@ function parseSeenIds(req: Request): string[] {
   return raw
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean)
+    // Drop non-UUID values: one bad id used to 500 the entire feed query,
+    // trapping clients on the offline fallback clips forever.
+    .filter((s) => UUID_RE.test(s))
     .slice(0, GUEST_SEEN_LIMIT);
 }
 
