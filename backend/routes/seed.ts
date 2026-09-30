@@ -829,4 +829,76 @@ router.post("/custom", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed/scrub — Delete feed posts matching a hashtag/keyword.
+ * Query: ?tag=poutine[&hive=quebec][&dry=1][&background=1]
+ * dry=1 counts matches without deleting.
+ */
+router.post("/scrub", async (req, res) => {
+  try {
+    const tag = String(req.query.tag ?? req.body?.tag ?? "")
+      .trim()
+      .replace(/^#+/, "");
+    if (!tag) {
+      return res
+        .status(400)
+        .json({ success: false, message: "tag is required" });
+    }
+    const hiveId = String(req.query.hive ?? req.body?.hive ?? "quebec");
+    const dry = req.query.dry === "1" || req.body?.dry === true;
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return res
+        .status(503)
+        .json({ success: false, message: "Supabase not configured" });
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const run = async () => {
+      const { data, error } = await supabase
+        .from("publications")
+        .select("id")
+        .eq("hive_id", hiveId)
+        .ilike("content", `%${tag}%`);
+      if (error) throw error;
+      const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+      if (!dry && ids.length) {
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          const { error: delErr } = await supabase
+            .from("publications")
+            .delete()
+            .in("id", chunk);
+          if (delErr) throw delErr;
+        }
+      }
+      return { matched: ids.length, deleted: dry ? 0 : ids.length };
+    };
+
+    if (req.query.background === "1" || req.query.background === "true") {
+      run()
+        .then((r) =>
+          console.log(
+            `[seed/scrub] tag=${tag} hive=${hiveId} matched=${r.matched} deleted=${r.deleted}`,
+          ),
+        )
+        .catch((e) => console.error("[seed/scrub] background scrub failed:", e));
+      return res.json({
+        success: true,
+        started: true,
+        message: `Scrub of "${tag}" started in background`,
+      });
+    }
+
+    const r = await run();
+    res.json({ success: true, tag, hive: hiveId, dry, ...r });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Scrub error:", error);
+    res.status(500).json({ error: "Scrub failed", details: message });
+  }
+});
+
 export default router;
