@@ -48,6 +48,19 @@ export async function ingestTikTokVideoToMux(options: {
   if (sources.length === 0) return null;
 
   for (const sourceUrl of sources) {
+    // Fast path (2026-09-30): let Mux fetch the TikTok CDN URL directly.
+    // The old path downloaded every MP4 through Render first, and TikTok
+    // throttles/stalls datacenter IPs — imports crawled (30s timeout per
+    // video, hours per batch, mostly failures). Mux URL-ingest is one API
+    // call per video; on failure we fall through to the download path below.
+    const fromUrl = await createMuxAssetFromUrl(sourceUrl);
+    if (fromUrl) {
+      console.log(
+        `[TikTokMux] URL ingest OK for ${options.tiktokId} → ${fromUrl.muxPlaybackId}`,
+      );
+      return fromUrl;
+    }
+
     const buffer = await downloadTikTokMp4(sourceUrl);
     if (!buffer) continue;
 
