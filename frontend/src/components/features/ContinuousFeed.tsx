@@ -156,9 +156,13 @@ const NEWEST_MARKER_12345 = "zyeute_newest_marker_12345";
 function keepServerOrder(): boolean {
   try {
     void NEWEST_MARKER_12345;
-    return new URLSearchParams(window.location.search).get("sort") === "newest";
+    // Default: newest first (2026-09-30) — the shuffled view buried fresh videos.
+    // Pass ?sort=shuffle for the old mixed view.
+    return (
+      new URLSearchParams(window.location.search).get("sort") !== "shuffle"
+    );
   } catch {
-    return false;
+    return true;
   }
 }
 
