@@ -353,12 +353,18 @@ export async function getInfiniteFeedPosts(
     }
   }
 
+  const sortParam =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("sort") || ""
+      : "";
+
   const params = new URLSearchParams({
     limit: String(limit),
     type: feedType,
     hive,
     session: sessionId,
     ...(cursor ? { cursor } : {}),
+    ...(sortParam ? { sort: sortParam } : {}),
   });
 
   const seenIds = getGuestSeenForRequest();
