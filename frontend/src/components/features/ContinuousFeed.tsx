@@ -151,6 +151,15 @@ function hashSessionToSeed(sessionId: string): number {
   return h >>> 0;
 }
 
+/** ?sort=newest: keep the API's chronological order, skip the client shuffle. */
+function keepServerOrder(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get("sort") === "newest";
+  } catch {
+    return false;
+  }
+}
+
 function prepareFeedPage(
   posts: FeedPost[],
   sessionId: string,
@@ -829,7 +838,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             /* keep server order */
           }
         }
-        validPosts = prepareFeedPage(pagePosts, sessionId);
+        validPosts = keepServerOrder()
+          ? pagePosts
+          : prepareFeedPage(pagePosts, sessionId);
       }
 
       if (validPosts.length === 0) {
@@ -867,6 +878,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
           const have = new Set(prev.map((p) => p.id));
           const extra = validPosts.filter((p) => !have.has(p.id));
           if (extra.length === 0) return prev;
+          if (keepServerOrder()) return [...prev, ...extra];
           return mergeFeedPages(prev, extra, sessionId);
         });
         setHasMore(apiHasMore);
@@ -979,15 +991,21 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
             /* keep server order */
           }
         }
-        const validPosts = prepareFeedPage(
-          pagePosts,
-          feedSessionRef.current,
-          postsRef.current.length,
-        );
+        const validPosts = keepServerOrder()
+          ? pagePosts
+          : prepareFeedPage(
+              pagePosts,
+              feedSessionRef.current,
+              postsRef.current.length,
+            );
         if (validPosts.length > 0) {
-          setPosts((prev) =>
-            mergeFeedPages(prev, validPosts, feedSessionRef.current),
-          );
+          setPosts((prev) => {
+            if (keepServerOrder()) {
+              const have = new Set(prev.map((p) => p.id));
+              return [...prev, ...validPosts.filter((p) => !have.has(p.id))];
+            }
+            return mergeFeedPages(prev, validPosts, feedSessionRef.current);
+          });
         }
       }
 
