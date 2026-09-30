@@ -326,6 +326,7 @@ async function getInfiniteFeedAuthHeaders(): Promise<Record<string, string>> {
 }
 
 /** Cursor-based feed from /api/feed/infinite (shuffle, unseen-first, watch exclusion). */
+const API_MARKER_99999 = "zyeute_api_marker_99999"; void API_MARKER_99999;
 export async function getInfiniteFeedPosts(
   feedType: InfiniteFeedType,
   options: {
