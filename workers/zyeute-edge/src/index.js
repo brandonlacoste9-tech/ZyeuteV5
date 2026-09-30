@@ -6,7 +6,7 @@
  * - Cron (scheduled) pings health + warms hot keys so Render stays awake
  */
 
-const ORIGIN = "https://zyeutev5-bg8t.onrender.com";
+const ORIGIN = "https://zyeute-api.onrender.com";
 
 /** Soft TTL = serve as fresh. After soft, still serve stale while revalidating until hard. */
 const PUBLIC_CACHE_RULES = [
