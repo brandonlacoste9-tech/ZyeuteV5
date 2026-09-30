@@ -87,6 +87,60 @@ function parseSeenIds(req: Request): string[] {
     .slice(0, GUEST_SEEN_LIMIT);
 }
 
+/**
+ * Cold-start freshness queue (2026-09-30): brand-new uploads score ~0 on
+ * viral ranking and would never surface, so ~1 in 10 feed slots is reserved
+ * for videos created in the last FRESH_WINDOW_HOURS. Slot assignment is
+ * deterministic per session seed (fresh slot k serves
+ * freshPool[(seed + k) % len]) so cursor pagination stays stable.
+ */
+const FRESH_WINDOW_HOURS = 48;
+const FRESH_EVERY_N = 10;
+const FRESH_SLOT_OFFSET = 3; // 0-indexed position within each group of 10
+
+async function fetchFreshVideoPool(
+  supabase: SupabaseClient,
+  publicationSelect: string,
+  hiveId: string,
+  excludedIds: string[],
+  poolLimit = 60,
+): Promise<Record<string, unknown>[]> {
+  try {
+    const since = new Date(
+      Date.now() - FRESH_WINDOW_HOURS * 3600 * 1000,
+    ).toISOString();
+    let q = supabase
+      .from("publications")
+      .select(publicationSelect)
+      .filter("visibility::text", "eq", "public")
+      .eq("est_masque", false)
+      .is("deleted_at", null)
+      .filter("processing_status::text", "neq", "no_audio")
+      .filter("hive_id::text", "eq", hiveId || "quebec")
+      .or(
+        "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+      )
+      .not("media_url", "is", null)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(poolLimit);
+    if (excludedIds.length > 0) {
+      q = q.not(
+        "id",
+        "in",
+        `(${excludedIds.join(",")})`,
+      );
+    }
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return (data as Record<string, unknown>[]).filter((p) =>
+      isExplorePlayablePost(p),
+    );
+  } catch {
+    return [];
+  }
+}
+
 function isTikTokStylePost(p: Record<string, unknown>): boolean {
   const meta = p.media_metadata as Record<string, unknown> | undefined;
   if (meta?.tiktok_id) return true;
@@ -1079,6 +1133,56 @@ router.get(
         }
       }
 
+      // ── Cold-start injection: 1 in 10 slots from the freshness queue ──
+      // New uploads (last 48h) rank ~0 on viral score and would never surface.
+      // Reserve deterministic slots so every session sees fresh content.
+      // Skipped for sort=newest (that feed IS the freshness queue) and for
+      // the following feed (subscribers expect their follows, not discovery).
+      if (
+        sortParam !== "newest" &&
+        feedType !== "feed" &&
+        finalPosts.length > 0
+      ) {
+        const freshPool = await fetchFreshVideoPool(
+          supabase,
+          publicationSelect,
+          hiveId || "quebec",
+          [...hardExclude].map(String),
+        );
+        if (freshPool.length > 0) {
+          const baseOffset = didWrap ? 0 : pageOffset;
+          const inFeed = new Set(
+            finalPosts.map((p: Record<string, unknown>) => String(p.id)),
+          );
+          const freshUsed = new Set<string>();
+          const injected = finalPosts.map((p) => p);
+          for (let j = 0; j < injected.length; j++) {
+            if ((baseOffset + j) % FRESH_EVERY_N !== FRESH_SLOT_OFFSET)
+              continue;
+            const freshSlotIndex = Math.floor(
+              (baseOffset + j) / FRESH_EVERY_N,
+            );
+            let pick: Record<string, unknown> | null = null;
+            for (let t = 0; t < freshPool.length; t++) {
+              const cand =
+                freshPool[(seed + freshSlotIndex + t) % freshPool.length];
+              const cid = String(cand.id);
+              if (!inFeed.has(cid) && !freshUsed.has(cid)) {
+                pick = cand;
+                break;
+              }
+            }
+            if (pick) {
+              const pid = String(pick.id);
+              freshUsed.add(pid);
+              inFeed.add(pid);
+              injected[j] = pick;
+            }
+          }
+          finalPosts = injected;
+        }
+      }
+
       const activeOffset = didWrap ? 0 : pageOffset;
       const hasMore = finalPosts.length >= limit && !didWrap;
       const nextCursor = hasMore
@@ -1254,3 +1358,4 @@ router.post(
 );
 
 export default router;
+
