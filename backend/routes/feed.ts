@@ -120,7 +120,9 @@ async function fetchFreshVideoPool(
       .or(
         "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
       )
-      .not("media_url", "is", null)
+      .or(
+        "media_url.not.is.null,mux_playback_id.not.is.null,hls_url.not.is.null",
+      )
       .gte("created_at", since)
       .order("created_at", { ascending: false })
       .limit(poolLimit);
@@ -139,6 +141,80 @@ async function fetchFreshVideoPool(
   } catch {
     return [];
   }
+}
+
+/**
+ * Newest uploads, same window Explore uses (created_at desc).
+ * The viral/RPC block is ORDER BY viral_score and never contains score≈0 rows,
+ * so this query is the only way those posts enter the ranked pool.
+ */
+const RECENT_CANDIDATE_LIMIT = 60;
+
+async function fetchRecentCandidates(
+  supabase: SupabaseClient,
+  publicationSelect: string,
+  hiveId: string,
+  authorIds: string[] | null,
+): Promise<Record<string, unknown>[]> {
+  try {
+    let q = supabase
+      .from("publications")
+      .select(publicationSelect)
+      .filter("visibility::text", "eq", "public")
+      .eq("est_masque", false)
+      .is("deleted_at", null)
+      .filter("processing_status::text", "neq", "no_audio")
+      .filter("hive_id::text", "eq", hiveId || "quebec")
+      .or(
+        "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
+      )
+      .or(
+        "media_url.not.is.null,mux_playback_id.not.is.null,hls_url.not.is.null",
+      )
+      .order("created_at", { ascending: false })
+      .limit(RECENT_CANDIDATE_LIMIT);
+    if (authorIds && authorIds.length > 0) {
+      q = q.in("user_id", authorIds);
+    }
+    const { data, error } = await q;
+    if (error || !data) {
+      console.warn(
+        "[FeedInfinite] recent candidates skipped:",
+        (error as { message?: string } | null)?.message,
+      );
+      return [];
+    }
+    return (data as Record<string, unknown>[]).filter((p) =>
+      isExplorePlayablePost(p),
+    );
+  } catch (err) {
+    console.warn("[FeedInfinite] recent candidates skipped:", err);
+    return [];
+  }
+}
+
+function isRecentUpload(
+  p: Record<string, unknown>,
+  hours = FRESH_FLOOR_HOURS,
+): boolean {
+  const t = new Date(String(p.created_at ?? "")).getTime();
+  return Number.isFinite(t) && Date.now() - t < hours * 3_600_000;
+}
+
+function mergeCandidates(
+  base: Record<string, unknown>[],
+  extra: Record<string, unknown>[],
+  excluded: Set<string>,
+): Record<string, unknown>[] {
+  const merged = [...base];
+  const seen = new Set(merged.map((p) => String(p.id)));
+  for (const row of extra) {
+    const id = String(row.id ?? "");
+    if (!id || seen.has(id) || excluded.has(id)) continue;
+    merged.push(row);
+    seen.add(id);
+  }
+  return merged;
 }
 
 function isTikTokStylePost(p: Record<string, unknown>): boolean {
@@ -194,17 +270,30 @@ function recencyMultiplier(createdAt: unknown, now: number): number {
   return Math.exp(-RECENCY_LAMBDA_PER_HOUR * ageHours);
 }
 
-/** Rank on decayed viral_score. Original score is restored before the response. */
+/** Rank on decayed viral_score. Posts under 48h get a floor so a raw score of 0
+ *  still enters the top tiers — decay alone cannot promote rows that score 0.
+ *  Original viral_score is restored before the response.
+ */
+const FRESH_SCORE_FLOOR = 12000;
+const FRESH_FLOOR_HOURS = 48;
+
 function applyRecencyDecay(
   posts: Record<string, unknown>[],
 ): Record<string, unknown>[] {
   const now = Date.now();
   return posts.map((p) => {
     const base = Number(p.viral_score) || 0;
+    const t = new Date(String(p.created_at ?? "")).getTime();
+    const ageHours = Number.isFinite(t)
+      ? Math.max(0, (now - t) / 3_600_000)
+      : Number.POSITIVE_INFINITY;
+    const mult = recencyMultiplier(p.created_at, now);
+    const floor =
+      ageHours <= FRESH_FLOOR_HOURS ? FRESH_SCORE_FLOOR * mult : 0;
     return {
       ...p,
       _raw_viral_score: base,
-      viral_score: base * recencyMultiplier(p.created_at, now),
+      viral_score: base * mult + floor,
     };
   });
 }
@@ -785,7 +874,9 @@ router.get(
           .or(
             "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
           )
-          .not("media_url", "is", null)
+          .or(
+            "media_url.not.is.null,mux_playback_id.not.is.null,hls_url.not.is.null",
+          )
           .not("caption", "ilike", "%DIAGNOSTIC%")
           .not("content", "ilike", "%DIAGNOSTIC%")
           .not("caption", "ilike", "%TEST VIDEO%")
@@ -1003,6 +1094,24 @@ router.get(
         }
       }
 
+      // Viral/RPC block is the top scores only. Union the newest uploads
+      // (the Explore query) so score≈0 rows exist before decay and tiering.
+      try {
+        const recentRows = await fetchRecentCandidates(
+          supabase,
+          publicationSelect,
+          hiveId || "quebec",
+          authorIds,
+        );
+        posts = mergeCandidates(
+          (posts || []) as Record<string, unknown>[],
+          recentRows,
+          new Set(excludedIds.map(String)),
+        );
+      } catch (recentErr) {
+        console.warn("[FeedInfinite] recent merge skipped:", recentErr);
+      }
+
       // ── Personalization: affinity tags + region soft re-rank (all feed types) ──
       // Decay viral_score first so old hits lose rank before affinity/boost/shuffle.
       let rankedPool = applyRecencyDecay(
@@ -1066,7 +1175,7 @@ router.get(
         isExplorePlayablePost(p),
       );
       const nonStockOrdered = playableOrdered.filter(
-        (p) => !isStockFillerPost(p),
+        (p) => !isStockFillerPost(p) || isRecentUpload(p),
       );
       const feedCandidates =
         feedType === "explore"
@@ -1139,7 +1248,7 @@ router.get(
             isExplorePlayablePost(p),
           );
           const fallbackNonStock = fallbackPlayable.filter(
-            (p) => !isStockFillerPost(p),
+            (p) => !isStockFillerPost(p) || isRecentUpload(p),
           );
           const fallbackCandidates =
             feedType === "explore"
