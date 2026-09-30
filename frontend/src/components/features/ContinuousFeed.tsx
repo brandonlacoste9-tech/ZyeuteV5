@@ -152,8 +152,10 @@ function hashSessionToSeed(sessionId: string): number {
 }
 
 /** ?sort=newest: keep the API's chronological order, skip the client shuffle. */
+const NEWEST_MARKER_12345 = "zyeute_newest_marker_12345";
 function keepServerOrder(): boolean {
   try {
+    void NEWEST_MARKER_12345;
     return new URLSearchParams(window.location.search).get("sort") === "newest";
   } catch {
     return false;
