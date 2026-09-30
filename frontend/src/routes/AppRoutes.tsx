@@ -250,12 +250,12 @@ function NullClawPage() {
   );
 }
 
-export function RootRedirect() {
+function RootRedirect() {
   const location = useLocation();
   return <Navigate to={{ pathname: "/feed", search: location.search }} replace />;
 }
 
-function AppRoutes() {
+export function AppRoutes() {
   const location = useLocation();
 
   useEffect(() => {
