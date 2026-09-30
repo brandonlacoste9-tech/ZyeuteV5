@@ -359,7 +359,7 @@ export async function getInfiniteFeedPosts(
       ? new URLSearchParams(window.location.search).get("sort")
       : null;
   // Default: newest first on the main feed (2026-09-30). ?sort=shuffle restores the mixed view.
-  const sortParam = urlSort || (feedType === "feed" ? "newest" : "");
+  const sortParam = urlSort || "newest";
 
   const params = new URLSearchParams({
     limit: String(limit),
