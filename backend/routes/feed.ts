@@ -702,13 +702,18 @@ router.get(
       // Lets viewers watch fresh imports land. Same filters as the table
       // path, primary order created_at desc, simple offset pagination.
       if (sortParam === "newest") {
+        // Re-derive the offset from the raw cursor: the seed-regeneration
+        // block above resets pageOffset to 0 when seed=0, which is always
+        // true for newest cursors ("<offset>-0").
+        const rawCursor = (req.query.cursor as string) || "";
+        const newestOffset = parseInt(rawCursor.split("-")[0], 10) || 0;
         let nq = buildBaseQuery()
           .order("created_at", { ascending: false })
           .order("id", { ascending: false });
         if (excludedIds.length > 0) {
           nq = nq.not("id", "in", `(${excludedIds.join(",")})`);
         }
-        nq = nq.range(pageOffset, pageOffset + limit - 1);
+        nq = nq.range(newestOffset, newestOffset + limit - 1);
         const { data: newestPosts, error: newestError } = await nq;
         if (newestError) {
           console.error(
@@ -726,7 +731,7 @@ router.get(
           posts: rows,
           hasMore: hasMoreNewest,
           nextCursor: hasMoreNewest
-            ? `${pageOffset + rows.length}-0`
+            ? `${newestOffset + rows.length}-0`
             : null,
           source: "supabase-http-v2",
           feedType,
