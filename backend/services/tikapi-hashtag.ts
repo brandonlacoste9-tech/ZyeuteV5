@@ -26,7 +26,6 @@ export const REGIONAL_HASHTAG_SEEDS: HashtagSeed[] = [
   { name: "quebec", id: "13725", region: "quebec_city" },
   { name: "quebecois", id: "4764129", region: "quebec_city" },
   { name: "mtl", id: "84124", region: "montreal" },
-  { name: "poutine", id: "1874324", region: "montreal" },
   { name: "vieuxquebec", region: "quebec_city" },
   { name: "laval", id: "5012099", region: "montreal" },
   { name: "gatineau", id: "1545799", region: "gatineau" },
@@ -51,6 +50,15 @@ export const VIRAL_HASHTAG_SEEDS: HashtagSeed[] = [
   { name: "foryou", region: "montreal" },
   { name: "foryoupage", region: "montreal" },
   { name: "foodtiktok", region: "montreal" },
+  { name: "animals", region: "montreal" },
+  { name: "pets", region: "montreal" },
+  { name: "petsoftiktok", region: "montreal" },
+  { name: "dogsoftiktok", region: "montreal" },
+  { name: "catsoftiktok", region: "montreal" },
+  { name: "funnyanimals", region: "montreal" },
+  { name: "satisfying", region: "montreal" },
+  { name: "wholesome", region: "montreal" },
+  { name: "memes", region: "montreal" },
 ];
 
 export type FeedSeedCandidate = {
