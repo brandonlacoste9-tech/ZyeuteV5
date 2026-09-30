@@ -826,7 +826,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
       if (result.posts?.length) {
         let pagePosts = filterPlayablePosts(result.posts);
-        // Client-side Pour Toi•MKR re-rank from watch history (explore / following-fallback)
+        // Client-side Pour Toi re-rank from watch history (explore / following-fallback)
         if (
           (infiniteType === "explore" || infiniteType === "smart") &&
           user?.id
