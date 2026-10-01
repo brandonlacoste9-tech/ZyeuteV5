@@ -6,47 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
-const expectedBatchId = "qc-20261001-impossible-03";
+const expectedBatchId = "qc-20261001-impossible-04";
 const batch = [
   {
-    title: "Une baleine survole le Vieux-Québec",
+    title: "Les pigeons de Montréal deviennent un hélicoptère",
+    region: "montreal",
+    prompt:
+      "One continuous five-second photorealistic handheld smartphone shot from a downtown Montreal sidewalk, looking upward between buildings. Thousands of realistic pigeons are already flying together in the unmistakable silhouette of a helicopter: a dense bird-shaped fuselage, tail and a large circular rotor formation made entirely of swirling pigeons. The coordinated bird-helicopter moves slowly overhead while individual birds visibly flap their wings and maintain the shape. Pedestrians below film with phones. Authentic Montreal architecture and skyline, realistic feather detail, coherent flock motion, natural daylight, absurd impossible event. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+    caption:
+      "À Montréal, les pigeons ont lancé leur service d’hélicoptère. 🐦🚁 Scène fictive générée par IA. #Montreal #Quebec #Zyeute",
+  },
+  {
+    title: "Un lac des Laurentides se vide vers le ciel",
+    region: "laurentides",
+    prompt:
+      "One continuous five-second photorealistic handheld smartphone shot from the shore of a peaceful lake in Quebec's Laurentians. A huge continuous column of lake water pours upward like a reverse waterfall, visibly connecting the lake surface to low clouds. Two intact canoes near the column slowly rise with the swirling water, while adult hikers stand safely on shore watching in disbelief. Dense green forest and rounded hills around the lake, realistic water texture, spray, reflections and sunlight refraction, clear upward flow and coherent enormous scale. Absurd impossible natural event, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+    caption:
+      "Dans les Laurentides, le lac a décidé de déménager dans les nuages. 🛶☁️ Scène fictive générée par IA. #Laurentides #Quebec #Zyeute",
+  },
+  {
+    title: "Une déneigeuse dévore les bancs de neige",
     region: "quebec",
     prompt:
-      "One continuous five-second photorealistic handheld smartphone shot from a riverside viewpoint near Old Quebec. An enormous realistic humpback whale is already leaping from the Saint Lawrence River, arcs impossibly high across the sky above Old Quebec and the recognizable Chateau Frontenac, then splashes back into the river beyond the buildings. Detailed wet whale skin, believable scale, sunlight in falling water droplets, spectacular distant splash with no damage to the city. Tourists in the foreground calmly keep filming on phones. Authentic Quebec architecture, summer daylight, absurd impossible wildlife event treated as normal. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic shaky smartphone shot from a sidewalk on a suburban Quebec winter street. A huge municipal snowplow has an enormous articulated mechanical mouth built into its front blade. It drives slowly forward, opens its metal jaws and scoops up a tall snowbank, visibly chewing and swallowing only the snow. Perfectly dry clean pavement appears behind it. Bundled-up neighbours on the sidewalk clap calmly. Detailed realistic steel machinery, hydraulic motion, powdery snow and tiny flying flakes, Quebec houses with steep roofs, soft winter daylight. Absurd machine comedy, no food, no people or animals inside the mouth. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "À Québec, même les baleines font le tour du Château. 🐋🏰 Scène fictive générée par IA. #VieuxQuebec #SaintLaurent #Quebec #Zyeute",
+      "La déneigeuse avait une petite fringale de neige. 🚜❄️ Scène fictive générée par IA. #Hiver #Quebec #Zyeute",
   },
   {
-    title: "Les escaliers du Plateau prennent la route",
+    title: "Les gratte-ciel de Montréal deviennent gonflables",
     region: "montreal",
     prompt:
-      "One continuous five-second photorealistic smartphone shot from the sidewalk of a residential street in Montreal's Plateau-Mont-Royal. Two familiar exterior black metal spiral staircases are detached from their buildings and walk slowly across a quiet intersection on thin jointed metal legs like mechanical spiders. Adult residents calmly ride on the steps while holding the sturdy railings. The camera tracks the nearest walking staircase slightly. Authentic colorful Montreal brick duplexes, balconies, realistic cast-iron textures, coherent articulated movement and shadows, natural daylight. Absurd deadpan neighborhood scene, no injuries. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic smartphone shot from a downtown Montreal plaza looking upward at three tall glass office towers. The buildings suddenly behave like giant inflatable versions of themselves while retaining realistic architectural facade details: one tower bends softly toward its neighbour in the wind, briefly folds sideways, then springs gently back upright like a bounce house. Reflections move coherently on flexible glass-like surfaces. Adult pedestrians below continue walking calmly at a safe distance. Authentic Montreal skyline, realistic daylight and shadows, clear enormous scale, absurd impossible architecture, no debris or injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Le Plateau a trouvé sa solution au stationnement : déplacer les escaliers. 🕷️🏘️ Scène fictive générée par IA. #PlateauMontRoyal #Montreal #Quebec #Zyeute",
+      "Montréal a commandé ses gratte-ciel en version gonflable. 🏙️🎈 Scène fictive générée par IA. #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Le bus STM devient un sous-marin",
+    title: "Un orignal roule en BIXI",
     region: "montreal",
     prompt:
-      "One continuous five-second photorealistic action-camera view alongside the front side of a blue-and-white STM city bus as it rolls gently down a riverside launch ramp into the Saint Lawrence River in Montreal. The camera lens crosses the waterline with the bus and stays underwater. The bus seals itself smoothly, its wheels retract and small submarine fins extend; it glides forward beneath the surface. Through the clear windows, calm seated passengers keep scrolling on phones, visibly dry inside. Realistic bubbles, water refraction, daylight rays, detailed Montreal transit vehicle, no panic or injuries. Clearly impossible deadpan commute, no cuts. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second dead-serious photorealistic handheld smartphone street shot in downtown Montreal. A massive realistic moose rides an ordinary small grey Montreal BIXI shared bicycle, balancing perfectly with its front hooves on the handlebars and hind legs pedaling. It coasts toward a nearby BIXI docking station, rings the bicycle bell and stops with the front wheel correctly entering an empty dock. Pedestrians glance casually at it. Detailed natural brown fur and large antlers, convincing bicycle geometry, wheel rotation and shadows, recognizable BIXI-style bike and docking station, authentic Montreal architecture, sunny daylight, absurd deadpan documentary, no cartoon animals. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "La STM teste une nouvelle ligne… sous le fleuve. 🚌🌊 Scène fictive générée par IA. #STM #Montreal #SaintLaurent #Quebec #Zyeute",
-  },
-  {
-    title: "La neige québécoise remonte dans le ciel",
-    region: "quebec",
-    prompt:
-      "One continuous five-second handheld smartphone shot of a snow-covered Quebec residential street during a winter storm. All snow suddenly reverses direction: flakes rise from the ground toward the clouds, and thick layers of snow lift smoothly off parked cars and steep house roofs in billowing white sheets, revealing clean surfaces underneath. One bundled-up adult tries to shovel upward in confusion while neighbours watch calmly. Photorealistic Quebec houses, realistic snow particles, coherent upward motion, soft grey winter daylight. Camera and people move normally, only the snow rises. Absurd impossible weather event. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
-    caption:
-      "L’hiver a décidé de reprendre sa neige. ❄️⬆️ Scène fictive générée par IA. #Hiver #Quebec #Zyeute",
-  },
-  {
-    title: "Un renard géant dort sur le pont Jacques-Cartier",
-    region: "montreal",
-    prompt:
-      "One continuous five-second photorealistic handheld smartphone shot from a waterfront viewpoint in Montreal at sunrise. A colossal living red fox is curled up asleep across the recognizable green steel Jacques Cartier Bridge. Its huge fluffy tail hangs gently over the Saint Lawrence River and sways in the breeze. Small cars creep slowly along a clear lane around its enormous resting paws without contact. Detailed realistic red fur, closed eyes, subtle breathing, convincing animal-to-bridge scale, authentic Montreal skyline, warm sunrise reflections on the river. Absurd peaceful impossible scene, no injuries. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
-    caption:
-      "Le pont Jacques-Cartier est fermé pour une petite sieste. 🦊💤 Scène fictive générée par IA. #JacquesCartier #Montreal #Quebec #Zyeute",
+      "L’orignal a pris un BIXI pour éviter le trafic. 🫎🚲 Scène fictive générée par IA. #BIXI #Montreal #Quebec #Zyeute",
   },
 ];
 
