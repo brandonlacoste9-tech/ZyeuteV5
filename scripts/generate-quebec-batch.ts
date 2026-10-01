@@ -6,47 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
-const expectedBatchId = "qc-20261001-meanwhile-01";
+const expectedBatchId = "qc-20261001-meanwhile-02";
 const batch = [
   {
-    title: "Pendant ce temps à Laval : lave-auto pour orignal",
-    region: "laval",
+    title: "Pendant ce temps à Sherbrooke : pickups volants",
+    region: "sherbrooke",
     prompt:
-      "One continuous five-second photorealistic smartphone shot filmed through the window of an automatic car wash in Laval, Quebec. A giant living moose, without any car, calmly stands on the moving conveyor belt inside the wash tunnel. Soft rotating blue and red brushes gently scrub its wet brown fur as soapy water sprays around it. Its enormous antlers stay clear of the machinery. Two car-wash employees watch through the glass with deadpan expressions. Convincing wet fur, foam, water droplets on the window, realistic Quebec suburban setting and car-wash lighting. Absurd but treated as normal. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic handheld smartphone shot from the sidewalk of a suburban street in Sherbrooke, Quebec. Three ordinary full-sized pickup trucks float and fly smoothly past at rooftop height like airplanes, with no wings or propellers. The nearest truck passes slowly enough to see a calm adult driver with one arm resting outside the open side window. Normal cars keep moving on the road underneath. Convincing truck metal, tires hanging freely, consistent moving shadows, authentic Quebec houses, distant green hills, natural afternoon light. Absurd impossible event treated as normal traffic. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Laval : lavage extérieur, intérieur… et bois inclus. 🫎🧼 Scène fictive générée par IA. #Laval #Quebec #Zyeute",
+      "Pendant ce temps à Sherbrooke : les pickups ont trouvé un raccourci. 🛻☁️ Scène fictive générée par IA. #Sherbrooke #Quebec #Zyeute",
   },
   {
-    title: "Pendant ce temps à Montréal : course de déneigeuses",
+    title: "Pendant ce temps à Gatineau : chantier de castors géants",
+    region: "gatineau",
+    prompt:
+      "One continuous five-second vertical smartphone worksite shot beside the river in Gatineau, Quebec. A team of three giant photorealistic beavers wearing bright reflective safety vests builds a tall wooden tower from entire tree trunks. One beaver lifts a huge tree trunk into place while another steadies it with its paws. A human construction supervisor in a hard hat stands well clear in the foreground, calmly checking a clipboard. Detailed brown fur, realistic reflective fabric, fresh wood grain, sawdust, coherent enormous scale, river and Quebec urban buildings in the background. Deadpan absurd construction documentary, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+    caption:
+      "Pendant ce temps à Gatineau : le chantier avance à coups de dents. 🦫🚧 Scène fictive générée par IA. #Gatineau #Construction #Quebec #Zyeute",
+  },
+  {
+    title: "Pendant ce temps à Montréal : escalier roulant vers les nuages",
     region: "montreal",
     prompt:
-      "One continuous five-second handheld spectator smartphone shot from the sidewalk of a wide snowy Montreal boulevard. Two enormous municipal snowplows are lined up side by side at a red traffic light. The light turns green and both snowplows accelerate together in a ridiculous short drag race down the empty street, spraying huge harmless rooster tails of powdery snow behind them. Authentic Montreal winter buildings, snowbanks, overcast daylight, realistic diesel machinery, tire motion and flying snow. A few bundled-up spectators film calmly from the sidewalk. Fictional absurd event, no collisions or injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic handheld smartphone shot from a sidewalk on Sainte-Catherine Street in Montreal. An ordinary outdoor escalator begins directly on the sidewalk and extends impossibly upward between buildings, thousands of feet into low clouds. The camera gently tilts upward from its base, revealing the enormous continuous escalator climbing into the sky. Several normal adult shoppers stand calmly in line and ride upward holding shopping bags, with secure handrails. Authentic Montreal storefront architecture, realistic escalator metal and moving steps, daylight city haze, deadpan impossible everyday scene. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Montréal : le Grand Prix du déneigement. 🚜❄️ Scène fictive générée par IA. #Montreal #Hiver #Quebec #Zyeute",
+      "Pendant ce temps à Montréal : les boutiques du dernier étage sont un peu loin. 🛍️☁️ Scène fictive générée par IA. #SainteCatherine #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Pendant ce temps à Québec : embouteillage médiéval",
-    region: "quebec",
+    title: "Pendant ce temps dans les Laurentides : migration de canots",
+    region: "laurentides",
     prompt:
-      "One continuous five-second photorealistic smartphone shot at street level in Old Quebec near historic stone buildings and with Chateau Frontenac visible in the distance. Several medieval knights in realistic steel armor sit on horses stuck in ordinary modern rush-hour traffic beside a city bus and taxis. In the foreground one knight lifts the visor with one hand and angrily checks a smartphone in the other, while the horse gently shifts its weight. Modern drivers behave normally. Believable historical armor, detailed horses, natural late-afternoon light, convincing historical-modern mashup and deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second handheld smartphone shot from a cottage dock beside a lake in Quebec's Laurentians at golden hour. Hundreds of empty full-sized canoes fly across the sky in a huge clear V-shaped migration formation like geese. The nearest red and green canoes glide smoothly overhead with realistic wood and fiberglass hulls, no wings or people, gently banking together. Cottage owners stand safely on docks below and wave casually at the migrating boats. Photorealistic forested hills, lake reflections, warm evening sunlight, convincing scale and coordinated motion, absurd deadpan nature documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Québec : même les chevaliers sont pris dans le trafic. 🐎📱 Scène fictive générée par IA. #VieuxQuebec #Quebec #Zyeute",
+      "Pendant ce temps dans les Laurentides : les canots partent dans le Sud. 🛶🍁 Scène fictive générée par IA. #Laurentides #Quebec #Zyeute",
   },
   {
-    title: "Pendant ce temps à Longueuil : canard géant à la piscine",
-    region: "longueuil",
-    prompt:
-      "One continuous five-second vertical smartphone shot filmed from an apartment balcony overlooking a swimming pool in Longueuil, Quebec, in summer. A bright yellow inflatable rubber duck the size of the surrounding apartment building floats in the pool, towering above the courtyard while its base rests in the water. Several normal adult residents sit comfortably on its wide back like a floating island, sunbathing and chatting without reacting to its impossible size. Gentle buoyant rocking and small realistic water ripples. Convincing yellow rubber texture, summer sunlight, authentic Quebec apartment balconies, coherent enormous scale, absurd deadpan pool-party scene. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
-    caption:
-      "Pendant ce temps à Longueuil : le canard a réservé toute la piscine. 🐤☀️ Scène fictive générée par IA. #Longueuil #Quebec #Zyeute",
-  },
-  {
-    title: "Pendant ce temps à Montréal : arrêt de bus téléporteur",
+    title: "Pendant ce temps à Montréal : tout marche à reculons",
     region: "montreal",
     prompt:
-      "One continuous five-second handheld smartphone shot from across a quiet Montreal street, keeping both sidewalks and an ordinary STM bus shelter in the same fixed wide frame. Three adult commuters wait at the bus stop. One after another, two of them disappear in brief soft flashes of light and instantly reappear intact on the opposite sidewalk, each pausing and looking confused. The third commuter calmly continues scrolling on a phone. No cuts; clearly visible matching people before and after each teleportation. Photorealistic Montreal surroundings, authentic shelter, realistic people, daylight, natural reflections and shadows, subtle impossible effect, deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second fixed handheld smartphone shot at a Montreal intersection during a light winter snowfall. Everything in the street moves unmistakably backward while people stay calm: two cars reverse steadily through their lanes with their front ends facing away from their direction of travel, pedestrians walk backward on the sidewalk, a cyclist rolls backward while pedaling backward, and a blue-and-white STM city bus slowly reverses through the intersection. Snowflakes rise upward from the ground into the sky instead of falling. Keep the camera itself facing forward and time continuous. Authentic Montreal winter architecture, realistic people, vehicles, tire motion and lighting, coherent reversed movement, absurd deadpan documentary, no collisions. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Montréal : le bus était trop lent, on a installé la téléportation. 🚌✨ Scène fictive générée par IA. #STM #Montreal #Quebec #Zyeute",
+      "Pendant ce temps à Montréal : quelqu’un a appuyé sur rembobiner. ⏪❄️ Scène fictive générée par IA. #STM #Montreal #Quebec #Zyeute",
   },
 ];
 
