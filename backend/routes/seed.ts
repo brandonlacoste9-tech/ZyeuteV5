@@ -901,4 +901,73 @@ router.post("/scrub", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/seed/update-media-urls — Bulk update media_url by tiktok_id.
+ * Body: { updates: [{ tiktok_id: string, media_url: string }] }
+ * Used for permanent re-hosting (e.g. expired temp URLs -> Supabase).
+ */
+router.post("/update-media-urls", async (req, res) => {
+  try {
+    const updates = req.body?.updates;
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "updates array is required" });
+    }
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return res
+        .status(503)
+        .json({ success: false, message: "Supabase not configured" });
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    let updated = 0;
+    let notFound = 0;
+    const errors: string[] = [];
+
+    for (const u of updates) {
+      const tiktokId = String(u?.tiktok_id ?? "").trim();
+      const mediaUrl = String(u?.media_url ?? "").trim();
+      if (!tiktokId || !mediaUrl.startsWith("http")) {
+        errors.push(`Skipping invalid entry: ${tiktokId || "(empty)"}`);
+        continue;
+      }
+      const { data: found, error: findErr } = await supabase
+        .from("publications")
+        .select("id")
+        .eq("media_metadata->>tiktok_id", tiktokId)
+        .limit(1);
+      if (findErr) {
+        errors.push(`${tiktokId}: find failed - ${findErr.message}`);
+        continue;
+      }
+      if (!found || found.length === 0) {
+        notFound++;
+        continue;
+      }
+      const { error: updErr } = await supabase
+        .from("publications")
+        .update({
+          media_url: mediaUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", (found[0] as { id: string }).id);
+      if (updErr) {
+        errors.push(`${tiktokId}: update failed - ${updErr.message}`);
+      } else {
+        updated++;
+      }
+    }
+
+    res.json({ success: true, updated, notFound, errors });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Update media URLs error:", error);
+    res.status(500).json({ error: "Update failed", details: message });
+  }
+});
+
 export default router;
