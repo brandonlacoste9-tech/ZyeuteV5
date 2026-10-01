@@ -6,46 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
+const expectedBatchId = "qc-20261001-impossible-01";
 const batch = [
   {
-    title: "Montréal à l'heure dorée",
+    title: "Le mont Royal prend son envol",
     region: "montreal",
     prompt:
-      "Cinematic vertical shot of Montreal's Old Port at golden hour, the Jacques Cartier Bridge in the background, warm sunlight reflected in the Saint Lawrence River, slow camera glide, gentle waves, realistic Quebec architecture, natural motion. No food, no text overlays, no logos.",
+      "One continuous five-second smartphone shot of an impossible event in Montreal: Mount Royal, with its intact wooded slopes, park trails and cross, is already floating high above the city and slowly rises higher. Joggers calmly continue on a visible path along its edge. Viewed from a downtown street, stopped cars and a few people filming on phones give a convincing sense of enormous scale. Authentic Montreal skyline, warm daylight and city haze. Photorealistic trees, architecture and people, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Montréal, quand la lumière transforme le fleuve. ⚜️ Vidéo générée par IA. #Montreal #Quebec #Zyeute",
+      "Le mont Royal a décidé de changer d’adresse. 😭⚜️ Scène fictive générée par IA. #MontRoyal #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Une soirée dans le Vieux-Québec",
-    region: "quebec",
+    title: "Un homard géant sur Sainte-Catherine",
+    region: "montreal",
     prompt:
-      "Cinematic vertical street-level shot in Old Quebec's Petit Champlain district at blue hour, historic stone buildings and cobblestone streets, warm window lights, Chateau Frontenac in the distance, gentle forward camera movement, authentic Quebec atmosphere, realistic architecture. No food, no text overlays, no logos.",
+      "One continuous five-second handheld smartphone shot from a Montreal sidewalk: a building-sized living lobster walks slowly down Sainte-Catherine Street between authentic Montreal storefronts. It stops calmly at a red traffic light and lowers one eye toward a shop window. A cyclist in the foreground rings a bicycle bell at it while pedestrians barely react. Realistic wet red shell, articulated legs, believable shadows, strong giant-to-human scale. No food or cooked lobster; this is a living giant animal. Photorealistic, ridiculous deadpan street documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Une petite balade dans le Vieux-Québec. ✨ Vidéo générée par IA. #VieuxQuebec #Quebec #Zyeute",
+      "Même le homard respecte les feux sur Sainte-Catherine. 🦞🚦 Scène fictive générée par IA. #Montreal #SainteCatherine #Quebec #Zyeute",
   },
   {
-    title: "Les couleurs des Laurentides",
-    region: "laurentides",
+    title: "La Biosphère devient une boule de hamster",
+    region: "montreal",
     prompt:
-      "Cinematic vertical shot of a quiet lake in the Laurentians in Quebec during peak autumn, vivid red and orange maple trees, morning mist over the water, gentle camera drift, subtle leaves moving in the wind, photorealistic natural scenery. No food, no text overlays, no logos.",
+      "One continuous five-second accidental smartphone shot in Montreal's Parc Jean-Drapeau: the huge familiar steel geodesic sphere of the Biosphere is already detached from its base and rolls slowly across an open grassy path like an enormous hamster ball. Its glass-enclosed central visitor platform stays upright inside while tourists keep taking photographs. Trees and benches establish its enormous scale. Photorealistic steel lattice and glass reflections, detailed park vegetation, overcast daylight, physically coherent slow rolling motion, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Les Laurentides en automne, ça fait du bien. 🍁 Vidéo générée par IA. #Laurentides #Automne #Quebec #Zyeute",
+      "La Biosphère est partie faire un tour. 🐹⚜️ Scène fictive générée par IA. #Biosphere #ParcJeanDrapeau #Montreal #Zyeute",
   },
   {
-    title: "Le fleuve à Charlevoix",
-    region: "charlevoix",
+    title: "L’escalier roulant du métro va trop loin",
+    region: "montreal",
     prompt:
-      "Cinematic vertical shot of Quebec's Charlevoix coastline along the Saint Lawrence River, rolling green hills and a small coastal village, soft evening light, gentle river waves, slow lateral camera movement, realistic Canadian scenery. No food, no text overlays, no logos.",
+      "One continuous five-second realistic smartphone POV on an impossibly long Montreal Metro escalator. Start just above an open station roof and smoothly ascend far above Montreal's downtown skyline into a thin layer of clouds. The escalator rails remain continuous and stable in the foreground. Two normal commuters ahead stand calmly on the right holding the handrail, one scrolling on a phone. Ordinary Metro materials transition naturally into open sky without cuts or collisions. Realistic perspective, daylight haze, mild exposure adjustment, absurd deadpan commuter documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Le grand air de Charlevoix, au bord du fleuve. 🌊 Vidéo générée par IA. #Charlevoix #SaintLaurent #Quebec #Zyeute",
+      "J’ai pris la mauvaise sortie du métro. ☁️🚇 Scène fictive générée par IA. #STM #Metro #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Un village sous la neige",
-    region: "quebec",
+    title: "Une feuille d’érable recouvre Montréal",
+    region: "montreal",
     prompt:
-      "Cinematic vertical shot of a small rural Quebec village in winter, traditional colorful wooden houses with steep snow-covered roofs, warm porch lights, soft snowflakes falling, peaceful blue-hour atmosphere, slow camera push, realistic gentle motion. No food, no text overlays, no logos.",
+      "One continuous five-second handheld smartphone shot from a Montreal rooftop overlooking downtown: an enormous red maple leaf spanning several city blocks drifts slowly downward from just above the buildings, its detailed veins and ragged leaf edges visible. It settles gently across rooftops and a street like a flexible autumn blanket, with no damage. A few pedestrians at its street-level edge calmly step out from underneath it. Authentic Montreal architecture, realistic autumn sunlight, coherent shadows moving across buildings, ultra-photorealistic texture, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "La tranquillité d'un village québécois sous la neige. ❄️ Vidéo générée par IA. #Hiver #Quebec #Zyeute",
+      "À Montréal, l’automne ne fait pas les choses à moitié. 🍁😂 Scène fictive générée par IA. #Montreal #Automne #Quebec #Zyeute",
   },
 ];
 
@@ -96,8 +97,10 @@ async function main() {
   // Each batch has stable publication IDs, so restarting the same batch resumes
   // provider requests or skips completed clips instead of paying for duplicates.
   const batchId = process.env.QUEBEC_BATCH_ID;
-  if (!batchId)
-    throw new Error("Set a unique QUEBEC_BATCH_ID before generation.");
+  if (batchId !== expectedBatchId)
+    throw new Error(
+      `Set QUEBEC_BATCH_ID to ${expectedBatchId}; refusing a mismatched batch.`,
+    );
   const model = "fal-ai/kling-video/v2.6/pro/text-to-video";
   fal.config({ credentials: process.env.FAL_API_KEY || process.env.FAL_KEY });
   async function persistVideo(sourceUrl: string, id: string): Promise<string> {
@@ -171,27 +174,12 @@ async function main() {
       if (error)
         throw new Error(`Could not prepare ${clip.title}: ${error.message}`);
     }
+    if (metadata.batch_id !== batchId || metadata.prompt !== clip.prompt)
+      throw new Error(
+        `Existing batch prompt differs for ${clip.title}; refusing to submit.`,
+      );
     let requestId = metadata.fal_request_id as string | undefined;
     if (!requestId) {
-      // These exact five submissions all returned Forbidden in this deployment.
-      // Recover each once; never clear an unknown or subsequent interrupted call.
-      const rejectedDeployment = "256d3241-d402-471f-9676-cf2bd4abd96e";
-      if (
-        metadata.submission_started &&
-        batchId === "qc-20261001-five-01" &&
-        process.env.QUEBEC_RECOVER_REJECTED_DEPLOYMENT === rejectedDeployment &&
-        metadata.source === "quebec-ai-batch" &&
-        metadata.batch_id === batchId &&
-        metadata.prompt === clip.prompt &&
-        !metadata.recovered_rejected_deployment &&
-        !existing?.media_url
-      ) {
-        metadata = {
-          ...metadata,
-          submission_started: false,
-          recovered_rejected_deployment: rejectedDeployment,
-        };
-      }
       // A previous submission interrupted before checkpointing is ambiguous:
       // don't automatically issue another paid request.
       if (metadata.submission_started)
