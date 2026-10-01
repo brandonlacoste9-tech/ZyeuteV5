@@ -952,7 +952,6 @@ router.post("/update-media-urls", async (req, res) => {
         .from("publications")
         .update({
           media_url: mediaUrl,
-          updated_at: new Date().toISOString(),
         })
         .eq("id", (found[0] as { id: string }).id);
       if (updErr) {
