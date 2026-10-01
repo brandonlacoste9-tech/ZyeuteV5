@@ -3,7 +3,7 @@
  * Requires FAL_API_KEY (or FAL_KEY), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
 import { createHash } from "node:crypto";
-import { fal } from "@fal-ai/client";
+import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
 const batch = [
@@ -173,6 +173,25 @@ async function main() {
     }
     let requestId = metadata.fal_request_id as string | undefined;
     if (!requestId) {
+      // These exact five submissions all returned Forbidden in this deployment.
+      // Recover each once; never clear an unknown or subsequent interrupted call.
+      const rejectedDeployment = "256d3241-d402-471f-9676-cf2bd4abd96e";
+      if (
+        metadata.submission_started &&
+        batchId === "qc-20261001-five-01" &&
+        process.env.QUEBEC_RECOVER_REJECTED_DEPLOYMENT === rejectedDeployment &&
+        metadata.source === "quebec-ai-batch" &&
+        metadata.batch_id === batchId &&
+        metadata.prompt === clip.prompt &&
+        !metadata.recovered_rejected_deployment &&
+        !existing?.media_url
+      ) {
+        metadata = {
+          ...metadata,
+          submission_started: false,
+          recovered_rejected_deployment: rejectedDeployment,
+        };
+      }
       // A previous submission interrupted before checkpointing is ambiguous:
       // don't automatically issue another paid request.
       if (metadata.submission_started)
@@ -188,16 +207,45 @@ async function main() {
         throw new Error(
           `Could not checkpoint ${clip.title}: ${markError.message}`,
         );
-      const submitted = await fal.queue.submit(model, {
-        input: {
-          prompt: `${clip.prompt} Natural ambient sound, no dialogue, no narration, no music.`,
-          duration: "5",
-          aspect_ratio: "9:16",
-          generate_audio: true,
-          negative_prompt:
-            "poutine, food, text, subtitles, watermark, distorted architecture, warped objects, low quality",
-        },
-      });
+      let submitted;
+      try {
+        submitted = await fal.queue.submit(model, {
+          input: {
+            prompt: `${clip.prompt} Natural ambient sound, no dialogue, no narration, no music.`,
+            duration: "5",
+            aspect_ratio: "9:16",
+            generate_audio: true,
+            negative_prompt:
+              "poutine, food, text, subtitles, watermark, distorted architecture, warped objects, low quality",
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          [400, 401, 402, 403, 404, 422, 429].includes(error.status)
+        ) {
+          // Definitive rejection: no request was accepted. Network errors and
+          // server errors remain ambiguous and keep the checkpoint locked.
+          metadata = {
+            ...metadata,
+            submission_started: false,
+            submission_rejected_status: error.status,
+          };
+          const { error: checkpointError } = await supabase
+            .from("publications")
+            .update({ media_metadata: metadata })
+            .eq("id", id);
+          if (checkpointError)
+            throw new Error(`Could not record rejection for ${clip.title}`);
+          const detail = JSON.stringify(error.body ?? error.message)
+            .replace(/fal_sk_[A-Za-z0-9:_-]+/g, "[redacted]")
+            .slice(0, 800);
+          throw new Error(
+            `FAL rejected ${clip.title} (HTTP ${error.status}): ${detail}`,
+          );
+        }
+        throw error;
+      }
       requestId = submitted.request_id;
       metadata = { ...metadata, fal_request_id: requestId };
       const { error } = await supabase
@@ -231,7 +279,9 @@ async function main() {
         created_at: new Date().toISOString(),
         media_metadata: { ...metadata, has_audio: true },
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id,media_url,processing_status,est_masque")
+      .single();
     if (error)
       throw new Error(`Could not publish ${clip.title}: ${error.message}`);
     console.log(`Published: ${clip.title} (${id})`);
