@@ -492,8 +492,11 @@ async function fetchTikTokExploreSupabase(
  */
 const FEED_BLOCK_SIZE = 120;
 
-/** Cap on how many recently-watched ids we pull from video_views per request. */
-const WATCHED_LOOKBACK = 500;
+/** Cap on how many watched ids we pull from video_views per request.
+ * 5000 (no time window): power testers blow past 500, and anything outside
+ * the window resurfaces as "the same videos in a row". IDs are filtered
+ * in JS Sets, so the larger pull is cheap. */
+const WATCHED_LOOKBACK = 5000;
 
 /**
  * Recently-watched publication ids for an authenticated viewer, newest first.
@@ -819,17 +822,14 @@ router.get(
       }
       if (viewerId && (feedType === "feed" || feedType === "explore")) {
         try {
-          // 30 days + higher cap so logins don't re-serve the same block of clips
-          const since = new Date(
-            Date.now() - 30 * 24 * 60 * 60 * 1000,
-          ).toISOString();
+          // No time window + 5000 cap: once watched, a clip stays out of the
+          // feed until the unseen pool is exhausted (then it recycles).
           const { data: watched } = await supabase
             .from("video_views")
             .select("publication_id")
             .eq("user_id", viewerId)
-            .gte("watched_at", since)
             .order("watched_at", { ascending: false })
-            .limit(500);
+            .limit(5000);
           if (watched?.length) {
             for (const r of watched as { publication_id: string }[]) {
               if (r.publication_id) excludedIds.push(r.publication_id);
