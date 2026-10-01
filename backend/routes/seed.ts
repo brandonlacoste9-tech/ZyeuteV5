@@ -913,17 +913,29 @@ router.post("/scrub", async (req, res) => {
  *   "duplicates" (default): for each tiktok_id with 2+ rows, keeps the oldest
  *   row and deletes the rest. tiktok_ids with a single row are never touched.
  *   "all": deletes every row for each given tiktok_id (use for thinning).
- * Body: { tiktok_ids: string[], mode?: "duplicates"|"all", dry?: boolean }
+ *   "scan": ignores tiktok_ids; scans the whole publications table for
+ *   duplicate TikTok ids (checks BOTH media_metadata->>tiktok_id and
+ *   ->>source_tiktok_id — the import pipeline and ad-hoc scripts have used
+ *   different keys) and deletes all but the oldest row per id.
+ * Body: { tiktok_ids: string[], mode?: "duplicates"|"all"|"scan", dry?: boolean }
  */
 router.post("/dedup-tiktok-ids", async (req, res) => {
   try {
+    const mode =
+      req.body?.mode === "all"
+        ? "all"
+        : req.body?.mode === "scan"
+          ? "scan"
+          : "duplicates";
     const tiktokIds = req.body?.tiktok_ids;
-    if (!Array.isArray(tiktokIds) || tiktokIds.length === 0) {
+    if (
+      mode !== "scan" &&
+      (!Array.isArray(tiktokIds) || tiktokIds.length === 0)
+    ) {
       return res
         .status(400)
         .json({ success: false, message: "tiktok_ids array is required" });
     }
-    const mode = req.body?.mode === "all" ? "all" : "duplicates";
     const dry = req.body?.dry === true;
     const supabaseUrl =
       process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -942,13 +954,63 @@ router.post("/dedup-tiktok-ids", async (req, res) => {
       keep: string[];
       delete: string[];
     }[] = [];
+
+    // Scan mode: find every duplicated TikTok id across the table (both
+    // metadata keys), keep the oldest row per id.
+    if (mode === "scan") {
+      const seen: Record<string, Row[]> = {};
+      const pageSize = 1000;
+      let page = 0;
+      for (;;) {
+        const { data, error } = await supabase
+          .from("publications")
+          .select("id, created_at, view_count, media_metadata")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: true })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        if (error) throw error;
+        const rows = (data ?? []) as (Row & {
+          media_metadata: Record<string, unknown> | null;
+        })[];
+        if (rows.length === 0) break;
+        for (const r of rows) {
+          const mm = r.media_metadata ?? {};
+          const tid = String(
+            (mm as Record<string, unknown>).source_tiktok_id ??
+              (mm as Record<string, unknown>).tiktok_id ??
+              "",
+          ).trim();
+          if (!tid) continue;
+          (seen[tid] ??= []).push({
+            id: r.id,
+            created_at: r.created_at,
+            view_count: r.view_count,
+          });
+        }
+        if (rows.length < pageSize) break;
+        page += 1;
+        if (page > 50) break; // safety: 50k rows max
+      }
+      for (const [tid, rows] of Object.entries(seen)) {
+        if (rows.length < 2) continue;
+        groups.push({
+          tiktok_id: tid,
+          rows,
+          keep: [rows[0].id],
+          delete: rows.slice(1).map((r) => r.id),
+        });
+      }
+      groups.sort((a, b) => b.rows.length - a.rows.length);
+    } else
     for (const raw of tiktokIds) {
       const tid = String(raw ?? "").trim();
       if (!tid) continue;
       const { data, error } = await supabase
         .from("publications")
         .select("id, created_at, view_count")
-        .eq("media_metadata->>source_tiktok_id", tid)
+        .or(
+          `media_metadata->>source_tiktok_id.eq.${tid},media_metadata->>tiktok_id.eq.${tid}`,
+        )
         .order("created_at", { ascending: true });
       if (error) throw error;
       const rows = (data ?? []) as Row[];
@@ -984,7 +1046,7 @@ router.post("/dedup-tiktok-ids", async (req, res) => {
       success: true,
       dry,
       mode,
-      examined: tiktokIds.length,
+      examined: mode === "scan" ? groups.length : tiktokIds.length,
       matched_groups: groups.length,
       planned_deletions: groups.flatMap((g) => g.delete).length,
       deleted,
