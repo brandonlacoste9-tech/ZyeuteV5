@@ -121,7 +121,7 @@ async function fetchFreshVideoPool(
       .filter("visibility::text", "eq", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
-      .or("processing_status.is.null,processing_status.neq.no_audio")
+      .filter("processing_status::text", "neq", "no_audio")
       .filter("hive_id::text", "eq", hiveId || "quebec")
       .or(
         "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
@@ -141,7 +141,7 @@ async function fetchFreshVideoPool(
     }
     const { data, error } = await q;
     if (error || !data) return [];
-    return (data as unknown as Record<string, unknown>[]).filter((p) =>
+    return (data as Record<string, unknown>[]).filter((p) =>
       isExplorePlayablePost(p),
     );
   } catch {
@@ -169,7 +169,7 @@ async function fetchRecentCandidates(
       .filter("visibility::text", "eq", "public")
       .eq("est_masque", false)
       .is("deleted_at", null)
-      .or("processing_status.is.null,processing_status.neq.no_audio")
+      .filter("processing_status::text", "neq", "no_audio")
       .filter("hive_id::text", "eq", hiveId || "quebec")
       .or(
         "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
@@ -190,7 +190,7 @@ async function fetchRecentCandidates(
       );
       return [];
     }
-    return (data as unknown as Record<string, unknown>[]).filter((p) =>
+    return (data as Record<string, unknown>[]).filter((p) =>
       isExplorePlayablePost(p),
     );
   } catch (err) {
@@ -310,7 +310,7 @@ function restoreViralScores(
   return posts.map((p) => {
     if (!("_raw_viral_score" in p)) return p;
     const raw = p._raw_viral_score;
-    const next: Record<string, unknown> = { ...p, viral_score: raw };
+    const next = { ...p, viral_score: raw };
     delete next._raw_viral_score;
     return next;
   });
@@ -430,7 +430,7 @@ async function fetchTiGuyCuratedSupabase(
     .filter("visibility::text", "eq", "public")
     .eq("est_masque", false)
     .is("deleted_at", null)
-    .or("processing_status.is.null,processing_status.neq.no_audio")
+    .filter("processing_status::text", "neq", "no_audio")
     .filter("hive_id::text", "eq", hiveId || "quebec")
     .not("media_url", "is", null)
     .or(
@@ -441,13 +441,21 @@ async function fetchTiGuyCuratedSupabase(
 
   if (!data?.length) return [];
 
-  return (data as Record<string, unknown>[])
-    .filter((p) => {
-      if (!isExplorePlayablePost(p)) return false;
-      if (isTiGuyCuratedPost(p)) return true;
-      return botRow?.id != null && p.user_id === botRow.id;
-    })
-    .slice(0, limit);
+  const filtered = (data as Record<string, unknown>[]).filter((p) => {
+    if (!isExplorePlayablePost(p)) return false;
+    if (isTiGuyCuratedPost(p)) return true;
+    return botRow?.id != null && p.user_id === botRow.id;
+  });
+
+  // Diversify the candidate pool before slicing. Newest-first ordering let a
+  // single import batch (e.g. 21 Chris Sarault clips imported in one day)
+  // dominate every injected block. Shuffling here samples across time and
+  // creators; the caller re-shuffles per block seed for pagination stability.
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+  return filtered.slice(0, limit);
 }
 
 /** Pull playable TikTok imports (Apify/TikAPI) into Pour toi — often outranked by stock Mux. */
@@ -725,10 +733,6 @@ router.get("/smart", optionalAuth, async (req: Request, res: Response) => {
 // This bypasses DATABASE_URL issues by using Supabase HTTP API directly
 router.get(
   "/infinite",
-  (_req, res, next) => {
-    res.setHeader("Cache-Control", "private, no-store");
-    next();
-  },
   attachOptionalUser,
   async (req: Request, res: Response) => {
     try {
@@ -780,7 +784,16 @@ router.get(
       const viewerId = (req as any).userId as string | undefined;
 
       if (pageOffset === 0 || seed === 0) {
-        seed = resolveFeedSeed(req.query.session, viewerId);
+        const userSeed = viewerId
+          ? viewerId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+          : 0;
+        const clientSession = (req.query.session as string) || "";
+        const sessionSeed = clientSession
+          ? clientSession.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)
+          : Math.floor(Math.random() * 1e9);
+        const timeBucket = Math.floor(Date.now() / (30 * 60 * 1000));
+        seed =
+          (userSeed * 2654435761 + sessionSeed * 1597334677 + timeBucket) >>> 0;
         pageOffset = 0;
       }
 
@@ -870,7 +883,7 @@ router.get(
           .filter("visibility::text", "eq", "public")
           .eq("est_masque", false)
           .is("deleted_at", null)
-          .or("processing_status.is.null,processing_status.neq.no_audio")
+          .filter("processing_status::text", "neq", "no_audio")
           .filter("hive_id::text", "eq", hiveId || "quebec")
           .or(
             "processing_status.eq.completed,processing_status.is.null,mux_playback_id.not.is.null",
@@ -878,10 +891,10 @@ router.get(
           .or(
             "media_url.not.is.null,mux_playback_id.not.is.null,hls_url.not.is.null",
           )
-          .or("caption.is.null,caption.not.ilike.%DIAGNOSTIC%")
-          .or("content.is.null,content.not.ilike.%DIAGNOSTIC%")
-          .or("caption.is.null,caption.not.ilike.%TEST VIDEO%")
-          .or("content.is.null,content.not.ilike.%TEST VIDEO%");
+          .not("caption", "ilike", "%DIAGNOSTIC%")
+          .not("content", "ilike", "%DIAGNOSTIC%")
+          .not("caption", "ilike", "%TEST VIDEO%")
+          .not("content", "ilike", "%TEST VIDEO%");
 
       const buildTableQuery = () =>
         buildBaseQuery()
@@ -904,7 +917,6 @@ router.get(
         if (excludedIds.length > 0) {
           nq = nq.not("id", "in", `(${excludedIds.join(",")})`);
         }
-        if (authorIds?.length) nq = nq.in("user_id", authorIds);
         nq = nq.range(newestOffset, newestOffset + limit - 1);
         const { data: newestPosts, error: newestError } = await nq;
         if (newestError) {
@@ -928,7 +940,7 @@ router.get(
           source: "supabase-http-v2",
           feedType,
           sort: "newest",
-          followingFiltered: !!authorIds?.length,
+          followingFiltered: false,
           excludedCount: excludedIds.length,
         });
       }
