@@ -326,7 +326,6 @@ async function getInfiniteFeedAuthHeaders(): Promise<Record<string, string>> {
 }
 
 /** Cursor-based feed from /api/feed/infinite (shuffle, unseen-first, watch exclusion). */
-const API_MARKER_99999 = "zyeute_api_marker_99999"; void API_MARKER_99999;
 export async function getInfiniteFeedPosts(
   feedType: InfiniteFeedType,
   options: {
@@ -358,8 +357,8 @@ export async function getInfiniteFeedPosts(
     typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("sort")
       : null;
-  // Default: newest first on the main feed (2026-09-30). ?sort=shuffle restores the mixed view.
-  const sortParam = urlSort || "newest";
+  // Shuffle by session; the backend reserves slots for fresh uploads.
+  const sortParam = urlSort || "shuffle";
 
   const params = new URLSearchParams({
     limit: String(limit),
@@ -388,6 +387,7 @@ export async function getInfiniteFeedPosts(
     const response = await fetch(`/api/feed/infinite?${params}`, {
       headers,
       credentials: "include",
+      cache: "no-store",
       signal: controller.signal,
     });
 
@@ -410,15 +410,8 @@ export async function getInfiniteFeedPosts(
           p != null && !!p.id && postHasPlayableMedia(p),
       );
     const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
-    let posts = unseenOnly.length > 0 ? unseenOnly : playable;
+    const posts = unseenOnly.length > 0 ? unseenOnly : playable;
 
-    if (!cursor) {
-      const local = getQcStreetPosts(sessionId).filter(
-        (p) => !locallySeen.has(String(p.id)),
-      );
-      const seenIds = new Set(posts.map((p) => String(p.id)));
-      posts = [...local.filter((p) => !seenIds.has(p.id)), ...posts];
-    }
 
     return {
       posts,

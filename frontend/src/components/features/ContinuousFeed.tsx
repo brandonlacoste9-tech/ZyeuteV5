@@ -151,19 +151,9 @@ function hashSessionToSeed(sessionId: string): number {
   return h >>> 0;
 }
 
-/** ?sort=newest: keep the API's chronological order, skip the client shuffle. */
-const NEWEST_MARKER_12345 = "zyeute_newest_marker_12345";
+/** The API already shuffles and reserves fresh slots. Preserve both here. */
 function keepServerOrder(): boolean {
-  try {
-    void NEWEST_MARKER_12345;
-    // Default: newest first (2026-09-30) — the shuffled view buried fresh videos.
-    // Pass ?sort=shuffle for the old mixed view.
-    return (
-      new URLSearchParams(window.location.search).get("sort") !== "shuffle"
-    );
-  } catch {
-    return true;
-  }
+  return true;
 }
 
 function prepareFeedPage(
@@ -384,7 +374,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const listRef = useRef<any>(null);
   const { tap } = useHaptics();
   const { getFeedState, saveFeedState, clearFeedState } = useNavigationState();
-  const feedSessionRef = useRef(rotateFeedSessionId());
+  const feedSessionRef = useRef("");
+  if (!feedSessionRef.current) feedSessionRef.current = rotateFeedSessionId();
+  const [feedRevision, setFeedRevision] = useState(0);
   const { isOnline, addToQueue } = useNetworkQueue();
   const { user, isGuest } = useAuth();
 
@@ -832,6 +824,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         let pagePosts = filterPlayablePosts(result.posts);
         // Client-side Pour Toi re-rank from watch history (explore / following-fallback)
         if (
+          !keepServerOrder() &&
           (infiniteType === "explore" || infiniteType === "smart") &&
           user?.id
         ) {
@@ -916,7 +909,9 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (document.visibilityState === "hidden") {
         markFeedHidden();
       } else if (maybeRotateFeedSessionAfterBackground()) {
+        lastFetchTimeRef.current = 0;
         feedSessionRef.current = getOrCreateFeedSessionId();
+        setFeedRevision((revision) => revision + 1);
         clearFeedState(stateKey);
         setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
         setNextCursor(null);
@@ -932,6 +927,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Reset feed when tab changes (Découverte ↔ Abonnements)
   useEffect(() => {
+    lastFetchTimeRef.current = 0;
+    setFeedRevision((revision) => revision + 1);
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
     setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
@@ -952,6 +949,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   useEffect(() => {
     if (refreshTokenRef.current === refreshToken) return;
     refreshTokenRef.current = refreshToken;
+    lastFetchTimeRef.current = 0;
+    setFeedRevision((revision) => revision + 1);
     feedSessionRef.current = rotateFeedSessionId();
     clearFeedState(stateKey);
     setPosts(feedType === "decouverte" ? seedStreetFeed(feedSessionRef.current) : []);
@@ -985,6 +984,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
       if (result.posts.length > 0) {
         let pagePosts = filterPlayablePosts(result.posts);
         if (
+          !keepServerOrder() &&
           (infiniteType === "explore" || infiniteType === "smart") &&
           user?.id
         ) {
@@ -1053,8 +1053,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
     const savedCount = savedState?.posts?.length ?? 0;
     const cacheSessionMatches =
-      !savedState?.feedSessionId ||
-      savedState.feedSessionId === feedSessionRef.current;
+      Boolean(savedState?.feedSessionId) &&
+      savedState?.feedSessionId === feedSessionRef.current;
     const shouldFetchFresh =
       !savedState ||
       savedCount === 0 ||
@@ -1081,7 +1081,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         clearTimeout(callbackId);
       }
     };
-  }, [fetchVideoFeed, savedState, posts.length]);
+  }, [fetchVideoFeed, savedState, posts.length, feedRevision]);
 
   // Restore scroll position via ref
   useEffect(() => {
