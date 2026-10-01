@@ -6,47 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
-const expectedBatchId = "qc-20261001-impossible-01";
+const expectedBatchId = "qc-20261001-impossible-02";
 const batch = [
   {
-    title: "Le mont Royal prend son envol",
+    title: "Une pieuvre géante prend le métro",
     region: "montreal",
     prompt:
-      "One continuous five-second smartphone shot of an impossible event in Montreal: Mount Royal, with its intact wooded slopes, park trails and cross, is already floating high above the city and slowly rises higher. Joggers calmly continue on a visible path along its edge. Viewed from a downtown street, stopped cars and a few people filming on phones give a convincing sense of enormous scale. Authentic Montreal skyline, warm daylight and city haze. Photorealistic trees, architecture and people, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second handheld smartphone shot inside an authentic Montreal Metro station with rubber-tired Metro trains, tiled walls and STM-style turnstiles. A colossal living photorealistic octopus squeezes slowly through the concourse, its wet tentacles curling around pillars and an escalator. Commuters casually step over the tentacles. In the foreground one tentacle holds a blue OPUS transit card and taps it against the card reader, which lights green. Detailed suction cups, coherent tentacle motion, realistic fluorescent lighting and wet skin reflections. Impossible but treated as ordinary commuter life. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Le mont Royal a décidé de changer d’adresse. 😭⚜️ Scène fictive générée par IA. #MontRoyal #Montreal #Quebec #Zyeute",
+      "Même la pieuvre a sa carte OPUS. 🐙🚇 Scène fictive générée par IA. #STM #Metro #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Un homard géant sur Sainte-Catherine",
+    title: "Les cônes orange se multiplient",
     region: "montreal",
     prompt:
-      "One continuous five-second handheld smartphone shot from a Montreal sidewalk: a building-sized living lobster walks slowly down Sainte-Catherine Street between authentic Montreal storefronts. It stops calmly at a red traffic light and lowers one eye toward a shop window. A cyclist in the foreground rings a bicycle bell at it while pedestrians barely react. Realistic wet red shell, articulated legs, believable shadows, strong giant-to-human scale. No food or cooked lobster; this is a living giant animal. Photorealistic, ridiculous deadpan street documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second shaky smartphone shot at a downtown Montreal intersection. A construction worker places one orange traffic cone onto the asphalt. It visibly splits into two identical cones, then four, then dozens, rapidly multiplying outward until an enormous pile fills the intersection and partly buries stopped cars. Pedestrians on the sidewalk keep walking calmly and the worker stares at the spreading cones. Ultra-photorealistic orange plastic, realistic white reflective bands, authentic Montreal architecture, overcast daylight. Clear successive multiplication, absurd deadpan humor, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Même le homard respecte les feux sur Sainte-Catherine. 🦞🚦 Scène fictive générée par IA. #Montreal #SainteCatherine #Quebec #Zyeute",
+      "On a enfin trouvé pourquoi il y a autant de cônes à Montréal. 🚧😭 Scène fictive générée par IA. #Montreal #Construction #Quebec #Zyeute",
   },
   {
-    title: "La Biosphère devient une boule de hamster",
+    title: "Un orignal fait un tour à La Ronde",
     region: "montreal",
     prompt:
-      "One continuous five-second accidental smartphone shot in Montreal's Parc Jean-Drapeau: the huge familiar steel geodesic sphere of the Biosphere is already detached from its base and rolls slowly across an open grassy path like an enormous hamster ball. Its glass-enclosed central visitor platform stays upright inside while tourists keep taking photographs. Trees and benches establish its enormous scale. Photorealistic steel lattice and glass reflections, detailed park vegetation, overcast daylight, physically coherent slow rolling motion, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second vertical action-camera shot mounted just ahead of a roller-coaster seat at La Ronde in Montreal, facing backward toward the riders. A massive realistic moose sits safely strapped into an oversized roller-coaster seat, beside calm human riders. The train crests the top of the track and begins its steep drop; the moose opens its mouth in an excited bellow, wind rippling its detailed brown fur and its huge antlers wobbling comically. Glimpses of Parc Jean-Drapeau, the Saint Lawrence River and Montreal skyline behind. Photorealistic fur, believable restraints, wind and speed, absurd excitement without injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "La Biosphère est partie faire un tour. 🐹⚜️ Scène fictive générée par IA. #Biosphere #ParcJeanDrapeau #Montreal #Zyeute",
+      "L’orignal a pris le billet sensations fortes. 🫎🎢 Scène fictive générée par IA. #LaRonde #Montreal #Quebec #Zyeute",
   },
   {
-    title: "L’escalier roulant du métro va trop loin",
+    title: "Le métro déverse des canards en plastique",
     region: "montreal",
     prompt:
-      "One continuous five-second realistic smartphone POV on an impossibly long Montreal Metro escalator. Start just above an open station roof and smoothly ascend far above Montreal's downtown skyline into a thin layer of clouds. The escalator rails remain continuous and stable in the foreground. Two normal commuters ahead stand calmly on the right holding the handrail, one scrolling on a phone. Ordinary Metro materials transition naturally into open sky without cuts or collisions. Realistic perspective, daylight haze, mild exposure adjustment, absurd deadpan commuter documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second accidental smartphone shot on a normal Montreal Metro platform under realistic fluorescent lights. A stopped rubber-tired Metro train opens its sliding doors and a huge dense avalanche of bright yellow rubber ducks pours out, filling the platform ankle-deep and flowing toward an escalator. Commuters slowly wade through the growing mass of ducks while one station employee calmly sweeps them aside with a broom. Hyper-realistic rubber surfaces, convincing collisions and motion, authentic Metro tiled walls and blue train details, absurd deadpan humor, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "J’ai pris la mauvaise sortie du métro. ☁️🚇 Scène fictive générée par IA. #STM #Metro #Montreal #Quebec #Zyeute",
+      "Prochain arrêt : coin-coin. 🐤🚇 Scène fictive générée par IA. #Metro #STM #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Une feuille d’érable recouvre Montréal",
+    title: "Un castor emporte la tour du Stade olympique",
     region: "montreal",
     prompt:
-      "One continuous five-second handheld smartphone shot from a Montreal rooftop overlooking downtown: an enormous red maple leaf spanning several city blocks drifts slowly downward from just above the buildings, its detailed veins and ragged leaf edges visible. It settles gently across rooftops and a street like a flexible autumn blanket, with no damage. A few pedestrians at its street-level edge calmly step out from underneath it. Authentic Montreal architecture, realistic autumn sunlight, coherent shadows moving across buildings, ultra-photorealistic texture, absurd deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second shaky vertical smartphone shot filmed from a nearby Montreal apartment balcony overlooking the Olympic Stadium and its iconic inclined tower. A building-sized photorealistic beaver is already gripping the tower like a giant tree branch. It bites through the final section at the tower's base, lifts the now-detached tower over one shoulder and takes a slow step toward the distant Saint Lawrence River. Brief realistic concrete dust and small debris at the break, no gore or injured people. Cars continue on a distant road, a neighbour films from a balcony. Extreme scale, realistic wet brown fur, recognizable Montreal architecture, absurd deadpan impossible event. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "À Montréal, l’automne ne fait pas les choses à moitié. 🍁😂 Scène fictive générée par IA. #Montreal #Automne #Quebec #Zyeute",
+      "Le castor avait besoin d’une branche pour son barrage. 🦫🏟️ Scène fictive générée par IA. #StadeOlympique #Montreal #Quebec #Zyeute",
   },
 ];
 
