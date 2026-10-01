@@ -906,6 +906,82 @@ router.post("/scrub", async (req, res) => {
  * Body: { updates: [{ tiktok_id: string, media_url: string }] }
  * Used for permanent re-hosting (e.g. expired temp URLs -> Supabase).
  */
+/**
+ * POST /api/seed/dedup-tiktok-ids — Surgically remove duplicate publications
+ * sharing a media_metadata->>tiktok_id. For each tiktok_id with 2+ rows,
+ * keeps the oldest row and deletes the rest. tiktok_ids with a single row
+ * are never touched, so pre-existing unique posts are safe.
+ * Body: { tiktok_ids: string[], dry?: boolean }
+ */
+router.post("/dedup-tiktok-ids", async (req, res) => {
+  try {
+    const tiktokIds = req.body?.tiktok_ids;
+    if (!Array.isArray(tiktokIds) || tiktokIds.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "tiktok_ids array is required" });
+    }
+    const dry = req.body?.dry === true;
+    const supabaseUrl =
+      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return res
+        .status(503)
+        .json({ success: false, message: "Supabase not configured" });
+    }
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const plan: { tiktok_id: string; keep: string; delete: string[] }[] = [];
+    for (const raw of tiktokIds) {
+      const tid = String(raw ?? "").trim();
+      if (!tid) continue;
+      const { data, error } = await supabase
+        .from("publications")
+        .select("id, created_at")
+        .eq("media_metadata->>tiktok_id", tid)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      const rows = (data ?? []) as { id: string; created_at: string }[];
+      if (rows.length > 1) {
+        plan.push({
+          tiktok_id: tid,
+          keep: rows[0].id,
+          delete: rows.slice(1).map((r) => r.id),
+        });
+      }
+    }
+
+    let deleted = 0;
+    if (!dry) {
+      const ids = plan.flatMap((p) => p.delete);
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100);
+        const { error: delErr } = await supabase
+          .from("publications")
+          .delete()
+          .in("id", chunk);
+        if (delErr) throw delErr;
+        deleted += chunk.length;
+      }
+    }
+
+    res.json({
+      success: true,
+      dry,
+      examined: tiktokIds.length,
+      duplicate_groups: plan.length,
+      planned_deletions: plan.flatMap((p) => p.delete).length,
+      deleted,
+      plan,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Dedup error:", error);
+    res.status(500).json({ error: "Dedup failed", details: message });
+  }
+});
+
 router.post("/update-media-urls", async (req, res) => {
   try {
     const updates = req.body?.updates;
