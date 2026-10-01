@@ -9,12 +9,13 @@ import { invalidatePourToiCache } from "@/lib/pourToiRanker";
 
 const GUEST_SEEN_KEY = "zyeute_seen_posts";
 /** Total ids retained locally (guests + authed backup). */
-const GUEST_SEEN_CAP = 400;
+const GUEST_SEEN_CAP = 1000;
 /**
- * Ids sent per feed request. Higher = less repeat on open; still fits a header
- * (~UUIDs × 150 ≈ 5.5KB). Backend caps at the same order of magnitude.
+ * Ids sent per feed request. Keep this aligned with the backend header cap so
+ * the server can prioritize as many unseen videos as possible without making
+ * the request header unreasonably large.
  */
-const GUEST_SEEN_SEND = 150;
+const GUEST_SEEN_SEND = 200;
 
 function readGuestSeen(): string[] {
   try {
@@ -43,6 +44,12 @@ export function addGuestSeen(postId: string): void {
   const current = readGuestSeen().filter((id) => id !== postId);
   current.unshift(postId);
   writeGuestSeen(current.slice(0, GUEST_SEEN_CAP));
+}
+
+/** All locally retained watched ids. Used client-side to avoid recycling clips
+ * even when older ids are intentionally omitted from the request header. */
+export function getAllGuestSeen(): string[] {
+  return readGuestSeen();
 }
 
 /** Most recently watched guest ids to send with a feed request. */
