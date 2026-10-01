@@ -2,13 +2,9 @@
  * Generate + publish: npx tsx scripts/generate-quebec-batch.ts --run
  * Requires FAL_API_KEY (or FAL_KEY), SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
  */
-import dotenv from "dotenv";
 import { createHash } from "node:crypto";
 import { fal } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
-
-dotenv.config({ quiet: true });
-dotenv.config({ path: ".env.local", quiet: true });
 
 const batch = [
   {
@@ -104,8 +100,34 @@ async function main() {
     throw new Error("Set a unique QUEBEC_BATCH_ID before generation.");
   const model = "fal-ai/kling-video/v2.6/pro/text-to-video";
   fal.config({ credentials: process.env.FAL_API_KEY || process.env.FAL_KEY });
-  const { downloadTikTokMp4, uploadMp4ToSupabase } =
-    await import("../backend/services/tiktok-mirror-storage.js");
+  async function persistVideo(sourceUrl: string, id: string): Promise<string> {
+    const response = await fetch(sourceUrl, {
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok || !response.body)
+      throw new Error("Generated video download failed");
+    const maxBytes = 80 * 1024 * 1024;
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    for await (const chunk of response.body) {
+      size += chunk.byteLength;
+      if (size > maxBytes) throw new Error("Generated video exceeds 80 MB");
+      chunks.push(chunk);
+    }
+    if (size < 4096)
+      throw new Error("Generated file is too small to be a video");
+    const path = `quebec-ai/${id}.mp4`;
+    const { error } = await supabase.storage
+      .from("zyeute-videos")
+      .upload(path, Buffer.concat(chunks), {
+        contentType: "video/mp4",
+        upsert: true,
+        cacheControl: "31536000",
+      });
+    if (error) throw new Error(`Permanent storage failed: ${error.message}`);
+    return supabase.storage.from("zyeute-videos").getPublicUrl(path).data
+      .publicUrl;
+  }
 
   async function publishClip(clip: (typeof batch)[number], index: number) {
     const hash = createHash("sha256")
@@ -136,13 +158,13 @@ async function main() {
         type: "video",
         caption: clip.caption,
         content: clip.caption,
-        visibility: "private",
+        visibility: "public",
         hive_id: "quebec",
         region_id: clip.region,
         ai_generated: true,
         video_source: "ai",
         processing_status: "pending",
-        est_masque: false,
+        est_masque: true,
         aspect_ratio: "9:16",
         duration: 5,
         media_metadata: metadata,
@@ -193,15 +215,7 @@ async function main() {
     const result = await fal.queue.result(model, { requestId });
     const video = (result.data as { video?: { url?: string } }).video;
     if (!video?.url) throw new Error(`No generated video for ${clip.title}`);
-    const buffer = await downloadTikTokMp4(video.url);
-    if (!buffer) throw new Error(`Could not download ${clip.title}`);
-    const mediaUrl = await uploadMp4ToSupabase(
-      supabase,
-      `quebec-ai/${id}.mp4`,
-      buffer,
-    );
-    if (!mediaUrl)
-      throw new Error(`Permanent storage failed for ${clip.title}`);
+    const mediaUrl = await persistVideo(video.url, id);
     const check = await fetch(mediaUrl, {
       method: "HEAD",
       signal: AbortSignal.timeout(15000),
@@ -214,6 +228,7 @@ async function main() {
         media_url: mediaUrl,
         visibility: "public",
         processing_status: "completed",
+        est_masque: false,
         created_at: new Date().toISOString(),
         media_metadata: { ...metadata, has_audio: true },
       })

@@ -1,0 +1,7 @@
+**
+!Dockerfile
+!batch-runtime/
+!batch-runtime/package.json
+!batch-runtime/package-lock.json
+!scripts/
+!scripts/generate-quebec-batch.ts
