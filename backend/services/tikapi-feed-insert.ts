@@ -175,9 +175,12 @@ async function isDuplicatePg(
   client: pg.PoolClient,
   tiktokId: string,
 ): Promise<boolean> {
+  // Check BOTH metadata keys: the Mux pipeline writes `tiktok_id`, ad-hoc
+  // scripts have used `source_tiktok_id`. Missing either let dupes through.
   const res = await client.query(
     `SELECT id FROM publications
-     WHERE media_metadata->>'tiktok_id' = $1
+     WHERE (media_metadata->>'tiktok_id' = $1
+        OR media_metadata->>'source_tiktok_id' = $1)
        AND deleted_at IS NULL
      LIMIT 1`,
     [tiktokId],
@@ -192,7 +195,9 @@ async function isDuplicateSupabase(
   const { data } = await supabase
     .from("publications")
     .select("id")
-    .contains("media_metadata", { tiktok_id: tiktokId })
+    .or(
+      `media_metadata->>tiktok_id.eq.${tiktokId},media_metadata->>source_tiktok_id.eq.${tiktokId}`,
+    )
     .is("deleted_at", null)
     .limit(1);
   return !!data?.length;
