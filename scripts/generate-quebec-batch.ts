@@ -162,7 +162,6 @@ async function main() {
         hive_id: "quebec",
         region_id: clip.region,
         ai_generated: true,
-        video_source: "ai",
         processing_status: "pending",
         est_masque: true,
         aspect_ratio: "9:16",
