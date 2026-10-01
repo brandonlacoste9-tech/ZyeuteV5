@@ -6,47 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
-const expectedBatchId = "qc-20261001-impossible-02";
+const expectedBatchId = "qc-20261001-meanwhile-01";
 const batch = [
   {
-    title: "Une pieuvre géante prend le métro",
-    region: "montreal",
+    title: "Pendant ce temps à Laval : lave-auto pour orignal",
+    region: "laval",
     prompt:
-      "One continuous five-second handheld smartphone shot inside an authentic Montreal Metro station with rubber-tired Metro trains, tiled walls and STM-style turnstiles. A colossal living photorealistic octopus squeezes slowly through the concourse, its wet tentacles curling around pillars and an escalator. Commuters casually step over the tentacles. In the foreground one tentacle holds a blue OPUS transit card and taps it against the card reader, which lights green. Detailed suction cups, coherent tentacle motion, realistic fluorescent lighting and wet skin reflections. Impossible but treated as ordinary commuter life. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic smartphone shot filmed through the window of an automatic car wash in Laval, Quebec. A giant living moose, without any car, calmly stands on the moving conveyor belt inside the wash tunnel. Soft rotating blue and red brushes gently scrub its wet brown fur as soapy water sprays around it. Its enormous antlers stay clear of the machinery. Two car-wash employees watch through the glass with deadpan expressions. Convincing wet fur, foam, water droplets on the window, realistic Quebec suburban setting and car-wash lighting. Absurd but treated as normal. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Même la pieuvre a sa carte OPUS. 🐙🚇 Scène fictive générée par IA. #STM #Metro #Montreal #Quebec #Zyeute",
+      "Pendant ce temps à Laval : lavage extérieur, intérieur… et bois inclus. 🫎🧼 Scène fictive générée par IA. #Laval #Quebec #Zyeute",
   },
   {
-    title: "Les cônes orange se multiplient",
+    title: "Pendant ce temps à Montréal : course de déneigeuses",
     region: "montreal",
     prompt:
-      "One continuous five-second shaky smartphone shot at a downtown Montreal intersection. A construction worker places one orange traffic cone onto the asphalt. It visibly splits into two identical cones, then four, then dozens, rapidly multiplying outward until an enormous pile fills the intersection and partly buries stopped cars. Pedestrians on the sidewalk keep walking calmly and the worker stares at the spreading cones. Ultra-photorealistic orange plastic, realistic white reflective bands, authentic Montreal architecture, overcast daylight. Clear successive multiplication, absurd deadpan humor, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second handheld spectator smartphone shot from the sidewalk of a wide snowy Montreal boulevard. Two enormous municipal snowplows are lined up side by side at a red traffic light. The light turns green and both snowplows accelerate together in a ridiculous short drag race down the empty street, spraying huge harmless rooster tails of powdery snow behind them. Authentic Montreal winter buildings, snowbanks, overcast daylight, realistic diesel machinery, tire motion and flying snow. A few bundled-up spectators film calmly from the sidewalk. Fictional absurd event, no collisions or injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "On a enfin trouvé pourquoi il y a autant de cônes à Montréal. 🚧😭 Scène fictive générée par IA. #Montreal #Construction #Quebec #Zyeute",
+      "Pendant ce temps à Montréal : le Grand Prix du déneigement. 🚜❄️ Scène fictive générée par IA. #Montreal #Hiver #Quebec #Zyeute",
   },
   {
-    title: "Un orignal fait un tour à La Ronde",
-    region: "montreal",
+    title: "Pendant ce temps à Québec : embouteillage médiéval",
+    region: "quebec",
     prompt:
-      "One continuous five-second vertical action-camera shot mounted just ahead of a roller-coaster seat at La Ronde in Montreal, facing backward toward the riders. A massive realistic moose sits safely strapped into an oversized roller-coaster seat, beside calm human riders. The train crests the top of the track and begins its steep drop; the moose opens its mouth in an excited bellow, wind rippling its detailed brown fur and its huge antlers wobbling comically. Glimpses of Parc Jean-Drapeau, the Saint Lawrence River and Montreal skyline behind. Photorealistic fur, believable restraints, wind and speed, absurd excitement without injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic smartphone shot at street level in Old Quebec near historic stone buildings and with Chateau Frontenac visible in the distance. Several medieval knights in realistic steel armor sit on horses stuck in ordinary modern rush-hour traffic beside a city bus and taxis. In the foreground one knight lifts the visor with one hand and angrily checks a smartphone in the other, while the horse gently shifts its weight. Modern drivers behave normally. Believable historical armor, detailed horses, natural late-afternoon light, convincing historical-modern mashup and deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "L’orignal a pris le billet sensations fortes. 🫎🎢 Scène fictive générée par IA. #LaRonde #Montreal #Quebec #Zyeute",
+      "Pendant ce temps à Québec : même les chevaliers sont pris dans le trafic. 🐎📱 Scène fictive générée par IA. #VieuxQuebec #Quebec #Zyeute",
   },
   {
-    title: "Le métro déverse des canards en plastique",
-    region: "montreal",
+    title: "Pendant ce temps à Longueuil : canard géant à la piscine",
+    region: "longueuil",
     prompt:
-      "One continuous five-second accidental smartphone shot on a normal Montreal Metro platform under realistic fluorescent lights. A stopped rubber-tired Metro train opens its sliding doors and a huge dense avalanche of bright yellow rubber ducks pours out, filling the platform ankle-deep and flowing toward an escalator. Commuters slowly wade through the growing mass of ducks while one station employee calmly sweeps them aside with a broom. Hyper-realistic rubber surfaces, convincing collisions and motion, authentic Metro tiled walls and blue train details, absurd deadpan humor, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second vertical smartphone shot filmed from an apartment balcony overlooking a swimming pool in Longueuil, Quebec, in summer. A bright yellow inflatable rubber duck the size of the surrounding apartment building floats in the pool, towering above the courtyard while its base rests in the water. Several normal adult residents sit comfortably on its wide back like a floating island, sunbathing and chatting without reacting to its impossible size. Gentle buoyant rocking and small realistic water ripples. Convincing yellow rubber texture, summer sunlight, authentic Quebec apartment balconies, coherent enormous scale, absurd deadpan pool-party scene. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Prochain arrêt : coin-coin. 🐤🚇 Scène fictive générée par IA. #Metro #STM #Montreal #Quebec #Zyeute",
+      "Pendant ce temps à Longueuil : le canard a réservé toute la piscine. 🐤☀️ Scène fictive générée par IA. #Longueuil #Quebec #Zyeute",
   },
   {
-    title: "Un castor emporte la tour du Stade olympique",
+    title: "Pendant ce temps à Montréal : arrêt de bus téléporteur",
     region: "montreal",
     prompt:
-      "One continuous five-second shaky vertical smartphone shot filmed from a nearby Montreal apartment balcony overlooking the Olympic Stadium and its iconic inclined tower. A building-sized photorealistic beaver is already gripping the tower like a giant tree branch. It bites through the final section at the tower's base, lifts the now-detached tower over one shoulder and takes a slow step toward the distant Saint Lawrence River. Brief realistic concrete dust and small debris at the break, no gore or injured people. Cars continue on a distant road, a neighbour films from a balcony. Extreme scale, realistic wet brown fur, recognizable Montreal architecture, absurd deadpan impossible event. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Montreal and Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second handheld smartphone shot from across a quiet Montreal street, keeping both sidewalks and an ordinary STM bus shelter in the same fixed wide frame. Three adult commuters wait at the bus stop. One after another, two of them disappear in brief soft flashes of light and instantly reappear intact on the opposite sidewalk, each pausing and looking confused. The third commuter calmly continues scrolling on a phone. No cuts; clearly visible matching people before and after each teleportation. Photorealistic Montreal surroundings, authentic shelter, realistic people, daylight, natural reflections and shadows, subtle impossible effect, deadpan humor. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Le castor avait besoin d’une branche pour son barrage. 🦫🏟️ Scène fictive générée par IA. #StadeOlympique #Montreal #Quebec #Zyeute",
+      "Pendant ce temps à Montréal : le bus était trop lent, on a installé la téléportation. 🚌✨ Scène fictive générée par IA. #STM #Montreal #Quebec #Zyeute",
   },
 ];
 
