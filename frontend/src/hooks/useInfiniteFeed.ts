@@ -133,17 +133,6 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
     retry: 1,
     retryDelay: 800,
     refetchOnWindowFocus: false,
-    placeholderData: {
-      pages: [
-        {
-          posts: getQcStreetPosts(feedSessionId),
-          nextCursor: null,
-          hasMore: true,
-          feedType,
-        },
-      ],
-      pageParams: [null],
-    },
     queryFn: async ({ pageParam, signal }) => {
       const cursorStr = pageParam ? String(pageParam) : "";
       const streetFallback = () => ({
@@ -208,13 +197,16 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
       let posts = unseenOnly.length > 0 ? unseenOnly : playable;
 
-      // First page: mix original Québec street clips into Pour toi.
-      if (!cursorStr) {
-        const local = getQcStreetPosts(feedSessionId).filter(
-          (p) => !locallySeen.has(String(p.id)),
-        );
+      // A couple of local street clips after the real posts, never in front.
+      // Prepending the whole library hid every new upload behind ~90 old clips.
+      if (!cursorStr && posts.length > 0) {
         const seenIds = new Set(posts.map((p) => String(p.id)));
-        posts = [...local.filter((p) => !seenIds.has(p.id)), ...posts];
+        const local = getQcStreetPosts(feedSessionId)
+          .filter((p) => !locallySeen.has(String(p.id)) && !seenIds.has(p.id))
+          .slice(0, 2);
+        const head = posts.slice(0, 6);
+        const tail = posts.slice(6);
+        posts = [...head, ...local, ...tail];
       }
 
       if (
