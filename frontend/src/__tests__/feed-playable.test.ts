@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { postHasPlayableMedia } from "@/services/api";
+import { normalizePostForFeed, postHasPlayableMedia } from "@/services/api";
 import type { Post } from "@/types";
 
 function post(partial: Partial<Post>): Post {
@@ -12,6 +12,88 @@ function post(partial: Partial<Post>): Post {
     ...partial,
   } as Post;
 }
+
+describe("feed playback normalization", () => {
+  const playbackId = "new-upload-playback-id";
+  const streamUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+
+  it.each(["snake_case", "camelCase"])(
+    "preserves player fields for %s Mux uploads",
+    (fieldStyle) => {
+      const fields =
+        fieldStyle === "snake_case"
+          ? {
+              mux_playback_id: playbackId,
+              media_url: streamUrl,
+              thumbnail_url: "https://image.mux.com/new-upload/thumbnail.jpg",
+              processing_status: "completed",
+            }
+          : {
+              muxPlaybackId: playbackId,
+              mediaUrl: streamUrl,
+              thumbnailUrl: "https://image.mux.com/new-upload/thumbnail.jpg",
+              processingStatus: "completed",
+            };
+      const normalized = normalizePostForFeed({ id: "upload", ...fields });
+
+      expect(normalized).toMatchObject({
+        type: "video",
+        media_url: streamUrl,
+        mediaUrl: streamUrl,
+        hls_url: streamUrl,
+        hlsUrl: streamUrl,
+        mux_playback_id: playbackId,
+        muxPlaybackId: playbackId,
+        thumbnailUrl: fields.thumbnail_url || fields.thumbnailUrl,
+        processingStatus: "completed",
+      });
+      expect(postHasPlayableMedia(normalized!)).toBe(true);
+    },
+  );
+
+  it("provides a source to the native player for direct uploads", () => {
+    const mediaUrl = "https://storage.example.com/new-upload.mp4";
+    const normalized = normalizePostForFeed({
+      id: "direct-upload",
+      type: "video",
+      media_url: mediaUrl,
+      original_url: mediaUrl,
+    });
+
+    expect(normalized).toMatchObject({
+      media_url: mediaUrl,
+      mediaUrl,
+      original_url: mediaUrl,
+      originalUrl: mediaUrl,
+    });
+  });
+
+  it("replaces stale HLS URLs with the ready Mux stream in both field styles", () => {
+    const normalized = normalizePostForFeed({
+      id: "ready-upload",
+      mux_playback_id: playbackId,
+      hls_url: "https://storage.example.com/expired.m3u8",
+    });
+
+    expect(normalized).toMatchObject({
+      media_url: streamUrl,
+      mediaUrl: streamUrl,
+      hls_url: streamUrl,
+      hlsUrl: streamUrl,
+      muxPlaybackId: playbackId,
+    });
+  });
+
+  it("preserves inferred Mux playback IDs for player selection", () => {
+    const normalized = normalizePostForFeed({
+      id: "stream-only",
+      media_url: streamUrl,
+    });
+
+    expect(normalized?.muxPlaybackId).toBe(playbackId);
+    expect(normalized?.mux_playback_id).toBe(playbackId);
+  });
+});
 
 describe("postHasPlayableMedia", () => {
   it("accepts Mux playback id", () => {
