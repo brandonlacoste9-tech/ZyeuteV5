@@ -21,7 +21,7 @@ import {
   maybeRotateFeedSessionAfterBackground,
   rotateFeedSessionId,
 } from "@/lib/feedSession";
-import { getGuestSeenForRequest } from "@/lib/watchTracking";
+import { getAllGuestSeen, getGuestSeenForRequest } from "@/lib/watchTracking";
 
 function getStoredHive(): string {
   try {
@@ -185,17 +185,25 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
 
       const data = await response.json();
       const rawCount = (data.posts || []).length;
-      const locallySeen = new Set(getGuestSeenForRequest());
+      const locallySeen = new Set(getAllGuestSeen());
       const playable: Post[] = (data.posts || [])
         .map((p: Record<string, unknown>) => normalizePostForFeed(p))
         .filter(
           (p: Post | null): p is Post =>
             p != null && !!p.id && postHasPlayableMedia(p),
         );
-      // Prefer unseen; only keep watched if the whole page was already seen
-      // (small catalog / wrap) so the feed never goes blank.
+      // Never recycle a watched page while the server still has more pages to
+      // search. This makes the feed behave like a shuffle deck: unseen videos
+      // are consumed first, then watched videos are allowed only after the
+      // available catalog has actually been exhausted.
       const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
-      let posts = unseenOnly.length > 0 ? unseenOnly : playable;
+      const serverHasMore = data.hasMore !== false && rawCount > 0;
+      let posts =
+        unseenOnly.length > 0
+          ? unseenOnly
+          : serverHasMore
+            ? []
+            : playable;
 
       // A couple of local street clips after the real posts, never in front.
       // Prepending the whole library hid every new upload behind ~90 old clips.
@@ -224,7 +232,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         ...data,
         posts,
         nextCursor: data.nextCursor || null,
-        hasMore: data.hasMore !== false && rawCount > 0,
+        hasMore: serverHasMore,
       };
       } catch {
         return streetFallback();
