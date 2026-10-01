@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "npm ci --omit=dev --ignore-scripts --no-audit --no-fund"
+  },
+  "deploy": {
+    "startCommand": "node --import tsx scripts/generate-quebec-batch.ts --run",
+    "restartPolicyType": "NEVER"
+  }
+}
