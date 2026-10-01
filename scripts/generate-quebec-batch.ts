@@ -6,47 +6,47 @@ import { createHash } from "node:crypto";
 import { fal, ApiError } from "@fal-ai/client";
 import { createClient } from "@supabase/supabase-js";
 
-const expectedBatchId = "qc-20261001-meanwhile-02";
+const expectedBatchId = "qc-20261001-impossible-03";
 const batch = [
   {
-    title: "Pendant ce temps à Sherbrooke : pickups volants",
-    region: "sherbrooke",
+    title: "Une baleine survole le Vieux-Québec",
+    region: "quebec",
     prompt:
-      "One continuous five-second photorealistic handheld smartphone shot from the sidewalk of a suburban street in Sherbrooke, Quebec. Three ordinary full-sized pickup trucks float and fly smoothly past at rooftop height like airplanes, with no wings or propellers. The nearest truck passes slowly enough to see a calm adult driver with one arm resting outside the open side window. Normal cars keep moving on the road underneath. Convincing truck metal, tires hanging freely, consistent moving shadows, authentic Quebec houses, distant green hills, natural afternoon light. Absurd impossible event treated as normal traffic. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic handheld smartphone shot from a riverside viewpoint near Old Quebec. An enormous realistic humpback whale is already leaping from the Saint Lawrence River, arcs impossibly high across the sky above Old Quebec and the recognizable Chateau Frontenac, then splashes back into the river beyond the buildings. Detailed wet whale skin, believable scale, sunlight in falling water droplets, spectacular distant splash with no damage to the city. Tourists in the foreground calmly keep filming on phones. Authentic Quebec architecture, summer daylight, absurd impossible wildlife event treated as normal. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Sherbrooke : les pickups ont trouvé un raccourci. 🛻☁️ Scène fictive générée par IA. #Sherbrooke #Quebec #Zyeute",
+      "À Québec, même les baleines font le tour du Château. 🐋🏰 Scène fictive générée par IA. #VieuxQuebec #SaintLaurent #Quebec #Zyeute",
   },
   {
-    title: "Pendant ce temps à Gatineau : chantier de castors géants",
-    region: "gatineau",
-    prompt:
-      "One continuous five-second vertical smartphone worksite shot beside the river in Gatineau, Quebec. A team of three giant photorealistic beavers wearing bright reflective safety vests builds a tall wooden tower from entire tree trunks. One beaver lifts a huge tree trunk into place while another steadies it with its paws. A human construction supervisor in a hard hat stands well clear in the foreground, calmly checking a clipboard. Detailed brown fur, realistic reflective fabric, fresh wood grain, sawdust, coherent enormous scale, river and Quebec urban buildings in the background. Deadpan absurd construction documentary, no injuries. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
-    caption:
-      "Pendant ce temps à Gatineau : le chantier avance à coups de dents. 🦫🚧 Scène fictive générée par IA. #Gatineau #Construction #Quebec #Zyeute",
-  },
-  {
-    title: "Pendant ce temps à Montréal : escalier roulant vers les nuages",
+    title: "Les escaliers du Plateau prennent la route",
     region: "montreal",
     prompt:
-      "One continuous five-second photorealistic handheld smartphone shot from a sidewalk on Sainte-Catherine Street in Montreal. An ordinary outdoor escalator begins directly on the sidewalk and extends impossibly upward between buildings, thousands of feet into low clouds. The camera gently tilts upward from its base, revealing the enormous continuous escalator climbing into the sky. Several normal adult shoppers stand calmly in line and ride upward holding shopping bags, with secure handrails. Authentic Montreal storefront architecture, realistic escalator metal and moving steps, daylight city haze, deadpan impossible everyday scene. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic smartphone shot from the sidewalk of a residential street in Montreal's Plateau-Mont-Royal. Two familiar exterior black metal spiral staircases are detached from their buildings and walk slowly across a quiet intersection on thin jointed metal legs like mechanical spiders. Adult residents calmly ride on the steps while holding the sturdy railings. The camera tracks the nearest walking staircase slightly. Authentic colorful Montreal brick duplexes, balconies, realistic cast-iron textures, coherent articulated movement and shadows, natural daylight. Absurd deadpan neighborhood scene, no injuries. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Montréal : les boutiques du dernier étage sont un peu loin. 🛍️☁️ Scène fictive générée par IA. #SainteCatherine #Montreal #Quebec #Zyeute",
+      "Le Plateau a trouvé sa solution au stationnement : déplacer les escaliers. 🕷️🏘️ Scène fictive générée par IA. #PlateauMontRoyal #Montreal #Quebec #Zyeute",
   },
   {
-    title: "Pendant ce temps dans les Laurentides : migration de canots",
-    region: "laurentides",
-    prompt:
-      "One continuous five-second handheld smartphone shot from a cottage dock beside a lake in Quebec's Laurentians at golden hour. Hundreds of empty full-sized canoes fly across the sky in a huge clear V-shaped migration formation like geese. The nearest red and green canoes glide smoothly overhead with realistic wood and fiberglass hulls, no wings or people, gently banking together. Cottage owners stand safely on docks below and wave casually at the migrating boats. Photorealistic forested hills, lake reflections, warm evening sunlight, convincing scale and coordinated motion, absurd deadpan nature documentary. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
-    caption:
-      "Pendant ce temps dans les Laurentides : les canots partent dans le Sud. 🛶🍁 Scène fictive générée par IA. #Laurentides #Quebec #Zyeute",
-  },
-  {
-    title: "Pendant ce temps à Montréal : tout marche à reculons",
+    title: "Le bus STM devient un sous-marin",
     region: "montreal",
     prompt:
-      "One continuous five-second fixed handheld smartphone shot at a Montreal intersection during a light winter snowfall. Everything in the street moves unmistakably backward while people stay calm: two cars reverse steadily through their lanes with their front ends facing away from their direction of travel, pedestrians walk backward on the sidewalk, a cyclist rolls backward while pedaling backward, and a blue-and-white STM city bus slowly reverses through the intersection. Snowflakes rise upward from the ground into the sky instead of falling. Keep the camera itself facing forward and time continuous. Authentic Montreal winter architecture, realistic people, vehicles, tire motion and lighting, coherent reversed movement, absurd deadpan documentary, no collisions. Looks like genuine accidental smartphone footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+      "One continuous five-second photorealistic action-camera view alongside the front side of a blue-and-white STM city bus as it rolls gently down a riverside launch ramp into the Saint Lawrence River in Montreal. The camera lens crosses the waterline with the bus and stays underwater. The bus seals itself smoothly, its wheels retract and small submarine fins extend; it glides forward beneath the surface. Through the clear windows, calm seated passengers keep scrolling on phones, visibly dry inside. Realistic bubbles, water refraction, daylight rays, detailed Montreal transit vehicle, no panic or injuries. Clearly impossible deadpan commute, no cuts. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
     caption:
-      "Pendant ce temps à Montréal : quelqu’un a appuyé sur rembobiner. ⏪❄️ Scène fictive générée par IA. #STM #Montreal #Quebec #Zyeute",
+      "La STM teste une nouvelle ligne… sous le fleuve. 🚌🌊 Scène fictive générée par IA. #STM #Montreal #SaintLaurent #Quebec #Zyeute",
+  },
+  {
+    title: "La neige québécoise remonte dans le ciel",
+    region: "quebec",
+    prompt:
+      "One continuous five-second handheld smartphone shot of a snow-covered Quebec residential street during a winter storm. All snow suddenly reverses direction: flakes rise from the ground toward the clouds, and thick layers of snow lift smoothly off parked cars and steep house roofs in billowing white sheets, revealing clean surfaces underneath. One bundled-up adult tries to shovel upward in confusion while neighbours watch calmly. Photorealistic Quebec houses, realistic snow particles, coherent upward motion, soft grey winter daylight. Camera and people move normally, only the snow rises. Absurd impossible weather event. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+    caption:
+      "L’hiver a décidé de reprendre sa neige. ❄️⬆️ Scène fictive générée par IA. #Hiver #Quebec #Zyeute",
+  },
+  {
+    title: "Un renard géant dort sur le pont Jacques-Cartier",
+    region: "montreal",
+    prompt:
+      "One continuous five-second photorealistic handheld smartphone shot from a waterfront viewpoint in Montreal at sunrise. A colossal living red fox is curled up asleep across the recognizable green steel Jacques Cartier Bridge. Its huge fluffy tail hangs gently over the Saint Lawrence River and sways in the breeze. Small cars creep slowly along a clear lane around its enormous resting paws without contact. Detailed realistic red fur, closed eyes, subtle breathing, convincing animal-to-bridge scale, authentic Montreal skyline, warm sunrise reflections on the river. Absurd peaceful impossible scene, no injuries. Looks like genuine accidental camera footage of a fictional impossible event, authentic Quebec surroundings, realistic people, imperfect autofocus, natural camera shake, vertical 9:16, no cartoon style, no obvious CGI, no added text, no captions, no watermark, no poutine.",
+    caption:
+      "Le pont Jacques-Cartier est fermé pour une petite sieste. 🦊💤 Scène fictive générée par IA. #JacquesCartier #Montreal #Quebec #Zyeute",
   },
 ];
 
