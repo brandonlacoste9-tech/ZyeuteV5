@@ -1353,6 +1353,7 @@ function mapBackendPost(p: Record<string, any>): Post | null {
   const muxHlsUrl = muxPlaybackId
     ? `https://stream.mux.com/${muxPlaybackId}.m3u8`
     : "";
+  const hlsUrl = muxHlsUrl || rawHls || undefined;
   // When we have a Mux id, prefer stream.mux.com over stale signed Supabase hls_url (common failure mode).
   const mediaUrl = muxPlaybackId
     ? muxHlsUrl ||
@@ -1387,7 +1388,9 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     id: p.id,
     user_id: p.user_id || p.userId,
     media_url: mediaUrl,
+    mediaUrl,
     thumbnail_url: p.thumbnail_url || p.thumbnailUrl,
+    thumbnailUrl: rawThumb,
     caption: p.caption,
     fire_count: p.reactions_count || p.fire_count || p.fireCount || 0,
     comment_count: p.comments_count || p.comment_count || p.commentCount || 0,
@@ -1399,11 +1402,16 @@ function mapBackendPost(p: Record<string, any>): Post | null {
     city: p.city,
 
     // Video-specific (for SingleVideoView / feed)
-    hls_url: rawHls || undefined,
+    hls_url: hlsUrl,
+    hlsUrl,
     enhanced_url: rawEnhanced || undefined,
+    enhancedUrl: rawEnhanced || undefined,
     original_url: rawOriginal || undefined,
+    originalUrl: rawOriginal || undefined,
     processing_status: p.processing_status || p.processingStatus,
+    processingStatus: p.processing_status || p.processingStatus,
     mux_playback_id: muxPlaybackId || undefined,
+    muxPlaybackId: muxPlaybackId || undefined,
     // Ephemeral Protocol
     is_ephemeral: p.is_ephemeral || p.isEphemeral || false,
     view_count: p.view_count || p.viewCount || 0,
