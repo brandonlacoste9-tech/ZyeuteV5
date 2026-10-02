@@ -6,56 +6,7 @@
  */
 import { apiCall } from "@/services/api";
 import { invalidatePourToiCache } from "@/lib/pourToiRanker";
-
-const GUEST_SEEN_KEY = "zyeute_seen_posts";
-/** Total ids retained locally (guests + authed backup). */
-const GUEST_SEEN_CAP = 1000;
-/**
- * Ids sent per feed request. Keep this aligned with the backend header cap so
- * the server can prioritize as many unseen videos as possible without making
- * the request header unreasonably large.
- */
-const GUEST_SEEN_SEND = 200;
-
-function readGuestSeen(): string[] {
-  try {
-    const raw = localStorage.getItem(GUEST_SEEN_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((x) => typeof x === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeGuestSeen(ids: string[]): void {
-  try {
-    localStorage.setItem(GUEST_SEEN_KEY, JSON.stringify(ids));
-  } catch {
-    /* storage full / unavailable — non-critical */
-  }
-}
-
-/** Record a watched post id locally (most-recent-first, deduped, capped). */
-export function addGuestSeen(postId: string): void {
-  if (!postId) return;
-  const current = readGuestSeen().filter((id) => id !== postId);
-  current.unshift(postId);
-  writeGuestSeen(current.slice(0, GUEST_SEEN_CAP));
-}
-
-/** All locally retained watched ids. Used client-side to avoid recycling clips
- * even when older ids are intentionally omitted from the request header. */
-export function getAllGuestSeen(): string[] {
-  return readGuestSeen();
-}
-
-/** Most recently watched guest ids to send with a feed request. */
-export function getGuestSeenForRequest(): string[] {
-  return readGuestSeen().slice(0, GUEST_SEEN_SEND);
-}
+import { addRecentVideoId, setLastViewedVideoId } from "@/lib/feedSessionMemory";
 
 /**
  * Record that a video was watched. Fire-and-forget: always update the local
@@ -73,7 +24,8 @@ export function recordWatch(
   },
 ): void {
   if (!postId) return;
-  addGuestSeen(postId);
+  addRecentVideoId(postId);
+  setLastViewedVideoId(postId);
   if (!opts.isAuthenticated) return;
   invalidatePourToiCache();
   void apiCall("/feed/watched", {
