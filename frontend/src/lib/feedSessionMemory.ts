@@ -6,6 +6,7 @@
  */
 
 const RECENT_VIDEO_IDS_KEY = "zyeute_recent_video_ids_v2";
+const LEGACY_RECENT_VIDEO_IDS_KEY = "zyeute_seen_posts";
 const SESSION_START_KEY = "zyeute_feed_session_start_v1";
 const LAST_VIEWED_KEY = "zyeute_last_viewed_video_id_v1";
 
@@ -64,10 +65,18 @@ function readSessionStart(): StoredSessionStart | null {
 }
 
 export function getRecentVideoIds(): string[] {
-  return readStringArray(RECENT_VIDEO_IDS_KEY).slice(
+  const current = readStringArray(RECENT_VIDEO_IDS_KEY);
+  if (current.length > 0) {
+    return current.slice(0, RECENT_VIDEO_HISTORY_LIMIT);
+  }
+
+  // One-time compatibility with the previous watch-history key.
+  const legacy = readStringArray(LEGACY_RECENT_VIDEO_IDS_KEY).slice(
     0,
     RECENT_VIDEO_HISTORY_LIMIT,
   );
+  if (legacy.length > 0) writeStringArray(RECENT_VIDEO_IDS_KEY, legacy);
+  return legacy;
 }
 
 /** Add a viewed video to the rolling 100-item recent history. */
