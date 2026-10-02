@@ -21,7 +21,7 @@ import {
   maybeRotateFeedSessionAfterBackground,
   rotateFeedSessionId,
 } from "@/lib/feedSession";
-import { getAllGuestSeen, getGuestSeenForRequest } from "@/lib/watchTracking";
+import { getFeedExclusionIds, saveSessionStartingVideoIds } from "@/lib/feedSessionMemory";
 
 function getStoredHive(): string {
   try {
@@ -98,7 +98,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
   // Fresh shuffle seed on each entry to the feed: rotating the session id on
   // mount means every time the user opens/returns to the feed they get a newly
   // shuffled order (the backend derives its block-shuffle seed from this id).
-  const [feedSessionId, setFeedSessionId] = useState(rotateFeedSessionId);
+  const [feedSessionId, setFeedSessionId] = useState(getOrCreateFeedSessionId);
 
   /** Force a brand-new shuffle (e.g. re-tapping the active feed tab). */
   const reshuffle = useCallback(() => {
@@ -159,7 +159,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
       // ids (guests + backup for authed). Explore used to skip both, which
       // made Pour Toi re-serve the same clips on every open.
       const authHeaders = await getAuthHeaders();
-      const seenIds = getGuestSeenForRequest();
+      const seenIds = getFeedExclusionIds(feedSessionId);
       const headers: Record<string, string> = {
         ...authHeaders,
         ...(seenIds.length ? { "x-seen-ids": seenIds.join(",") } : {}),
@@ -185,7 +185,7 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
 
       const data = await response.json();
       const rawCount = (data.posts || []).length;
-      const locallySeen = new Set(getAllGuestSeen());
+      const locallySeen = new Set(getFeedExclusionIds(feedSessionId));
       const playable: Post[] = (data.posts || [])
         .map((p: Record<string, unknown>) => normalizePostForFeed(p))
         .filter(
@@ -215,6 +215,13 @@ export function useInfiniteFeed(feedType: FeedType = "explore") {
         const head = posts.slice(0, 6);
         const tail = posts.slice(6);
         posts = [...head, ...local, ...tail];
+      }
+
+      if (!cursorStr && posts.length > 0) {
+        saveSessionStartingVideoIds(
+          feedSessionId,
+          posts.slice(0, 20).map((p) => String(p.id)),
+        );
       }
 
       if (
