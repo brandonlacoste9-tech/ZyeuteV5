@@ -62,6 +62,10 @@ import {
   rotateFeedSessionId,
 } from "@/lib/feedSession";
 import { recordWatch } from "@/lib/watchTracking";
+import {
+  getFeedExclusionIds,
+  saveSessionStartingVideoIds,
+} from "@/lib/feedSessionMemory";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchWatchHistory, pourToiRank } from "@/lib/pourToiRanker";
 
@@ -103,9 +107,12 @@ function filterPlayablePosts(items: Post[]): FeedPost[] {
 function seedStreetFeed(sessionId?: string): FeedPost[] {
   // Never fall back to getQcStreetPosts()'s fixed default seed — that served
   // the identical clip order on every open. Random per call when no session.
-  return filterPlayablePosts(
-    getQcStreetPosts(sessionId || Math.random().toString(36).slice(2)),
-  );
+  const id = sessionId || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const recent = new Set(getFeedExclusionIds(id));
+  const shuffled = filterPlayablePosts(getQcStreetPosts(id));
+  const fresh = shuffled.filter((post) => !recent.has(String(post.id)));
+  const older = shuffled.filter((post) => recent.has(String(post.id)));
+  return [...fresh, ...older];
 }
 
 /** Street-clip seed posts (AI Québec clips) — loading fallback, not real feed content. */
@@ -375,7 +382,8 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   const { tap } = useHaptics();
   const { getFeedState, saveFeedState, clearFeedState } = useNavigationState();
   const feedSessionRef = useRef("");
-  if (!feedSessionRef.current) feedSessionRef.current = rotateFeedSessionId();
+  if (!feedSessionRef.current)
+    feedSessionRef.current = getOrCreateFeedSessionId();
   const [feedRevision, setFeedRevision] = useState(0);
   const { isOnline, addToQueue } = useNetworkQueue();
   const { user, isGuest } = useAuth();
@@ -388,6 +396,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     () => getFeedState(stateKey),
     [stateKey, getFeedState],
   );
+  // Restore an in-memory feed only when it belongs to this exact app session.
+  // A reopened app gets a new sessionStorage id, so stale posts never occupy
+  // slots 0..N while the newly shuffled feed loads behind them.
+  const canRestoreSavedState =
+    Boolean(savedState?.posts?.length) &&
+    savedState?.feedSessionId === feedSessionRef.current;
 
   // Scroll Velocity Tracking — EMA-smoothed for clean motion decisions
   const {
@@ -411,34 +425,28 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
   // We use a ref for posts to ensure the cleanup function has the latest value
   // without triggering excessive re-renders/saves during normal operation
   const streetSeed =
-    feedType === "decouverte" && !savedState?.posts?.length
+    feedType === "decouverte" && !canRestoreSavedState
       ? seedStreetFeed(feedSessionRef.current)
       : [];
 
-  const postsRef = useRef<Array<Post & { user: User }>>(
-    savedState?.posts?.length ? savedState.posts : streetSeed,
-  );
+  const restoredPosts = canRestoreSavedState ? savedState!.posts : streetSeed;
+  const postsRef = useRef<Array<Post & { user: User }>>(restoredPosts);
 
   const [posts, setPosts] = useState<Array<Post & { user: User }>>(
-    savedState?.posts?.length ? savedState.posts : streetSeed,
+    restoredPosts,
   );
   const [nextCursor, setNextCursor] = useState<string | null>(
-    savedState?.cursor ?? null,
+    canRestoreSavedState ? savedState?.cursor ?? null : null,
   );
   const [currentIndex, setCurrentIndex] = useState(
-    savedState?.currentIndex || 0,
+    canRestoreSavedState ? savedState?.currentIndex || 0 : 0,
   );
 
   // Only loading if we have no posts
-  const [isLoading, setIsLoading] = useState(
-    !(savedState?.posts?.length || streetSeed.length),
-  );
+  const [isLoading, setIsLoading] = useState(restoredPosts.length === 0);
 
   useEffect(() => {
-    warmupStreetClips(
-      (savedState?.posts?.length ? savedState.posts : streetSeed) as FeedPost[],
-      3,
-    );
+    warmupStreetClips(restoredPosts as FeedPost[], 3);
   }, []);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -518,22 +526,23 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // FIX: Hydrate state if savedState arrives late (after initial mount)
   useEffect(() => {
-    // If we have no posts but savedState has posts, we likely missed the initialization
-    if (posts.length === 0 && savedState?.posts?.length) {
+    // Late hydration is allowed only inside the same feed session. Never revive
+    // a previous app session's opening videos after a fresh shuffle has begun.
+    if (
+      posts.length === 0 &&
+      canRestoreSavedState &&
+      savedState?.posts?.length
+    ) {
       feedLogger.info(
-        "Hydrating posts from delayed savedState",
+        "Hydrating posts from current-session savedState",
         savedState.posts.length,
       );
       setPosts(savedState.posts);
       setNextCursor(savedState.cursor ?? null);
-      if (savedState.feedSessionId) {
-        feedSessionRef.current = savedState.feedSessionId;
-      }
       setCurrentIndex(savedState.currentIndex || 0);
-      // Ensure specific scroll restoration if needed, though the ref effect handles it
       setIsLoading(false);
     }
-  }, [savedState, posts.length]);
+  }, [savedState, posts.length, canRestoreSavedState]);
 
   // Hardcoded demo videos - guaranteed to work without API keys
   const DEMO_VIDEOS: Array<Post & { user: User }> = [
@@ -858,6 +867,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         const street = seedStreetFeed(sessionId);
         if (street.length > 0) {
           feedLogger.info("API empty — showing Québec street clips");
+          saveSessionStartingVideoIds(
+            sessionId,
+            street.slice(0, 20).map((post) => String(post.id)),
+          );
           setPosts(street);
           setHasMore(false);
           setFetchError(false);
@@ -869,6 +882,10 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         setFetchError(false);
         return;
       } else {
+        saveSessionStartingVideoIds(
+          sessionId,
+          validPosts.slice(0, 20).map((post) => String(post.id)),
+        );
         setPosts((prev) => {
           if (prev.length === 0) return validPosts;
           // Seed is only a loading placeholder: when the API delivers real posts,
@@ -925,8 +942,12 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [clearFeedState, stateKey, feedType]);
 
-  // Reset feed when tab changes (Découverte ↔ Abonnements)
+  // Reset feed when tab changes (Découverte ↔ Abonnements). Skip the initial
+  // effect run: initial mount already has a valid app-session id.
+  const previousFeedTypeRef = useRef(feedType);
   useEffect(() => {
+    if (previousFeedTypeRef.current === feedType) return;
+    previousFeedTypeRef.current = feedType;
     lastFetchTimeRef.current = 0;
     setFeedRevision((revision) => revision + 1);
     feedSessionRef.current = rotateFeedSessionId();
@@ -1051,16 +1072,14 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
     let callbackId: any = null;
     let cancelled = false;
 
-    const savedCount = savedState?.posts?.length ?? 0;
-    const cacheSessionMatches =
-      Boolean(savedState?.feedSessionId) &&
-      savedState?.feedSessionId === feedSessionRef.current;
+    const savedCount = canRestoreSavedState
+      ? savedState?.posts?.length ?? 0
+      : 0;
     const shouldFetchFresh =
-      !savedState ||
+      !canRestoreSavedState ||
       savedCount === 0 ||
       posts.length === 0 ||
-      savedCount < FEED_PAGE_SIZE * 2 ||
-      !cacheSessionMatches;
+      savedCount < FEED_PAGE_SIZE * 2;
 
     if (shouldFetchFresh) {
       if (hasInitializedRef.current) return;
@@ -1085,7 +1104,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
 
   // Restore scroll position via ref
   useEffect(() => {
-    if (savedState?.currentIndex && listRef.current) {
+    if (canRestoreSavedState && savedState?.currentIndex && listRef.current) {
       // Robustly check for method name (react-window vs custom)
       if (typeof listRef.current.scrollToItem === "function") {
         // "start" alignment ensures the video snaps to top properly
@@ -1097,7 +1116,7 @@ export const ContinuousFeed: React.FC<ContinuousFeedProps> = ({
         });
       }
     }
-  }, [savedState]);
+  }, [savedState, canRestoreSavedState]);
 
   // Sliding-window memory: evict blob/chunk data outside active ±2
   // Keep current ±2 videos in memory, aggressively clean the rest
