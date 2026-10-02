@@ -10,7 +10,7 @@ const apiLogger = logger.withContext("API");
 
 import { getSessionWithTimeout } from "@/lib/supabase";
 import { getOrCreateFeedSessionId } from "@/lib/feedSession";
-import { getGuestSeenForRequest } from "@/lib/watchTracking";
+import { getFeedExclusionIds } from "@/lib/feedSessionMemory";
 import { getQcStreetPosts } from "@/lib/qc-street-clips";
 import {
   AIImageResponseSchema,
@@ -268,12 +268,11 @@ export async function getFeedPosts(
     // Stable per-session seed → feed order varies between sessions but stays
     // consistent across paginated requests (no dupes/skips). Rotated on reload
     // / pull-to-refresh via feedSession helpers.
-    const session = encodeURIComponent(getOrCreateFeedSessionId());
-    // Guests have no server-side video_views; send their recently-watched ids so
-    // the backend can surface unseen videos first. Authed users are read from
-    // video_views server-side and don't need this. Sent via header to keep the
-    // URL short. (apiCall attaches a Bearer token only when signed in.)
-    const seenIds = getGuestSeenForRequest();
+    const sessionId = getOrCreateFeedSessionId();
+    const session = encodeURIComponent(sessionId);
+    // Merge rolling watch history + previous session opening ids so a new app
+    // session does not lead with the same videos it showed last time.
+    const seenIds = getFeedExclusionIds(sessionId);
     const headers = seenIds.length
       ? { "x-seen-ids": seenIds.join(",") }
       : undefined;
@@ -369,9 +368,9 @@ export async function getInfiniteFeedPosts(
     ...(sortParam ? { sort: sortParam } : {}),
   });
 
-  const seenIds = getGuestSeenForRequest();
-  // Auth for video_views exclusions + local seen ids for guests / backup.
-  // Explore must not skip auth — otherwise every Pour Toi open looks identical.
+  const seenIds = getFeedExclusionIds(sessionId);
+  // Auth for video_views exclusions + persistent client exclusions for guests
+  // and as a backup for authenticated users.
   const headers: Record<string, string> = {
     ...(await getInfiniteFeedAuthHeaders()),
     ...(seenIds.length ? { "x-seen-ids": seenIds.join(",") } : {}),
@@ -402,7 +401,7 @@ export async function getInfiniteFeedPosts(
 
     const data = await response.json();
     const rawCount = (data.posts || []).length;
-    const locallySeen = new Set(getGuestSeenForRequest());
+    const locallySeen = new Set(getFeedExclusionIds(sessionId));
     const playable: Post[] = (data.posts || [])
       .map((p: Record<string, unknown>) => normalizePostForFeed(p))
       .filter(
@@ -410,13 +409,20 @@ export async function getInfiniteFeedPosts(
           p != null && !!p.id && postHasPlayableMedia(p),
       );
     const unseenOnly = playable.filter((p) => !locallySeen.has(String(p.id)));
-    const posts = unseenOnly.length > 0 ? unseenOnly : playable;
-
+    const serverHasMore = data.hasMore !== false && rawCount > 0;
+    // Do not recycle a watched/recent page while later pages may still contain
+    // unseen videos. Only allow recycle when the server has exhausted the pool.
+    const posts =
+      unseenOnly.length > 0
+        ? unseenOnly
+        : serverHasMore
+          ? []
+          : playable;
 
     return {
       posts,
       nextCursor: data.nextCursor || null,
-      hasMore: data.hasMore !== false && rawCount > 0,
+      hasMore: serverHasMore,
     };
   } catch (err) {
     apiLogger.warn("Infinite feed unavailable:", err);
