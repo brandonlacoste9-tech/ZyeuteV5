@@ -23,6 +23,12 @@
   status = 404
 
 [[redirects]]
+  from = "/test"
+  to = "https://play.google.com/apps/testing/com.zyeute.www.twa"
+  status = 302
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
