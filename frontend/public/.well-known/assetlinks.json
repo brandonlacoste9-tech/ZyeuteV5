@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.zyeute.www.twa",
+      "sha256_cert_fingerprints": [
+        "D53D0B66815244BE30BE032FB39609DCF3093E4457552B77876F5DA85A9474E9"
+      ]
+    }
+  }
+]
